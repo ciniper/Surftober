@@ -77,7 +77,13 @@ async function initSupabase(){
   sb.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user || null;
     reflectAuthUI();
-    if (currentUser) syncFromCloud();
+    if (currentUser) {
+      fetchProfile();
+      syncFromCloud();
+    } else {
+      profileName = null;
+      enforceProfileNameOnUI();
+    }
   });
 
   // start realtime listener for sessions
@@ -140,9 +146,6 @@ function enforceProfileNameOnUI(){
       meUser.readOnly = false;
       meUser.title = '';
     }
-  }
-}
-
   }
 }
 
@@ -211,6 +214,7 @@ async function insertCloud(row){
     user_id: currentUser.id,
     user_name: row.user,
     date: row.date,
+
     type: row.type,
     duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
     location: row.location || null,
@@ -231,6 +235,7 @@ function attachAccountHandlers(){
   const btnOut = document.getElementById('btn-signout');
   const btnSaveName = document.getElementById('btn-save-name');
   const btnGoogle = document.getElementById('btn-google');
+  const btnDeleteCloud = document.getElementById('btn-delete-cloud');
   if (btnMagic) btnMagic.addEventListener('click', async () => {
     try {
       if (!emailEl.value) return alert('Enter an email');
