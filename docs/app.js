@@ -1,3 +1,30 @@
+// Factory Reset helper
+async function factoryResetThisDevice() {
+  try {
+    // Sign out first
+    if (window.supabase && sb) {
+      try { await sb.auth.signOut(); } catch {}
+    }
+    // Clear localStorage (including supabase session keys)
+    localStorage.clear();
+    sessionStorage.clear?.();
+    // Unregister all service workers
+    if (navigator.serviceWorker) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) { try { await r.unregister(); } catch {} }
+    }
+    // Clear caches
+    if (window.caches) {
+      const names = await caches.keys();
+      await Promise.all(names.map((n) => caches.delete(n)));
+    }
+    // Reload
+    location.reload();
+  } catch (e) {
+    alert('Factory reset failed: ' + e.message);
+  }
+}
+
 // Simple client-side Surftober demo using localStorage as the DB
 // Supabase integration (Auth + DB)
 const SUPABASE_URL = 'https://fexixuteqhgcmccuivcv.supabase.co';
@@ -237,8 +264,13 @@ function attachAccountHandlers(){
   if (btnSaveName) btnSaveName.addEventListener('click', async () => {
     try {
       await saveDisplayName();
+      await fetchProfile();
+      enforceProfileNameOnUI();
+      renderMyStats();
+      toast('Name saved', 'success');
       document.getElementById('account-status').textContent = 'Name saved';
     } catch (e) {
+      toast('Save name failed: ' + e.message, 'error');
       document.getElementById('account-status').textContent = 'Error: ' + e.message;
     }
   });
@@ -748,6 +780,8 @@ window.addEventListener('load', () => {
   document.getElementById('btn-export-awards').addEventListener('click', exportAwards);
   document.getElementById('btn-awards-slides').addEventListener('click', openPrintSlides);
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+  const btnFactory = document.getElementById('btn-factory-reset');
+  if (btnFactory) btnFactory.addEventListener('click', factoryResetThisDevice);
   document.getElementById('btn-load-sample').addEventListener('click', () => {
     seedSample();
     populateDataLists();
