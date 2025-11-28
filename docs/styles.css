@@ -42,3 +42,14 @@ textarea { resize: vertical; }
 .badge.participant { background: #4ecdc4; color: #003534; }
 .badge.observer { background: #8892b0; color: #0b132b; }
 pre { white-space: pre-wrap; word-wrap: break-word; }
+
+/* Toasts */
+.toast-container { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 1000; display: grid; gap: 8px; width: min(92vw, 460px); }
+.toast { padding: 10px 12px; border-radius: 10px; border: 1px solid #2f3e5c; background: #0e1a2e; color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px; }
+.toast.success { border-color: #2b8a3e; background: #10251a; }
+.toast.warn { border-color: #b88900; background: #2a2306; }
+.toast.error { border-color: #b00020; background: #2a0e12; }
+.toast .close { margin-left: auto; opacity: .8; cursor: pointer; }
+
+/* Live status */
+.live { color: #5be37a; font-weight: 600; }

@@ -202,9 +202,11 @@
   </main>
 
   <footer class="app-footer">
-    <span>Surftober Demo · PWA-ready</span>
+    <span>Surftober Demo · PWA-ready <span id="live-status" class="live" style="display:none">• LIVE</span></span>
     <span id="sw-status"></span>
   </footer>
+
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./awards.js"></script>
   <script src="./app.js"></script>
