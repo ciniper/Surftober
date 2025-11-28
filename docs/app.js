@@ -21,17 +21,29 @@ let currentUser = null;
 
 async function initSupabase(){
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  // handle auth redirect
-  const { data: { user } } = await sb.auth.getUser();
+
+  // handle auth redirect / initial session
+  const {
+    data: { user }
+  } = await sb.auth.getUser();
   currentUser = user || null;
   reflectAuthUI();
+
   // initial sync
   syncFromCloud();
+
+  // auth state changes
+  sb.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    reflectAuthUI();
+    if (currentUser) syncFromCloud();
+  });
+
   // start realtime listener for sessions
   try {
-    sb.channel('public:sessions')
+    sb
+      .channel('public:sessions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => {
-        // re-fetch cloud sessions and merge into local cache
         syncFromCloud();
       })
       .subscribe();
@@ -40,7 +52,6 @@ async function initSupabase(){
 
 function reflectAuthUI(){
   const status = document.getElementById('account-status');
-  const name = document.getElementById('display-name');
   if (!status) return;
   if (currentUser) {
     status.textContent = `Signed in as ${currentUser.email}`;
@@ -67,13 +78,14 @@ async function saveDisplayName(){
 }
 
 async function fetchCloudSessions(){
-  const { data, error } = await sb.from('sessions')
+  const { data, error } = await sb
+    .from('sessions')
     .select('*')
     .eq('team', TEAM)
     .order('date', { ascending: true })
     .limit(5000);
   if (error) throw error;
-  return (data||[]).map(s=>({
+  return (data || []).map((s) => ({
     user: s.user_name,
     date: s.date,
     type: s.type,
@@ -83,7 +95,7 @@ async function fetchCloudSessions(){
     notes: s.notes,
     no_wetsuit: s.no_wetsuit ? 1 : 0,
     costume: s.costume ? 1 : 0,
-    cleanup_items: s.cleanup_items || 0,
+    cleanup_items: s.cleanup_items || 0
   }));
 }
 
@@ -96,7 +108,8 @@ async function syncFromCloud(){
     renderMyStats();
     renderLeaderboard();
     renderAwards();
-    document.getElementById('status').textContent = 'Synced from cloud';
+    const st = document.getElementById('status');
+    if (st) st.textContent = 'Synced from cloud';
   } catch (e) {
     // ignore
   }
@@ -116,11 +129,51 @@ async function insertCloud(row){
     notes: row.notes || null,
     no_wetsuit: !!row.no_wetsuit,
     costume: !!row.costume,
-    cleanup_items: Number(row.cleanup_items||0),
-    client_entry_id: crypto.randomUUID(),
+    cleanup_items: Number(row.cleanup_items || 0),
+    client_entry_id: crypto.randomUUID()
   };
   const { error } = await sb.from('sessions').insert(payload);
   if (error) throw error;
+}
+
+function attachAccountHandlers(){
+  const emailEl = document.getElementById('auth-email');
+  const btnMagic = document.getElementById('btn-magic-link');
+  const btnOut = document.getElementById('btn-signout');
+  const btnSaveName = document.getElementById('btn-save-name');
+  const btnGoogle = document.getElementById('btn-google');
+  if (btnMagic) btnMagic.addEventListener('click', async () => {
+    try {
+      if (!emailEl.value) return alert('Enter an email');
+      await signInMagicLink(emailEl.value);
+      document.getElementById('account-status').textContent = 'Magic link sent. Check your email.';
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
+  if (btnGoogle) btnGoogle.addEventListener('click', async () => {
+    try {
+      await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Google auth error: ' + e.message;
+    }
+  });
+  if (btnOut) btnOut.addEventListener('click', async () => {
+    try {
+      await signOut();
+      document.getElementById('account-status').textContent = 'Signed out';
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Sign out error: ' + e.message;
+    }
+  });
+  if (btnSaveName) btnSaveName.addEventListener('click', async () => {
+    try {
+      await saveDisplayName();
+      document.getElementById('account-status').textContent = 'Name saved';
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
 }
 
 // In production, replace with Supabase/Next.js API.
@@ -128,7 +181,11 @@ async function insertCloud(row){
 const LS_KEY = 'surftober.sessions.v1';
 
 function loadSessions() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+  } catch {
+    return [];
+  }
 }
 function saveSessions(rows) {
   localStorage.setItem(LS_KEY, JSON.stringify(rows));
@@ -136,16 +193,16 @@ function saveSessions(rows) {
 
 function seedSample() {
   const sample = [
-    {user:'Jason', date:'2025-10-03', type:'surf', duration:'02:10', location:'OB - Lawton', board:'PPE', notes:'Clean but a bit walled', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Jason', date:'2025-10-08', type:'surf', duration:'03:48', location:'OB - Lawton', board:'PPE', notes:'Marathon day', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Nic', date:'2025-10-09', type:'surf', duration:'01:30', location:'OB - Lawton', board:'Shortboard', notes:'Speedo sesh', no_wetsuit:1, costume:0, cleanup_items:0},
-    {user:'Nic', date:'2025-10-20', type:'surf', duration:'01:54', location:'OB - Lawton', board:'Shortboard', notes:'All OB all month', no_wetsuit:1, costume:0, cleanup_items:0},
-    {user:'Nahla', date:'2025-10-22', type:'surf', duration:'02:15', location:'OB - Noriega', board:'Mid', notes:'Streak day 20', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Nahla', date:'2025-10-24', type:'surf', duration:'02:05', location:'OB - Noriega', board:'Mid', notes:'Twofer day', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Pam', date:'2025-10-05', type:'surf', duration:'01:10', location:'OB - Kellys', board:'Log', notes:'With friends: Jason, Nic', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Pam', date:'2025-10-17', type:'cleanup', duration:'01:00', location:'OB', board:'cleanup', notes:'Picked up 80 items', no_wetsuit:0, costume:0, cleanup_items:80},
-    {user:'Chase', date:'2025-10-12', type:'kitesurf', duration:'01:35', location:'OB - Moraga', board:'TwinTip', notes:'Great wind; high five with Nick', no_wetsuit:0, costume:0, cleanup_items:0},
-    {user:'Chase', date:'2025-10-26', type:'surf', duration:'01:20', location:'OB - Kirkham', board:'Step Up', notes:'Inner bar smashy', no_wetsuit:0, costume:0, cleanup_items:0},
+    { user: 'Jason', date: '2025-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Jason', date: '2025-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Nic', date: '2025-10-09', type: 'surf', duration: '01:30', location: 'OB - Lawton', board: 'Shortboard', notes: 'Speedo sesh', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
+    { user: 'Nic', date: '2025-10-20', type: 'surf', duration: '01:54', location: 'OB - Lawton', board: 'Shortboard', notes: 'All OB all month', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
+    { user: 'Nahla', date: '2025-10-22', type: 'surf', duration: '02:15', location: 'OB - Noriega', board: 'Mid', notes: 'Streak day 20', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Nahla', date: '2025-10-24', type: 'surf', duration: '02:05', location: 'OB - Noriega', board: 'Mid', notes: 'Twofer day', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Pam', date: '2025-10-05', type: 'surf', duration: '01:10', location: 'OB - Kellys', board: 'Log', notes: 'With friends: Jason, Nic', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Pam', date: '2025-10-17', type: 'cleanup', duration: '01:00', location: 'OB', board: 'cleanup', notes: 'Picked up 80 items', no_wetsuit: 0, costume: 0, cleanup_items: 80 },
+    { user: 'Chase', date: '2025-10-12', type: 'kitesurf', duration: '01:35', location: 'OB - Moraga', board: 'TwinTip', notes: 'Great wind; high five with Nick', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Chase', date: '2025-10-26', type: 'surf', duration: '01:20', location: 'OB - Kirkham', board: 'Step Up', notes: 'Inner bar smashy', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
   ].map(SurftoberAwards.normalizeSession);
   saveSessions(sample);
 }
@@ -157,20 +214,20 @@ function appendSession(row) {
 }
 
 function toCSV(rows) {
-  const header = ['user','date','type','duration','location','board','notes','no_wetsuit','costume','cleanup_items'];
-  const esc = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+  const header = ['user', 'date', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items'];
+  const esc = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit?1:0, r.costume?1:0, r.cleanup_items||0].map(esc).join(','));
+    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0].map(esc).join(','));
   }
   return lines.join('\n');
 }
 
 function renderTabs() {
-  const hash = location.hash.replace('#','') || 'log';
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tabs a').forEach(a=>a.classList.remove('active'));
-  const el = document.getElementById('page-'+hash);
+  const hash = location.hash.replace('#', '') || 'log';
+  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+  document.querySelectorAll('.tabs a').forEach((a) => a.classList.remove('active'));
+  const el = document.getElementById('page-' + hash);
   const tab = document.querySelector(`.tabs a[data-tab="${hash}"]`);
   if (el) el.classList.add('active');
   if (tab) tab.classList.add('active');
@@ -192,15 +249,22 @@ function initForm() {
     const wetsuit = document.getElementById('log-no-wetsuit');
     const costume = document.getElementById('log-costume');
     if (isCleanup) {
-      h.value = 1; m.value = 0; h.disabled = true; m.disabled = true;
+      h.value = 1;
+      m.value = 0;
+      h.disabled = true;
+      m.disabled = true;
       board.value = 'cleanup';
       boardField.classList.add('hidden');
-      wetsuit.checked = false; wetsuit.disabled = true;
-      costume.checked = false; costume.disabled = true;
+      wetsuit.checked = false;
+      wetsuit.disabled = true;
+      costume.checked = false;
+      costume.disabled = true;
     } else {
-      h.disabled = false; m.disabled = false;
+      h.disabled = false;
+      m.disabled = false;
       boardField.classList.toggle('hidden', isSwim);
-      wetsuit.disabled = false; costume.disabled = false;
+      wetsuit.disabled = false;
+      costume.disabled = false;
     }
   }
 
@@ -210,7 +274,10 @@ function initForm() {
     const user = document.getElementById('log-user').value.trim();
     const dateStr = document.getElementById('log-date').value;
     const costumeEl = document.getElementById('log-costume');
-    if (!user || !dateStr) { costumeEl.disabled = false; return; }
+    if (!user || !dateStr) {
+      costumeEl.disabled = false;
+      return;
+    }
     if (costumeUsedForPeriod(user, dateStr)) {
       costumeEl.checked = false;
       costumeEl.disabled = true;
@@ -225,48 +292,72 @@ function initForm() {
     try {
       const d = new Date(dateStr);
       const y = d.getFullYear();
-      const m = d.getMonth()+1;
+      const m = d.getMonth() + 1;
       const all = loadSessions();
-      return all.some(s => (s.user||'').trim()===user.trim() && (()=>{const ds=new Date(s.date); return ds.getFullYear()===y && (ds.getMonth()+1)===m;})() && (s.costume===1||s.costume===true||String(s.costume)==='1'));
-    } catch { return false; }
+      return all.some(
+        (s) =>
+          (s.user || '').trim() === user.trim() &&
+          (() => {
+            const ds = new Date(s.date);
+            return ds.getFullYear() === y && ds.getMonth() + 1 === m;
+          })() &&
+          (s.costume === 1 || s.costume === true || String(s.costume) === '1')
+      );
+    } catch {
+      return false;
+    }
   }
 
-  document.getElementById('log-type').addEventListener('change', ()=>{ applyCleanupUI(); applyCostumeGuard(); });
+  document.getElementById('log-type').addEventListener('change', () => {
+    applyCleanupUI();
+    applyCostumeGuard();
+  });
   document.getElementById('log-user').addEventListener('input', applyCostumeGuard);
   document.getElementById('log-date').addEventListener('change', applyCostumeGuard);
   applyCleanupUI();
   applyCostumeGuard();
 
-  f.addEventListener('submit', async (e)=>{
+  f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const isCleanup = document.getElementById('log-type').value === 'cleanup';
     const row = {
       user: document.getElementById('log-user').value.trim(),
       date: document.getElementById('log-date').value,
       type: document.getElementById('log-type').value,
-      duration: isCleanup ? '01:00' : `${String(Number(document.getElementById('log-duration-h').value||0)).padStart(2,'0')}:${String(Number(document.getElementById('log-duration-m').value||0)).padStart(2,'0')}`,
+      duration: isCleanup
+        ? '01:00'
+        : `${String(Number(document.getElementById('log-duration-h').value || 0)).padStart(2, '0')}:${String(
+            Number(document.getElementById('log-duration-m').value || 0)
+          ).padStart(2, '0')}`,
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
-      no_wetsuit: isCleanup ? 0 : (document.getElementById('log-no-wetsuit').checked ? 1 : 0),
-      costume: isCleanup ? 0 : (document.getElementById('log-costume').checked ? 1 : 0),
-      cleanup_items: isCleanup ? 1 : 0,
+      no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
+      costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
+      cleanup_items: isCleanup ? 1 : 0
     };
-    if (!row.user || !row.date || !row.duration) { alert('Please fill required fields'); return; }
+    if (!row.user || !row.date || !row.duration) {
+      alert('Please fill required fields');
+      return;
+    }
     try {
       if (sb && currentUser) await insertCloud(row);
       appendSession(row);
-      document.getElementById('status').textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
-      renderRecent(); renderMyStats(); renderLeaderboard();
+      const st = document.getElementById('status');
+      if (st) st.textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
+      renderRecent();
+      renderMyStats();
+      renderLeaderboard();
       f.reset();
       document.getElementById('log-date').value = defaultDate;
     } catch (e) {
-      document.getElementById('status').textContent = 'Save failed: ' + e.message;
+      const st = document.getElementById('status');
+      if (st) st.textContent = 'Save failed: ' + e.message;
     }
   });
-  document.getElementById('btn-repeat-last').addEventListener('click', ()=>{
+  document.getElementById('btn-repeat-last').addEventListener('click', () => {
     const all = loadSessions();
-    const last = all[all.length-1];
+    const last = all[all.length - 1];
     if (!last) return;
     document.getElementById('log-user').value = last.user;
     document.getElementById('log-type').value = last.type;
@@ -278,12 +369,17 @@ function initForm() {
 function renderRecent() {
   const container = document.getElementById('recent-entries');
   const all = loadSessions().slice(-10).reverse();
-  container.innerHTML = all.map(r=>
-    `<div class="card"><div><b>${r.user}</b> · ${r.date} · ${r.type}</div>
-     <div>${r.location||''} · ${r.board||''}</div>
-     <div>${r.duration} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit?'<span class="badge">No wetsuit</span>':''} ${r.costume?'<span class="badge">Costume</span>':''} ${r.cleanup_items?`<span class="badge">Cleanup ${r.cleanup_items}</span>`:''}</div>
-     <div>${r.notes||''}</div></div>`
-  ).join('');
+  container.innerHTML = all
+    .map(
+      (r) =>
+        `<div class="card"><div><b>${r.user}</b> · ${r.date} · ${r.type}</div>
+     <div>${r.location || ''} · ${r.board || ''}</div>
+     <div>${r.duration} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
+          r.costume ? '<span class="badge">Costume</span>' : ''
+        } ${r.cleanup_items ? `<span class="badge">Cleanup ${r.cleanup_items}</span>` : ''}</div>
+     <div>${r.notes || ''}</div></div>`
+    )
+    .join('');
 }
 
 function renderMyStats() {
@@ -292,82 +388,61 @@ function renderMyStats() {
   const month = Number(document.getElementById('me-month').value);
   const all = loadSessions();
   const normalized = all.map(SurftoberAwards.normalizeSession);
-  const mine = normalized.filter(s=> (!user || s.user===user));
+  const mine = normalized.filter((s) => !user || s.user === user);
   const totals = SurftoberAwards.rollupByUser(mine, { year, month });
   const summary = document.getElementById('me-summary');
-  summary.innerHTML = totals.map(t=>
-    `<div class="card"><h3>${t.user}</h3>
+  summary.innerHTML =
+    totals
+      .map(
+        (t) =>
+          `<div class="card"><h3>${t.user}</h3>
      <div>Total Hours: ${t.total_hours.toFixed(1)} <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
      <div>Boards: ${t.boards} · Locations: ${t.locations}</div>
      <div>Std Dev: ${t.stddev.toFixed(1)} min · Twofer days: ${t.twofer_days}</div>
-     <div>Weekend: ${Math.round(t.weekendShare*100)}% · Weekday: ${Math.round(t.weekdayShare*100)}%</div>
-     <div>First Half: ${Math.round(t.firstHalfShare*100)}% · Last Half: ${Math.round(t.lastHalfShare*100)}%</div>
-    </div>`).join('') || '<div class="hint">No data</div>';
+     <div>Weekend: ${Math.round(t.weekendShare * 100)}% · Weekday: ${Math.round(t.weekdayShare * 100)}%</div>
+     <div>First Half: ${Math.round(t.firstHalfShare * 100)}% · Last Half: ${Math.round(t.lastHalfShare * 100)}%</div>
+    </div>`
+      )
+      .join('') || '<div class="hint">No data</div>';
 
   // Table of sessions
-// Hook up Account tab buttons after DOM load
-window.addEventListener('load', ()=>{
-  const emailEl = document.getElementById('auth-email');
-  const btnMagic = document.getElementById('btn-magic-link');
-  const btnOut = document.getElementById('btn-signout');
-  const btnSaveName = document.getElementById('btn-save-name');
-  const btnGoogle = document.getElementById('btn-google');
-  if (btnMagic) btnMagic.addEventListener('click', async ()=>{
-    try {
-      if (!emailEl.value) return alert('Enter an email');
-      await signInMagicLink(emailEl.value);
-      document.getElementById('account-status').textContent = 'Magic link sent. Check your email.';
-    } catch (e) {
-      document.getElementById('account-status').textContent = 'Error: ' + e.message;
-    }
-  });
-  if (btnGoogle) btnGoogle.addEventListener('click', async ()=>{
-    try {
-      await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: location.origin + location.pathname }
-      });
-    } catch (e) {
-      document.getElementById('account-status').textContent = 'Google auth error: ' + e.message;
-    }
-  });
-  if (btnOut) btnOut.addEventListener('click', async ()=>{
-    await signOut();
-    document.getElementById('account-status').textContent = 'Signed out';
-  });
-  if (btnSaveName) btnSaveName.addEventListener('click', async ()=>{
-    try {
-      await saveDisplayName();
-      document.getElementById('account-status').textContent = 'Name saved';
-    } catch (e) {
-      document.getElementById('account-status').textContent = 'Error: ' + e.message;
-    }
-  });
-});
-
-  const sessions = mine.filter(s=> SurftoberAwards.minutesToHHMM).filter(s=>{
-    const d = new Date(s.date);
-    const okY = !year || d.getFullYear() === year;
-    const okM = !month || d.getMonth()+1 === month;
-    return okY && okM;
-  });
+  const sessions = mine
+    .filter((s) => SurftoberAwards.minutesToHHMM)
+    .filter((s) => {
+      const d = new Date(s.date);
+      const okY = !year || d.getFullYear() === year;
+      const okM = !month || d.getMonth() + 1 === month;
+      return okY && okM;
+    });
   // Determine which session (if any) gets the one-time costume +1h in this period
-  let costumeIdx = -1; let earliest = null;
-  sessions.forEach((s, i)=>{
+  let costumeIdx = -1;
+  let earliest = null;
+  sessions.forEach((s, i) => {
     if (!s.costume) return;
     const ts = new Date(s.date).getTime();
-    if (earliest === null || ts < earliest || (ts === earliest && i < costumeIdx)) { earliest = ts; costumeIdx = i; }
+    if (earliest === null || ts < earliest || (ts === earliest && i < costumeIdx)) {
+      earliest = ts;
+      costumeIdx = i;
+    }
   });
-  const tbl = [`<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th></tr></thead><tbody>`];
-  sessions.forEach((s, i)=>{
-    const costumeApplied = (i === costumeIdx);
+  const tbl = [
+    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th></tr></thead><tbody>`
+  ];
+  sessions.forEach((s, i) => {
+    const costumeApplied = i === costumeIdx;
     const scoredMins = s.base_minutes + (costumeApplied ? 60 : 0);
     const bonusBadges = [
       s.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : '',
       costumeApplied ? '<span class="badge">Costume +1h</span>' : '',
-      (s.type === 'cleanup') ? '<span class="badge">Cleanup</span>' : ''
-    ].filter(Boolean).join(' ');
-    tbl.push(`<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(scoredMins)}</td><td>${bonusBadges}</td><td>${s.location||''}</td><td>${s.board||''}</td><td>${s.notes||''}</td></tr>`);
+      s.type === 'cleanup' ? '<span class="badge">Cleanup</span>' : ''
+    ]
+      .filter(Boolean)
+      .join(' ');
+    tbl.push(
+      `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
+        scoredMins
+      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td></tr>`
+    );
   });
   tbl.push('</tbody></table>');
   document.getElementById('me-sessions').innerHTML = tbl.join('');
@@ -377,7 +452,9 @@ function renderLeaderboard() {
   const year = Number(document.getElementById('lb-year').value);
   const month = Number(document.getElementById('lb-month').value);
   const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
-  const rows = totals.map((t,i)=> `<tr><td>${i+1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>` );
+  const rows = totals.map(
+    (t, i) => `<tr><td>${i + 1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+  );
   document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
@@ -385,7 +462,9 @@ function renderAwards() {
   const year = Number(document.getElementById('aw-year').value);
   const month = Number(document.getElementById('aw-month').value);
   const { awards } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
-  const cards = awards.map(a=> `<div class="card"><h3>${a.name}</h3><div>${a.desc}</div><div><b>${a.winner}</b> — ${a.value}</div></div>`);
+  const cards = awards.map(
+    (a) => `<div class="card"><h3>${a.name}</h3><div>${a.desc}</div><div><b>${a.winner}</b> — ${a.value}</div></div>`
+  );
   document.getElementById('awards').innerHTML = cards.join('') || '<div class="hint">No awards for period</div>';
 }
 
@@ -396,7 +475,9 @@ function exportAwards() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `awards_${year}_${month||'all'}.json`; a.click();
+  a.href = url;
+  a.download = `awards_${year}_${month || 'all'}.json`;
+  a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -406,32 +487,36 @@ function exportCSV() {
   const blob = new Blob([text], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'surftober_sessions.csv'; a.click();
+  a.href = url;
+  a.download = 'surftober_sessions.csv';
+  a.click();
   URL.revokeObjectURL(url);
 }
 
 function importCSV(file) {
-  return new Promise((resolve, reject)=>{
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const text = reader.result;
         const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
-        const headers = headerLine.split(',').map(h=>h.replace(/^"|"$/g,''));
+        const headers = headerLine.split(',').map((h) => h.replace(/^"|"$/g, ''));
         const rows = [];
         for (const line of lines) {
-          const cols = line.match(/\"([^\"]*)\"|[^,]+/g)?.map(s=> s.replace(/^\"|\"$/g,'')) || [];
-          const row = Object.fromEntries(headers.map((h,i)=>[h, cols[i] || '']));
-          row.no_wetsuit = Number(row.no_wetsuit||0);
-          row.costume = Number(row.costume||0);
-          row.cleanup_items = Number(row.cleanup_items||0);
+          const cols = line.match(/\"([^\"]*)\"|[^,]+/g)?.map((s) => s.replace(/^\"|\"$/g, '')) || [];
+          const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || '']));
+          row.no_wetsuit = Number(row.no_wetsuit || 0);
+          row.costume = Number(row.costume || 0);
+          row.cleanup_items = Number(row.cleanup_items || 0);
           rows.push(row);
         }
         const all = loadSessions();
         for (const r of rows) all.push(SurftoberAwards.normalizeSession(r));
         saveSessions(all);
         resolve(rows.length);
-      } catch (e) { reject(e); }
+      } catch (e) {
+        reject(e);
+      }
     };
     reader.onerror = reject;
     reader.readAsText(file);
@@ -440,12 +525,12 @@ function importCSV(file) {
 
 function populateDataLists() {
   const all = loadSessions();
-  const users = Array.from(new Set(all.map(r=>r.user))).sort();
-  const locs = Array.from(new Set(all.map(r=>r.location))).sort();
-  const boards = Array.from(new Set(all.map(r=>r.board))).sort();
-  document.getElementById('user-list').innerHTML = users.map(u=>`<option value="${u}">`).join('');
-  document.getElementById('location-list').innerHTML = locs.map(u=>`<option value="${u}">`).join('');
-  document.getElementById('board-list').innerHTML = boards.map(u=>`<option value="${u}">`).join('');
+  const users = Array.from(new Set(all.map((r) => r.user))).sort();
+  const locs = Array.from(new Set(all.map((r) => r.location))).sort();
+  const boards = Array.from(new Set(all.map((r) => r.board))).sort();
+  document.getElementById('user-list').innerHTML = users.map((u) => `<option value="${u}">`).join('');
+  document.getElementById('location-list').innerHTML = locs.map((u) => `<option value="${u}">`).join('');
+  document.getElementById('board-list').innerHTML = boards.map((u) => `<option value="${u}">`).join('');
 }
 
 function openPrintSlides() {
@@ -454,11 +539,16 @@ function openPrintSlides() {
   const month = Number(document.getElementById('aw-month').value);
   const { awards, totals } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
   const style = `<style>body{font-family:system-ui;margin:0;background:#111;color:#fff}section{page-break-after:always;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:5vw}h1{font-size:6vw;margin:0}.sub{opacity:.8;margin-top:1vw}table{width:80%;margin:2vw auto;border-collapse:collapse}td,th{border-bottom:1px solid #333;padding:.5vw 1vw;text-align:left}</style>`;
-  const lbRows = totals.map((t,i)=>`<tr><td>${i+1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td>${t.medal}</td></tr>`).join('');
+  const lbRows = totals
+    .map((t, i) => `<tr><td>${i + 1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td>${t.medal}</td></tr>`)
+    .join('');
   const pages = [
-    `<section><div><h1>Surftober Awards</h1><div class="sub">${year}${month?` — Month ${month}`:''}</div></div></section>`,
+    `<section><div><h1>Surftober Awards</h1><div class="sub">${year}${month ? ` — Month ${month}` : ''}</div></div></section>`,
     `<section><div><h1>Leaderboard</h1><table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${lbRows}</tbody></table></div></section>`,
-    ...awards.map(a=> `<section><div><h1>${a.name}</h1><div class="sub">${a.desc}</div><h1>${a.winner}</h1><div class="sub">${a.value}</div></div></section>`)
+    ...awards.map(
+      (a) =>
+        `<section><div><h1>${a.name}</h1><div class="sub">${a.desc}</div><h1>${a.winner}</h1><div class="sub">${a.value}</div></div></section>`
+    )
   ];
   w.document.write(`<html><head><title>Surftober Slides</title>${style}</head><body>${pages.join('')}</body></html>`);
   w.document.close();
@@ -466,17 +556,20 @@ function openPrintSlides() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg=>{
-    document.getElementById('sw-status').textContent = 'PWA ready';
-  }).catch(()=>{
-    document.getElementById('sw-status').textContent = 'PWA failed';
-  });
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then((reg) => {
+      document.getElementById('sw-status').textContent = 'PWA ready';
+    })
+    .catch(() => {
+      document.getElementById('sw-status').textContent = 'PWA failed';
+    });
 }
 
 window.addEventListener('hashchange', renderTabs);
-window.addEventListener('load', ()=>{
+window.addEventListener('load', () => {
   renderTabs();
   initForm();
+  attachAccountHandlers();
   renderRecent();
   renderMyStats();
   renderLeaderboard();
@@ -485,22 +578,53 @@ window.addEventListener('load', ()=>{
   // Handlers
   document.getElementById('lb-year').addEventListener('input', renderLeaderboard);
   document.getElementById('lb-month').addEventListener('change', renderLeaderboard);
-  document.getElementById('me-user').addEventListener('input', ()=>{ renderMyStats(); });
+  document.getElementById('me-user').addEventListener('input', () => {
+    renderMyStats();
+  });
   document.getElementById('me-year').addEventListener('input', renderMyStats);
   document.getElementById('me-month').addEventListener('change', renderMyStats);
-  document.getElementById('aw-year').addEventListener('input', ()=>{ renderAwards(); });
-  document.getElementById('aw-month').addEventListener('change', ()=>{ renderAwards(); });
+  document.getElementById('aw-year').addEventListener('input', () => {
+    renderAwards();
+  });
+  document.getElementById('aw-month').addEventListener('change', () => {
+    renderAwards();
+  });
   document.getElementById('btn-compute-awards').addEventListener('click', renderAwards);
   document.getElementById('btn-export-awards').addEventListener('click', exportAwards);
   document.getElementById('btn-awards-slides').addEventListener('click', openPrintSlides);
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-  document.getElementById('btn-load-sample').addEventListener('click', ()=>{ seedSample(); populateDataLists(); renderRecent(); renderMyStats(); renderLeaderboard(); renderAwards(); });
-  document.getElementById('btn-clear').addEventListener('click', ()=>{ saveSessions([]); populateDataLists(); renderRecent(); renderMyStats(); renderLeaderboard(); renderAwards(); });
-  document.getElementById('csv-file').addEventListener('change', async (e)=>{
-    const f = e.target.files[0]; if (!f) return;
-    document.getElementById('status').textContent = 'Importing…';
-    try { const n = await importCSV(f); document.getElementById('status').textContent = `Imported ${n} rows`; populateDataLists(); renderRecent(); renderMyStats(); renderLeaderboard(); renderAwards(); }
-    catch (e) { document.getElementById('status').textContent = 'Import failed: '+e.message; }
+  document.getElementById('btn-load-sample').addEventListener('click', () => {
+    seedSample();
+    populateDataLists();
+    renderRecent();
+    renderMyStats();
+    renderLeaderboard();
+    renderAwards();
+  });
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    saveSessions([]);
+    populateDataLists();
+    renderRecent();
+    renderMyStats();
+    renderLeaderboard();
+    renderAwards();
+  });
+  document.getElementById('csv-file').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const st = document.getElementById('status');
+    if (st) st.textContent = 'Importing…';
+    try {
+      const n = await importCSV(f);
+      if (st) st.textContent = `Imported ${n} rows`;
+      populateDataLists();
+      renderRecent();
+      renderMyStats();
+      renderLeaderboard();
+      renderAwards();
+    } catch (e) {
+      if (st) st.textContent = 'Import failed: ' + e.message;
+    }
   });
   populateDataLists();
 });
