@@ -98,15 +98,7 @@ function reflectAuthUI(){
     status.textContent = `Signed in as ${currentUser.email}`;
   } else {
     status.textContent = 'Not signed in';
-function toast(msg, type='success'){
-  const box = document.getElementById('toast-container');
-  if (!box) { console.log(`[${type}]`, msg); return; }
-  const el = document.createElement('div');
-  el.className = 'toast ' + (type||'');
-  el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
-  el.querySelector('.close').onclick = ()=> el.remove();
-  box.appendChild(el);
-  setTimeout(()=> el.remove(), 4000);
+  }
 }
 
 async function fetchProfile(){
