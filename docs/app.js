@@ -1,4 +1,126 @@
 // Simple client-side Surftober demo using localStorage as the DB
+// Supabase integration (Auth + DB)
+const SUPABASE_URL = 'https://fexixuteqhgcmccuivcv.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleGl4dXRlcWhnY21jY3VpdmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNDYwOTksImV4cCI6MjA3OTkyMjA5OX0.M6AlLo7ICTFJ20wIFC2QfZAXhwN5uWEeKRtcnBkTAOU';
+const TEAM = 'surftober-2025';
+
+// Load Supabase JS if not present
+(function ensureSupabase(){
+  if (!window.supabase) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    s.onload = initSupabase;
+    document.head.appendChild(s);
+  } else {
+    initSupabase();
+  }
+})();
+
+let sb = null; // supabase client
+let currentUser = null;
+
+async function initSupabase(){
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  // handle auth redirect
+  const { data: { user } } = await sb.auth.getUser();
+  currentUser = user || null;
+  reflectAuthUI();
+  // start realtime listener for sessions
+  try {
+    sb.channel('public:sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => {
+        // re-fetch cloud sessions and merge into local cache
+        syncFromCloud();
+      })
+      .subscribe();
+  } catch {}
+}
+
+function reflectAuthUI(){
+  const status = document.getElementById('account-status');
+  const name = document.getElementById('display-name');
+  if (!status) return;
+  if (currentUser) {
+    status.textContent = `Signed in as ${currentUser.email}`;
+  } else {
+    status.textContent = 'Not signed in';
+  }
+}
+
+async function signInMagicLink(email){
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+  if (error) throw error;
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  currentUser = null;
+  reflectAuthUI();
+}
+
+async function saveDisplayName(){
+  if (!currentUser) throw new Error('Sign in first');
+  const { error } = await sb.from('profiles').upsert({ id: currentUser.id, display_name: document.getElementById('display-name').value || null });
+  if (error) throw error;
+}
+
+async function fetchCloudSessions(){
+  const { data, error } = await sb.from('sessions')
+    .select('*')
+    .eq('team', TEAM)
+    .order('date', { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+  return (data||[]).map(s=>({
+    user: s.user_name,
+    date: s.date,
+    type: s.type,
+    duration: SurftoberAwards.minutesToHHMM(s.duration_minutes),
+    location: s.location,
+    board: s.surf_craft,
+    notes: s.notes,
+    no_wetsuit: s.no_wetsuit ? 1 : 0,
+    costume: s.costume ? 1 : 0,
+    cleanup_items: s.cleanup_items || 0,
+  }));
+}
+
+async function syncFromCloud(){
+  try {
+    const cloud = await fetchCloudSessions();
+    saveSessions(cloud);
+    populateDataLists();
+    renderRecent();
+    renderMyStats();
+    renderLeaderboard();
+    renderAwards();
+    document.getElementById('status').textContent = 'Synced from cloud';
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function insertCloud(row){
+  if (!currentUser) throw new Error('Please sign in');
+  const payload = {
+    team: TEAM,
+    user_id: currentUser.id,
+    user_name: row.user,
+    date: row.date,
+    type: row.type,
+    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
+    location: row.location || null,
+    surf_craft: row.board || null,
+    notes: row.notes || null,
+    no_wetsuit: !!row.no_wetsuit,
+    costume: !!row.costume,
+    cleanup_items: Number(row.cleanup_items||0),
+    client_entry_id: crypto.randomUUID(),
+  };
+  const { error } = await sb.from('sessions').insert(payload);
+  if (error) throw error;
+}
+
 // In production, replace with Supabase/Next.js API.
 
 const LS_KEY = 'surftober.sessions.v1';
@@ -113,7 +235,7 @@ function initForm() {
   applyCleanupUI();
   applyCostumeGuard();
 
-  f.addEventListener('submit', (e)=>{
+  f.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const isCleanup = document.getElementById('log-type').value === 'cleanup';
     const row = {
@@ -129,11 +251,16 @@ function initForm() {
       cleanup_items: isCleanup ? 1 : 0,
     };
     if (!row.user || !row.date || !row.duration) { alert('Please fill required fields'); return; }
-    appendSession(row);
-    document.getElementById('status').textContent = 'Saved entry for ' + row.user + ' on ' + row.date;
-    renderRecent(); renderMyStats(); renderLeaderboard();
-    f.reset();
-    document.getElementById('log-date').value = defaultDate;
+    try {
+      if (sb && currentUser) await insertCloud(row);
+      appendSession(row);
+      document.getElementById('status').textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
+      renderRecent(); renderMyStats(); renderLeaderboard();
+      f.reset();
+      document.getElementById('log-date').value = defaultDate;
+    } catch (e) {
+      document.getElementById('status').textContent = 'Save failed: ' + e.message;
+    }
   });
   document.getElementById('btn-repeat-last').addEventListener('click', ()=>{
     const all = loadSessions();
@@ -176,6 +303,35 @@ function renderMyStats() {
     </div>`).join('') || '<div class="hint">No data</div>';
 
   // Table of sessions
+// Hook up Account tab buttons after DOM load
+window.addEventListener('load', ()=>{
+  const emailEl = document.getElementById('auth-email');
+  const btnMagic = document.getElementById('btn-magic-link');
+  const btnOut = document.getElementById('btn-signout');
+  const btnSaveName = document.getElementById('btn-save-name');
+  if (btnMagic) btnMagic.addEventListener('click', async ()=>{
+    try {
+      if (!emailEl.value) return alert('Enter an email');
+      await signInMagicLink(emailEl.value);
+      document.getElementById('account-status').textContent = 'Magic link sent. Check your email.';
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
+  if (btnOut) btnOut.addEventListener('click', async ()=>{
+    await signOut();
+    document.getElementById('account-status').textContent = 'Signed out';
+  });
+  if (btnSaveName) btnSaveName.addEventListener('click', async ()=>{
+    try {
+      await saveDisplayName();
+      document.getElementById('account-status').textContent = 'Name saved';
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
+});
+
   const sessions = mine.filter(s=> SurftoberAwards.minutesToHHMM).filter(s=>{
     const d = new Date(s.date);
     const okY = !year || d.getFullYear() === year;
