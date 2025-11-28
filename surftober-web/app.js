@@ -297,7 +297,7 @@ function openPrintSlides() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').then(reg=>{
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg=>{
     document.getElementById('sw-status').textContent = 'PWA ready';
   }).catch(()=>{
     document.getElementById('sw-status').textContent = 'PWA failed';
