@@ -20,6 +20,17 @@ let sb = null; // supabase client
 let currentUser = null;
 let profileName = null;
 
+function toast(msg, type='success'){
+  const box = document.getElementById('toast-container');
+  if (!box) { console.log(`[${type}]`, msg); return; }
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type||'');
+  el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
+  el.querySelector('.close').onclick = ()=> el.remove();
+  box.appendChild(el);
+  setTimeout(()=> el.remove(), 4000);
+}
+
 async function initSupabase(){
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -375,6 +386,12 @@ function initForm() {
 
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
+    // Enforce display name when signed in (no special format required)
+    if (sb && currentUser && !profileName) {
+      toast('Please set your display name in Account before logging.', 'warn');
+      location.hash = '#account';
+      return;
+    }
     const isCleanup = document.getElementById('log-type').value === 'cleanup';
     const row = {
       user: document.getElementById('log-user').value.trim(),
@@ -397,8 +414,18 @@ function initForm() {
       return;
     }
     try {
-      if (sb && currentUser) await insertCloud(row);
-      appendSession(row);
+      if (editingId && sb && currentUser) {
+        await updateCloudSession(editingId, row);
+        toast('Session updated', 'success');
+        editingId = null;
+        document.getElementById('btn-submit').textContent = 'Add Entry';
+        document.getElementById('btn-cancel-edit').style.display = 'none';
+        await syncFromCloud();
+      } else {
+        if (sb && currentUser) await insertCloud(row);
+        appendSession(row);
+        toast('Entry saved', 'success');
+      }
       const st = document.getElementById('status');
       if (st) st.textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
       renderRecent();
@@ -409,7 +436,17 @@ function initForm() {
     } catch (e) {
       const st = document.getElementById('status');
       if (st) st.textContent = 'Save failed: ' + e.message;
+      toast('Save failed: ' + e.message, 'error');
     }
+  });
+  // Cancel edit
+  const btnCancel = document.getElementById('btn-cancel-edit');
+  if (btnCancel) btnCancel.addEventListener('click', () => {
+    editingId = null;
+    document.getElementById('btn-submit').textContent = 'Add Entry';
+    document.getElementById('btn-cancel-edit').style.display = 'none';
+    f.reset();
+    document.getElementById('log-date').value = defaultDate;
   });
   document.getElementById('btn-repeat-last').addEventListener('click', () => {
     const all = loadSessions();
@@ -463,16 +500,26 @@ function renderRecent() {
   const container = document.getElementById('recent-entries');
   const all = loadSessions().slice(-10).reverse();
   container.innerHTML = all
-    .map(
-      (r) =>
-        `<div class="card"><div><b>${r.user}</b> · ${r.date} · ${r.type}</div>
-     <div>${r.location || ''} · ${r.board || ''}</div>
-     <div>${r.duration} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
-          r.costume ? '<span class="badge">Costume</span>' : ''
-        } ${r.cleanup_items ? `<span class="badge">Cleanup ${r.cleanup_items}</span>` : ''}</div>
-     <div>${r.notes || ''}</div></div>`
-    )
+    .map((r) => {
+      const canEdit = !!currentUser && !!profileName && r.user === profileName && r._id;
+      const edit = canEdit ? `<div><a class="edit-link" data-id="${r._id}">Edit</a></div>` : '';
+      return `<div class="card"><div><b>${r.user}</b> · ${r.date} · ${r.type}</div>
+      <div>${r.location || ''} · ${r.board || ''}</div>
+      <div>${r.duration} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
+        r.costume ? '<span class="badge">Costume</span>' : ''
+      } ${r.cleanup_items ? `<span class="badge">Cleanup ${r.cleanup_items}</span>` : ''}</div>
+      <div>${r.notes || ''}</div>${edit}</div>`;
+    })
     .join('');
+  // Attach edit handlers
+  container.querySelectorAll('.edit-link').forEach((a) => {
+    a.addEventListener('click', () => {
+      const id = a.getAttribute('data-id');
+      const allSess = loadSessions();
+      const s = allSess.find((x) => x._id === id);
+      if (s) startEditSession(s);
+    });
+  });
 }
 
 function renderMyStats() {
@@ -519,7 +566,7 @@ function renderMyStats() {
     }
   });
   const tbl = [
-    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th></tr></thead><tbody>`
+    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th><th></th></tr></thead><tbody>`
   ];
   sessions.forEach((s, i) => {
     const costumeApplied = i === costumeIdx;
@@ -531,14 +578,28 @@ function renderMyStats() {
     ]
       .filter(Boolean)
       .join(' ');
+    const canEdit = !!currentUser && !!profileName && s.user === profileName && s._id;
+    const edit = canEdit ? `<a class="edit-link" data-id="${s._id}">Edit</a>` : '';
     tbl.push(
       `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td><td>${edit}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
   document.getElementById('me-sessions').innerHTML = tbl.join('');
+  // Attach edit handlers in My Stats
+  document.querySelectorAll('#me-sessions .edit-link').forEach((a) => {
+    a.addEventListener('click', () => {
+      const id = a.getAttribute('data-id');
+      const allSess = loadSessions();
+      const s = allSess.find((x) => x._id === id);
+      if (s) {
+        location.hash = '#log';
+        startEditSession(s);
+      }
+    });
+  });
 }
 
 function renderLeaderboard() {
