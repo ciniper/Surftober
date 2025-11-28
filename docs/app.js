@@ -113,9 +113,10 @@ function enforceProfileNameOnUI(){
   const meUser = document.getElementById('me-user');
   if (meUser) {
     if (currentUser && profileName) {
+      // Default to your profile name but allow changing to view others
       meUser.value = profileName;
-      meUser.readOnly = true;
-      meUser.title = 'Showing only your sessions.';
+      meUser.readOnly = false;
+      meUser.title = 'Default: your name. Pick another to view others.';
     } else {
       meUser.readOnly = false;
       meUser.title = '';
