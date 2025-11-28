@@ -25,6 +25,8 @@ async function initSupabase(){
   const { data: { user } } = await sb.auth.getUser();
   currentUser = user || null;
   reflectAuthUI();
+  // initial sync
+  syncFromCloud();
   // start realtime listener for sessions
   try {
     sb.channel('public:sessions')
@@ -309,6 +311,7 @@ window.addEventListener('load', ()=>{
   const btnMagic = document.getElementById('btn-magic-link');
   const btnOut = document.getElementById('btn-signout');
   const btnSaveName = document.getElementById('btn-save-name');
+  const btnGoogle = document.getElementById('btn-google');
   if (btnMagic) btnMagic.addEventListener('click', async ()=>{
     try {
       if (!emailEl.value) return alert('Enter an email');
@@ -316,6 +319,16 @@ window.addEventListener('load', ()=>{
       document.getElementById('account-status').textContent = 'Magic link sent. Check your email.';
     } catch (e) {
       document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
+  if (btnGoogle) btnGoogle.addEventListener('click', async ()=>{
+    try {
+      await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: location.origin + location.pathname }
+      });
+    } catch (e) {
+      document.getElementById('account-status').textContent = 'Google auth error: ' + e.message;
     }
   });
   if (btnOut) btnOut.addEventListener('click', async ()=>{
