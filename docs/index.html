@@ -17,6 +17,7 @@
       <a href="#leaderboard" class="tab-link" data-tab="leaderboard">Leaderboard</a>
       <a href="#awards" class="tab-link" data-tab="awards">Awards</a>
       <a href="#admin" class="tab-link" data-tab="admin">Admin</a>
+      <a href="#account" class="tab-link" data-tab="account">Account</a>
     </nav>
   </header>
 
@@ -155,13 +156,45 @@
           <button id="btn-export-csv">Export Sessions CSV</button>
         </div>
         <div class="card">
-          <h3>Seed Data</h3>
+          <h3>Seed Data (local demo only)</h3>
           <button id="btn-load-sample">Load Sample Dataset</button>
           <button id="btn-clear">Clear All Data</button>
         </div>
         <div class="card">
           <h3>Status</h3>
           <pre id="status"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Account Page -->
+    <section id="page-account" class="page">
+      <h2>Account</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Sign in</h3>
+          <p>Use your email to receive a magic link.</p>
+          <div class="grid">
+            <label>Email
+              <input type="email" id="auth-email" placeholder="you@example.com" />
+            </label>
+          </div>
+          <div class="actions">
+            <button id="btn-magic-link">Send Magic Link</button>
+            <button id="btn-signout" class="warn">Sign out</button>
+          </div>
+          <div class="hint" id="account-status"></div>
+        </div>
+        <div class="card">
+          <h3>Profile</h3>
+          <div class="grid">
+            <label>Display name
+              <input type="text" id="display-name" placeholder="Your public name" />
+            </label>
+          </div>
+          <div class="actions">
+            <button id="btn-save-name">Save Name</button>
+          </div>
         </div>
       </div>
     </section>
