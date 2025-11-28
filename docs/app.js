@@ -23,6 +23,34 @@ async function factoryResetThisDevice() {
   } catch (e) {
     alert('Factory reset failed: ' + e.message);
   }
+// Nuclear wipe: requires a privileged backend. Here, we call a Supabase Edge Function.
+async function nuclearWipeAll(){
+  if (!confirm('This will DELETE ALL users and ALL data. Type OK on the next prompt to continue.')) return;
+  const confirmText = prompt('Type OK to confirm nuclear wipe (ALL users + data):');
+  if ((confirmText||'').toUpperCase() !== 'OK') { toast('Cancelled', 'warn'); return; }
+  try {
+    if (!sb) throw new Error('Supabase client not ready');
+    // You must deploy an Edge Function named "nuclear_wipe" that performs the admin deletes.
+    // It should be secured (e.g., require a secret header) and not callable by regular clients.
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/nuclear_wipe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Optionally include an admin token header if your function requires it
+        // 'x-admin-secret': '<YOUR_EDGE_FUNCTION_SECRET>'
+      },
+      body: JSON.stringify({ confirm: 'OK' })
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || `HTTP ${resp.status}`);
+    }
+    toast('Nuclear wipe triggered', 'success');
+  } catch (e) {
+    toast('Nuclear wipe failed: ' + e.message, 'error');
+  }
+}
+
 }
 
 // Simple client-side Surftober demo using localStorage as the DB
@@ -781,6 +809,8 @@ window.addEventListener('load', () => {
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
   const btnFactory = document.getElementById('btn-factory-reset');
   if (btnFactory) btnFactory.addEventListener('click', factoryResetThisDevice);
+  const btnNuclear = document.getElementById('btn-nuclear-wipe');
+  if (btnNuclear) btnNuclear.addEventListener('click', nuclearWipeAll);
   document.getElementById('btn-load-sample').addEventListener('click', () => {
     seedSample();
     populateDataLists();
