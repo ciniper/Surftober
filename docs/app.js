@@ -18,6 +18,7 @@ const TEAM = 'surftober-2025';
 
 let sb = null; // supabase client
 let currentUser = null;
+let profileName = null;
 
 async function initSupabase(){
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -28,6 +29,8 @@ async function initSupabase(){
   } = await sb.auth.getUser();
   currentUser = user || null;
   reflectAuthUI();
+  await fetchProfile();
+  enforceProfileNameOnUI();
 
   // initial sync
   syncFromCloud();
@@ -57,6 +60,58 @@ function reflectAuthUI(){
     status.textContent = `Signed in as ${currentUser.email}`;
   } else {
     status.textContent = 'Not signed in';
+function toast(msg, type='success'){
+  const box = document.getElementById('toast-container');
+  if (!box) { console.log(`[${type}]`, msg); return; }
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type||'');
+  el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
+  el.querySelector('.close').onclick = ()=> el.remove();
+  box.appendChild(el);
+  setTimeout(()=> el.remove(), 4000);
+}
+
+async function fetchProfile(){
+  if (!currentUser) { profileName = null; return; }
+  const { data, error } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
+  if (error) { console.warn('profile fetch error', error); return; }
+  profileName = (data && data.display_name) ? data.display_name : null;
+  // Reflect Account UI
+  const dn = document.getElementById('display-name');
+  if (dn && profileName) dn.value = profileName;
+  enforceProfileNameOnUI();
+}
+
+function enforceProfileNameOnUI(){
+  // Log form user field
+  const userEl = document.getElementById('log-user');
+  if (userEl) {
+    if (currentUser && profileName) {
+      userEl.value = profileName;
+      userEl.readOnly = true;
+      userEl.title = 'Name comes from your profile. Edit in Account tab.';
+    } else if (currentUser && !profileName) {
+      userEl.value = '';
+      userEl.readOnly = true;
+      userEl.placeholder = 'Set your name in Account tab';
+    } else {
+      userEl.readOnly = false;
+    }
+  }
+  // My Stats filter
+  const meUser = document.getElementById('me-user');
+  if (meUser) {
+    if (currentUser && profileName) {
+      meUser.value = profileName;
+      meUser.readOnly = true;
+      meUser.title = 'Showing only your sessions.';
+    } else {
+      meUser.readOnly = false;
+      meUser.title = '';
+    }
+  }
+}
+
   }
 }
 
