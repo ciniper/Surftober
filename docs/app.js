@@ -141,6 +141,7 @@ async function fetchCloudSessions(){
     .limit(5000);
   if (error) throw error;
   return (data || []).map((s) => ({
+    _id: s.id,
     user: s.user_name,
     date: s.date,
     type: s.type,
@@ -418,6 +419,43 @@ function initForm() {
     document.getElementById('log-type').value = last.type;
     document.getElementById('log-location').value = last.location;
     document.getElementById('log-board').value = last.board;
+let editingId = null; // UUID of session being edited (cloud), or index fallback
+
+function startEditSession(session){
+  // Prefill form with session values, lock user field (already enforced), toggle submit button label
+  document.getElementById('log-date').value = session.date;
+  document.getElementById('log-type').value = session.type;
+  const [h,m] = session.duration.split(':').map(x=>Number(x));
+  document.getElementById('log-duration-h').value = h;
+  document.getElementById('log-duration-m').value = m;
+  document.getElementById('log-location').value = session.location||'';
+  document.getElementById('log-board').value = session.board||'';
+  document.getElementById('log-notes').value = session.notes||'';
+  document.getElementById('log-no-wetsuit').checked = !!session.no_wetsuit;
+  document.getElementById('log-costume').checked = !!session.costume;
+  document.getElementById('btn-submit').textContent = 'Update Entry';
+  document.getElementById('btn-cancel-edit').style.display = '';
+  editingId = session._id || null; // we'll attach _id when rendering from cloud
+}
+
+async function updateCloudSession(id, row){
+  // Update allowed only for owner; server RLS will enforce user_id = auth.uid()
+  const payload = {
+    date: row.date,
+    type: row.type,
+    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
+    location: row.location || null,
+    surf_craft: row.board || null,
+    notes: row.notes || null,
+    no_wetsuit: !!row.no_wetsuit,
+    costume: !!row.costume,
+    cleanup_items: Number(row.cleanup_items||0),
+    user_name: profileName || row.user, // keep name in sync client-side too
+  };
+  const { error } = await sb.from('sessions').update(payload).eq('id', id);
+  if (error) throw error;
+}
+
   });
 }
 
