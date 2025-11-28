@@ -88,17 +88,6 @@ async function fetchCloudSessions(){
   return (data || []).map((s) => ({
     user: s.user_name,
     date: s.date,
-function toast(msg, type='success'){
-  const box = document.getElementById('toast-container');
-  if (!box) return alert(msg);
-  const el = document.createElement('div');
-  el.className = 'toast ' + (type||'');
-  el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
-  el.querySelector('.close').onclick = ()=> el.remove();
-  box.appendChild(el);
-  setTimeout(()=> el.remove(), 5000);
-}
-
     type: s.type,
     duration: SurftoberAwards.minutesToHHMM(s.duration_minutes),
     location: s.location,
