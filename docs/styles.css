@@ -63,3 +63,6 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 
 /* Live status */
 .live { color: #5be37a; font-weight: 600; }
+
+/* Edit icons and links */
+.table .edit-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
