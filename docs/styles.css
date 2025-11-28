@@ -1,15 +1,17 @@
 * { box-sizing: border-box; }
 :root {
-  --bg: #0b132b;
-  --panel: #1c2541;
-  --muted: #3a506b;
-  --accent: #5bc0be;
-  --text: #f0f4f8;
+  /* October orange theme */
+  --bg: #0d0a06;          /* near-black with warm tint */
+  --panel: #1a140c;       /* dark brown panel */
+  --muted: #3b2a1a;       /* muted brown */
+  --accent: #ff8c1a;      /* pumpkin orange */
+  --accent-strong: #ff6a00; /* deeper orange */
+  --text: #fff3e6;        /* warm off-white */
   --ok: #5be37a;
-  --warn: #ffd166;
+  --warn: #ffb347;        /* orange warn */
 }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-.app-header, .app-footer { position: sticky; left: 0; right: 0; background: var(--panel); padding: 8px 12px; display: flex; align-items: center; gap: 12px; z-index: 10; }
+.app-header, .app-footer { position: sticky; left: 0; right: 0; background: var(--panel); padding: 10px 14px; display: flex; align-items: center; gap: 12px; z-index: 10; border-bottom: 1px solid #3b2a1a; }
 .app-header { top: 0; justify-content: space-between; }
 .app-footer { bottom: 0; justify-content: space-between; font-size: 12px; opacity: 0.8; }
 .brand { font-weight: 700; letter-spacing: 0.5px; }
@@ -22,7 +24,15 @@ main { padding: 12px; display: block; }
 .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 8px; }
 label { display: grid; gap: 6px; font-size: 13px; }
 .hidden { display: none !important; }
-input, select, textarea, button { border-radius: 8px; border: 1px solid #2f3e5c; background: #101829; color: var(--text); padding: 8px 10px; }
+input, select, textarea, button { border-radius: 12px; border: 1px solid #4a3725; background: #120e09; color: var(--text); padding: 10px 12px; transition: transform .04s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease; }
+button { background: var(--accent); color: #1a0f05; font-weight: 600; border-color: var(--accent-strong); box-shadow: 0 2px 0 var(--accent-strong); cursor: pointer; }
+button:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--accent-strong); }
+button:hover { filter: brightness(1.05); }
+.tabs a { transition: background-color .12s ease, transform .04s ease; }
+.tabs a:active { transform: translateY(1px); }
+.card, .cards .card { transition: transform .06s ease; }
+.card:active { transform: translateY(1px); }
+
 textarea { resize: vertical; }
 .checkbox { align-items: center; grid-template-columns: 20px 1fr; }
 .actions { display: flex; gap: 8px; }
