@@ -167,7 +167,9 @@ async function signOut(){
 
 async function saveDisplayName(){
   if (!currentUser) throw new Error('Sign in first');
-  const { error } = await sb.from('profiles').upsert({ id: currentUser.id, display_name: document.getElementById('display-name').value || null });
+  const val = (document.getElementById('display-name').value || '').trim();
+  if (!val) throw new Error('Display name cannot be empty');
+  const { error } = await sb.from('profiles').upsert({ id: currentUser.id, display_name: val });
   if (error) throw error;
 }
 
