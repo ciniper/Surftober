@@ -16,7 +16,7 @@
       <a href="#me" class="tab-link" data-tab="me">My Stats</a>
       <a href="#leaderboard" class="tab-link" data-tab="leaderboard">Leaderboard</a>
       <a href="#awards" class="tab-link" data-tab="awards">Awards</a>
-      <a href="#admin" class="tab-link" data-tab="admin">Admin</a>
+      <a href="#admin" id="tab-admin-link" class="tab-link" data-tab="admin">Admin</a>
       <a href="#account" class="tab-link" data-tab="account">Account</a>
     </nav>
   </header>
@@ -165,6 +165,15 @@
           <h3>Factory Reset</h3>
           <p>Signs out, clears local data and caches, and reloads.</p>
           <button id="btn-factory-reset" class="warn">Factory Reset (This device)</button>
+        <div class="card" id="admin-users-card">
+          <h3>Registered Users</h3>
+          <p>Admins only — list of emails and display names.</p>
+          <div class="actions">
+            <button id="btn-list-users">List Users</button>
+          </div>
+          <div id="admin-users" class="table"></div>
+        </div>
+
         </div>
         <div class="card">
           <h3>Nuclear Wipe</h3>

@@ -86,6 +86,13 @@ function toast(msg, type='success'){
   el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
   el.querySelector('.close').onclick = ()=> el.remove();
   box.appendChild(el);
+  // Fetch NUKE_ADMINS list from the function (safe to expose list of emails you already configured)
+  let adminEmails = [];
+  try {
+    const { data, error } = await sb.functions.invoke('nuke_admins');
+    if (!error && Array.isArray(data?.admins)) adminEmails = data.admins.map((s)=>String(s).toLowerCase());
+  } catch {}
+
   setTimeout(()=> el.remove(), 4000);
 }
 
@@ -100,6 +107,7 @@ async function initSupabase(){
   reflectAuthUI();
   await fetchProfile();
   enforceProfileNameOnUI();
+  reflectAdminVisibility(adminEmails);
 
   // initial sync
   syncFromCloud();
@@ -118,6 +126,15 @@ async function initSupabase(){
   });
 
   // start realtime listener for sessions
+// Admin UI gating based on NUKE_ADMINS allowlist
+function reflectAdminVisibility(adminEmailList = []){
+  const tab = document.getElementById('tab-admin-link');
+  const page = document.getElementById('page-admin');
+  const isAdmin = !!currentUser && currentUser.email && adminEmailList.includes(currentUser.email.toLowerCase());
+  if (tab) tab.style.display = isAdmin ? '' : 'none';
+  if (page) page.style.display = isAdmin ? '' : 'none';
+}
+
   try {
     sb
       .channel('public:sessions')
@@ -290,6 +307,31 @@ function attachAccountHandlers(){
       document.getElementById('account-status').textContent = 'Sign out error: ' + e.message;
     }
   });
+  // Admin: List users (emails + display names)
+  const btnListUsers = document.getElementById('btn-list-users');
+  if (btnListUsers) btnListUsers.addEventListener('click', async () => {
+    try {
+      // Fetch emails via admin-only function (returns limited fields)
+      const { data: usersData, error } = await sb.functions.invoke('list_users');
+      if (error) throw new Error(error.message || JSON.stringify(error));
+      const users = Array.isArray(usersData?.users) ? usersData.users : [];
+
+      // Fetch profiles (display names)
+      const { data: profs, error: pErr } = await sb.from('profiles').select('id, display_name');
+      if (pErr) throw pErr;
+      const nameById = Object.fromEntries((profs||[]).map(p=>[p.id, p.display_name||'']));
+
+      const rows = users.map(u => ({ email: u.email || '', name: nameById[u.id] || '' }));
+      const html = [`<table><thead><tr><th>Email</th><th>Display Name</th></tr></thead><tbody>`]
+        .concat(rows.map(r=>`<tr><td>${r.email}</td><td>${r.name}</td></tr>`))
+        .concat(['</tbody></table>'])
+        .join('');
+      document.getElementById('admin-users').innerHTML = html || '<div class="hint">No users</div>';
+    } catch (e) {
+      toast('List users failed: ' + e.message, 'error');
+    }
+  });
+
   if (btnSaveName) btnSaveName.addEventListener('click', async () => {
     try {
       await saveDisplayName();
