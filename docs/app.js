@@ -23,6 +23,8 @@ async function factoryResetThisDevice() {
   } catch (e) {
     alert('Factory reset failed: ' + e.message);
   }
+}
+
 // Nuclear wipe: requires a privileged backend. Here, we call a Supabase Edge Function.
 async function nuclearWipeAll(){
   if (!confirm('This will DELETE ALL users and ALL data. Type OK on the next prompt to continue.')) return;
@@ -249,7 +251,6 @@ async function insertCloud(row){
     user_id: currentUser.id,
     user_name: row.user,
     date: row.date,
-
     type: row.type,
     duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
     location: row.location || null,
@@ -306,6 +307,27 @@ function attachAccountHandlers(){
     } catch (e) {
       toast('Save name failed: ' + e.message, 'error');
       document.getElementById('account-status').textContent = 'Error: ' + e.message;
+    }
+  });
+  if (btnDeleteCloud) btnDeleteCloud.addEventListener('click', async () => {
+    if (!currentUser) { toast('Sign in first', 'warn'); return; }
+    if (!confirm('Delete ALL your cloud data (sessions + profile)? This cannot be undone.')) return;
+    try {
+      let { error: err1 } = await sb.from('sessions').delete().eq('user_id', currentUser.id);
+      if (err1) throw err1;
+      let { error: err2 } = await sb.from('profiles').delete().eq('id', currentUser.id);
+      if (err2) throw err2;
+      toast('Deleted your cloud data', 'success');
+      await signOut();
+      // Clear local mirror and UI
+      saveSessions([]);
+      populateDataLists();
+      renderRecent();
+      renderMyStats();
+      renderLeaderboard();
+      renderAwards();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
     }
   });
 }
@@ -523,7 +545,14 @@ function initForm() {
     document.getElementById('log-type').value = last.type;
     document.getElementById('log-location').value = last.location;
     document.getElementById('log-board').value = last.board;
-let editingId = null; // UUID of session being edited (cloud), or index fallback
+    document.getElementById('log-notes').value = last.notes || '';
+    document.getElementById('log-no-wetsuit').checked = !!last.no_wetsuit;
+    document.getElementById('log-costume').checked = !!last.costume;
+  });
+}
+
+// Editing state and helpers (top-level)
+let editingId = null; // UUID of session being edited (cloud), null when not editing
 
 function startEditSession(session){
   // Prefill form with session values, lock user field (already enforced), toggle submit button label
@@ -554,13 +583,10 @@ async function updateCloudSession(id, row){
     no_wetsuit: !!row.no_wetsuit,
     costume: !!row.costume,
     cleanup_items: Number(row.cleanup_items||0),
-    user_name: profileName || row.user, // keep name in sync client-side too
+    user_name: profileName || row.user,
   };
   const { error } = await sb.from('sessions').update(payload).eq('id', id);
   if (error) throw error;
-}
-
-  });
 }
 
 function renderRecent() {
