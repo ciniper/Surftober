@@ -32,26 +32,20 @@ async function nuclearWipeAll(){
   if ((confirmText||'').toUpperCase() !== 'OK') { toast('Cancelled', 'warn'); return; }
   try {
     if (!sb) throw new Error('Supabase client not ready');
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session?.access_token) {
-      toast('Sign in as an admin to run the nuclear wipe', 'warn');
-      location.hash = '#account';
-      return;
-    }
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/nuclear_wipe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        // If you chose secret-based gating, also include:
-        // 'x-admin-secret': '<YOUR_EDGE_FUNCTION_SECRET>'
-      },
-      body: JSON.stringify({ confirm: 'OK' })
+    // Invoke via Supabase client so auth/apikey headers are handled for you
+    const { data, error } = await sb.functions.invoke('nuclear_wipe', {
+      body: { confirm: 'OK' }
     });
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new Error(text || `HTTP ${resp.status}`);
+  // Always try to use latest SW on page load
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('./');
+    if (reg) {
+      await reg.update().catch(()=>{});
+      if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
     }
+  } catch {}
+
+    if (error) throw new Error(error.message || JSON.stringify(error));
     toast('Nuclear wipe triggered', 'success');
   } catch (e) {
     toast('Nuclear wipe failed: ' + e.message, 'error');
@@ -803,7 +797,7 @@ function openPrintSlides() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js', { scope: './' })
+  navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' })
     .then((reg) => {
       document.getElementById('sw-status').textContent = 'PWA ready';
     })
