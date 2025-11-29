@@ -30,13 +30,18 @@ async function nuclearWipeAll(){
   if ((confirmText||'').toUpperCase() !== 'OK') { toast('Cancelled', 'warn'); return; }
   try {
     if (!sb) throw new Error('Supabase client not ready');
-    // You must deploy an Edge Function named "nuclear_wipe" that performs the admin deletes.
-    // It should be secured (e.g., require a secret header) and not callable by regular clients.
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) {
+      toast('Sign in as an admin to run the nuclear wipe', 'warn');
+      location.hash = '#account';
+      return;
+    }
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/nuclear_wipe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Optionally include an admin token header if your function requires it
+        'Authorization': `Bearer ${session.access_token}`,
+        // If you chose secret-based gating, also include:
         // 'x-admin-secret': '<YOUR_EDGE_FUNCTION_SECRET>'
       },
       body: JSON.stringify({ confirm: 'OK' })
