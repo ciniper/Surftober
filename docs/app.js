@@ -113,9 +113,14 @@ async function initSupabase(){
   syncFromCloud();
 
   // auth state changes
-  sb.auth.onAuthStateChange((_event, session) => {
+  sb.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
     reflectAuthUI();
+    try {
+      const { data, error } = await sb.functions.invoke('nuke_admins');
+      const admins = (!error && Array.isArray(data?.admins)) ? data.admins.map((s)=>String(s).toLowerCase()) : [];
+      reflectAdminVisibility(admins);
+    } catch { reflectAdminVisibility([]); }
     if (currentUser) {
       fetchProfile();
       syncFromCloud();
