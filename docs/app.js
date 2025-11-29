@@ -56,7 +56,9 @@ async function nuclearWipeAll(){
   }
 }
 
-}
+// Ensure global access for event handlers
+// @ts-ignore
+window.nuclearWipeAll = nuclearWipeAll;
 
 // Simple client-side Surftober demo using localStorage as the DB
 // Supabase integration (Auth + DB)
