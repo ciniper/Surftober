@@ -793,7 +793,7 @@ function renderMyStats() {
       .filter(Boolean)
       .join(' ');
     const canEdit = !!currentUser && !!profileName && s.user === profileName && s._id;
-    const actions = canEdit ? `<a class="edit-link" data-id="${s._id}">Edit</a> | <a class="remove-link" data-id="${s._id}" style="color:#c00">Remove</a>` : '';
+    const actions = canEdit ? `<a class="edit-link" data-id="${s._id}" style="cursor:pointer">Edit</a> | <a class="remove-link" data-id="${s._id}" style="color:#c00;cursor:pointer">Remove</a>` : '';
     tbl.push(
       `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
