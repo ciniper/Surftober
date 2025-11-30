@@ -6,7 +6,7 @@ self.addEventListener('message', (event) => {
 });
 
 const ASSETS = [
-  './', './index.html', './styles.css', './app.js', './awards.js', './manifest.webmanifest'
+  './', './index.html', './styles.css?v=5', './app.js?v=6', './awards.js?v=5', './manifest.webmanifest?v=5'
 ];
 
 self.addEventListener('install', (e) => {
