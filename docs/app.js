@@ -662,18 +662,7 @@ function initForm() {
     document.getElementById('btn-cancel-edit').style.display = 'none';
     f.reset();
     document.getElementById('log-date').value = defaultDate;
-  });
-  document.getElementById('btn-repeat-last').addEventListener('click', () => {
-    const all = loadSessions();
-    const last = all[all.length - 1];
-    if (!last) return;
-    document.getElementById('log-user').value = last.user;
-    document.getElementById('log-type').value = last.type;
-    document.getElementById('log-location').value = last.location;
-    document.getElementById('log-board').value = last.board;
-    document.getElementById('log-notes').value = last.notes || '';
-    document.getElementById('log-no-wetsuit').checked = !!last.no_wetsuit;
-    document.getElementById('log-costume').checked = !!last.costume;
+    enforceProfileNameOnUI();
   });
 }
 
