@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="./styles.css?v=5" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
     .landing-container {
       min-height: 100vh;
       display: flex;
@@ -15,25 +20,27 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      background: linear-gradient(135deg, #0b3d91 0%, #1e5a8e 100%);
+      background: linear-gradient(135deg, #0a1628 0%, #152238 100%);
     }
     .landing-card {
-      background: white;
+      background: #152238;
       border-radius: 12px;
       padding: 3rem;
       max-width: 500px;
       width: 100%;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       text-align: center;
+      border: 2px solid #ff6b35;
     }
     .landing-title {
       font-size: 3rem;
       margin: 0 0 0.5rem 0;
-      color: #0b3d91;
+      color: #ff6b35;
+      text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
     }
     .landing-subtitle {
       font-size: 1.5rem;
-      color: #666;
+      color: #7a9bb5;
       margin: 0 0 2rem 0;
     }
     .landing-buttons {
@@ -47,26 +54,38 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      font-weight: 600;
-      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 700;
+      transition: all 0.3s ease;
       text-decoration: none;
       display: block;
     }
     .landing-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
     }
     .btn-register {
-      background: #0b3d91;
+      background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%);
       color: white;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
     }
     .btn-signin {
-      background: #1e5a8e;
-      color: white;
+      background: #1e3a52;
+      color: #e8f4f8;
+      border: 2px solid #2d4a62;
+    }
+    .btn-signin:hover {
+      background: #243b54;
+      border-color: #ff6b35;
     }
     .btn-view {
-      background: #f0f0f0;
-      color: #333;
+      background: transparent;
+      color: #7a9bb5;
+      border: 2px solid #2d4a62;
+    }
+    .btn-view:hover {
+      background: #1e3a52;
+      color: #e8f4f8;
+      border-color: #4ecdc4;
     }
   </style>
 </head>
