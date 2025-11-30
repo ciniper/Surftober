@@ -21,7 +21,7 @@ function monthFilter(dateStr, year, month) {
 }
 
 function normalizeSession(raw) {
-  // raw: {user,date,type,duration(HH:MM),location,board,notes,no_wetsuit,costume,cleanup_items}
+  // raw: {user,date,type,duration(HH:MM),location,board,notes,no_wetsuit,costume,cleanup_items,audio_b64}
   const duration_minutes = hhmmToMinutes(raw.duration);
   const no_wetsuit = raw.no_wetsuit === true || raw.no_wetsuit === 1 || `${raw.no_wetsuit}` === '1';
   const costume = raw.costume === true || raw.costume === 1 || `${raw.costume}` === '1';
@@ -35,6 +35,7 @@ function normalizeSession(raw) {
     no_wetsuit,
     costume,
     cleanup_items,
+    audio_b64: raw.audio_b64 || null,
   };
 }
 
