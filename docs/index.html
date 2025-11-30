@@ -259,29 +259,37 @@
       <h2>Account</h2>
       <div class="cards">
         <div class="card">
-          <h3>Sign in</h3>
-          <p>Use your email to receive a magic link.</p>
-          <div class="grid">
-            <label>Email
-              <input type="email" id="auth-email" placeholder="you@example.com" />
-            </label>
-          </div>
-          <div class="actions">
-            <button id="btn-magic-link">Send Magic Link</button>
-            <button id="btn-google">Sign in with Google</button>
-            <button id="btn-signout" class="warn">Sign out</button>
-          </div>
-          <div class="hint" id="account-status"></div>
-        </div>
-        <div class="card">
           <h3>Profile</h3>
+          <div class="hint" id="account-status"></div>
           <div class="grid">
-            <label>Display name
+            <label>Display Name
               <input type="text" id="display-name" placeholder="Your public name" />
             </label>
+            <label>Target Hours Goal
+              <input type="text" id="profile-target-hours" placeholder="e.g., 40 hours" />
+            </label>
+            <label>Charitable Contribution Commitment
+              <input type="text" id="profile-charity" placeholder="e.g., $100" />
+            </label>
+            <label>Sponsor Match
+              <input type="text" id="profile-sponsor" placeholder="e.g., Company XYZ" />
+            </label>
+            <label>Location Based
+              <input type="text" id="profile-location" placeholder="e.g., Outer Sunset" />
+            </label>
+            <label>WhatsApp Phone
+              <input type="text" id="profile-whatsapp" placeholder="e.g., 916-622-6075" />
+            </label>
+            <label>Fun Comment
+              <textarea id="profile-fun-comment" rows="2" placeholder="Your opening comment"></textarea>
+            </label>
+            <label>Additional Comments
+              <textarea id="profile-comments" rows="2" placeholder="Questions or comments"></textarea>
+            </label>
           </div>
           <div class="actions">
-            <button id="btn-save-name">Save Name</button>
+            <button id="btn-save-profile">Save Profile</button>
+            <button id="btn-signout" class="warn">Sign Out</button>
             <button id="btn-delete-cloud" class="warn">Delete My Cloud Data</button>
           </div>
         </div>
