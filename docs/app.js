@@ -178,6 +178,16 @@ async function readAudioAsBase64(file){
     reader.readAsDataURL(file);
   });
 }
+// Utility: convert Blob to base64 (no prefix)
+async function blobToBase64(blob){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 
     } else {
       userEl.readOnly = false;
@@ -388,6 +398,67 @@ function seedSample() {
   const sample = [
     { user: 'Jason', date: '2025-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
     { user: 'Jason', date: '2025-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+// Audio capture state
+let audioBlob = null;
+let mediaRecorder = null;
+let mediaChunks = [];
+
+function attachAudioHandlers(){
+  const btnRec = document.getElementById('btn-audio-record');
+  const btnDel = document.getElementById('btn-audio-delete');
+  const fileEl = document.getElementById('log-audio-file');
+  const audioPrev = document.getElementById('audio-preview');
+  if (!btnRec || !fileEl) return;
+
+  function reflectAudioUI(){
+    if (audioBlob) {
+      const url = URL.createObjectURL(audioBlob);
+      audioPrev.src = url;
+      audioPrev.style.display = '';
+      btnDel.style.display = '';
+    } else {
+      audioPrev.removeAttribute('src');
+      audioPrev.style.display = 'none';
+      btnDel.style.display = 'none';
+    }
+  }
+
+  btnRec.onclick = async () => {
+    try {
+      // If already recorded, overwrite after confirm
+      if (audioBlob && !confirm('Replace existing voice note?')) return;
+      // Ask microphone permission and record ~ up to 60s
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaChunks = [];
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorder.ondataavailable = (e) => { if (e.data?.size) mediaChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(mediaChunks, { type: 'audio/webm' });
+        reflectAudioUI();
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      toast('Recording… tap again to stop', 'success');
+      btnRec.textContent = 'Stop Recording';
+      btnRec.onclick = () => { try { mediaRecorder?.stop(); } catch {} btnRec.textContent = 'Record Voice Note'; btnRec.onclick = arguments.callee; };
+    } catch (e) {
+      toast('Mic error: ' + e.message, 'error');
+    }
+  };
+
+  btnDel.onclick = () => { audioBlob = null; reflectAudioUI(); };
+
+  fileEl.onchange = () => {
+    const f = fileEl.files?.[0] || null;
+    if (f) {
+      audioBlob = f;
+      reflectAudioUI();
+    }
+  };
+
+  reflectAudioUI();
+}
+
     { user: 'Nic', date: '2025-10-09', type: 'surf', duration: '01:30', location: 'OB - Lawton', board: 'Shortboard', notes: 'Speedo sesh', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
     { user: 'Nic', date: '2025-10-20', type: 'surf', duration: '01:54', location: 'OB - Lawton', board: 'Shortboard', notes: 'All OB all month', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
     { user: 'Nahla', date: '2025-10-22', type: 'surf', duration: '02:15', location: 'OB - Noriega', board: 'Mid', notes: 'Streak day 20', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
@@ -531,7 +602,7 @@ function initForm() {
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
-      audio_b64: await readAudioAsBase64(document.getElementById('log-audio').files?.[0]),
+      audio_b64: audioBlob ? await blobToBase64(audioBlob) : null,
       no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
       costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
@@ -859,6 +930,7 @@ window.addEventListener('load', () => {
   renderMyStats();
   renderLeaderboard();
   renderAwards();
+  attachAudioHandlers();
   registerSW();
   // Handlers
   document.getElementById('lb-year').addEventListener('input', renderLeaderboard);

@@ -143,8 +143,13 @@
         </label>
         <label>
           Voice note
-          <input type="file" id="log-audio" accept="audio/*" capture>
-          <small class="hint">Optional. Record a short voice memo about the session.</small>
+          <div class="voice-note">
+            <button type="button" id="btn-audio-record">Record Voice Note</button>
+            <button type="button" id="btn-audio-delete" class="warn" style="display:none">Remove Voice Note</button>
+            <input type="file" id="log-audio-file" accept="audio/*" style="display:block;margin-top:6px" />
+            <small class="hint">Optional. Record a short voice memo, or choose an audio file. On mobile, the Record button uses the mic.</small>
+            <audio id="audio-preview" controls style="display:none;margin-top:6px;width:100%"></audio>
+          </div>
         </label>
 
         <div class="actions">
