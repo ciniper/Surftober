@@ -53,7 +53,7 @@ function rollupByUser(sessions, { year, month } = {}) {
     const costume_bonus = arr.some(s=>s.costume) ? 60 : 0;
     const total_minutes = arr.reduce((a, b) => a + b.base_minutes, 0) + costume_bonus;
     const total_hours = total_minutes / 60;
-    const medal = total_hours >= 40 ? 'GOLD' : total_hours >= 30 ? 'SILVER' : total_hours >= 25 ? 'BRONZE' : total_hours >= 10 ? 'PARTICIPANT' : 'OBSERVER';
+    const medal = total_hours >= 50 ? 'PLATINUM' : total_hours >= 40 ? 'GOLD' : total_hours >= 30 ? 'SILVER' : total_hours >= 25 ? 'BRONZE' : total_hours >= 10 ? 'PARTICIPANT' : 'OBSERVER';
     const boards = new Set(arr.map(x => (x.board || '').trim()).filter(Boolean)).size;
     const locations = new Set(arr.map(x => (x.location || '').trim()).filter(Boolean)).size;
     const durations = arr.map(x => x.duration_minutes);
