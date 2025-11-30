@@ -68,7 +68,9 @@ const TEAM = 'surftober-2025';
 let sb = null; // supabase client
 let currentUser = null;
 let profileName = null;
+let profileData = null; // full profile data
 let adminEmails = []; // allowlist fetched from backend
+let isViewMode = false; // read-only mode
 
 function toast(msg, type='success'){
   const box = document.getElementById('toast-container');
@@ -146,13 +148,52 @@ function reflectAuthUI(){
 }
 
 async function fetchProfile(){
-  if (!currentUser) { profileName = null; return; }
-  const { data, error } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
+  if (!currentUser) { 
+    profileName = null; 
+    profileData = null;
+    return; 
+  }
+  const { data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) { console.warn('profile fetch error', error); return; }
+  profileData = data;
   profileName = (data && data.display_name) ? data.display_name : null;
-  // Reflect Account UI
-  const dn = document.getElementById('display-name');
-  if (dn && profileName) dn.value = profileName;
+  
+  // Populate all profile fields in Account tab
+  const fields = {
+    'display-name': data?.display_name || '',
+    'profile-target-hours': data?.target_hours || '',
+    'profile-charity': data?.charity_commitment || '',
+    'profile-sponsor': data?.sponsor_match || '',
+    'profile-location': data?.location_based || '',
+    'profile-whatsapp': data?.whatsapp_phone || '',
+    'profile-fun-comment': data?.fun_comment || '',
+    'profile-comments': data?.additional_comments || ''
+  };
+  
+  for (const [id, value] of Object.entries(fields)) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+  
+  enforceProfileNameOnUI();
+}
+
+async function saveProfile(){
+  if (!currentUser) throw new Error('Sign in first');
+  const profileUpdate = {
+    id: currentUser.id,
+    display_name: document.getElementById('display-name').value.trim(),
+    target_hours: document.getElementById('profile-target-hours').value.trim(),
+    charity_commitment: document.getElementById('profile-charity').value.trim(),
+    sponsor_match: document.getElementById('profile-sponsor').value.trim(),
+    location_based: document.getElementById('profile-location').value.trim(),
+    whatsapp_phone: document.getElementById('profile-whatsapp').value.trim(),
+    fun_comment: document.getElementById('profile-fun-comment').value.trim(),
+    additional_comments: document.getElementById('profile-comments').value.trim()
+  };
+  const { error } = await sb.from('profiles').upsert(profileUpdate);
+  if (error) throw error;
+  await fetchProfile();
   enforceProfileNameOnUI();
 }
 
@@ -292,9 +333,22 @@ function attachAccountHandlers(){
   if (btnOut) btnOut.addEventListener('click', async () => {
     try {
       await signOut();
-      document.getElementById('account-status').textContent = 'Signed out';
+      // Redirect to landing page
+      window.location.href = './landing.html';
     } catch (e) {
       document.getElementById('account-status').textContent = 'Sign out error: ' + e.message;
+    }
+  });
+  
+  // New: Save full profile button
+  const btnSaveProfile = document.getElementById('btn-save-profile');
+  if (btnSaveProfile) btnSaveProfile.addEventListener('click', async () => {
+    try {
+      await saveProfile();
+      toast('Profile saved successfully', 'success');
+      renderMyStats();
+    } catch (e) {
+      toast('Save profile failed: ' + e.message, 'error');
     }
   });
   // Admin: List users (emails + display names)

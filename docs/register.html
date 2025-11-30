@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register - Surftober 2025</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%84%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css?v=5" />
+  <meta name="theme-color" content="#0b3d91" />
+  <style>
+    .register-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .welcome-message {
+      background: #f8f9fa;
+      border-left: 4px solid #0b3d91;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    .welcome-message h1 {
+      margin-top: 0;
+      color: #0b3d91;
+    }
+    .auth-method {
+      display: flex;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .auth-method button {
+      flex: 1;
+      padding: 1rem;
+      font-size: 1rem;
+    }
+    .form-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    .photo-upload {
+      border: 2px dashed #ccc;
+      padding: 2rem;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+    .photo-upload:hover {
+      border-color: #0b3d91;
+    }
+    .photo-preview {
+      max-width: 200px;
+      max-height: 200px;
+      margin: 1rem auto;
+      display: none;
+    }
+    .photo-preview img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <div class="welcome-message">
+      <h1>Welcome to 4th annual Surftober 2025!</h1>
+      <p>
+        Surftober was started by a few friends in the outer sunset of San Francisco to have fun and jump in to the start of the surfing season. The goal of the event is simple, to surf as many hours as possible in the month of October. Any active Open Water (Ocean, Lake) sport in the surf will count toward your total hours (surfing, windsurfing, swimming, etc..). Try to only log time in the water! Feel free to invite others by sending them this sign up form, would like to try mainly keep this local though (Bay Area).
+      </p>
+      <p>
+        This year we will introduce a few methods of getting bonus hours including:
+      </p>
+      <ul>
+        <li><strong>[Unlimited 2x multiplier]</strong> Surfing without a wetsuit (Cold Water ~ <= Bay Area Water)</li>
+        <li><strong>[One time +1 Hour Bonus]</strong> Beach trash cleanup</li>
+        <li><strong>[One time +1 Hour Bonus]</strong> Surfing in a costume near Halloween (There will also be a group event)</li>
+      </ul>
+    </div>
+
+    <div class="form-section">
+      <h2>Choose Sign In Method</h2>
+      <div class="auth-method">
+        <button id="btn-google-auth" class="btn-register">Sign in with Google</button>
+        <button id="btn-magic-auth" class="btn-signin">Magic Link (Email)</button>
+      </div>
+      
+      <div id="magic-email-section" class="hidden">
+        <label>
+          Email Address
+          <input type="email" id="auth-email" placeholder="you@example.com" required />
+        </label>
+        <button id="btn-send-magic">Send Magic Link</button>
+        <p class="hint" id="magic-status"></p>
+      </div>
+    </div>
+
+    <form id="registration-form" class="form-section hidden">
+      <h2>Registration Details</h2>
+      
+      <label>
+        First and Last Name (Display Name) *
+        <input type="text" id="display-name" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        What is your target hours goal? *
+        <small>Last year about 25% got gold, 25% silver, 25% bronze, 25% participant.</small>
+        <input type="text" id="target-hours" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        What is your charitable contribution commitment? *
+        <small>Consider your target surf hours.</small>
+        <input type="text" id="charity-commitment" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        Do you have a sponsor to commit to matching your contribution? *
+        <small>(Being sponsored is cool). Can always update later in the google sheet.</small>
+        <input type="text" id="sponsor-match" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        What Location are you based? *
+        <small>(outer sunset, pacifica, etc..)</small>
+        <input type="text" id="location-based" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        Would you like to be on the WhatsApp Group chat? *
+        <small>If yes provide phone number here.</small>
+        <input type="text" id="whatsapp-phone" placeholder="test" value="test" required />
+      </label>
+
+      <label>
+        Write an opening fun comment if you'd like
+        <textarea id="fun-comment" rows="3" placeholder="test">test</textarea>
+      </label>
+
+      <label>
+        Please upload a photo of yourself
+        <small>(for award ceremony fun purposes)</small>
+        <div class="photo-upload" id="photo-upload-area">
+          <p>Click to upload or drag and drop</p>
+          <input type="file" id="photo-upload" accept="image/*" style="display:none" />
+        </div>
+        <div class="photo-preview" id="photo-preview">
+          <img id="photo-preview-img" src="" alt="Preview" />
+        </div>
+      </label>
+
+      <label>
+        Additional Comments/Questions
+        <small>Feel free to write here, message me at 916-622-6075 (Chase Cooper), or message the WhatsApp Group. If you have any leads on a "company donation match" let me know!</small>
+        <textarea id="additional-comments" rows="3" placeholder="test">test</textarea>
+      </label>
+
+      <div class="actions">
+        <button type="submit" id="btn-submit-registration">Submit Registration</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <script>
+    // Load Supabase
+    const SUPABASE_URL = 'https://fexixuteqhgcmccuivcv.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleGl4dXRlcWhnY21jY3VpdmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNDYwOTksImV4cCI6MjA3OTkyMjA5OX0.M6AlLo7ICTFJ20wIFC2QfZAXhwN5uWEeKRtcnBkTAOU';
+
+    let sb = null;
+    let currentUser = null;
+    let photoBase64 = null;
+
+    function toast(msg, type='success'){
+      const box = document.getElementById('toast-container');
+      if (!box) { console.log(`[${type}]`, msg); return; }
+      const el = document.createElement('div');
+      el.className = 'toast ' + (type||'');
+      el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
+      el.querySelector('.close').onclick = ()=> el.remove();
+      box.appendChild(el);
+      setTimeout(()=> el.remove(), 4000);
+    }
+
+    (function ensureSupabase(){
+      if (!window.supabase) {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        s.onload = initSupabase;
+        document.head.appendChild(s);
+      } else {
+        initSupabase();
+      }
+    })();
+
+    async function initSupabase(){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+      // Check if user is already authenticated (from redirect)
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        currentUser = user;
+        showRegistrationForm();
+      }
+
+      // Listen for auth state changes
+      sb.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          currentUser = session.user;
+          showRegistrationForm();
+        }
+      });
+    }
+
+    function showRegistrationForm() {
+      document.getElementById('registration-form').classList.remove('hidden');
+      toast('Authentication successful! Please complete your registration.', 'success');
+    }
+
+    // Auth method buttons
+    document.getElementById('btn-google-auth').addEventListener('click', async () => {
+      try {
+        await sb.auth.signInWithOAuth({ 
+          provider: 'google', 
+          options: { redirectTo: window.location.href }
+        });
+      } catch (e) {
+        toast('Google auth error: ' + e.message, 'error');
+      }
+    });
+
+    document.getElementById('btn-magic-auth').addEventListener('click', () => {
+      document.getElementById('magic-email-section').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-send-magic').addEventListener('click', async () => {
+      const email = document.getElementById('auth-email').value.trim();
+      if (!email) {
+        toast('Please enter an email address', 'error');
+        return;
+      }
+      try {
+        const { error } = await sb.auth.signInWithOtp({ 
+          email, 
+          options: { emailRedirectTo: window.location.href }
+        });
+        if (error) throw error;
+        document.getElementById('magic-status').textContent = 'Magic link sent! Check your email and click the link to continue.';
+        toast('Magic link sent to ' + email, 'success');
+      } catch (e) {
+        toast('Error sending magic link: ' + e.message, 'error');
+      }
+    });
+
+    // Photo upload
+    document.getElementById('photo-upload-area').addEventListener('click', () => {
+      document.getElementById('photo-upload').click();
+    });
+
+    document.getElementById('photo-upload').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Show preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('photo-preview-img').src = e.target.result;
+        document.getElementById('photo-preview').style.display = 'block';
+        photoBase64 = e.target.result.split(',')[1]; // Store base64 without prefix
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Registration form submission
+    document.getElementById('registration-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!currentUser) {
+        toast('Please sign in first', 'error');
+        return;
+      }
+
+      const profileData = {
+        id: currentUser.id,
+        display_name: document.getElementById('display-name').value.trim(),
+        target_hours: document.getElementById('target-hours').value.trim(),
+        charity_commitment: document.getElementById('charity-commitment').value.trim(),
+        sponsor_match: document.getElementById('sponsor-match').value.trim(),
+        location_based: document.getElementById('location-based').value.trim(),
+        whatsapp_phone: document.getElementById('whatsapp-phone').value.trim(),
+        fun_comment: document.getElementById('fun-comment').value.trim(),
+        photo_base64: photoBase64,
+        additional_comments: document.getElementById('additional-comments').value.trim(),
+        registered_at: new Date().toISOString()
+      };
+
+      try {
+        const { error } = await sb.from('profiles').upsert(profileData);
+        if (error) throw error;
+        
+        toast('Registration complete! Redirecting to app...', 'success');
+        setTimeout(() => {
+          window.location.href = './index.html';
+        }, 2000);
+      } catch (e) {
+        toast('Registration failed: ' + e.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>
