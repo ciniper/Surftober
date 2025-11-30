@@ -227,9 +227,22 @@
       });
     }
 
-    function showRegistrationForm() {
-      document.getElementById('registration-form').classList.remove('hidden');
-      toast('Authentication successful! Please complete your registration.', 'success');
+    async function showRegistrationForm() {
+      // Check if user already has a profile
+      const { data, error } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
+      
+      if (data && data.display_name) {
+        // User already registered, redirect to main app
+        toast('Welcome back! Redirecting...', 'success');
+        setTimeout(() => {
+          sessionStorage.setItem('surftober_authenticated', '1');
+          window.location.href = './index.html';
+        }, 1000);
+      } else {
+        // New user, show registration form
+        document.getElementById('registration-form').classList.remove('hidden');
+        toast('Authentication successful! Please complete your registration.', 'success');
+      }
     }
 
     // Auth method buttons
