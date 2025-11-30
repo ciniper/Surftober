@@ -368,16 +368,7 @@ async function blobToBase64(blob){
   });
 }
 
-/* Audio capture removed for now (branch: feature/voice-notes-wip)
-// Audio capture state (global)
-let audioBlob = null;
-let mediaRecorder = null;
-let mediaChunks = [];
-
-function attachAudioHandlers(){
-  // ...
-}
-*/
+/* Audio capture removed for now (branch: feature/voice-notes-wip) */
 
 // In production, replace with Supabase/Next.js API.
 
@@ -402,17 +393,6 @@ function seedSample() {
   saveSessions(sample);
 }
 
-/* Audio capture removed for now (branch: feature/voice-notes-wip)
-// Audio capture state (global)
-let audioBlob = null;
-let mediaRecorder = null;
-let mediaChunks = [];
-
-function attachAudioHandlers(){
-  // ...
-}
-*/
-
     { user: 'Nic', date: '2025-10-09', type: 'surf', duration: '01:30', location: 'OB - Lawton', board: 'Shortboard', notes: 'Speedo sesh', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
     { user: 'Nic', date: '2025-10-20', type: 'surf', duration: '01:54', location: 'OB - Lawton', board: 'Shortboard', notes: 'All OB all month', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
     { user: 'Nahla', date: '2025-10-22', type: 'surf', duration: '02:15', location: 'OB - Noriega', board: 'Mid', notes: 'Streak day 20', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
@@ -436,7 +416,7 @@ function toCSV(rows) {
   const esc = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_b64 || ''].map(esc).join(','));
+    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0].map(esc).join(','));
   }
   return lines.join('\n');
 }
