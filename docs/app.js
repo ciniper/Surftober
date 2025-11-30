@@ -400,7 +400,7 @@ function toCSV(rows) {
   const esc = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0].map(esc).join(','));
+    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_b64 || ''].map(esc).join(','));
   }
   return lines.join('\n');
 }
@@ -474,6 +474,16 @@ function initForm() {
     try {
       const d = new Date(dateStr);
       const y = d.getFullYear();
+async function readAudioAsBase64(file){
+  if (!file) return null;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
       const m = d.getMonth() + 1;
       const all = loadSessions();
       return all.some(
@@ -520,6 +530,7 @@ function initForm() {
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
+      audio_b64: await readAudioAsBase64(document.getElementById('log-audio').files?.[0]),
       no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
       costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
