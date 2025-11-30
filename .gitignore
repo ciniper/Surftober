@@ -1,1 +1,5 @@
 .venv/
+
+# Large background files
+background/*.xlsx
+background/*.pdf
