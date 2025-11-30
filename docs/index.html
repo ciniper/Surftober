@@ -13,11 +13,26 @@
   (function() {
     const urlParams = new URLSearchParams(window.location.search);
     const fromAuth = sessionStorage.getItem('surftober_authenticated');
-    const hasSession = localStorage.getItem('supabase.auth.token');
+    
+    // Check for any Supabase auth token in localStorage
+    let hasSession = false;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes('supabase') && key.includes('auth')) {
+          const val = localStorage.getItem(key);
+          if (val && val.length > 10) {
+            hasSession = true;
+            break;
+          }
+        }
+      }
+    } catch (e) {}
     
     // If no auth session and not coming from registration/sign-in, redirect to landing
     if (!fromAuth && !hasSession && !urlParams.has('mode')) {
-      window.location.href = './landing.html';
+      window.location.replace('./landing.html');
+      return;
     }
     
     // Clear the auth flag after checking
