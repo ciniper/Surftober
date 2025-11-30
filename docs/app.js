@@ -392,18 +392,6 @@ function seedSample() {
   ].map(SurftoberAwards.normalizeSession);
   saveSessions(sample);
 }
-  const sample2 = [
-    { user: 'Nic', date: '2025-10-09', type: 'surf', duration: '01:30', location: 'OB - Lawton', board: 'Shortboard', notes: 'Speedo sesh', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
-    { user: 'Nic', date: '2025-10-20', type: 'surf', duration: '01:54', location: 'OB - Lawton', board: 'Shortboard', notes: 'All OB all month', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
-    { user: 'Nahla', date: '2025-10-22', type: 'surf', duration: '02:15', location: 'OB - Noriega', board: 'Mid', notes: 'Streak day 20', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Nahla', date: '2025-10-24', type: 'surf', duration: '02:05', location: 'OB - Noriega', board: 'Mid', notes: 'Twofer day', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Pam', date: '2025-10-05', type: 'surf', duration: '01:10', location: 'OB - Kellys', board: 'Log', notes: 'With friends: Jason, Nic', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Pam', date: '2025-10-17', type: 'cleanup', duration: '01:00', location: 'OB', board: 'cleanup', notes: 'Picked up 80 items', no_wetsuit: 0, costume: 0, cleanup_items: 80 },
-    { user: 'Chase', date: '2025-10-12', type: 'kitesurf', duration: '01:35', location: 'OB - Moraga', board: 'TwinTip', notes: 'Great wind; high five with Nick', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Chase', date: '2025-10-26', type: 'surf', duration: '01:20', location: 'OB - Kirkham', board: 'Step Up', notes: 'Inner bar smashy', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
-  ].map(SurftoberAwards.normalizeSession);
-  // Optionally include sample2 by merging: saveSessions(loadSessions().concat(sample2));
-}
 
 function appendSession(row) {
   const all = loadSessions();
