@@ -358,6 +358,77 @@ function attachAccountHandlers(){
   });
 }
 
+// Utility: convert Blob to base64 (no prefix)
+async function blobToBase64(blob){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Audio capture state (global)
+let audioBlob = null;
+let mediaRecorder = null;
+let mediaChunks = [];
+
+function attachAudioHandlers(){
+  const btnRec = document.getElementById('btn-audio-record');
+  const btnDel = document.getElementById('btn-audio-delete');
+  const fileEl = document.getElementById('log-audio-file');
+  const audioPrev = document.getElementById('audio-preview');
+  if (!btnRec || !fileEl) return;
+
+  function reflectAudioUI(){
+    if (audioBlob) {
+      const url = URL.createObjectURL(audioBlob);
+      audioPrev.src = url;
+      audioPrev.style.display = '';
+      btnDel.style.display = '';
+    } else {
+      audioPrev.removeAttribute('src');
+      audioPrev.style.display = 'none';
+      btnDel.style.display = 'none';
+    }
+  }
+
+  btnRec.onclick = async () => {
+    try {
+      if (audioBlob && !confirm('Replace existing voice note?')) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => { if (e.data?.size) mediaChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(mediaChunks, { type: mediaChunks[0]?.type || 'audio/webm' });
+        reflectAudioUI();
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      toast('Recording… tap again to stop', 'success');
+      const stopNow = () => { try { mediaRecorder?.stop(); } catch {} btnRec.textContent = 'Record Voice Note'; btnRec.onclick = btnRecHandler; };
+      const btnRecHandler = btnRec.onclick;
+      btnRec.textContent = 'Stop Recording';
+      btnRec.onclick = stopNow;
+    } catch (e) {
+      toast('Mic error: ' + e.message, 'error');
+    }
+  };
+
+  btnDel.onclick = () => { audioBlob = null; reflectAudioUI(); };
+
+  fileEl.onchange = () => {
+    const f = fileEl.files?.[0] || null;
+    if (f) {
+      audioBlob = f;
+      reflectAudioUI();
+    }
+  };
+
+  reflectAudioUI();
+}
+
 // In production, replace with Supabase/Next.js API.
 
 const LS_KEY = 'surftober.sessions.v1';
@@ -376,8 +447,12 @@ function saveSessions(rows) {
 function seedSample() {
   const sample = [
     { user: 'Jason', date: '2025-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Jason', date: '2025-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-// Audio capture state
+    { user: 'Jason', date: '2025-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
+  ].map(SurftoberAwards.normalizeSession);
+  saveSessions(sample);
+}
+
+// Audio capture state (global)
 let audioBlob = null;
 let mediaRecorder = null;
 let mediaChunks = [];
