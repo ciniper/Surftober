@@ -243,9 +243,29 @@ async function signInMagicLink(email){
 }
 
 async function signOut(){
-  await sb.auth.signOut();
-  currentUser = null;
-  reflectAuthUI();
+  try {
+    await sb.auth.signOut();
+    currentUser = null;
+    profileName = null;
+    profileData = null;
+    
+    // Clear all session storage
+    sessionStorage.clear();
+    
+    // Clear Supabase-specific localStorage keys
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('supabase')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    reflectAuthUI();
+  } catch (e) {
+    console.error('Sign out error:', e);
+  }
 }
 
 async function saveDisplayName(){
