@@ -168,6 +168,17 @@ function enforceProfileNameOnUI(){
       userEl.value = '';
       userEl.readOnly = true;
       userEl.placeholder = 'Set your name in Account tab';
+// Utility: read audio file as base64 data (no prefix)
+async function readAudioAsBase64(file){
+  if (!file) return null;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
     } else {
       userEl.readOnly = false;
     }
@@ -474,16 +485,6 @@ function initForm() {
     try {
       const d = new Date(dateStr);
       const y = d.getFullYear();
-async function readAudioAsBase64(file){
-  if (!file) return null;
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
       const m = d.getMonth() + 1;
       const all = loadSessions();
       return all.some(
