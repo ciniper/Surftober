@@ -361,13 +361,22 @@ function attachAccountHandlers(){
   });
   if (btnOut) btnOut.addEventListener('click', async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[SIGN OUT] Button clicked, starting sign out...');
+    
     try {
       await signOut();
+      console.log('[SIGN OUT] Sign out completed');
     } catch (err) {
-      console.error('Sign out error:', err);
+      console.error('[SIGN OUT] Sign out error:', err);
     }
-    // Always redirect, even if sign out had an error
-    window.location.replace('./landing.html');
+    
+    // Use setTimeout to ensure redirect happens after all async operations
+    console.log('[SIGN OUT] Redirecting to landing page...');
+    setTimeout(() => {
+      window.location.replace('./landing.html');
+    }, 100);
   });
   
   // New: Save full profile button
