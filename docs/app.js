@@ -646,6 +646,8 @@ function initForm() {
       renderLeaderboard();
       f.reset();
       document.getElementById('log-date').value = defaultDate;
+      // Restore the display name after reset
+      enforceProfileNameOnUI();
     } catch (e) {
       const st = document.getElementById('status');
       if (st) st.textContent = 'Save failed: ' + e.message;
