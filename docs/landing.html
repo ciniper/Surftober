@@ -20,33 +20,29 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      background: linear-gradient(135deg, #0d0d0f 0%, #1a1a1e 100%);
+      background: linear-gradient(135deg, #f5f0e8 0%, #e8dcc8 100%);
     }
     .landing-card {
-      background: #1a1a1e;
+      background: #fff8f0;
       border-radius: 12px;
       padding: 3rem;
       max-width: 500px;
       width: 100%;
-      box-shadow: 0 0 60px rgba(255, 107, 53, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       text-align: center;
-      border: 2px solid #ff6b35;
+      border: 3px solid #ff6b35;
     }
     .landing-title {
       font-size: 3rem;
       margin: 0 0 0.5rem 0;
       color: #ff6b35;
-      text-shadow: 0 0 30px rgba(255, 107, 53, 0.8);
-      animation: glow 2s ease-in-out infinite alternate;
-    }
-    @keyframes glow {
-      from { text-shadow: 0 0 20px rgba(255, 107, 53, 0.6); }
-      to { text-shadow: 0 0 40px rgba(255, 107, 53, 1); }
+      font-weight: 800;
     }
     .landing-subtitle {
       font-size: 1.5rem;
-      color: #888;
+      color: #6a5a4a;
       margin: 0 0 2rem 0;
+      font-weight: 600;
     }
     .landing-buttons {
       display: flex;
@@ -60,7 +56,7 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: 700;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
       text-decoration: none;
       display: block;
       text-transform: uppercase;
@@ -70,34 +66,34 @@
       transform: translateY(-2px);
     }
     .btn-register {
-      background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%);
-      color: #000;
-      box-shadow: 0 0 30px rgba(255, 107, 53, 0.6);
+      background: linear-gradient(135deg, #ff6b35 0%, #e85d2a 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
     }
     .btn-register:hover {
-      box-shadow: 0 0 50px rgba(255, 107, 53, 0.9);
-      filter: brightness(1.2);
+      box-shadow: 0 6px 16px rgba(255, 107, 53, 0.5);
+      filter: brightness(1.05);
     }
     .btn-signin {
-      background: #1a1a1e;
-      color: #f5f5f5;
-      border: 2px solid #3a3a42;
+      background: #fff8f0;
+      color: #2d2416;
+      border: 2px solid #d4c4a8;
     }
     .btn-signin:hover {
-      background: #242428;
+      background: white;
       border-color: #ff6b35;
-      box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
     }
     .btn-view {
       background: transparent;
-      color: #888;
-      border: 2px solid #3a3a42;
+      color: #6a5a4a;
+      border: 2px solid #d4c4a8;
     }
     .btn-view:hover {
-      background: #1a1a1e;
-      color: #f5f5f5;
-      border-color: #00ff88;
-      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+      background: #fff8f0;
+      color: #2d2416;
+      border-color: #2d8659;
+      box-shadow: 0 4px 12px rgba(45, 134, 89, 0.2);
     }
   </style>
 </head>
