@@ -309,6 +309,7 @@
         
         toast('Registration complete! Redirecting to app...', 'success');
         setTimeout(() => {
+          sessionStorage.setItem('surftober_authenticated', '1');
           window.location.href = './index.html';
         }, 2000);
       } catch (e) {

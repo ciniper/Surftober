@@ -8,6 +8,24 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%84%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css?v=5" />
   <meta name="theme-color" content="#0b3d91" />
+  <script>
+  // Redirect to landing page if not coming from auth flow or already in app
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromAuth = sessionStorage.getItem('surftober_authenticated');
+    const hasSession = localStorage.getItem('supabase.auth.token');
+    
+    // If no auth session and not coming from registration/sign-in, redirect to landing
+    if (!fromAuth && !hasSession && !urlParams.has('mode')) {
+      window.location.href = './landing.html';
+    }
+    
+    // Clear the auth flag after checking
+    if (fromAuth) {
+      sessionStorage.removeItem('surftober_authenticated');
+    }
+  })();
+  </script>
 </head>
   <script>
   // Runtime error overlay + one-time PWA rescue to clear stale SW/caches
@@ -305,6 +323,6 @@
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./awards.js?v=5"></script>
-  <script type="module" src="./app.js?v=8"></script>
+  <script type="module" src="./app.js?v=9"></script>
 </body>
 </html>

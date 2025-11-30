@@ -77,8 +77,8 @@
       <div class="landing-subtitle">2025</div>
       <div class="landing-buttons">
         <a href="./register.html" class="landing-btn btn-register">Register for Surftober</a>
-        <a href="./index.html?mode=signin" class="landing-btn btn-signin">Sign In</a>
-        <a href="./index.html?mode=view" class="landing-btn btn-view">View Mode (Read Only)</a>
+        <a href="./index.html?mode=signin" class="landing-btn btn-signin" onclick="sessionStorage.setItem('surftober_authenticated', '1')">Sign In</a>
+        <a href="./index.html?mode=view" class="landing-btn btn-view" onclick="sessionStorage.setItem('surftober_authenticated', '1')">View Mode (Read Only)</a>
       </div>
     </div>
   </div>
