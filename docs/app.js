@@ -168,27 +168,6 @@ function enforceProfileNameOnUI(){
       userEl.value = '';
       userEl.readOnly = true;
       userEl.placeholder = 'Set your name in Account tab';
-// Utility: read audio file as base64 data (no prefix)
-async function readAudioAsBase64(file){
-  if (!file) return null;
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-// Utility: convert Blob to base64 (no prefix)
-async function blobToBase64(blob){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1] || null);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-
     } else {
       userEl.readOnly = false;
     }
