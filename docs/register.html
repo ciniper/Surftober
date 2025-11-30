@@ -130,7 +130,14 @@
       <label>
         What is your target hours goal? *
         <small>Last year about 25% got gold, 25% silver, 25% bronze, 25% participant.</small>
-        <input type="text" id="target-hours" placeholder="test" value="test" required />
+        <select id="target-hours" required>
+          <option value="">Select your goal...</option>
+          <option value="10">10 hours (Participant)</option>
+          <option value="20">20 hours</option>
+          <option value="30">30 hours (Silver)</option>
+          <option value="40">40 hours (Gold)</option>
+          <option value="50">50 hours (Platinum)</option>
+        </select>
       </label>
 
       <label>

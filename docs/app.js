@@ -748,14 +748,44 @@ function renderMyStats() {
   summary.innerHTML =
     totals
       .map(
-        (t) =>
-          `<div class="card"><h3>${t.user}</h3>
+        (t) => {
+          // Calculate on-track hours (formula: ((TODAY()-DATEVALUE("2025-9-30"))/31)*GoalHours)
+          const startDate = new Date('2025-09-30'); // Sept 30, 2025
+          const today = new Date();
+          const daysSinceStart = Math.max(0, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)));
+          const daysInOctober = 31;
+          
+          // Get user's goal hours from profile
+          const goalHours = profileData && t.user === profileName && profileData.target_hours 
+            ? Number(profileData.target_hours) 
+            : null;
+          
+          const onTrackHours = goalHours ? (daysSinceStart / daysInOctober) * goalHours : null;
+          const progressPercent = goalHours ? (t.total_hours / goalHours * 100) : null;
+          
+          let goalSection = '';
+          if (goalHours) {
+            const statusColor = t.total_hours >= onTrackHours ? '#5be37a' : '#ffb347';
+            goalSection = `
+              <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #2f3e5c">
+                <div><strong>Goal Progress:</strong></div>
+                <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong></div>
+                <div>On-Track Hours: <strong style="color:${statusColor}">${onTrackHours.toFixed(1)}</strong></div>
+                <div>Goal Hours: <strong>${goalHours}</strong></div>
+                <div>Progress: <strong>${progressPercent.toFixed(0)}%</strong> ${progressPercent >= 100 ? '🎉' : ''}</div>
+              </div>
+            `;
+          }
+          
+          return `<div class="card"><h3>${t.user}</h3>
      <div>Total Hours: ${t.total_hours.toFixed(1)} <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
      <div>Boards: ${t.boards} · Locations: ${t.locations}</div>
      <div>Std Dev: ${t.stddev.toFixed(1)} min · Twofer days: ${t.twofer_days}</div>
      <div>Weekend: ${Math.round(t.weekendShare * 100)}% · Weekday: ${Math.round(t.weekdayShare * 100)}%</div>
      <div>First Half: ${Math.round(t.firstHalfShare * 100)}% · Last Half: ${Math.round(t.lastHalfShare * 100)}%</div>
-    </div>`
+     ${goalSection}
+    </div>`;
+        }
       )
       .join('') || '<div class="hint">No data</div>';
 

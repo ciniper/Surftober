@@ -221,7 +221,7 @@
         </label>
       </div>
       <div id="leaderboard" class="table"></div>
-      <p class="hint">Medal thresholds (demo): Gold ≥ 40h, Silver ≥ 30h, Bronze ≥ 25h, Participant ≥ 10h.</p>
+      <p class="hint">Medal thresholds: Platinum ≥ 50h, Gold ≥ 40h, Silver ≥ 30h, Bronze ≥ 25h, Participant ≥ 10h.</p>
     </section>
 
     <!-- Awards Page -->
@@ -298,7 +298,14 @@
               <input type="text" id="display-name" placeholder="Your public name" />
             </label>
             <label>Target Hours Goal
-              <input type="text" id="profile-target-hours" placeholder="e.g., 40 hours" />
+              <select id="profile-target-hours">
+                <option value="">Select your goal...</option>
+                <option value="10">10 hours (Participant)</option>
+                <option value="20">20 hours</option>
+                <option value="30">30 hours (Silver)</option>
+                <option value="40">40 hours (Gold)</option>
+                <option value="50">50 hours (Platinum)</option>
+              </select>
             </label>
             <label>Charitable Contribution Commitment
               <input type="text" id="profile-charity" placeholder="e.g., $100" />
