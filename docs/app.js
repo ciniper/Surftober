@@ -36,15 +36,6 @@ async function nuclearWipeAll(){
     const { data, error } = await sb.functions.invoke('nuclear_wipe', {
       body: { confirm: 'OK' }
     });
-  // Always try to use latest SW on page load
-  try {
-    const reg = await navigator.serviceWorker.getRegistration('./');
-    if (reg) {
-      await reg.update().catch(()=>{});
-      if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
-    }
-  } catch {}
-
     if (error) throw new Error(error.message || JSON.stringify(error));
     toast('Nuclear wipe triggered', 'success');
   } catch (e) {
@@ -77,6 +68,7 @@ const TEAM = 'surftober-2025';
 let sb = null; // supabase client
 let currentUser = null;
 let profileName = null;
+let adminEmails = []; // allowlist fetched from backend
 
 function toast(msg, type='success'){
   const box = document.getElementById('toast-container');
@@ -86,14 +78,16 @@ function toast(msg, type='success'){
   el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
   el.querySelector('.close').onclick = ()=> el.remove();
   box.appendChild(el);
-  // Fetch NUKE_ADMINS list from the function (safe to expose list of emails you already configured)
-  let adminEmails = [];
-  try {
-    const { data, error } = await sb.functions.invoke('nuke_admins');
-    if (!error && Array.isArray(data?.admins)) adminEmails = data.admins.map((s)=>String(s).toLowerCase());
-  } catch {}
-
   setTimeout(()=> el.remove(), 4000);
+}
+
+// Admin UI gating based on NUKE_ADMINS allowlist
+function reflectAdminVisibility(adminEmailList = []){
+  const tab = document.getElementById('tab-admin-link');
+  const page = document.getElementById('page-admin');
+  const isAdmin = !!currentUser && currentUser.email && adminEmailList.includes(currentUser.email.toLowerCase());
+  if (tab) tab.style.display = isAdmin ? '' : 'none';
+  if (page) page.style.display = isAdmin ? '' : 'none';
 }
 
 async function initSupabase(){
@@ -131,15 +125,6 @@ async function initSupabase(){
   });
 
   // start realtime listener for sessions
-// Admin UI gating based on NUKE_ADMINS allowlist
-function reflectAdminVisibility(adminEmailList = []){
-  const tab = document.getElementById('tab-admin-link');
-  const page = document.getElementById('page-admin');
-  const isAdmin = !!currentUser && currentUser.email && adminEmailList.includes(currentUser.email.toLowerCase());
-  if (tab) tab.style.display = isAdmin ? '' : 'none';
-  if (page) page.style.display = isAdmin ? '' : 'none';
-}
-
   try {
     sb
       .channel('public:sessions')
