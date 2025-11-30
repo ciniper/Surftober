@@ -100,6 +100,15 @@ async function initSupabase(){
     data: { user }
   } = await sb.auth.getUser();
   currentUser = user || null;
+  
+  // Check if user clicked "Sign In" from landing page
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('mode') === 'signin' && !currentUser) {
+    // Redirect to register page which has sign-in options
+    window.location.href = './register.html';
+    return;
+  }
+  
   reflectAuthUI();
   await fetchProfile();
   enforceProfileNameOnUI();
