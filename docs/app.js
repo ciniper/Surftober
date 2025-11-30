@@ -793,7 +793,7 @@ function renderMyStats() {
       .filter(Boolean)
       .join(' ');
     const canEdit = !!currentUser && !!profileName && s.user === profileName && s._id;
-    const actions = canEdit ? `<a class="edit-link" data-id="${s._id}" style="cursor:pointer">Edit</a> | <a class="remove-link" data-id="${s._id}" style="color:#c00;cursor:pointer">Remove</a>` : '';
+    const actions = canEdit ? `<a href="#" class="edit-link" data-id="${s._id}" style="cursor:pointer">Edit</a> | <a href="#" class="remove-link" data-id="${s._id}" style="color:#c00;cursor:pointer">Remove</a>` : '';
     tbl.push(
       `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
@@ -804,7 +804,8 @@ function renderMyStats() {
   document.getElementById('me-sessions').innerHTML = tbl.join('');
   // Attach edit handlers in My Stats
   document.querySelectorAll('#me-sessions .edit-link').forEach((a) => {
-    a.addEventListener('click', () => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
       const id = a.getAttribute('data-id');
       const allSess = loadSessions();
       const s = allSess.find((x) => x._id === id);
@@ -816,7 +817,8 @@ function renderMyStats() {
   });
   // Attach remove handlers in My Stats
   document.querySelectorAll('#me-sessions .remove-link').forEach((a) => {
-    a.addEventListener('click', async () => {
+    a.addEventListener('click', async (e) => {
+      e.preventDefault();
       const id = a.getAttribute('data-id');
       const allSess = loadSessions();
       const s = allSess.find((x) => x._id === id);
