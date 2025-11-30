@@ -41,7 +41,7 @@
       font-size: 1rem;
     }
     .form-section {
-      background: white;
+      background: #f5f5f5;
       padding: 2rem;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -55,8 +55,21 @@
       color: #333;
     }
     .form-section input,
+    .form-section select,
     .form-section textarea {
+      background: white;
       color: #333;
+      border: 2px solid #ccc;
+    }
+    .form-section input:focus,
+    .form-section select:focus,
+    .form-section textarea:focus {
+      background: white;
+      border-color: #0b3d91;
+    }
+    .form-section input::placeholder,
+    .form-section textarea::placeholder {
+      color: #999;
     }
     .photo-upload {
       border: 2px dashed #ccc;
