@@ -87,9 +87,13 @@ function toast(msg, type='success'){
 function reflectAdminVisibility(adminEmailList = []){
   const tab = document.getElementById('tab-admin-link');
   const page = document.getElementById('page-admin');
+  const awardsTab = document.getElementById('tab-awards-link');
+  const awardsPage = document.getElementById('page-awards');
   const isAdmin = !!currentUser && currentUser.email && adminEmailList.includes(currentUser.email.toLowerCase());
   if (tab) tab.style.display = isAdmin ? '' : 'none';
   if (page) page.style.display = isAdmin ? '' : 'none';
+  if (awardsTab) awardsTab.style.display = isAdmin ? '' : 'none';
+  if (awardsPage) awardsPage.style.display = isAdmin ? '' : 'none';
 }
 
 async function initSupabase(){
@@ -763,28 +767,33 @@ function renderMyStats() {
           const onTrackHours = goalHours ? (daysSinceStart / daysInOctober) * goalHours : null;
           const progressPercent = goalHours ? (t.total_hours / goalHours * 100) : null;
           
-          let goalSection = '';
+          // Determine goal medal badge
+          let goalMedalBadge = '';
           if (goalHours) {
-            const statusColor = t.total_hours >= onTrackHours ? '#5be37a' : '#ffb347';
-            goalSection = `
-              <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #2f3e5c">
-                <div><strong>Goal Progress:</strong></div>
-                <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong></div>
-                <div>On-Track Hours: <strong style="color:${statusColor}">${onTrackHours.toFixed(1)}</strong></div>
-                <div>Goal Hours: <strong>${goalHours}</strong></div>
-                <div>Progress: <strong>${progressPercent.toFixed(0)}%</strong> ${progressPercent >= 100 ? '🎉' : ''}</div>
-              </div>
-            `;
+            let goalMedal = 'PARTICIPANT';
+            if (goalHours >= 50) goalMedal = 'PLATINUM';
+            else if (goalHours >= 40) goalMedal = 'GOLD';
+            else if (goalHours >= 30) goalMedal = 'SILVER';
+            else if (goalHours >= 20) goalMedal = 'BRONZE';
+            goalMedalBadge = `<span class="badge ${goalMedal.toLowerCase()}">${goalMedal}</span>`;
           }
           
-          return `<div class="card"><h3>${t.user}</h3>
-     <div>Total Hours: ${t.total_hours.toFixed(1)} <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
-     <div>Boards: ${t.boards} · Locations: ${t.locations}</div>
-     <div>Std Dev: ${t.stddev.toFixed(1)} min · Twofer days: ${t.twofer_days}</div>
-     <div>Weekend: ${Math.round(t.weekendShare * 100)}% · Weekday: ${Math.round(t.weekdayShare * 100)}%</div>
-     <div>First Half: ${Math.round(t.firstHalfShare * 100)}% · Last Half: ${Math.round(t.lastHalfShare * 100)}%</div>
-     ${goalSection}
-    </div>`;
+          let content = `<div class="card"><h3>${t.user}</h3>`;
+          
+          if (goalHours) {
+            const statusColor = t.total_hours >= onTrackHours ? '#5be37a' : '#ffb347';
+            content += `
+              <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
+              <div>On-Track Hours: <strong style="color:${statusColor}">${onTrackHours.toFixed(1)}</strong></div>
+              <div>Goal Hours: <strong>${goalHours}</strong> ${goalMedalBadge}</div>
+              <div>Progress: <strong>${progressPercent.toFixed(0)}%</strong> ${progressPercent >= 100 ? '🎉' : ''}</div>
+            `;
+          } else {
+            content += `<div>Total Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>`;
+          }
+          
+          content += `</div>`;
+          return content;
         }
       )
       .join('') || '<div class="hint">No data</div>';
