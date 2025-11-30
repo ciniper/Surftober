@@ -9,8 +9,8 @@
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
-      background: #0a1628;
-      color: #e8f4f8;
+      background: #0d0d0f;
+      color: #f5f5f5;
     }
     .register-container {
       max-width: 800px;
@@ -18,23 +18,25 @@
       padding: 2rem;
     }
     .welcome-message {
-      background: #152238;
+      background: #1a1a1e;
       border-left: 4px solid #ff6b35;
       padding: 1.5rem;
       margin-bottom: 2rem;
       line-height: 1.6;
-      color: #e8f4f8;
+      color: #f5f5f5;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 30px rgba(255, 107, 53, 0.2);
+      border: 1px solid #2a2a32;
     }
     .welcome-message h1 {
       margin-top: 0;
       color: #ff6b35;
+      text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
     }
     .welcome-message p,
     .welcome-message ul,
     .welcome-message li {
-      color: #e8f4f8;
+      color: #f5f5f5;
     }
     .auth-method {
       display: flex;
@@ -47,64 +49,66 @@
       font-size: 1rem;
     }
     .form-section {
-      background: #152238;
+      background: #1a1a1e;
       padding: 2rem;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 0 30px rgba(255, 107, 53, 0.2);
       margin-bottom: 2rem;
-      color: #e8f4f8;
-      border: 1px solid #2d4a62;
+      color: #f5f5f5;
+      border: 1px solid #2a2a32;
     }
     .form-section h2 {
       color: #ff6b35;
       margin-top: 0;
+      text-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
     }
     .form-section label {
-      color: #e8f4f8;
+      color: #ccc;
     }
     .form-section p,
     .form-section small {
-      color: #7a9bb5;
+      color: #888;
     }
     .form-section input,
     .form-section select,
     .form-section textarea {
-      background: #1e3a52 !important;
-      color: #e8f4f8 !important;
-      border: 1px solid #2d4a62;
+      background: #1a1a1e !important;
+      color: #f5f5f5 !important;
+      border: 1px solid #3a3a42;
       font-size: 15px;
       border-radius: 8px;
     }
     .form-section input:focus,
     .form-section select:focus,
     .form-section textarea:focus {
-      background: #243b54 !important;
+      background: #242428 !important;
       border-color: #ff6b35;
-      color: #e8f4f8 !important;
-      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+      color: #f5f5f5 !important;
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
     }
     .form-section input::placeholder,
     .form-section textarea::placeholder {
-      color: #7a9bb5 !important;
+      color: #666 !important;
     }
     .form-section select option {
-      background: #1e3a52;
-      color: #e8f4f8;
+      background: #1a1a1e;
+      color: #f5f5f5;
     }
     .photo-upload {
-      border: 2px dashed #2d4a62;
+      border: 2px dashed #3a3a42;
       padding: 2rem;
       text-align: center;
       border-radius: 8px;
       cursor: pointer;
-      transition: border-color 0.3s;
-      background: #1e3a52;
+      transition: all 0.3s ease;
+      background: #1a1a1e;
     }
     .photo-upload:hover {
       border-color: #ff6b35;
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
     }
     .photo-upload p {
-      color: #7a9bb5;
+      color: #888;
     }
     .photo-preview {
       max-width: 200px;
@@ -116,6 +120,7 @@
       width: 100%;
       height: auto;
       border-radius: 8px;
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
     }
     .hidden {
       display: none;
