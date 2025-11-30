@@ -368,66 +368,16 @@ async function blobToBase64(blob){
   });
 }
 
+/* Audio capture removed for now (branch: feature/voice-notes-wip)
 // Audio capture state (global)
 let audioBlob = null;
 let mediaRecorder = null;
 let mediaChunks = [];
 
 function attachAudioHandlers(){
-  const btnRec = document.getElementById('btn-audio-record');
-  const btnDel = document.getElementById('btn-audio-delete');
-  const fileEl = document.getElementById('log-audio-file');
-  const audioPrev = document.getElementById('audio-preview');
-  if (!btnRec || !fileEl) return;
-
-  function reflectAudioUI(){
-    if (audioBlob) {
-      const url = URL.createObjectURL(audioBlob);
-      audioPrev.src = url;
-      audioPrev.style.display = '';
-      btnDel.style.display = '';
-    } else {
-      audioPrev.removeAttribute('src');
-      audioPrev.style.display = 'none';
-      btnDel.style.display = 'none';
-    }
-  }
-
-  btnRec.onclick = async () => {
-    try {
-      if (audioBlob && !confirm('Replace existing voice note?')) return;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = (e) => { if (e.data?.size) mediaChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        audioBlob = new Blob(mediaChunks, { type: mediaChunks[0]?.type || 'audio/webm' });
-        reflectAudioUI();
-        stream.getTracks().forEach(t => t.stop());
-      };
-      mediaRecorder.start();
-      toast('Recording… tap again to stop', 'success');
-      const stopNow = () => { try { mediaRecorder?.stop(); } catch {} btnRec.textContent = 'Record Voice Note'; btnRec.onclick = btnRecHandler; };
-      const btnRecHandler = btnRec.onclick;
-      btnRec.textContent = 'Stop Recording';
-      btnRec.onclick = stopNow;
-    } catch (e) {
-      toast('Mic error: ' + e.message, 'error');
-    }
-  };
-
-  btnDel.onclick = () => { audioBlob = null; reflectAudioUI(); };
-
-  fileEl.onchange = () => {
-    const f = fileEl.files?.[0] || null;
-    if (f) {
-      audioBlob = f;
-      reflectAudioUI();
-    }
-  };
-
-  reflectAudioUI();
+  // ...
 }
+*/
 
 // In production, replace with Supabase/Next.js API.
 
@@ -452,66 +402,16 @@ function seedSample() {
   saveSessions(sample);
 }
 
+/* Audio capture removed for now (branch: feature/voice-notes-wip)
 // Audio capture state (global)
 let audioBlob = null;
 let mediaRecorder = null;
 let mediaChunks = [];
 
 function attachAudioHandlers(){
-  const btnRec = document.getElementById('btn-audio-record');
-  const btnDel = document.getElementById('btn-audio-delete');
-  const fileEl = document.getElementById('log-audio-file');
-  const audioPrev = document.getElementById('audio-preview');
-  if (!btnRec || !fileEl) return;
-
-  function reflectAudioUI(){
-    if (audioBlob) {
-      const url = URL.createObjectURL(audioBlob);
-      audioPrev.src = url;
-      audioPrev.style.display = '';
-      btnDel.style.display = '';
-    } else {
-      audioPrev.removeAttribute('src');
-      audioPrev.style.display = 'none';
-      btnDel.style.display = 'none';
-    }
-  }
-
-  btnRec.onclick = async () => {
-    try {
-      // If already recorded, overwrite after confirm
-      if (audioBlob && !confirm('Replace existing voice note?')) return;
-      // Ask microphone permission and record ~ up to 60s
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaChunks = [];
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorder.ondataavailable = (e) => { if (e.data?.size) mediaChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        audioBlob = new Blob(mediaChunks, { type: 'audio/webm' });
-        reflectAudioUI();
-        stream.getTracks().forEach(t => t.stop());
-      };
-      mediaRecorder.start();
-      toast('Recording… tap again to stop', 'success');
-      btnRec.textContent = 'Stop Recording';
-      btnRec.onclick = () => { try { mediaRecorder?.stop(); } catch {} btnRec.textContent = 'Record Voice Note'; btnRec.onclick = arguments.callee; };
-    } catch (e) {
-      toast('Mic error: ' + e.message, 'error');
-    }
-  };
-
-  btnDel.onclick = () => { audioBlob = null; reflectAudioUI(); };
-
-  fileEl.onchange = () => {
-    const f = fileEl.files?.[0] || null;
-    if (f) {
-      audioBlob = f;
-      reflectAudioUI();
-    }
-  };
-
-  reflectAudioUI();
+  // ...
 }
+*/
 
     { user: 'Nic', date: '2025-10-09', type: 'surf', duration: '01:30', location: 'OB - Lawton', board: 'Shortboard', notes: 'Speedo sesh', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
     { user: 'Nic', date: '2025-10-20', type: 'surf', duration: '01:54', location: 'OB - Lawton', board: 'Shortboard', notes: 'All OB all month', no_wetsuit: 1, costume: 0, cleanup_items: 0 },
@@ -656,7 +556,7 @@ function initForm() {
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
-      audio_b64: audioBlob ? await blobToBase64(audioBlob) : null,
+      // audio_b64: audioBlob ? await blobToBase64(audioBlob) : null, // removed for now
       no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
       costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
@@ -984,7 +884,7 @@ window.addEventListener('load', () => {
   renderMyStats();
   renderLeaderboard();
   renderAwards();
-  attachAudioHandlers();
+  // attachAudioHandlers(); // temporarily disabled (see feature/voice-notes-wip)
   registerSW();
   // Handlers
   document.getElementById('lb-year').addEventListener('input', renderLeaderboard);
