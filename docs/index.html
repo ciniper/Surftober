@@ -9,6 +9,70 @@
   <link rel="stylesheet" href="./styles.css?v=5" />
   <meta name="theme-color" content="#0b3d91" />
 </head>
+  <script>
+  // Runtime error overlay + one-time PWA rescue to clear stale SW/caches
+  (function(){
+    // Error overlay
+    function ensureOverlay(){
+      var el = document.getElementById('err-overlay');
+      if (el) return el;
+      el = document.createElement('div');
+      el.id = 'err-overlay';
+      el.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.85);color:#fff;font:12px/1.4 system-ui,monospace;padding:16px;overflow:auto;';
+      var close = document.createElement('button');
+      close.textContent = '✕';
+      close.style.cssText = 'position:absolute;top:8px;right:8px;background:#333;color:#fff;border:1px solid #666;padding:4px 8px;border-radius:4px;cursor:pointer;';
+      close.onclick = function(){ el.remove(); };
+      el.appendChild(close);
+      var pre = document.createElement('pre');
+      pre.id = 'err-overlay-pre';
+      pre.style.whiteSpace = 'pre-wrap';
+      el.appendChild(pre);
+      document.documentElement.appendChild(el);
+      return el;
+    }
+    function showError(msg){
+      try{
+        var el = ensureOverlay();
+        var pre = document.getElementById('err-overlay-pre');
+        pre.textContent = String(msg || '').slice(0, 100000);
+        console.error('[RUNTIME ERROR]', msg);
+      }catch(_){ /* noop */ }
+    }
+    window.addEventListener('error', function(e){
+      var info = (e && e.message ? e.message : 'Script error') + (e && e.filename ? ('\n' + e.filename + ':' + e.lineno + ':' + e.colno) : '');
+      if (e && e.error && e.error.stack) info += '\n' + e.error.stack;
+      showError(info);
+    });
+    window.addEventListener('unhandledrejection', function(e){
+      var reason = e && e.reason ? e.reason : 'unknown';
+      var text = 'Unhandled promise rejection: ' + (reason && reason.message ? reason.message : String(reason));
+      if (reason && reason.stack) text += '\n' + reason.stack;
+      showError(text);
+    });
+
+    // One-time SW/cache rescue to break out of stale SW
+    try {
+      if (!sessionStorage.getItem('pwa_rescue_done')) {
+        sessionStorage.setItem('pwa_rescue_done', '1');
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            return Promise.all(regs.map(function(r){ return r.unregister().catch(function(){}); }));
+          }).then(function(){
+            if (window.caches && caches.keys) {
+              return caches.keys().then(function(names){
+                return Promise.all(names.map(function(n){ return caches.delete(n); }));
+              });
+            }
+          }).finally(function(){
+            location.reload();
+          });
+        }
+      }
+    } catch (_) {}
+  })();
+  </script>
+
 <body>
   <header class="app-header">
     <div class="brand">🏄 Surftober</div>
