@@ -57,19 +57,25 @@
     .form-section input,
     .form-section select,
     .form-section textarea {
-      background: white;
-      color: #333;
+      background: white !important;
+      color: #000 !important;
       border: 2px solid #ccc;
+      font-size: 15px;
     }
     .form-section input:focus,
     .form-section select:focus,
     .form-section textarea:focus {
-      background: white;
+      background: white !important;
       border-color: #0b3d91;
+      color: #000 !important;
     }
     .form-section input::placeholder,
     .form-section textarea::placeholder {
-      color: #999;
+      color: #999 !important;
+    }
+    .form-section select option {
+      background: white;
+      color: #000;
     }
     .photo-upload {
       border: 2px dashed #ccc;
