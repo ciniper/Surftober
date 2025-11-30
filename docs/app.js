@@ -704,6 +704,12 @@ async function updateCloudSession(id, row){
   if (error) throw error;
 }
 
+async function deleteCloudSession(id){
+  // Delete allowed only for owner; server RLS will enforce user_id = auth.uid()
+  const { error } = await sb.from('sessions').delete().eq('id', id);
+  if (error) throw error;
+}
+
 function renderRecent() {
   const container = document.getElementById('recent-entries');
   const all = loadSessions().slice(-10).reverse();
@@ -787,11 +793,11 @@ function renderMyStats() {
       .filter(Boolean)
       .join(' ');
     const canEdit = !!currentUser && !!profileName && s.user === profileName && s._id;
-    const edit = canEdit ? `<a class="edit-link" data-id="${s._id}">Edit</a>` : '';
+    const actions = canEdit ? `<a class="edit-link" data-id="${s._id}">Edit</a> | <a class="remove-link" data-id="${s._id}" style="color:#c00">Remove</a>` : '';
     tbl.push(
       `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td><td>${edit}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td><td>${actions}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
@@ -805,6 +811,31 @@ function renderMyStats() {
       if (s) {
         location.hash = '#log';
         startEditSession(s);
+      }
+    });
+  });
+  // Attach remove handlers in My Stats
+  document.querySelectorAll('#me-sessions .remove-link').forEach((a) => {
+    a.addEventListener('click', async () => {
+      const id = a.getAttribute('data-id');
+      const allSess = loadSessions();
+      const s = allSess.find((x) => x._id === id);
+      if (!s) return;
+      
+      // Confirmation dialog
+      const confirmMsg = `Are you sure you want to delete this session?\n\n${s.date} - ${s.type} - ${s.duration}\n${s.location || ''} ${s.board || ''}`;
+      if (!confirm(confirmMsg)) return;
+      
+      try {
+        // Delete from cloud if authenticated
+        if (sb && currentUser && s._id) {
+          await deleteCloudSession(s._id);
+          toast('Session deleted', 'success');
+        }
+        // Sync from cloud to update local storage
+        await syncFromCloud();
+      } catch (e) {
+        toast('Delete failed: ' + e.message, 'error');
       }
     });
   });
