@@ -359,14 +359,15 @@ function attachAccountHandlers(){
       document.getElementById('account-status').textContent = 'Google auth error: ' + e.message;
     }
   });
-  if (btnOut) btnOut.addEventListener('click', async () => {
+  if (btnOut) btnOut.addEventListener('click', async (e) => {
+    e.preventDefault();
     try {
       await signOut();
-      // Redirect to landing page
-      window.location.href = './landing.html';
-    } catch (e) {
-      document.getElementById('account-status').textContent = 'Sign out error: ' + e.message;
+    } catch (err) {
+      console.error('Sign out error:', err);
     }
+    // Always redirect, even if sign out had an error
+    window.location.replace('./landing.html');
   });
   
   // New: Save full profile button
