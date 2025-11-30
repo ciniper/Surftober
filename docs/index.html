@@ -322,7 +322,7 @@
           </div>
           <div class="actions">
             <button id="btn-save-profile">Save Profile</button>
-            <button id="btn-signout" class="warn">Sign Out</button>
+            <button id="btn-signout" class="warn" onclick="console.log('[INLINE] Sign out clicked'); if(window.sb && window.sb.auth) { window.sb.auth.signOut().then(() => { sessionStorage.clear(); Object.keys(localStorage).forEach(k => { if(k.includes('supabase')) localStorage.removeItem(k); }); window.location.replace('./landing.html'); }); } else { window.location.replace('./landing.html'); }">Sign Out</button>
             <button id="btn-delete-cloud" class="warn">Delete My Cloud Data</button>
           </div>
         </div>
