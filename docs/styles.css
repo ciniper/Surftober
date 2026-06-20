@@ -19,6 +19,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: 
 .app-footer { bottom: 0; justify-content: space-between; font-size: 12px; opacity: 0.8; border-top: 2px solid var(--accent); border-bottom: none; }
 .brand { font-weight: 700; letter-spacing: 0.5px; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
 .brand-logo { width: 30px; height: 30px; display: block; }
+.app-version { font-size: 11px; color: var(--text); opacity: 0.45; letter-spacing: 0.4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tabs { display: flex; gap: 8px; }
 .tabs a { color: var(--text); text-decoration: none; padding: 6px 12px; border-radius: 6px; background: transparent; transition: all 0.2s ease; }
 .tabs a:hover { background: var(--muted); }
