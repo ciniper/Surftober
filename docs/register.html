@@ -313,9 +313,7 @@
     document.getElementById('btn-google-auth').addEventListener('click', async () => {
       try {
         // Use the full production URL for redirect
-        const redirectUrl = window.location.hostname === 'localhost' 
-          ? 'http://localhost:8000/register.html'
-          : 'https://ciniper.github.io/Surftober/register.html';
+        const redirectUrl = window.location.origin + window.location.pathname;
         
         await sb.auth.signInWithOAuth({ 
           provider: 'google', 
@@ -338,9 +336,7 @@
       }
       try {
         // Use the full production URL for redirect
-        const redirectUrl = window.location.hostname === 'localhost' 
-          ? 'http://localhost:8000/register.html'
-          : 'https://ciniper.github.io/Surftober/register.html';
+        const redirectUrl = window.location.origin + window.location.pathname;
         
         const { error } = await sb.auth.signInWithOtp({ 
           email, 
