@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v11';
+const CACHE = 'surftober-demo-v12';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -15,7 +15,8 @@ const ASSETS = [
   './awards.js?v=5',
   './manifest.webmanifest?v=10',
   './logo.svg?v=10',
-  './icon-maskable.svg?v=10'
+  './icon-maskable.svg?v=10',
+  './version.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -43,6 +44,15 @@ self.addEventListener('fetch', (e) => {
 
   // Only handle same-origin requests
   if (url.origin !== location.origin) return;
+
+  // Deploy marker: always fetch fresh (bypass HTTP + SW cache) so the
+  // visible version reliably reflects what is actually live.
+  if (url.pathname.endsWith('version.js')) {
+    e.respondWith(
+      fetch(req.url, { cache: 'no-store' }).catch(() => caches.match('./version.js'))
+    );
+    return;
+  }
 
   // Handle navigations (HTML pages): network-first with cache fallback
   const acceptsHTML = req.headers.get('accept')?.includes('text/html');
