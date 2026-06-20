@@ -1,9 +1,12 @@
 {
-  "name": "Surftober Web (Demo)",
+  "name": "Surftober",
   "short_name": "Surftober",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b132b",
-  "theme_color": "#0b3d91",
-  "icons": []
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "icons": [
+    { "src": "./logo.svg?v=10", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon-maskable.svg?v=10", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
 }
