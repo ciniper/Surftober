@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Surftober — a snowy plover at sunset within a medal ring">
+  <title>Surftober</title>
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb072"/><stop offset="1" stop-color="#ff4500"/></linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#ff6b35"/></linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d3050"/><stop offset="1" stop-color="#0a1628"/></linearGradient>
+    <clipPath id="disc"><circle cx="50" cy="50" r="39.5"/></clipPath>
+  </defs>
+  <circle cx="50" cy="50" r="45" fill="url(#sky)"/>
+  <g clip-path="url(#disc)">
+    <circle cx="61" cy="40" r="12.5" fill="url(#sun)"/>
+    <path d="M12 74 Q 50 63 88 74 L 88 92 L 12 92 Z" fill="#13283c"/>
+    <path d="M13 72 q 12 -6 24 0 t 24 0 t 24 0" fill="none" stroke="#4ecdc4" stroke-width="2.3" stroke-linecap="round" opacity="0.85"/>
+    <path d="M36 46 Q 36 40 41 39 Q 47 38 49 43 Q 57 44 63 48 Q 70 51 75 51 Q 71 55 64 56 Q 57 60 51 60 Q 44 60 41 55 Q 38 52 37 50 Q 35 48 36 46 Z" fill="#efe7d2"/>
+    <path d="M46 59 L 45 72 M53 59 L 54 72" stroke="#1a2c46" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M42 72 L 48 72 M51 72 L 57 72" stroke="#1a2c46" stroke-width="1.2" stroke-linecap="round"/>
+    <ellipse cx="42" cy="40.2" rx="2.6" ry="1.5" fill="#16273d"/>
+    <ellipse cx="42.5" cy="44" rx="3" ry="1.8" fill="#16273d"/>
+    <ellipse cx="44" cy="51.5" rx="2.2" ry="2.8" fill="#16273d"/>
+    <polygon points="37,45 30,47 37,48" fill="#16273d"/>
+    <circle cx="40.4" cy="43.6" r="1" fill="#0a1628"/>
+  </g>
+  <circle cx="50" cy="50" r="39" fill="none" stroke="#e8f4f8" stroke-width="1" opacity="0.4"/>
+  <circle cx="50" cy="50" r="44" fill="none" stroke="url(#ring)" stroke-width="3.2"/>
+</svg>
