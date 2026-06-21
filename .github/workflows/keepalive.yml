@@ -22,7 +22,7 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Stamp keepalive branch (prevents 60-day auto-disable of this workflow)
         run: |

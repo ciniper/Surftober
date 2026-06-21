@@ -69,7 +69,7 @@ let sb = null; // supabase client
 let currentUser = null;
 let profileName = null;
 let profileData = null; // full profile data
-let adminEmails = []; // allowlist fetched from backend
+const adminEmails = ['ciniper@gmail.com']; // client-side admin allowlist (lowercase emails)
 let isViewMode = false; // read-only mode
 
 function toast(msg, type='success'){
@@ -125,11 +125,7 @@ async function initSupabase(){
   sb.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
     reflectAuthUI();
-    try {
-      const { data, error } = await sb.functions.invoke('nuke_admins');
-      const admins = (!error && Array.isArray(data?.admins)) ? data.admins.map((s)=>String(s).toLowerCase()) : [];
-      reflectAdminVisibility(admins);
-    } catch { reflectAdminVisibility([]); }
+    reflectAdminVisibility(adminEmails);
     if (currentUser) {
       fetchProfile();
       syncFromCloud();
