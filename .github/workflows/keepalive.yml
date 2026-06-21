@@ -1,0 +1,46 @@
+# Keeps the free-tier Supabase project alive during the Surftober off-season.
+# Free Supabase projects auto-pause after ~7 days with no API activity, which
+# breaks sign-in and cloud sync. This pings the REST API every 3 days. It also
+# writes a timestamp to a throwaway `keepalive` branch each run so GitHub does
+# not auto-disable this scheduled workflow after 60 days of no repo activity.
+# Runs entirely on GitHub Actions — no servers. (Public repo = free minutes.)
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '23 8 */3 * *'   # every ~3 days at 08:23 UTC — well under the 7-day pause window
+  workflow_dispatch: {}        # also runnable on demand from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp keepalive branch (prevents 60-day auto-disable of this workflow)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch --orphan keepalive
+          git rm -rf --cached . >/dev/null 2>&1 || true
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > last-ping.txt
+          git add last-ping.txt
+          git commit -m 'keepalive ping'
+          git push -f origin keepalive
+
+      - name: Ping Supabase REST API
+        run: |
+          # Public anon key — already ships in the site's app.js, so safe to keep here.
+          ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0'
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            'https://rdrblueqytucygpmjuyh.supabase.co/rest/v1/sessions?select=id&limit=1' \
+            -H "apikey: $ANON" -H "Authorization: Bearer $ANON")
+          echo "Supabase REST responded: HTTP $CODE"
+          test "$CODE" = "200"
