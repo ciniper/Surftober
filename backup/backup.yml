@@ -1,0 +1,95 @@
+# Surftober database backup — THIS FILE BELONGS IN THE PRIVATE REPO, NOT HERE.
+#
+# Copy to:  ciniper/surftober-backup  (a PRIVATE repo)  at  .github/workflows/backup.yml
+# Never run this from the public site repo: the dumps contain user PII (emails,
+# phone numbers, photos) and must only ever land somewhere private.
+#
+# What it does, every 3 days (and on demand from the Actions tab):
+#   1. Dumps roles, schema (DDL), public-table data, and auth-schema data
+#      (auth.users holds the email<->UUID map needed to re-link users after a rebuild).
+#   2. Sanity-gates the dumps — a paused/dead project fails the run loudly
+#      instead of silently committing an empty "backup".
+#   3. Commits the dumps + a STATUS.md stamp. The stamp changes every run, so the
+#      repo always has fresh activity and GitHub never auto-disables the schedule
+#      (scheduled workflows are disabled after 60 days of repo inactivity).
+#
+# Required repo secret (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL  — the SESSION POOLER connection string (port 5432), e.g.
+#     postgresql://postgres.rdrblueqytucygpmjuyh:<DB_PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#   Use the exact string from Supabase dashboard -> Connect -> Session pooler.
+#   The direct db.<ref>.supabase.co host is IPv6-only on the free tier and GitHub
+#   runners are IPv4-only — the session pooler is the one that works. The
+#   transaction pooler (port 6543) does NOT support pg_dump; don't use it.
+name: Supabase backup
+
+on:
+  schedule:
+    - cron: '47 9 */3 * *'   # every ~3 days; doubles as extra keep-alive traffic
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump database (roles, schema, data, auth)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p backups
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/schema.sql
+          # --schema public matters: without it the CLI's data dump also includes
+          # auth/storage rows, which would collide with auth.sql on restore.
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/data.sql --data-only --use-copy --schema public
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/auth.sql --data-only --use-copy --schema auth
+
+      - name: Sanity gate — fail loudly if the dump looks empty or broken
+        run: |
+          set -euo pipefail
+          test -s backups/schema.sql
+          grep -q 'CREATE TABLE' backups/schema.sql
+          # The CLI dumps with --quote-all-identifiers, so COPY lines look like:
+          #   COPY "public"."profiles" ("id", ...) FROM stdin;
+          grep -q 'COPY "public"\."profiles"' backups/data.sql
+          grep -q 'COPY "public"\."sessions"' backups/data.sql
+          grep -q 'COPY "auth"\."users"'      backups/auth.sql
+          # Row counts only — never print row contents to logs.
+          profiles=$(awk '/^COPY "public"\."profiles" /{f=1;next} /^\\\.$/{f=0} f' backups/data.sql | wc -l)
+          sessions=$(awk '/^COPY "public"\."sessions" /{f=1;next} /^\\\.$/{f=0} f' backups/data.sql | wc -l)
+          users=$(awk '/^COPY "auth"\."users" /{f=1;next} /^\\\.$/{f=0} f' backups/auth.sql | wc -l)
+          echo "profiles=$profiles sessions=$sessions auth_users=$users" > counts.txt
+          cat counts.txt
+          # An empty auth.users means the project is wiped or broken — refuse to
+          # advance the freshness stamp over a hollow backup.
+          if [ "$users" -eq 0 ]; then
+            echo 'auth.users is EMPTY — refusing to commit this as a backup'
+            exit 1
+          fi
+
+      - name: Commit backup + status stamp
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          {
+            echo '# Backup status'
+            echo
+            echo "Last successful run: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            cat counts.txt
+          } > STATUS.md
+          git add backups STATUS.md
+          git commit -m "backup: $(date -u +%F) [$(cat counts.txt)]"
+          git push
