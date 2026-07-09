@@ -51,7 +51,7 @@ window.nuclearWipeAll = nuclearWipeAll;
 // Supabase integration (Auth + DB)
 const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0';
-const TEAM = 'surftober-2025';
+const TEAM = 'surftober-2026';
 
 // Load Supabase JS if not present
 (function ensureSupabase(){
@@ -480,8 +480,8 @@ function saveSessions(rows) {
 
 function seedSample() {
   const sample = [
-    { user: 'Jason', date: '2025-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Jason', date: '2025-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
+    { user: 'Jason', date: '2026-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
+    { user: 'Jason', date: '2026-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
   ].map(SurftoberAwards.normalizeSession);
   saveSessions(sample);
 }
@@ -514,7 +514,8 @@ function renderTabs() {
 
 function initForm() {
   const f = document.getElementById('log-form');
-  const defaultDate = '2025-10-15';
+  const _today = new Date();
+  const defaultDate = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
   document.getElementById('log-date').value = defaultDate;
 
   function applyCleanupUI() {
@@ -749,8 +750,8 @@ function renderMyStats() {
     totals
       .map(
         (t) => {
-          // Calculate on-track hours (formula: ((TODAY()-DATEVALUE("2025-9-30"))/31)*GoalHours)
-          const startDate = new Date('2025-09-30'); // Sept 30, 2025
+          // Calculate on-track hours (formula: ((TODAY()-DATEVALUE("2026-9-30"))/31)*GoalHours)
+          const startDate = new Date('2026-09-30'); // Sept 30, 2026
           const today = new Date();
           const daysSinceStart = Math.max(0, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)));
           const daysInOctober = 31;
@@ -883,9 +884,19 @@ function renderLeaderboard() {
   const month = Number(document.getElementById('lb-month').value);
   const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
   const rows = totals.map(
-    (t, i) => `<tr><td>${i + 1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${t.user}" style="color:var(--accent);cursor:pointer;text-decoration:none">${t.user}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
   );
   document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  // Click a leaderboard name to view that person's sessions in My Stats
+  document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const meUser = document.getElementById('me-user');
+      if (meUser) meUser.value = a.getAttribute('data-user');
+      location.hash = '#me';
+      renderMyStats();
+    });
+  });
 }
 
 function renderAwards() {
