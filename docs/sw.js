@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v15';
+const CACHE = 'surftober-demo-v16';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -10,9 +10,9 @@ const ASSETS = [
   './index.html', 
   './landing.html',
   './register.html',
-  './styles.css?v=5', 
-  './app.js?v=12', 
-  './awards.js?v=5',
+  './styles.css?v=6',
+  './app.js?v=13',
+  './awards.js?v=6',
   './manifest.webmanifest?v=10',
   './logo.svg?v=10',
   './icon-maskable.svg?v=10',
@@ -54,17 +54,25 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Handle navigations (HTML pages): network-first with cache fallback
+  // Handle navigations (HTML pages): network-first with cache fallback.
+  // Cache under the page's own URL — caching everything as './index.html'
+  // meant a visit to landing.html poisoned the offline copy of the app.
   const acceptsHTML = req.headers.get('accept')?.includes('text/html');
   if (req.mode === 'navigate' || acceptsHTML) {
     e.respondWith(
       fetch(req)
         .then((r) => {
-          const copy = r.clone();
-          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          // Only cache good responses — a cached 404/500 would be served offline forever.
+          if (r.ok) {
+            const copy = r.clone();
+            caches.open(CACHE).then((c) => c.put(new URL(url.pathname, location.origin).href, copy));
+          }
           return r;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() =>
+          caches.match(url.pathname.endsWith('/') ? './index.html' : new URL(url.pathname, location.origin).href)
+            .then((res) => res || caches.match('./index.html'))
+        )
     );
     return;
   }
@@ -75,8 +83,10 @@ self.addEventListener('fetch', (e) => {
       res ||
       fetch(req)
         .then((r) => {
-          const copy = r.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          if (r.ok) {
+            const copy = r.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return r;
         })
     )

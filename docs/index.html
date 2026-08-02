@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=10">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=5" />
+  <link rel="stylesheet" href="./styles.css?v=6" />
   <meta name="theme-color" content="#0b3d91" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -16,11 +16,12 @@
     const fromAuth = sessionStorage.getItem('surftober_authenticated');
     
     // Check for any Supabase auth token in localStorage
+    // (supabase-js v2 stores it as 'sb-<project-ref>-auth-token')
     let hasSession = false;
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.includes('supabase') && key.includes('auth')) {
+        if (key && key.startsWith('sb-') && key.includes('-auth-token')) {
           const val = localStorage.getItem(key);
           if (val && val.length > 10) {
             hasSession = true;
@@ -36,8 +37,10 @@
       return;
     }
     
-    // Clear the auth flag after checking
+    // Clear the auth flag after checking (remember it for the rescue reload below,
+    // which would otherwise bounce first-time visitors back to the landing page)
     if (fromAuth) {
+      window.__fromAuth = true;
       sessionStorage.removeItem('surftober_authenticated');
     }
   })();
@@ -85,10 +88,12 @@
       showError(text);
     });
 
-    // One-time SW/cache rescue to break out of stale SW
+    // One-time SW/cache rescue to break out of stale SW.
+    // localStorage (not sessionStorage!) — the old per-session flag wiped the
+    // SW + caches on EVERY new browser session, so offline never worked.
     try {
-      if (!sessionStorage.getItem('pwa_rescue_done')) {
-        sessionStorage.setItem('pwa_rescue_done', '1');
+      if (!localStorage.getItem('pwa_rescue_v2_done')) {
+        localStorage.setItem('pwa_rescue_v2_done', '1');
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(regs){
             return Promise.all(regs.map(function(r){ return r.unregister().catch(function(){}); }));
@@ -99,6 +104,7 @@
               });
             }
           }).finally(function(){
+            if (window.__fromAuth) sessionStorage.setItem('surftober_authenticated', '1');
             location.reload();
           });
         }
@@ -121,9 +127,11 @@
   </header>
 
   <main id="app">
+    <div id="event-banner" class="event-banner" style="display:none"></div>
     <!-- Log Page -->
     <section id="page-log" class="page">
       <h2>Quick Log</h2>
+      <div id="event-notice" class="event-notice hint" style="display:none"></div>
       <form id="log-form">
         <div class="grid">
           <label>
@@ -175,7 +183,16 @@
           Notes
           <textarea id="log-notes" rows="3" placeholder="Short journal…"></textarea>
         </label>
-        <!-- Voice note controls temporarily removed; see feature/voice-notes-wip branch -->
+        <div id="field-audio">
+          <label>
+            Audio note (optional, max 10 MB)
+            <input type="file" id="log-audio" accept="audio/*" />
+          </label>
+          <div class="hint" id="log-audio-hint" style="display:none">
+            This session has an audio note — pick a new file to replace it, or
+            <label class="checkbox" style="display:inline-flex"><input type="checkbox" id="log-audio-remove" /> remove it</label>
+          </div>
+        </div>
 
         <div class="actions">
           <button type="submit" id="btn-submit">Add Entry</button>
@@ -194,15 +211,7 @@
         <label> Name
           <input list="user-list" id="me-user" placeholder="Your name" />
         </label>
-        <label> Year
-          <input type="number" id="me-year" value="2026" />
-        </label>
-        <label> Month
-          <select id="me-month">
-            <option value="10" selected>October (Surftober)</option>
-            <option value="0">All Months</option>
-          </select>
-        </label>
+        <span class="event-scope hint" id="me-scope"></span>
       </div>
       <div id="me-summary" class="cards"></div>
       <h3>Sessions</h3>
@@ -213,13 +222,7 @@
     <section id="page-leaderboard" class="page">
       <h2>Leaderboard</h2>
       <div class="filters">
-        <label> Year <input type="number" id="lb-year" value="2026" /></label>
-        <label> Month
-          <select id="lb-month">
-            <option value="10" selected>October</option>
-            <option value="0">All</option>
-          </select>
-        </label>
+        <span class="event-scope hint" id="lb-scope"></span>
       </div>
       <div id="leaderboard" class="table"></div>
       <p class="hint">Medal thresholds: Platinum ≥ 50h, Gold ≥ 40h, Silver ≥ 30h, Bronze ≥ 25h, Participant ≥ 10h.</p>
@@ -229,13 +232,7 @@
     <section id="page-awards" class="page">
       <h2>Awards</h2>
       <div class="filters">
-        <label> Year <input type="number" id="aw-year" value="2026" /></label>
-        <label> Month
-          <select id="aw-month">
-            <option value="10" selected>October</option>
-            <option value="0">All</option>
-          </select>
-        </label>
+        <span class="event-scope hint" id="aw-scope"></span>
         <button id="btn-compute-awards">Compute Awards</button>
         <button id="btn-export-awards">Export JSON</button>
         <button id="btn-awards-slides">Open Print Slides</button>
@@ -247,6 +244,41 @@
     <section id="page-admin" class="page">
       <h2>Admin</h2>
       <div class="cards">
+        <div class="card">
+          <h3>Launch an Event</h3>
+          <p>Users can only log sessions dated inside the active event's window. Launching a new event deactivates (and freezes) the current one.</p>
+          <div class="grid">
+            <label>Year <input type="number" id="ev-year" value="2026" min="2020" max="2100" /></label>
+            <label>Month
+              <select id="ev-month">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10" selected>October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </label>
+            <label>Start date <input type="date" id="ev-start" /></label>
+            <label>End date <input type="date" id="ev-end" /></label>
+            <label>Event name <input type="text" id="ev-name" placeholder="Surftober 2026" /></label>
+          </div>
+          <div class="actions">
+            <button id="btn-launch-event">Launch Event</button>
+          </div>
+          <p class="hint">Picking a Year + Month fills the dates with the full month; adjust them for a custom range.</p>
+        </div>
+        <div class="card">
+          <h3>Events</h3>
+          <p>View loads a past event's data everywhere (read-only); Activate re-opens logging for it.</p>
+          <div id="admin-events" class="table"></div>
+        </div>
         <div class="card">
           <h3>Import CSV</h3>
           <p>Columns (header expected): user,date(YYYY-MM-DD),type,duration(HH:MM),location,board,notes,no_wetsuit(0/1),costume(0/1),cleanup_items(int)</p>
@@ -265,6 +297,7 @@
           <h3>Factory Reset</h3>
           <p>Signs out, clears local data and caches, and reloads.</p>
           <button id="btn-factory-reset" class="warn">Factory Reset (This device)</button>
+        </div>
         <div class="card" id="admin-users-card">
           <h3>Registered Users</h3>
           <p>Admins only — list of emails and display names.</p>
@@ -272,8 +305,6 @@
             <button id="btn-list-users">List Users</button>
           </div>
           <div id="admin-users" class="table"></div>
-        </div>
-
         </div>
         <div class="card">
           <h3>Nuclear Wipe</h3>
@@ -302,7 +333,7 @@
               <select id="profile-target-hours">
                 <option value="">Select your goal...</option>
                 <option value="10">10 hours (Participant)</option>
-                <option value="20">20 hours (Bronze)</option>
+                <option value="25">25 hours (Bronze)</option>
                 <option value="30">30 hours (Silver)</option>
                 <option value="40">40 hours (Gold)</option>
                 <option value="50">50 hours (Platinum)</option>
@@ -329,7 +360,7 @@
           </div>
           <div class="actions">
             <button id="btn-save-profile">Save Profile</button>
-            <button id="btn-signout" class="warn" onclick="console.log('[INLINE] Sign out clicked'); if(window.sb && window.sb.auth) { window.sb.auth.signOut().then(() => { sessionStorage.clear(); Object.keys(localStorage).forEach(k => { if(k.includes('supabase')) localStorage.removeItem(k); }); window.location.replace('./landing.html'); }); } else { window.location.replace('./landing.html'); }">Sign Out</button>
+            <button id="btn-signout" class="warn">Sign Out</button>
             <button id="btn-delete-cloud" class="warn">Delete My Cloud Data</button>
           </div>
         </div>
@@ -345,7 +376,7 @@
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./version.js"></script>
-  <script src="./awards.js?v=5"></script>
-  <script type="module" src="./app.js?v=12"></script>
+  <script src="./awards.js?v=6"></script>
+  <script type="module" src="./app.js?v=13"></script>
 </body>
 </html>
