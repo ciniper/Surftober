@@ -56,6 +56,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const DEFAULT_EVENT = { id: null, name: 'Surftober 2026', team: 'surftober-2026', start_date: '2026-10-01', end_date: '2026-10-31', is_active: true };
 let activeEvent = DEFAULT_EVENT;  // event currently accepting logs (null = logging closed)
 let viewedEvent = DEFAULT_EVENT;  // event whose data is on screen
+let viewedEventPinned = false;    // true once someone explicitly picks an event to view
 let allEvents = [DEFAULT_EVENT];
 let eventsTableAvailable = false;
 
@@ -314,7 +315,9 @@ async function loadEvents(){
     eventsTableAvailable = true;
     allEvents = data || [];
     activeEvent = allEvents.find((e) => e.is_active) || null;
-    const stillThere = viewedEvent && allEvents.find((e) => e.team === viewedEvent.team);
+    // Follow the active event unless someone explicitly picked one to view —
+    // otherwise the boot-time fallback pins the screen to the wrong season.
+    const stillThere = viewedEventPinned && viewedEvent && allEvents.find((e) => e.team === viewedEvent.team);
     viewedEvent = stillThere || activeEvent || allEvents[0] || DEFAULT_EVENT;
   } catch {
     // events table not deployed yet — keep the built-in season
@@ -345,6 +348,7 @@ function isViewingActiveEvent(){
 
 function switchViewedEvent(ev){
   viewedEvent = ev;
+  viewedEventPinned = true;
   reflectEventUI();
   syncFromCloud();
 }
@@ -707,19 +711,136 @@ async function blobToBase64(blob){
 // ===== Session audio notes (Supabase Storage, bucket: session-audio) =====
 
 const AUDIO_MAX_BYTES = 10 * 1024 * 1024; // keep in sync with the bucket's file_size_limit
+const RECORD_MAX_MS = 5 * 60 * 1000;      // auto-stop: 5 min stays well under the size cap
 
-async function uploadSessionAudio(file){
+const AUDIO_EXT_BY_TYPE = {
+  'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'm4a',
+  'audio/mpeg': 'mp3', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/wav': 'wav'
+};
+
+// Accepts a picked File or a recorded Blob.
+async function uploadSessionAudio(fileOrBlob){
   if (!sb || !currentUser) throw new Error('Sign in to attach audio');
-  if (file.size > AUDIO_MAX_BYTES) throw new Error('Audio must be under 10 MB');
-  const ext = ((file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')) || 'audio';
+  if (fileOrBlob.size > AUDIO_MAX_BYTES) throw new Error('Audio must be under 10 MB');
+  const type = (fileOrBlob.type || 'audio/mpeg').split(';')[0]; // strip ";codecs=…" — the bucket matches on bare audio/*
+  const nameExt = fileOrBlob.name ? (fileOrBlob.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const ext = nameExt || AUDIO_EXT_BY_TYPE[type] || 'm4a';
   const path = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await sb.storage.from('session-audio').upload(path, file, {
-    contentType: file.type || 'audio/mpeg',
+  const { error } = await sb.storage.from('session-audio').upload(path, fileOrBlob, {
+    contentType: type,
     upsert: false
   });
   if (error) throw new Error('Audio upload failed: ' + error.message);
   const { data } = sb.storage.from('session-audio').getPublicUrl(path);
   return data.publicUrl;
+}
+
+// --- In-browser voice recording (device mic via MediaRecorder) ---
+let recorder = null;        // active MediaRecorder while recording
+let recorderChunks = [];
+let recordedBlob = null;    // finished take waiting to be saved with the entry
+let recordedUrl = null;     // object URL backing the preview player
+let recordTimer = null;
+let recordStartedAt = 0;
+
+function recordingSupported(){
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+}
+
+function pickRecordingMime(){
+  // audio/mp4 (AAC) first: Safari records it and every browser plays it back.
+  // webm/opus recordings do NOT play on iPhones, so it's the fallback only.
+  const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
+  for (const c of candidates) {
+    try { if (MediaRecorder.isTypeSupported(c)) return c; } catch {}
+  }
+  return ''; // let the browser pick
+}
+
+function fmtRecordTime(ms){
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function setRecordButton(recording){
+  const btn = document.getElementById('btn-record-audio');
+  if (!btn) return;
+  btn.textContent = recording ? '■ Stop' : '🎙 Record';
+  btn.classList.toggle('recording', recording);
+}
+
+function discardRecording(){
+  recordedBlob = null;
+  if (recordedUrl) { URL.revokeObjectURL(recordedUrl); recordedUrl = null; }
+  const wrap = document.getElementById('audio-preview-wrap');
+  if (wrap) wrap.style.display = 'none';
+  const player = document.getElementById('audio-preview');
+  if (player) player.removeAttribute('src');
+}
+
+async function toggleRecording(){
+  if (recorder) { recorder.stop(); return; } // onstop finishes up
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = pickRecordingMime();
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    recorderChunks = [];
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) recorderChunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop()); // release the mic (red indicator off)
+      clearInterval(recordTimer); recordTimer = null;
+      const timerEl = document.getElementById('record-timer');
+      if (timerEl) timerEl.style.display = 'none';
+      const type = (recorder.mimeType || mime || 'audio/mp4').split(';')[0];
+      recorder = null;
+      setRecordButton(false);
+      const blob = new Blob(recorderChunks, { type });
+      recorderChunks = [];
+      if (!blob.size) { toast('Nothing was recorded', 'warn'); return; }
+      discardRecording(); // clear any previous take first
+      recordedBlob = blob;
+      recordedUrl = URL.createObjectURL(blob);
+      const player = document.getElementById('audio-preview');
+      const wrap = document.getElementById('audio-preview-wrap');
+      if (player) player.src = recordedUrl;
+      if (wrap) wrap.style.display = '';
+      const fileInput = document.getElementById('log-audio');
+      if (fileInput) fileInput.value = ''; // fresh recording wins over a picked file
+    };
+    recorder.start();
+    recordStartedAt = Date.now();
+    setRecordButton(true);
+    const timerEl = document.getElementById('record-timer');
+    if (timerEl) { timerEl.textContent = '0:00'; timerEl.style.display = ''; }
+    recordTimer = setInterval(() => {
+      const elapsed = Date.now() - recordStartedAt;
+      const el = document.getElementById('record-timer');
+      if (el) el.textContent = fmtRecordTime(elapsed);
+      if (elapsed >= RECORD_MAX_MS && recorder) recorder.stop();
+    }, 250);
+  } catch (e) {
+    recorder = null;
+    setRecordButton(false);
+    if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+      toast('Microphone access was denied — allow the mic for this site and try again.', 'error');
+    } else {
+      toast('Could not start recording: ' + (e.message || e.name || e), 'error');
+    }
+  }
+}
+
+function attachAudioHandlers(){
+  const btn = document.getElementById('btn-record-audio');
+  if (btn) {
+    if (recordingSupported()) btn.addEventListener('click', toggleRecording);
+    else btn.style.display = 'none'; // ancient browser: file upload still works
+  }
+  const discard = document.getElementById('btn-discard-audio');
+  if (discard) discard.addEventListener('click', (e) => { e.preventDefault(); discardRecording(); });
+  const fileInput = document.getElementById('log-audio');
+  if (fileInput) fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) discardRecording(); // picked file replaces an old take
+  });
 }
 
 function audioPathFromUrl(url){
@@ -945,17 +1066,22 @@ function initForm() {
       toast(`Sessions must be dated inside ${activeEvent.name} (${activeEvent.start_date} → ${activeEvent.end_date})`, 'warn');
       return;
     }
+    if (recorder) {
+      toast('Stop the audio recording first.', 'warn');
+      return;
+    }
     const audioInput = document.getElementById('log-audio');
     const audioRemove = document.getElementById('log-audio-remove');
-    const audioFile = audioInput && audioInput.files && audioInput.files[0];
+    // A fresh recording wins; otherwise a picked file.
+    const audioSource = recordedBlob || (audioInput && audioInput.files && audioInput.files[0]) || null;
     const previousAudioUrl = editingAudioUrl;
     try {
       // Audio note: keep the existing one unless removed or replaced
       let audioUrl = editingAudioUrl;
       if (audioRemove && audioRemove.checked) audioUrl = null;
-      if (audioFile) {
+      if (audioSource) {
         if (sb && currentUser) {
-          audioUrl = await uploadSessionAudio(audioFile);
+          audioUrl = await uploadSessionAudio(audioSource);
         } else {
           toast('Audio notes need a signed-in account — entry saved without audio.', 'warn');
         }
@@ -1025,6 +1151,7 @@ function resetAudioField(){
   if (remove) remove.checked = false;
   const hint = document.getElementById('log-audio-hint');
   if (hint) hint.style.display = 'none';
+  discardRecording();
 }
 
 function startEditSession(session){
@@ -1055,6 +1182,7 @@ function resetAudioFieldForEdit(){
   if (remove) remove.checked = false;
   const hint = document.getElementById('log-audio-hint');
   if (hint) hint.style.display = editingAudioUrl ? '' : 'none';
+  discardRecording();
 }
 
 async function updateCloudSession(id, row){
@@ -1380,6 +1508,7 @@ window.addEventListener('load', () => {
   initForm();
   attachAccountHandlers();
   attachAdminEventHandlers();
+  attachAudioHandlers();
   reflectEventUI();
   renderRecent();
   renderMyStats();

@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=10">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=6" />
+  <link rel="stylesheet" href="./styles.css?v=7" />
   <meta name="theme-color" content="#0b3d91" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -184,12 +184,19 @@
           <textarea id="log-notes" rows="3" placeholder="Short journal…"></textarea>
         </label>
         <div id="field-audio">
-          <label>
-            Audio note (optional, max 10 MB)
+          <label>Audio note (optional, max 10 MB)</label>
+          <div class="audio-controls">
+            <button type="button" id="btn-record-audio">🎙 Record</button>
+            <span id="record-timer" class="hint" style="display:none">0:00</span>
+            <span class="hint">or</span>
             <input type="file" id="log-audio" accept="audio/*" />
-          </label>
+          </div>
+          <div id="audio-preview-wrap" style="display:none">
+            <audio id="audio-preview" controls></audio>
+            <a href="#" id="btn-discard-audio">Discard recording</a>
+          </div>
           <div class="hint" id="log-audio-hint" style="display:none">
-            This session has an audio note — pick a new file to replace it, or
+            This session has an audio note — record or pick a new one to replace it, or
             <label class="checkbox" style="display:inline-flex"><input type="checkbox" id="log-audio-remove" /> remove it</label>
           </div>
         </div>
@@ -377,6 +384,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=13"></script>
+  <script type="module" src="./app.js?v=14"></script>
 </body>
 </html>
