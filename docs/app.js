@@ -251,19 +251,6 @@ function enforceProfileNameOnUI(){
       userEl.readOnly = false;
     }
   }
-  // My Stats filter
-  const meUser = document.getElementById('me-user');
-  if (meUser) {
-    if (currentUser && profileName) {
-      // Default to your profile name but allow changing to view others
-      meUser.value = profileName;
-      meUser.readOnly = false;
-      meUser.title = 'Default: your name. Pick another to view others.';
-    } else {
-      meUser.readOnly = false;
-      meUser.title = '';
-    }
-  }
 }
 
 async function signInMagicLink(email){
@@ -316,6 +303,7 @@ const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'tex
 
 const THEMES = {
   'sunset-surf': { label: 'Sunset Surf (current)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
+  'sunset-ember': { label: 'Sunset Surf · accent borders', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#9c4d31', 'card-border': '#9c4d31' } },
   'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e' } },
   'high-tide': { label: 'High Tide', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#2ec4b6', 'accent-strong': '#17a398', 'text': '#e8f4f8', 'ok': '#5be37a', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
   'golden-hour': { label: 'Golden Hour', vars: { 'bg': '#161020', 'panel': '#241a30', 'muted': '#332545', 'accent': '#ffb347', 'accent-strong': '#ff8c42', 'text': '#f6ecdf', 'ok': '#4ecdc4', 'warn': '#ffd166', 'input-bg': '#332545', 'input-border': '#453458', 'card-border': '#453458' } },
@@ -324,6 +312,7 @@ const THEMES = {
   'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349' } },
   'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32' } },
   'pumpkin-spice': { label: 'Pumpkin Spice (light)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#c96a1e', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8' } },
+  'pumpkin-ember': { label: 'Pumpkin Spice · accent borders', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#c96a1e', 'input-bg': '#ffffff', 'input-border': '#e2a380', 'card-border': '#e2a380' } },
   'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#c97b1e', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4' } },
 };
 
@@ -1008,14 +997,6 @@ function saveSessions(rows) {
   localStorage.setItem(LS_KEY, JSON.stringify(rows));
 }
 
-function seedSample() {
-  const sample = [
-    { user: 'Jason', date: '2026-10-03', type: 'surf', duration: '02:10', location: 'OB - Lawton', board: 'PPE', notes: 'Clean but a bit walled', no_wetsuit: 0, costume: 0, cleanup_items: 0 },
-    { user: 'Jason', date: '2026-10-08', type: 'surf', duration: '03:48', location: 'OB - Lawton', board: 'PPE', notes: 'Marathon day', no_wetsuit: 0, costume: 0, cleanup_items: 0 }
-  ].map(SurftoberAwards.normalizeSession);
-  saveSessions(sample);
-}
-
 function appendSession(row) {
   const all = loadSessions();
   all.push(SurftoberAwards.normalizeSession(row));
@@ -1379,12 +1360,51 @@ function renderRecent() {
   });
 }
 
+// Sessions page state: your own sessions, or one other surfer's page
+let sessionsView = 'mine';   // 'mine' | 'others'
+let otherUserSelected = '';
+
 function renderMyStats() {
-  const user = document.getElementById('me-user').value.trim();
   const ev = viewedEvent || DEFAULT_EVENT;
   const range = { start: ev.start_date, end: ev.end_date };
   const normalized = loadSessions().map(SurftoberAwards.normalizeSession);
-  const mine = normalized.filter((s) => !user || s.user === user);
+
+  // Sub-tab chrome
+  const mineBtn = document.getElementById('subtab-mine');
+  const othersBtn = document.getElementById('subtab-others');
+  if (mineBtn) mineBtn.classList.toggle('active', sessionsView === 'mine');
+  if (othersBtn) othersBtn.classList.toggle('active', sessionsView === 'others');
+  const otherWrap = document.getElementById('other-user-wrap');
+  if (otherWrap) otherWrap.style.display = sessionsView === 'others' ? '' : 'none';
+
+  // Resolve whose page we're showing
+  let user;
+  if (sessionsView === 'others') {
+    const names = Array.from(new Set(
+      normalized.filter((s) => SurftoberAwards.inRange(s.date, range)).map((s) => (s.user || '').trim())
+    )).filter((n) => n && n !== profileName).sort((a, b) => a.localeCompare(b));
+    const select = document.getElementById('other-user-select');
+    if (select) {
+      if (!names.includes(otherUserSelected)) otherUserSelected = names[0] || '';
+      select.innerHTML = names.map((n) => `<option value="${esc(n)}"${n === otherUserSelected ? ' selected' : ''}>${esc(n)}</option>`).join('');
+    }
+    user = otherUserSelected;
+  } else {
+    user = profileName || '';
+  }
+
+  if (!user) {
+    const hint = sessionsView === 'mine'
+      ? (currentUser
+          ? 'Set your display name in Account to see your sessions.'
+          : 'Sign in to see your sessions — or browse Other Surfers.')
+      : 'No other surfers have logged sessions in this event yet.';
+    document.getElementById('me-summary').innerHTML = `<div class="hint">${hint}</div>`;
+    document.getElementById('me-sessions').innerHTML = '';
+    return;
+  }
+
+  const mine = normalized.filter((s) => s.user === user);
   const totals = SurftoberAwards.rollupByUser(mine, range);
   const summary = document.getElementById('me-summary');
   summary.innerHTML =
@@ -1452,7 +1472,7 @@ function renderMyStats() {
     }
   });
   const tbl = [
-    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th><th>Audio</th><th></th></tr></thead><tbody>`
+    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th><th></th></tr></thead><tbody>`
   ];
   sessions.forEach((s, i) => {
     const costumeApplied = costumeIdxByUser.get((s.user || '').trim()) === i;
@@ -1469,7 +1489,7 @@ function renderMyStats() {
     tbl.push(
       `<tr><td>${esc(s.date)}</td><td>${esc(s.type)}</td><td>${esc(s.duration)}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td>${esc(s.notes || '')}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${esc(s.notes || '')}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
@@ -1523,12 +1543,17 @@ function renderLeaderboard() {
     (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
   );
   document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  // Click a leaderboard name to view that person's sessions in My Stats
+  // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      const meUser = document.getElementById('me-user');
-      if (meUser) meUser.value = a.getAttribute('data-user');
+      const name = a.getAttribute('data-user');
+      if (profileName && name === profileName) {
+        sessionsView = 'mine';
+      } else {
+        sessionsView = 'others';
+        otherUserSelected = name;
+      }
       location.hash = '#me';
       renderMyStats();
     });
@@ -1656,7 +1681,10 @@ window.addEventListener('load', () => {
   // attachAudioHandlers(); // temporarily disabled (see feature/voice-notes-wip)
   registerSW();
   // Handlers (period filters are gone — everything is scoped to the viewed event)
-  document.getElementById('me-user').addEventListener('input', () => {
+  document.getElementById('subtab-mine').addEventListener('click', () => { sessionsView = 'mine'; renderMyStats(); });
+  document.getElementById('subtab-others').addEventListener('click', () => { sessionsView = 'others'; renderMyStats(); });
+  document.getElementById('other-user-select').addEventListener('change', (e) => {
+    otherUserSelected = e.target.value;
     renderMyStats();
   });
   document.getElementById('btn-compute-awards').addEventListener('click', renderAwards);
@@ -1667,22 +1695,6 @@ window.addEventListener('load', () => {
   if (btnFactory) btnFactory.addEventListener('click', factoryResetThisDevice);
   const btnNuclear = document.getElementById('btn-nuclear-wipe');
   if (btnNuclear) btnNuclear.addEventListener('click', nuclearWipeAll);
-  document.getElementById('btn-load-sample').addEventListener('click', () => {
-    seedSample();
-    populateDataLists();
-    renderRecent();
-    renderMyStats();
-    renderLeaderboard();
-    renderAwards();
-  });
-  document.getElementById('btn-clear').addEventListener('click', () => {
-    saveSessions([]);
-    populateDataLists();
-    renderRecent();
-    renderMyStats();
-    renderLeaderboard();
-    renderAwards();
-  });
   document.getElementById('csv-file').addEventListener('change', async (e) => {
     const f = e.target.files[0];
     if (!f) return;

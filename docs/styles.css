@@ -108,3 +108,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .theme-pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 10px 0; }
 .theme-pickers label { font-size: 12px; }
 .theme-pickers input[type="color"] { padding: 2px; height: 36px; width: 100%; cursor: pointer; }
+
+/* v1.5.5: log-form breathing room, Sessions sub-tabs, readable Journal column */
+#field-audio { margin: 16px 0 6px; }
+#field-audio > label { display: block; margin-bottom: 8px; }
+#log-form .actions { margin-top: 20px; }
+.subtabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.subtab { background: var(--muted); color: var(--text); box-shadow: none; border: 2px solid var(--card-border); font-weight: 600; }
+.subtab.active { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); border-color: transparent; color: #fff; }
+.subtabs .event-scope { margin-left: auto; }
+/* Journal entries are meant to be read, not squeezed into a sliver */
+.table th.journal-cell { min-width: 340px; }
+.table td.journal-cell { min-width: 340px; max-width: 560px; white-space: pre-wrap; line-height: 1.5; }
