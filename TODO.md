@@ -10,6 +10,11 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
+      not null`) in the Admin tab with a Restore button per row (sets `deleted_at`
+      back to null). Today restoring requires the Supabase dashboard (Table Editor →
+      sessions → clear `deleted_at`). Needs an admin-gated RPC, since the anon API
+      can only see rows, not un-tombstone others' sessions.
 - [ ] Rebuild or remove the dead admin buttons — the `list_users` and `nuclear_wipe`
       Edge Functions died with the old Supabase project. "List Users" and
       "Nuclear Wipe" in the Admin tab currently error.
