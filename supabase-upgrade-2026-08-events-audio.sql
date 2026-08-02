@@ -47,11 +47,15 @@ create policy "Admins can delete events" on public.events for delete
 
 -- Atomic activation: exactly one event ends up active, in one statement.
 -- Runs as the caller, so events RLS still applies (non-admins update 0 rows).
+-- The WHERE clause is required: hosted Supabase preloads pg_safeupdate on API
+-- connections, which rejects UPDATEs without one (even inside functions).
 create or replace function public.activate_event(p_team text)
 returns void
 language sql
 as $$
-  update public.events set is_active = (team = p_team);
+  update public.events
+     set is_active = (team = p_team)
+   where is_active is distinct from (team = p_team);
 $$;
 
 -- Seed the current season as the active event.
