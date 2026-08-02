@@ -47,6 +47,9 @@ const SESSION_COLS = [
   'audio_url', 'deleted_at', 'created_at'
 ];
 
+// v1.5+: the admin-launched seasons table.
+const EVENT_COLS = ['id', 'name', 'team', 'start_date', 'end_date', 'is_active', 'created_at'];
+
 /** Run this once by hand: first sync + creates the nightly trigger. */
 function setup() {
   // Remove any triggers from previous setups so reruns don't stack them.
@@ -68,6 +71,8 @@ function mirror() {
     'select=' + PROFILE_COLS.join(',') + '&order=created_at.asc,id.asc');
   const sessions = fetchAllRows_('/rest/v1/sessions',
     'select=' + SESSION_COLS.join(',') + '&order=date.asc,id.asc');
+  const events = fetchAllRows_('/rest/v1/events',
+    'select=' + EVENT_COLS.join(',') + '&order=start_date.asc,id.asc');
   const users = fetchAuthUsers_();
 
   // Every profile row belongs to an auth user; fewer users than profiles means
@@ -84,8 +89,10 @@ function mirror() {
     users.map(function (u) {
       return [cell_(u.id), cell_(u.email), cell_(u.created_at), cell_(u.last_sign_in_at)];
     }));
-  writeTab_(ss, 'meta', ['last_sync_utc', 'profiles', 'sessions', 'auth_users'],
-    [[new Date().toISOString(), profiles.length, sessions.length, users.length]]);
+  writeTab_(ss, 'events', EVENT_COLS,
+    events.map(function (r) { return EVENT_COLS.map(function (c) { return cell_(r[c]); }); }));
+  writeTab_(ss, 'meta', ['last_sync_utc', 'profiles', 'sessions', 'auth_users', 'events'],
+    [[new Date().toISOString(), profiles.length, sessions.length, users.length, events.length]]);
 }
 
 /** Script Properties -> config, with a clear error if unset. */

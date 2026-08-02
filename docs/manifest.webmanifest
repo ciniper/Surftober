@@ -4,7 +4,7 @@
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a1628",
-  "theme_color": "#0a1628",
+  "theme_color": "#152238",
   "icons": [
     { "src": "./logo.svg?v=10", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "./icon-maskable.svg?v=10", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }

@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Surftober Web (Demo)</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=10">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Surftober</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=10" />
-  <meta name="theme-color" content="#0b3d91" />
+  <link rel="stylesheet" href="./styles.css?v=11" />
+  <meta name="theme-color" content="#152238" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
   (function() {
@@ -130,13 +130,16 @@
     <div id="event-banner" class="event-banner" style="display:none"></div>
     <!-- Log Page -->
     <section id="page-log" class="page">
-      <h2>Quick Log</h2>
+      <div class="page-head">
+        <h2 id="log-title">Quick Log</h2>
+        <span id="log-head-actions"></span>
+      </div>
       <div id="event-notice" class="event-notice hint" style="display:none"></div>
       <form id="log-form">
         <div class="grid">
           <label>
             Name
-            <input required list="user-list" id="log-user" placeholder="Your name" />
+            <input required list="user-list" id="log-user" placeholder="Your name" autocomplete="name" autocapitalize="words" />
             <datalist id="user-list"></datalist>
           </label>
           <label>
@@ -156,18 +159,18 @@
           <label>
             Duration
             <div class="duration-inputs">
-              <input type="number" id="log-duration-h" min="0" max="24" value="1" aria-label="Hours" /> h
-              <input type="number" id="log-duration-m" min="0" max="59" step="1" value="0" aria-label="Minutes" /> m
+              <input type="number" id="log-duration-h" min="0" max="24" value="1" inputmode="numeric" aria-label="Hours" /> h
+              <input type="number" id="log-duration-m" min="0" max="59" step="1" value="0" inputmode="numeric" aria-label="Minutes" /> m
             </div>
           </label>
           <label>
             Location
-            <input list="location-list" id="log-location" placeholder="e.g., OB - Lawton" />
+            <input list="location-list" id="log-location" placeholder="e.g., OB - Lawton" autocapitalize="words" enterkeyhint="next" />
             <datalist id="location-list"></datalist>
           </label>
           <label id="field-craft">
             Surf craft
-            <input list="board-list" id="log-board" placeholder="e.g., 6'1 Phantom" />
+            <input list="board-list" id="log-board" placeholder="e.g., 6'1 Phantom" autocapitalize="words" enterkeyhint="next" />
             <datalist id="board-list"></datalist>
           </label>
         </div>
@@ -181,12 +184,12 @@
         </div>
         <label>
           Journal
-          <textarea id="log-notes" rows="3" placeholder="How was it out there?"></textarea>
+          <textarea id="log-notes" rows="3" placeholder="How was it out there?" enterkeyhint="done"></textarea>
         </label>
         <div id="field-audio">
           <label>Audio note (optional, max 10 MB)</label>
           <div class="audio-controls">
-            <button type="button" id="btn-record-audio">🎙 Record</button>
+            <button type="button" id="btn-record-audio" class="btn-secondary">🎙 Record</button>
             <span id="record-timer" class="hint" style="display:none">0:00</span>
             <span class="hint">or</span>
             <input type="file" id="log-audio" accept="audio/*" />
@@ -201,9 +204,11 @@
           </div>
         </div>
 
-        <div class="actions">
-          <button type="submit" id="btn-submit">Add Entry</button>
-          <button type="button" id="btn-cancel-edit" class="warn" style="display:none">Cancel Edit</button>
+        <div id="log-actions-home">
+          <div class="actions" id="log-actions">
+            <button type="submit" id="btn-submit" form="log-form">Add Entry</button>
+            <button type="button" id="btn-cancel-edit" form="log-form" class="btn-secondary" style="display:none">Cancel Edit</button>
+          </div>
         </div>
       </form>
 
@@ -245,8 +250,8 @@
       <div class="filters">
         <span class="event-scope hint" id="aw-scope"></span>
         <button id="btn-compute-awards">Compute Awards</button>
-        <button id="btn-export-awards">Export JSON</button>
-        <button id="btn-awards-slides">Open Print Slides</button>
+        <button id="btn-export-awards" class="btn-secondary">Export JSON</button>
+        <button id="btn-awards-slides" class="btn-secondary">Open Print Slides</button>
       </div>
       <div id="awards" class="cards"></div>
     </section>
@@ -298,8 +303,8 @@
             <summary>Custom…</summary>
             <div id="theme-pickers" class="theme-pickers"></div>
             <div class="actions">
-              <button type="button" id="btn-theme-copy">Copy current into pickers</button>
-              <button type="button" id="btn-theme-reset">Reset to default</button>
+              <button type="button" id="btn-theme-copy" class="btn-secondary">Copy current into pickers</button>
+              <button type="button" id="btn-theme-reset" class="btn-secondary">Reset to default</button>
             </div>
           </details>
         </div>
@@ -310,7 +315,7 @@
         </div>
         <div class="card">
           <h3>Export</h3>
-          <button id="btn-export-csv">Export Sessions CSV</button>
+          <button id="btn-export-csv" class="btn-secondary">Export Sessions CSV</button>
         </div>
         <div class="card">
           <h3>Factory Reset</h3>
@@ -321,7 +326,7 @@
           <h3>Registered Users</h3>
           <p>Admins only — list of emails and display names.</p>
           <div class="actions">
-            <button id="btn-list-users">List Users</button>
+            <button id="btn-list-users" class="btn-secondary">List Users</button>
           </div>
           <div id="admin-users" class="table"></div>
         </div>
@@ -379,7 +384,7 @@
           </div>
           <div class="actions">
             <button id="btn-save-profile">Save Profile</button>
-            <button id="btn-signout" class="warn">Sign Out</button>
+            <button id="btn-signout" class="btn-secondary">Sign Out</button>
             <button id="btn-delete-cloud" class="warn">Delete My Cloud Data</button>
           </div>
         </div>
@@ -388,14 +393,14 @@
   </main>
 
   <footer class="app-footer">
-    <span>Surftober Demo · PWA-ready <span id="live-status" class="live" style="display:none">• LIVE</span></span>
-    <span><span id="sw-status"></span><span class="app-version" style="margin-left:10px;"></span></span>
+    <span>Surftober <span id="live-status" class="live" style="display:none">• LIVE</span></span>
+    <span><span id="sw-status" style="display:none"></span><span class="app-version"></span></span>
   </footer>
 
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=19"></script>
+  <script type="module" src="./app.js?v=20"></script>
 </body>
 </html>

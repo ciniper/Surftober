@@ -1,7 +1,7 @@
 // Surftober deploy marker — bump APP_VERSION on every deploy.
 // Served network-first (see sw.js), so the live value updates the moment a
 // deploy lands. Use it to confirm a push made it through the CDN + caches.
-window.APP_VERSION = 'v1.5.6 · 2026-08-02';
+window.APP_VERSION = 'v1.6.0 · 2026-08-02';
 
 (function () {
   console.log('[Surftober] ' + window.APP_VERSION);
