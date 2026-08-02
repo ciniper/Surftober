@@ -31,7 +31,8 @@ main { padding: 12px; display: block; }
 label { display: grid; gap: 6px; font-size: 13px; }
 .hidden { display: none !important; }
 input, select, textarea, button { border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); padding: 10px 12px; transition: all 0.2s ease; font-size: 14px; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: #243b54; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+/* Theme-aware focus: a hardcoded navy here turned inputs near-black on light themes */
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--input-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 input::placeholder, textarea::placeholder { color: #7a9bb5; }
 button { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: #fff; font-weight: 600; border: none; box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3); cursor: pointer; }
 button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3); }
@@ -66,9 +67,11 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 /* Toasts */
 .toast-container { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 1000; display: grid; gap: 8px; width: min(92vw, 460px); }
 .toast { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--panel); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px; }
-.toast.success { border-color: var(--ok); background: #0d2a27; }
-.toast.warn { border-color: var(--warn); background: #2a2306; }
-.toast.error { border-color: #ff4444; background: #2a0e12; }
+/* Tinted from the theme panel so toast text stays readable on light themes too
+   (older browsers without color-mix fall back to the plain panel background) */
+.toast.success { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--panel)); }
+.toast.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--panel)); }
+.toast.error { border-color: #ff4444; background: color-mix(in srgb, #ff4444 14%, var(--panel)); }
 .toast .close { margin-left: auto; opacity: .8; cursor: pointer; }
 
 /* Live status */
@@ -119,4 +122,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .subtabs .event-scope { margin-left: auto; }
 /* Journal entries are meant to be read, not squeezed into a sliver */
 .table th.journal-cell { min-width: 340px; }
-.table td.journal-cell { min-width: 340px; max-width: 560px; white-space: pre-wrap; line-height: 1.5; }
+.table td.journal-cell { min-width: 340px; max-width: 560px; line-height: 1.5; }
+
+/* v1.5.6: long journals clamp to 4 lines with a Show more toggle */
+.journal-text { display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.journal-text.expanded { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+.journal-more { display: inline-block; margin-top: 3px; color: var(--accent); font-size: 12px; text-decoration: underline; cursor: pointer; }

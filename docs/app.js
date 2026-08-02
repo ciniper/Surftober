@@ -982,6 +982,33 @@ function audioPlayerHtml(url){
   return url ? `<audio controls preload="none" src="${esc(url)}"></audio>` : '';
 }
 
+// ===== Journal clamping (long entries collapse to 4 lines) =====
+
+function journalHtml(text){
+  return text ? `<div class="journal-text">${esc(text)}</div>` : '';
+}
+
+// Adds a Show more/less toggle to any clamped journal that actually overflows.
+// Skips journals inside hidden pages (they measure as 0) and retries when the
+// page becomes visible — renderTabs calls this on every tab switch.
+function attachJournalToggles(){
+  document.querySelectorAll('.journal-text:not([data-wired])').forEach((el) => {
+    if (!el.offsetParent) return; // hidden — measure on next tab switch
+    el.dataset.wired = '1';
+    if (el.scrollHeight <= el.clientHeight + 2) return; // fits in the clamp
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'journal-more';
+    a.textContent = 'Show more';
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const expanded = el.classList.toggle('expanded');
+      a.textContent = expanded ? 'Show less' : 'Show more';
+    });
+    el.after(a);
+  });
+}
+
 // In production, replace with Supabase/Next.js API.
 
 const LS_KEY = 'surftober.sessions.v1';
@@ -1056,6 +1083,9 @@ function renderTabs() {
   const tab = document.querySelector(`.tabs a[data-tab="${hash}"]`);
   if (el) el.classList.add('active');
   if (tab) tab.classList.add('active');
+  // Journals rendered while this page was hidden couldn't be measured for the
+  // Show-more toggle — retry now that it's visible.
+  attachJournalToggles();
 }
 
 function initForm() {
@@ -1346,7 +1376,7 @@ function renderRecent() {
       <div>${esc(r.duration)} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
         r.costume ? '<span class="badge">Costume</span>' : ''
       } ${r.cleanup_items ? `<span class="badge">Cleanup ${Number(r.cleanup_items)}</span>` : ''}</div>
-      <div>${esc(r.notes || '')}</div>${audioPlayerHtml(r.audio_url)}${edit}</div>`;
+      ${journalHtml(r.notes)}${audioPlayerHtml(r.audio_url)}${edit}</div>`;
     })
     .join('');
   // Attach edit handlers
@@ -1358,6 +1388,7 @@ function renderRecent() {
       if (s) startEditSession(s);
     });
   });
+  attachJournalToggles();
 }
 
 // Sessions page state: your own sessions, or one other surfer's page
@@ -1439,7 +1470,7 @@ function renderMyStats() {
           let content = `<div class="card"><h3>${esc(t.user)}</h3>`;
 
           if (goalHours) {
-            const statusColor = t.total_hours >= onTrackHours ? '#5be37a' : '#ffb347';
+            const statusColor = t.total_hours >= onTrackHours ? 'var(--ok)' : 'var(--warn)'; // theme-aware
             content += `
               <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
               <div>On-Track Hours: <strong style="color:${statusColor}">${onTrackHours.toFixed(1)}</strong></div>
@@ -1489,7 +1520,7 @@ function renderMyStats() {
     tbl.push(
       `<tr><td>${esc(s.date)}</td><td>${esc(s.type)}</td><td>${esc(s.duration)}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${esc(s.notes || '')}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
@@ -1534,6 +1565,7 @@ function renderMyStats() {
       }
     });
   });
+  attachJournalToggles();
 }
 
 function renderLeaderboard() {
