@@ -632,7 +632,9 @@ function attachAccountHandlers(){
     try {
       await saveProfile();
       toast('Profile saved successfully', 'success');
-      renderMyStats();
+      // Re-pull sessions: a rename rewrites user_name on all of them
+      // (sync_session_names trigger), so refresh every view from the cloud.
+      await syncFromCloud();
     } catch (e) {
       toast('Save profile failed: ' + e.message, 'error');
     }
