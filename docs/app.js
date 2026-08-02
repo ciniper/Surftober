@@ -85,6 +85,12 @@ function esc(v){
   return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// 'Oct 1' instead of '2026-10-01' anywhere a human reads a date
+function fmtDay(d){
+  try { return SurftoberAwards.localDate(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+  catch { return String(d); }
+}
+
 function toast(msg, type='success'){
   const box = document.getElementById('toast-container');
   if (!box) { console.log(`[${type}]`, msg); return; }
@@ -299,21 +305,27 @@ async function saveDisplayName(){
 // else's app; the winner gets baked into styles.css for everyone.
 
 const THEME_KEY = 'surftober.theme.v1';
-const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border'];
+// on-accent = ink on accent-filled surfaces; accent-text = accent used AS text
+// (darkened on light themes). Every pairing is WCAG-checked >= 4.5:1.
+const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border', 'on-accent', 'accent-text'];
 
 const THEMES = {
-  'sunset-surf': { label: 'Sunset Surf (current)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
-  'sunset-ember': { label: 'Sunset Surf · accent borders', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#9c4d31', 'card-border': '#9c4d31' } },
-  'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e' } },
-  'high-tide': { label: 'High Tide', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#2ec4b6', 'accent-strong': '#17a398', 'text': '#e8f4f8', 'ok': '#5be37a', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
-  'golden-hour': { label: 'Golden Hour', vars: { 'bg': '#161020', 'panel': '#241a30', 'muted': '#332545', 'accent': '#ffb347', 'accent-strong': '#ff8c42', 'text': '#f6ecdf', 'ok': '#4ecdc4', 'warn': '#ffd166', 'input-bg': '#332545', 'input-border': '#453458', 'card-border': '#453458' } },
-  'dawn-patrol': { label: 'Dawn Patrol', vars: { 'bg': '#141126', 'panel': '#1f1a38', 'muted': '#2c2450', 'accent': '#ff8fa3', 'accent-strong': '#ff5c7a', 'text': '#f3eefc', 'ok': '#7ce7c4', 'warn': '#ffc46b', 'input-bg': '#2c2450', 'input-border': '#3b3166', 'card-border': '#3b3166' } },
-  'deep-kelp': { label: 'Deep Kelp', vars: { 'bg': '#0a1f14', 'panel': '#12301f', 'muted': '#1a4029', 'accent': '#ffc857', 'accent-strong': '#f4a300', 'text': '#eaf6ec', 'ok': '#4ecdc4', 'warn': '#ff9f1c', 'input-bg': '#1a4029', 'input-border': '#2a5a3c', 'card-border': '#2a5a3c' } },
-  'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349' } },
-  'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32' } },
-  'pumpkin-spice': { label: 'Pumpkin Spice (light)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#c96a1e', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8' } },
-  'pumpkin-ember': { label: 'Pumpkin Spice · accent borders', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#c96a1e', 'input-bg': '#ffffff', 'input-border': '#e2a380', 'card-border': '#e2a380' } },
-  'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#c97b1e', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4' } },
+  'sunset-surf': { label: 'Sunset Surf (current)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
+  'sunset-ember': { label: 'Sunset Surf · accent borders', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#9c4d31', 'card-border': '#9c4d31', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
+  'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e', 'on-accent': '#26140a', 'accent-text': '#ff8b5e' } },
+  'board-wax': { label: 'Board Wax', vars: { 'bg': '#181310', 'panel': '#241c16', 'muted': '#33271d', 'accent': '#f4703a', 'accent-strong': '#dd4f0e', 'text': '#f3eae2', 'ok': '#57cfa8', 'warn': '#ffb54d', 'input-bg': '#33271d', 'input-border': '#85684c', 'card-border': '#4a3728', 'on-accent': '#140a04', 'accent-text': '#f4703a' } },
+  'night-swell': { label: 'Night Swell', vars: { 'bg': '#060b16', 'panel': '#0e1626', 'muted': '#182337', 'accent': '#ff5a1f', 'accent-strong': '#e8430a', 'text': '#e9f0fa', 'ok': '#3fdbb4', 'warn': '#ffab40', 'input-bg': '#182337', 'input-border': '#546a8c', 'card-border': '#28374f', 'on-accent': '#140a04', 'accent-text': '#ff5a1f' } },
+  'dusk-patrol': { label: 'Dusk Patrol', vars: { 'bg': '#171533', 'panel': '#211e46', 'muted': '#2e2a5e', 'accent': '#fb6a2a', 'accent-strong': '#e85510', 'text': '#efedfb', 'ok': '#5fe0c0', 'warn': '#ffc46b', 'input-bg': '#2e2a5e', 'input-border': '#6f68ad', 'card-border': '#403a78', 'on-accent': '#26140a', 'accent-text': '#fb6a2a' } },
+  'high-tide': { label: 'High Tide', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#2ec4b6', 'accent-strong': '#17a398', 'text': '#e8f4f8', 'ok': '#5be37a', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#04231f', 'accent-text': '#2ec4b6' } },
+  'golden-hour': { label: 'Golden Hour', vars: { 'bg': '#161020', 'panel': '#241a30', 'muted': '#332545', 'accent': '#ffb347', 'accent-strong': '#ff8c42', 'text': '#f6ecdf', 'ok': '#4ecdc4', 'warn': '#ffd166', 'input-bg': '#332545', 'input-border': '#453458', 'card-border': '#453458', 'on-accent': '#241505', 'accent-text': '#ffb347' } },
+  'dawn-patrol': { label: 'Dawn Patrol', vars: { 'bg': '#141126', 'panel': '#1f1a38', 'muted': '#2c2450', 'accent': '#ff8fa3', 'accent-strong': '#ff5c7a', 'text': '#f3eefc', 'ok': '#7ce7c4', 'warn': '#ffc46b', 'input-bg': '#2c2450', 'input-border': '#3b3166', 'card-border': '#3b3166', 'on-accent': '#2b0f16', 'accent-text': '#ff8fa3' } },
+  'deep-kelp': { label: 'Deep Kelp', vars: { 'bg': '#0a1f14', 'panel': '#12301f', 'muted': '#1a4029', 'accent': '#ffc857', 'accent-strong': '#f4a300', 'text': '#eaf6ec', 'ok': '#4ecdc4', 'warn': '#ff9f1c', 'input-bg': '#1a4029', 'input-border': '#2a5a3c', 'card-border': '#2a5a3c', 'on-accent': '#1f1503', 'accent-text': '#ffc857' } },
+  'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349', 'on-accent': '#02060c', 'accent-text': '#4da3ff' } },
+  'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
+  'pumpkin-spice': { label: 'Pumpkin Spice (light)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8', 'on-accent': '#26140a', 'accent-text': '#b54a17' } },
+  'pumpkin-ember': { label: 'Pumpkin Spice · accent borders', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#e2a380', 'card-border': '#e2a380', 'on-accent': '#26140a', 'accent-text': '#b54a17' } },
+  'sandbar': { label: 'Sandbar (light)', vars: { 'bg': '#f8efe2', 'panel': '#fffaf2', 'muted': '#eddcc2', 'accent': '#c8480f', 'accent-strong': '#b83c05', 'text': '#38271a', 'ok': '#1e7a52', 'warn': '#a95410', 'input-bg': '#ffffff', 'input-border': '#94795a', 'card-border': '#d8c3a2', 'on-accent': '#ffffff', 'accent-text': '#b23f07' } },
+  'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#9a5c0d', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4', 'on-accent': '#ffffff', 'accent-text': '#0e7c86' } },
 };
 
 function currentThemeSelection(){
@@ -464,7 +476,7 @@ function reflectEventUI(){
   const banner = document.getElementById('event-banner');
   if (banner) {
     if (activeEvent && ev.team !== activeEvent.team) {
-      banner.innerHTML = `Viewing past event: <b>${esc(ev.name)}</b> (${esc(ev.start_date)} → ${esc(ev.end_date)}) · <a href="#" id="event-banner-back">Back to ${esc(activeEvent.name)}</a>`;
+      banner.innerHTML = `Viewing past event: <b>${esc(ev.name)}</b> (${fmtDay(ev.start_date)} – ${fmtDay(ev.end_date)}) · <a href="#" id="event-banner-back">Back to ${esc(activeEvent.name)}</a>`;
       banner.style.display = '';
       const back = document.getElementById('event-banner-back');
       if (back) back.addEventListener('click', (e) => { e.preventDefault(); switchViewedEvent(activeEvent); });
@@ -475,8 +487,8 @@ function reflectEventUI(){
       banner.style.display = 'none';
     }
   }
-  // Scope labels on My Stats / Leaderboard / Awards
-  const scopeText = `${ev.name} · ${ev.start_date} → ${ev.end_date}`;
+  // Scope labels on Sessions / Leaderboard / Awards
+  const scopeText = `${ev.name} · ${fmtDay(ev.start_date)} – ${fmtDay(ev.end_date)}`;
   for (const id of ['me-scope', 'lb-scope', 'aw-scope']) {
     const el = document.getElementById(id);
     if (el) el.textContent = scopeText;
@@ -504,7 +516,7 @@ function reflectEventUI(){
       notice.textContent = 'No active event — logging opens when the admin launches one.';
       notice.style.display = '';
     } else if (preWindow) {
-      notice.textContent = `${activeEvent.name} starts ${activeEvent.start_date} — logging opens then.`;
+      notice.textContent = `${activeEvent.name} starts ${fmtDay(activeEvent.start_date)} — logging opens then.`;
       notice.style.display = '';
     } else {
       notice.style.display = 'none';
@@ -528,7 +540,7 @@ function renderAdminEvents(){
     return;
   }
   const rows = allEvents.map((e) => {
-    const status = e.is_active ? '<span class="badge gold">ACTIVE</span>' : '';
+    const status = e.is_active ? '<span class="badge ok">ACTIVE</span>' : ''; // not a medal — gold means 40h here
     const viewing = viewedEvent && viewedEvent.team === e.team ? ' 👁' : '';
     const actions = [
       `<a href="#" class="ev-view" data-team="${esc(e.team)}">View</a>`,
@@ -1204,11 +1216,11 @@ function initForm() {
       return;
     }
     if (todayStr() < activeEvent.start_date) {
-      toast(`${activeEvent.name} starts ${activeEvent.start_date} — logging opens then.`, 'warn');
+      toast(`${activeEvent.name} starts ${fmtDay(activeEvent.start_date)} — logging opens then.`, 'warn');
       return;
     }
     if (row.date < activeEvent.start_date || row.date > activeEvent.end_date) {
-      toast(`Sessions must be dated inside ${activeEvent.name} (${activeEvent.start_date} → ${activeEvent.end_date})`, 'warn');
+      toast(`Sessions must be dated inside ${activeEvent.name} (${fmtDay(activeEvent.start_date)} – ${fmtDay(activeEvent.end_date)})`, 'warn');
       return;
     }
     if (recorder) {
@@ -1282,11 +1294,25 @@ function initForm() {
 let editingId = null; // UUID of session being edited (cloud), null when not editing
 let editingAudioUrl = null; // existing audio note of the session being edited
 
+// Make edit mode unmistakable: title flips to "Editing Session", the action
+// buttons jump up next to it, and the form gets an accent outline.
+function setEditModeUI(editing){
+  const title = document.getElementById('log-title');
+  if (title) title.textContent = editing ? 'Editing Session' : 'Quick Log';
+  const form = document.getElementById('log-form');
+  if (form) form.classList.toggle('editing', editing);
+  const actions = document.getElementById('log-actions');
+  const headSlot = document.getElementById('log-head-actions');
+  const home = document.getElementById('log-actions-home');
+  if (actions && headSlot && home) (editing ? headSlot : home).appendChild(actions);
+}
+
 function resetEditState(){
   editingId = null;
   editingAudioUrl = null;
   document.getElementById('btn-submit').textContent = 'Add Entry';
   document.getElementById('btn-cancel-edit').style.display = 'none';
+  setEditModeUI(false);
 }
 
 function resetAudioField(){
@@ -1313,6 +1339,7 @@ function startEditSession(session){
   document.getElementById('log-costume').checked = !!session.costume;
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
+  setEditModeUI(true);
   editingId = session._id || null; // we'll attach _id when rendering from cloud
   editingAudioUrl = session.audio_url || null;
   resetAudioFieldForEdit();
@@ -1365,15 +1392,20 @@ function renderRecent() {
   // Normalize: cloud-synced rows don't carry base_minutes until normalized
   // (it used to render as "NaN:NaN" after a sync).
   const all = loadSessions().map(SurftoberAwards.normalizeSession).slice(-10).reverse();
+  if (!all.length) {
+    container.innerHTML = '<div class="hint">No sessions yet — paddle out and log the first one.</div>';
+    return;
+  }
   container.innerHTML = all
     .map((r) => {
       // Ownership by user_id, not display name — two people sharing a name
       // must not see edit links on each other's rows.
       const canEdit = !!currentUser && r._id && r.user_id === currentUser.id && isViewingActiveEvent();
       const edit = canEdit ? `<div><a class="edit-link" data-id="${esc(r._id)}">Edit</a></div>` : '';
-      return `<div class="card"><div><b>${esc(r.user)}</b> · ${esc(r.date)} · ${esc(r.type)}</div>
-      <div>${esc(r.location || '')} · ${esc(r.board || '')}</div>
-      <div>${esc(r.duration)} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
+      const where = [r.location, r.board].filter(Boolean).map(esc).join(' · ');
+      return `<div class="card"><div><b>${esc(r.user)}</b> · ${fmtDay(r.date)} · ${esc(r.type)}</div>
+      ${where ? `<div>${where}</div>` : ''}
+      <div>${esc(r.duration)} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : ''} ${
         r.costume ? '<span class="badge">Costume</span>' : ''
       } ${r.cleanup_items ? `<span class="badge">Cleanup ${Number(r.cleanup_items)}</span>` : ''}</div>
       ${journalHtml(r.notes)}${audioPlayerHtml(r.audio_url)}${edit}</div>`;
@@ -1503,7 +1535,7 @@ function renderMyStats() {
     }
   });
   const tbl = [
-    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th><th></th></tr></thead><tbody>`
+    `<table><thead><tr><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th></tr></thead><tbody>`
   ];
   sessions.forEach((s, i) => {
     const costumeApplied = costumeIdxByUser.get((s.user || '').trim()) === i;
@@ -1516,11 +1548,11 @@ function renderMyStats() {
       .filter(Boolean)
       .join(' ');
     const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent();
-    const actions = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}" style="cursor:pointer">Edit</a> | <a href="#" class="remove-link" data-id="${esc(s._id)}" style="color:#c00;cursor:pointer">Remove</a>` : '';
+    const actions = canEdit ? `<div><a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a> <a href="#" class="remove-link" data-id="${esc(s._id)}">Remove</a></div>` : '';
     tbl.push(
-      `<tr><td>${esc(s.date)}</td><td>${esc(s.type)}</td><td>${esc(s.duration)}</td><td>${SurftoberAwards.minutesToHHMM(
+      `<tr><td>${fmtDay(s.date)}</td><td>${esc(s.type)}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}${actions}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
@@ -1571,8 +1603,12 @@ function renderMyStats() {
 function renderLeaderboard() {
   const ev = viewedEvent || DEFAULT_EVENT;
   const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
+  if (!totals.length) {
+    document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet. First wave wins.</div>';
+    return;
+  }
   const rows = totals.map(
-    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
   );
   document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   // Click a leaderboard name to open that surfer's Sessions page
@@ -1669,7 +1705,9 @@ function openPrintSlides() {
   const w = window.open('', 'slides');
   const ev = viewedEvent || DEFAULT_EVENT;
   const { awards, totals } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
-  const style = `<style>body{font-family:system-ui;margin:0;background:#111;color:#fff}section{page-break-after:always;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:5vw}h1{font-size:6vw;margin:0}.sub{opacity:.8;margin-top:1vw}table{width:80%;margin:2vw auto;border-collapse:collapse}td,th{border-bottom:1px solid #333;padding:.5vw 1vw;text-align:left}</style>`;
+  // @media print matters: browsers strip dark backgrounds when printing but
+  // keep color:#fff — without it the deck prints white-on-white.
+  const style = `<style>body{font-family:system-ui;margin:0;background:#111;color:#fff}section{page-break-after:always;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:5vw}h1{font-size:6vw;margin:0}.sub{opacity:.8;margin-top:1vw}table{width:80%;margin:2vw auto;border-collapse:collapse}td,th{border-bottom:1px solid #333;padding:.5vw 1vw;text-align:left}@media print{body{background:#fff;color:#000}.sub{opacity:1;color:#333}td,th{border-bottom:1px solid #999}}</style>`;
   const lbRows = totals
     .map((t, i) => `<tr><td>${i + 1}</td><td>${esc(t.user)}</td><td>${t.total_hours.toFixed(1)}</td><td>${t.medal}</td></tr>`)
     .join('');

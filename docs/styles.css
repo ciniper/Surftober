@@ -12,35 +12,55 @@
   --input-bg: #1e3a52;    /* muted blue input */
   --input-border: #2d4a62; /* lighter border */
   --card-border: #2d4a62;
+  --on-accent: #26140a;   /* ink on accent-filled surfaces (buttons, active tabs) */
+  --accent-text: #ff6b35; /* accent used AS text — darkened on light themes for contrast */
+  --danger: #ff4444;      /* one red for all destructive UI */
 }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-.app-header, .app-footer { position: sticky; left: 0; right: 0; background: var(--panel); padding: 10px 14px; display: flex; align-items: center; gap: 12px; z-index: 10; border-bottom: 2px solid var(--accent); }
-.app-header { top: 0; justify-content: space-between; }
-.app-footer { bottom: 0; justify-content: space-between; font-size: 12px; opacity: 0.8; border-top: 2px solid var(--accent); border-bottom: none; }
-.brand { font-weight: 700; letter-spacing: 0.5px; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
+.app-header, .app-footer { background: var(--panel); padding: 10px 14px; display: flex; align-items: center; gap: 12px; z-index: 10; border-bottom: 2px solid var(--accent); }
+/* Wrapping header + swipeable tab strip: 6 tabs used to force the whole page
+   to pan sideways on phones (490px document at a 375px viewport). */
+.app-header { position: sticky; top: 0; left: 0; right: 0; justify-content: space-between; flex-wrap: wrap; row-gap: 2px; padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); }
+.app-footer { justify-content: space-between; font-size: 12px; opacity: 0.8; border-top: 2px solid var(--accent); border-bottom: none; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+.brand { font-weight: 700; letter-spacing: 0.5px; color: var(--accent-text); display: inline-flex; align-items: center; gap: 8px; }
 .brand-logo { width: 30px; height: 30px; display: block; }
 .app-version { font-size: 11px; color: var(--text); opacity: 0.45; letter-spacing: 0.4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.tabs { display: flex; gap: 8px; }
-.tabs a { color: var(--text); text-decoration: none; padding: 6px 12px; border-radius: 6px; background: transparent; transition: all 0.2s ease; }
+.tabs { display: flex; gap: 8px; flex: 1 1 auto; justify-content: flex-end; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { color: var(--text); text-decoration: none; padding: 10px 12px; border-radius: 6px; background: transparent; transition: all 0.2s ease; flex: 0 0 auto; white-space: nowrap; }
 .tabs a:hover { background: var(--muted); }
-.tabs a.active { background: var(--accent); color: #fff; font-weight: 600; }
+.tabs a.active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 main { padding: 12px; display: block; }
 .page { display: none; }
 .page.active { display: block; }
-.grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 8px; }
-label { display: grid; gap: 6px; font-size: 13px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-bottom: 12px; }
+label { display: grid; gap: 6px; font-size: 14px; }
 .hidden { display: none !important; }
-input, select, textarea, button { border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); padding: 10px 12px; transition: all 0.2s ease; font-size: 14px; }
+/* 16px on form controls is load-bearing: anything smaller makes iOS Safari
+   auto-zoom on every field focus and strand the user zoomed-in. */
+input, select, textarea { border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); padding: 10px 12px; transition: all 0.2s ease; font-size: 16px; }
+input[type="checkbox"] { accent-color: var(--accent); }
 /* Theme-aware focus: a hardcoded navy here turned inputs near-black on light themes */
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--input-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
-input::placeholder, textarea::placeholder { color: #7a9bb5; }
-button { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: #fff; font-weight: 600; border: none; box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3); cursor: pointer; }
-button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3); }
-button:hover { filter: brightness(1.1); }
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--text) 45%, transparent); }
+input:disabled, select:disabled, textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Shadows follow the theme's accent — a fixed orange glow looked wrong on teal/blue/pink themes */
+button { border-radius: 8px; padding: 10px 12px; font-size: 15px; transition: all 0.2s ease; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: var(--on-accent); font-weight: 600; border: none; box-shadow: 0 4px 6px color-mix(in srgb, var(--accent) 30%, transparent); cursor: pointer; }
+button:active { transform: translateY(2px); box-shadow: 0 2px 4px color-mix(in srgb, var(--accent) 30%, transparent); }
+/* Button hierarchy: primary = accent gradient (default), secondary = quiet, warn = destructive */
+button.btn-secondary { background: var(--muted); color: var(--text); border: 1px solid var(--card-border); box-shadow: none; }
+button.warn { background: color-mix(in srgb, var(--danger) 16%, var(--panel)); color: var(--text); border: 1px solid color-mix(in srgb, var(--danger) 70%, var(--card-border)); box-shadow: none; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Hover only where hover exists — on touch screens these stuck after every tap */
+@media (hover: hover) and (pointer: fine) {
+  button:hover { filter: brightness(1.1); }
+  button.btn-secondary:hover { filter: brightness(1.12); }
+  button.warn:hover { background: color-mix(in srgb, var(--danger) 28%, var(--panel)); filter: none; }
+  .card:hover { transform: translateY(-2px); }
+}
 .tabs a { transition: all 0.2s ease; }
 .tabs a:active { transform: translateY(1px); }
 .card, .cards .card { transition: transform 0.2s ease; }
-.card:hover { transform: translateY(-2px); }
 
 textarea { resize: vertical; }
 .checkbox { align-items: center; grid-template-columns: 20px 1fr; }
@@ -48,44 +68,53 @@ textarea { resize: vertical; }
 .duration-inputs { display: flex; align-items: center; gap: 6px; }
 .duration-inputs input { width: 70px; }
 .card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
-.card, .cards .card { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.card, .cards .card { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
 .table { width: 100%; overflow-x: auto; }
 .table table { width: 100%; border-collapse: collapse; }
-.table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--card-border); font-size: 13px; }
-.table th { color: var(--accent); font-weight: 600; }
-.hint { color: #7a9bb5; opacity: 0.9; }
-.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--muted); font-weight: 600; }
+.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--card-border); font-size: 13px; }
+.table th { color: var(--accent-text); font-weight: 600; }
+.table td:first-child { white-space: nowrap; }
+.hint { color: color-mix(in srgb, var(--text) 62%, transparent); }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--muted); font-weight: 600; white-space: nowrap; }
 .badge.platinum { background: linear-gradient(90deg, #e5e4e2, #b8b8b8); color: #000; font-weight: 700; }
 .badge.gold { background: linear-gradient(90deg, #ffd700, #ffb700); color: #000; }
 .badge.silver { background: linear-gradient(90deg, #c0c0c0, #9e9e9e); color: #000; }
-.badge.bronze { background: linear-gradient(90deg, #cd7f32, #b8722c); color: #fff; }
-.badge.participant { background: var(--ok); color: #003534; }
+.badge.bronze { background: linear-gradient(90deg, #cd7f32, #b8722c); color: #241505; font-weight: 700; }
+.badge.participant { background: color-mix(in srgb, var(--ok) 20%, var(--panel)); color: var(--text); border: 1px solid var(--ok); }
 .badge.observer { background: #8892b0; color: #0b132b; }
+.badge.ok { background: color-mix(in srgb, var(--ok) 20%, var(--panel)); color: var(--text); border: 1px solid var(--ok); }
 pre { white-space: pre-wrap; word-wrap: break-word; }
 
 /* Toasts */
-.toast-container { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 1000; display: grid; gap: 8px; width: min(92vw, 460px); }
-.toast { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--panel); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 8px; }
+.toast-container { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 1000; display: grid; gap: 8px; width: min(92vw, 460px); }
+.toast { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--panel); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; }
 /* Tinted from the theme panel so toast text stays readable on light themes too
    (older browsers without color-mix fall back to the plain panel background) */
 .toast.success { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--panel)); }
 .toast.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--panel)); }
-.toast.error { border-color: #ff4444; background: color-mix(in srgb, #ff4444 14%, var(--panel)); }
-.toast .close { margin-left: auto; opacity: .8; cursor: pointer; }
+.toast.error { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--panel)); }
+.toast .close { padding: 10px; margin: -10px -10px -10px auto; opacity: .8; cursor: pointer; }
 
 /* Live status */
 .live { color: var(--ok); font-weight: 600; }
 
-/* Edit icons and links */
-.table .edit-link, .table .ev-view, .table .ev-activate { color: var(--accent); text-decoration: underline; cursor: pointer; }
+/* Edit icons and links — padding/negative-margin expands the tap target without moving layout */
+.table .edit-link, .table .ev-view, .table .ev-activate { color: var(--accent-text); text-decoration: underline; cursor: pointer; }
+.table .edit-link, .table .remove-link, .table .ev-view, .table .ev-activate { display: inline-block; padding: 8px 6px; margin: -8px -6px; }
+.table .remove-link { color: color-mix(in srgb, var(--danger) 60%, var(--text)); cursor: pointer; text-decoration: underline; }
 .table .edit-link:hover, .table .ev-view:hover, .table .ev-activate:hover { color: var(--accent-strong); }
 
-h2, h3 { color: var(--accent); }
+/* Heading hierarchy: accent for page titles, plain text for section heads —
+   when everything was orange, nothing was */
+h2 { color: var(--accent-text); font-size: 24px; margin: 8px 0 16px; }
+h3 { color: var(--text); font-size: 16px; margin: 24px 0 10px; }
+.card h3 { margin: 0 0 8px; }
+.card p { margin: 0 0 10px; }
 
 /* v1.5: events + audio notes */
-.event-banner { background: rgba(255, 165, 0, 0.12); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
-.event-banner a { color: var(--accent); }
+.event-banner { background: color-mix(in srgb, var(--warn) 12%, transparent); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.event-banner a { color: var(--accent-text); }
 .event-notice { margin-bottom: 10px; color: var(--warn); }
 .event-scope { align-self: center; font-size: 13px; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
@@ -93,10 +122,13 @@ h2, h3 { color: var(--accent); }
 #field-audio input[type="file"] { padding: 8px; }
 #field-audio > label { margin-bottom: 6px; }
 .audio-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-#btn-record-audio.recording { background: #c0392b; animation: rec-pulse 1.2s ease-in-out infinite; }
-@keyframes rec-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.5); } 50% { box-shadow: 0 0 0 8px rgba(255, 68, 68, 0); } }
+#btn-record-audio.recording { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  #btn-record-audio.recording { animation: rec-pulse 1.2s ease-in-out infinite; }
+}
+@keyframes rec-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 50%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
 #audio-preview-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-#audio-preview-wrap a { color: var(--accent); }
+#audio-preview-wrap a { color: var(--accent-text); }
 #audio-preview { max-width: 280px; height: 36px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 
@@ -106,7 +138,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .theme-chip.active { border-color: var(--accent); font-weight: 700; }
 .theme-chip .sw { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.25); display: inline-block; }
 #theme-custom { margin-top: 8px; }
-#theme-custom summary { cursor: pointer; color: var(--accent); }
+#theme-custom summary { cursor: pointer; color: var(--accent-text); }
 #theme-custom.active summary::after { content: " (active)"; font-weight: 700; }
 .theme-pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 10px 0; }
 .theme-pickers label { font-size: 12px; }
@@ -123,8 +155,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 /* Journal entries are meant to be read, not squeezed into a sliver */
 .table th.journal-cell { min-width: 340px; }
 .table td.journal-cell { min-width: 340px; max-width: 560px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .table th.journal-cell, .table td.journal-cell { min-width: 200px; }
+}
 
 /* v1.5.6: long journals clamp to 4 lines with a Show more toggle */
 .journal-text { display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
 .journal-text.expanded { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
-.journal-more { display: inline-block; margin-top: 3px; color: var(--accent); font-size: 12px; text-decoration: underline; cursor: pointer; }
+.journal-more { display: inline-block; margin-top: 3px; color: var(--accent-text); font-size: 12px; text-decoration: underline; cursor: pointer; padding: 8px 6px; margin: -5px -6px -8px; }
+
+/* v1.6: obvious edit mode — title swaps, actions dock to the header, form gets an accent ring */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.page-head .actions { margin: 0; }
+#log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
