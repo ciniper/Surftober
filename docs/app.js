@@ -306,6 +306,122 @@ async function saveDisplayName(){
   if (error) throw error;
 }
 
+// ===== Color scheme selector (Admin tab, applies per-device) =====
+// Themes are just values for the CSS variables in styles.css. The choice is
+// stored in localStorage, so the admin can tinker without changing anyone
+// else's app; the winner gets baked into styles.css for everyone.
+
+const THEME_KEY = 'surftober.theme.v1';
+const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border'];
+
+const THEMES = {
+  'sunset-surf': { label: 'Sunset Surf (current)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
+  'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e' } },
+  'high-tide': { label: 'High Tide', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#2ec4b6', 'accent-strong': '#17a398', 'text': '#e8f4f8', 'ok': '#5be37a', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62' } },
+  'golden-hour': { label: 'Golden Hour', vars: { 'bg': '#161020', 'panel': '#241a30', 'muted': '#332545', 'accent': '#ffb347', 'accent-strong': '#ff8c42', 'text': '#f6ecdf', 'ok': '#4ecdc4', 'warn': '#ffd166', 'input-bg': '#332545', 'input-border': '#453458', 'card-border': '#453458' } },
+  'dawn-patrol': { label: 'Dawn Patrol', vars: { 'bg': '#141126', 'panel': '#1f1a38', 'muted': '#2c2450', 'accent': '#ff8fa3', 'accent-strong': '#ff5c7a', 'text': '#f3eefc', 'ok': '#7ce7c4', 'warn': '#ffc46b', 'input-bg': '#2c2450', 'input-border': '#3b3166', 'card-border': '#3b3166' } },
+  'deep-kelp': { label: 'Deep Kelp', vars: { 'bg': '#0a1f14', 'panel': '#12301f', 'muted': '#1a4029', 'accent': '#ffc857', 'accent-strong': '#f4a300', 'text': '#eaf6ec', 'ok': '#4ecdc4', 'warn': '#ff9f1c', 'input-bg': '#1a4029', 'input-border': '#2a5a3c', 'card-border': '#2a5a3c' } },
+  'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349' } },
+  'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32' } },
+  'pumpkin-spice': { label: 'Pumpkin Spice (light)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#c96a1e', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8' } },
+  'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#c97b1e', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4' } },
+};
+
+function currentThemeSelection(){
+  try { return JSON.parse(localStorage.getItem(THEME_KEY)) || { name: 'sunset-surf' }; }
+  catch { return { name: 'sunset-surf' }; }
+}
+
+function themeVarsFor(sel){
+  if (sel.name === 'custom') return { ...THEMES['sunset-surf'].vars, ...(sel.vars || {}) };
+  return (THEMES[sel.name] || THEMES['sunset-surf']).vars;
+}
+
+function applyThemeVars(vars){
+  for (const k of THEME_VAR_NAMES) {
+    if (vars[k]) document.documentElement.style.setProperty('--' + k, vars[k]);
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && vars.panel) meta.setAttribute('content', vars.panel);
+}
+
+function reflectThemeChips(){
+  const sel = currentThemeSelection();
+  document.querySelectorAll('#theme-presets .theme-chip').forEach((b) => {
+    b.classList.toggle('active', b.getAttribute('data-theme') === sel.name);
+  });
+  const custom = document.getElementById('theme-custom');
+  if (custom) custom.classList.toggle('active', sel.name === 'custom');
+}
+
+function seedThemePickers(vars){
+  document.querySelectorAll('#theme-pickers input[type="color"]').forEach((inp) => {
+    const v = vars[inp.getAttribute('data-var')];
+    if (v && /^#[0-9a-fA-F]{6}$/.test(v.trim())) inp.value = v.trim();
+  });
+}
+
+function readThemePickers(){
+  const vars = {};
+  document.querySelectorAll('#theme-pickers input[type="color"]').forEach((inp) => {
+    vars[inp.getAttribute('data-var')] = inp.value;
+  });
+  return vars;
+}
+
+function initThemeUI(){
+  const presets = document.getElementById('theme-presets');
+  if (!presets) return;
+  presets.innerHTML = Object.entries(THEMES).map(([key, t]) =>
+    `<button type="button" class="theme-chip" data-theme="${esc(key)}">
+      <span class="sw" style="background:${esc(t.vars['bg'])}"></span><span class="sw" style="background:${esc(t.vars['panel'])}"></span><span class="sw" style="background:${esc(t.vars['accent'])}"></span>
+      ${esc(t.label)}
+    </button>`).join('');
+  presets.querySelectorAll('.theme-chip').forEach((b) => b.addEventListener('click', () => {
+    const name = b.getAttribute('data-theme');
+    localStorage.setItem(THEME_KEY, JSON.stringify({ name }));
+    applyThemeVars(themeVarsFor({ name }));
+    seedThemePickers(themeVarsFor({ name }));
+    reflectThemeChips();
+  }));
+
+  const pickers = document.getElementById('theme-pickers');
+  if (pickers) {
+    pickers.innerHTML = THEME_VAR_NAMES.map((k) =>
+      `<label>${esc(k)}<input type="color" data-var="${esc(k)}" /></label>`).join('');
+    pickers.querySelectorAll('input[type="color"]').forEach((inp) => inp.addEventListener('input', () => {
+      const vars = readThemePickers();
+      localStorage.setItem(THEME_KEY, JSON.stringify({ name: 'custom', vars }));
+      applyThemeVars(vars);
+      reflectThemeChips();
+    }));
+  }
+
+  const copyBtn = document.getElementById('btn-theme-copy');
+  if (copyBtn) copyBtn.addEventListener('click', () => {
+    // Seed the pickers from whatever is on screen right now
+    const cs = getComputedStyle(document.documentElement);
+    const vars = {};
+    for (const k of THEME_VAR_NAMES) vars[k] = cs.getPropertyValue('--' + k).trim();
+    seedThemePickers(vars);
+  });
+
+  const resetBtn = document.getElementById('btn-theme-reset');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    localStorage.removeItem(THEME_KEY);
+    applyThemeVars(THEMES['sunset-surf'].vars);
+    seedThemePickers(THEMES['sunset-surf'].vars);
+    reflectThemeChips();
+  });
+
+  // Boot state
+  const sel = currentThemeSelection();
+  seedThemePickers(themeVarsFor(sel));
+  reflectThemeChips();
+  const details = document.getElementById('theme-custom');
+  if (details && sel.name === 'custom') details.open = true;
+}
+
 // ===== Events (admin-launched seasons) =====
 
 async function loadEvents(){
@@ -1525,6 +1641,8 @@ function registerSW() {
 
 window.addEventListener('hashchange', renderTabs);
 window.addEventListener('load', () => {
+  applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
+  initThemeUI();
   renderTabs();
   initForm();
   attachAccountHandlers();
