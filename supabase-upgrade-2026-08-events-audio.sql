@@ -130,6 +130,38 @@ create policy "Users delete own session audio" on storage.objects for delete to 
   using (bucket_id = 'session-audio' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =========================================================
+-- rename sync : sessions.user_name follows profile renames
+-- =========================================================
+-- Sessions snapshot the display name at logging time and everything groups by
+-- it, so a rename used to strand old sessions under the old name. This trigger
+-- rewrites the user's sessions in the same transaction as the rename.
+-- SECURITY DEFINER: the backfill must bypass sessions RLS, whose WITH CHECK
+-- would reject rows outside the active event window. The WHERE clause is
+-- required by pg_safeupdate (see activate_event above).
+create or replace function public.sync_session_names()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.display_name is distinct from old.display_name then
+    update public.sessions
+       set user_name = new.display_name
+     where user_id = new.id
+       and user_name is distinct from new.display_name;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_session_names on public.profiles;
+create trigger trg_sync_session_names
+  after update of display_name on public.profiles
+  for each row
+  execute function public.sync_session_names();
+
+-- =========================================================
 -- RUN ONCE — data repairs (do NOT blindly re-run this section)
 -- =========================================================
 -- (1) Pre-v1.5 app code stored no-wetsuit sessions with duration_minutes

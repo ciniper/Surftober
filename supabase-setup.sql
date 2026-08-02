@@ -159,6 +159,34 @@ create policy "Users can update own sessions" on public.sessions for update
   );
 create policy "Users can delete own sessions" on public.sessions for delete using (auth.uid() = user_id);
 
+-- Keep sessions.user_name in sync when a profile is renamed (everything
+-- groups by user_name, so old sessions would otherwise strand under the old
+-- name). SECURITY DEFINER: the backfill must bypass sessions RLS, whose WITH
+-- CHECK rejects rows outside the active event window; the WHERE clause is
+-- required by pg_safeupdate on hosted Supabase.
+create or replace function public.sync_session_names()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.display_name is distinct from old.display_name then
+    update public.sessions
+       set user_name = new.display_name
+     where user_id = new.id
+       and user_name is distinct from new.display_name;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_session_names on public.profiles;
+create trigger trg_sync_session_names
+  after update of display_name on public.profiles
+  for each row
+  execute function public.sync_session_names();
+
 -- Realtime: the app subscribes to live changes on both tables
 -- (wrapped so a re-run doesn't error on "already member of publication")
 do $$ begin
