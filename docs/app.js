@@ -51,7 +51,13 @@ window.nuclearWipeAll = nuclearWipeAll;
 // Supabase integration (Auth + DB)
 const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0';
-const TEAM = 'surftober-2026';
+// Fallback season, used until the events table is reachable (and if the
+// upgrade SQL hasn't been run yet — the app keeps working exactly as before).
+const DEFAULT_EVENT = { id: null, name: 'Surftober 2026', team: 'surftober-2026', start_date: '2026-10-01', end_date: '2026-10-31', is_active: true };
+let activeEvent = DEFAULT_EVENT;  // event currently accepting logs (null = logging closed)
+let viewedEvent = DEFAULT_EVENT;  // event whose data is on screen
+let allEvents = [DEFAULT_EVENT];
+let eventsTableAvailable = false;
 
 // Load Supabase JS if not present
 (function ensureSupabase(){
@@ -72,12 +78,18 @@ let profileData = null; // full profile data
 const adminEmails = ['ciniper@gmail.com']; // client-side admin allowlist (lowercase emails)
 let isViewMode = false; // read-only mode
 
+// HTML-escape for anything user-typed that lands in innerHTML. Sessions are
+// public-read, so one malicious note/name would otherwise run on every device.
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function toast(msg, type='success'){
   const box = document.getElementById('toast-container');
   if (!box) { console.log(`[${type}]`, msg); return; }
   const el = document.createElement('div');
   el.className = 'toast ' + (type||'');
-  el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
+  el.innerHTML = `<span>${esc(msg)}</span><span class="close">✕</span>`;
   el.querySelector('.close').onclick = ()=> el.remove();
   box.appendChild(el);
   setTimeout(()=> el.remove(), 4000);
@@ -94,6 +106,7 @@ function reflectAdminVisibility(adminEmailList = []){
   if (page) page.style.display = isAdmin ? '' : 'none';
   if (awardsTab) awardsTab.style.display = isAdmin ? '' : 'none';
   if (awardsPage) awardsPage.style.display = isAdmin ? '' : 'none';
+  renderTabs(); // bounce off #admin/#awards if the current page just got hidden
 }
 
 async function initSupabase(){
@@ -117,6 +130,7 @@ async function initSupabase(){
   await fetchProfile();
   enforceProfileNameOnUI();
   reflectAdminVisibility(adminEmails);
+  await loadEvents();
 
   // initial sync
   syncFromCloud();
@@ -140,6 +154,18 @@ async function initSupabase(){
     sb
       .channel('public:sessions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => {
+        syncFromCloud();
+      })
+      .subscribe();
+  } catch {}
+
+  // realtime listener for events, so a Launch/Activate reaches clients that
+  // are already open (events are otherwise only fetched at page load)
+  try {
+    sb
+      .channel('public:events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, async () => {
+        await loadEvents();
         syncFromCloud();
       })
       .subscribe();
@@ -189,9 +215,11 @@ async function fetchProfile(){
 
 async function saveProfile(){
   if (!currentUser) throw new Error('Sign in first');
+  const displayName = document.getElementById('display-name').value.trim();
+  if (!displayName) throw new Error('Display name cannot be empty');
   const profileUpdate = {
     id: currentUser.id,
-    display_name: document.getElementById('display-name').value.trim(),
+    display_name: displayName,
     target_hours: document.getElementById('profile-target-hours').value.trim(),
     charity_commitment: document.getElementById('profile-charity').value.trim(),
     sponsor_match: document.getElementById('profile-sponsor').value.trim(),
@@ -252,11 +280,12 @@ async function signOut(){
     // Clear all session storage
     sessionStorage.clear();
     
-    // Clear Supabase-specific localStorage keys
+    // Clear Supabase auth tokens. supabase-js v2 stores the session under
+    // 'sb-<project-ref>-auth-token' — NOT under a 'supabase*' key.
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('supabase')) {
+      if (key && key.startsWith('sb-') && key.includes('-auth-token')) {
         keysToRemove.push(key);
       }
     }
@@ -276,16 +305,221 @@ async function saveDisplayName(){
   if (error) throw error;
 }
 
+// ===== Events (admin-launched seasons) =====
+
+async function loadEvents(){
+  try {
+    const { data, error } = await sb.from('events').select('*').order('start_date', { ascending: false });
+    if (error) throw error;
+    eventsTableAvailable = true;
+    allEvents = data || [];
+    activeEvent = allEvents.find((e) => e.is_active) || null;
+    const stillThere = viewedEvent && allEvents.find((e) => e.team === viewedEvent.team);
+    viewedEvent = stillThere || activeEvent || allEvents[0] || DEFAULT_EVENT;
+  } catch {
+    // events table not deployed yet — keep the built-in season
+    eventsTableAvailable = false;
+    allEvents = [DEFAULT_EVENT];
+    activeEvent = DEFAULT_EVENT;
+    viewedEvent = DEFAULT_EVENT;
+  }
+  reflectEventUI();
+}
+
+function todayStr(){
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
+// Today, clamped into the active event's window (the log form only accepts
+// dates inside the window).
+function defaultLogDate(){
+  const t = todayStr();
+  if (!activeEvent) return t;
+  return t < activeEvent.start_date ? activeEvent.start_date : t > activeEvent.end_date ? activeEvent.end_date : t;
+}
+
+function isViewingActiveEvent(){
+  return !!activeEvent && !!viewedEvent && activeEvent.team === viewedEvent.team;
+}
+
+function switchViewedEvent(ev){
+  viewedEvent = ev;
+  reflectEventUI();
+  syncFromCloud();
+}
+
+function reflectEventUI(){
+  const ev = viewedEvent || DEFAULT_EVENT;
+  // Banner when browsing a past event / when logging is closed
+  const banner = document.getElementById('event-banner');
+  if (banner) {
+    if (activeEvent && ev.team !== activeEvent.team) {
+      banner.innerHTML = `Viewing past event: <b>${esc(ev.name)}</b> (${esc(ev.start_date)} → ${esc(ev.end_date)}) · <a href="#" id="event-banner-back">Back to ${esc(activeEvent.name)}</a>`;
+      banner.style.display = '';
+      const back = document.getElementById('event-banner-back');
+      if (back) back.addEventListener('click', (e) => { e.preventDefault(); switchViewedEvent(activeEvent); });
+    } else if (!activeEvent && eventsTableAvailable) {
+      banner.innerHTML = `No active event — logging is closed. Viewing <b>${esc(ev.name)}</b>.`;
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  // Scope labels on My Stats / Leaderboard / Awards
+  const scopeText = `${ev.name} · ${ev.start_date} → ${ev.end_date}`;
+  for (const id of ['me-scope', 'lb-scope', 'aw-scope']) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = scopeText;
+  }
+  // Log form window
+  const dateEl = document.getElementById('log-date');
+  if (dateEl) {
+    if (activeEvent) {
+      dateEl.min = activeEvent.start_date;
+      dateEl.max = activeEvent.end_date;
+      if (!editingId) dateEl.value = defaultLogDate();
+    } else {
+      dateEl.removeAttribute('min');
+      dateEl.removeAttribute('max');
+    }
+  }
+  // Logging is closed with no active event AND before the window opens —
+  // clamping the date forward would silently misdate pre-season entries.
+  const preWindow = !!activeEvent && todayStr() < activeEvent.start_date;
+  const submitBtn = document.getElementById('btn-submit');
+  if (submitBtn) submitBtn.disabled = !activeEvent || preWindow;
+  const notice = document.getElementById('event-notice');
+  if (notice) {
+    if (!activeEvent) {
+      notice.textContent = 'No active event — logging opens when the admin launches one.';
+      notice.style.display = '';
+    } else if (preWindow) {
+      notice.textContent = `${activeEvent.name} starts ${activeEvent.start_date} — logging opens then.`;
+      notice.style.display = '';
+    } else {
+      notice.style.display = 'none';
+    }
+  }
+  // Audio needs the storage bucket + column from the upgrade SQL
+  const audioField = document.getElementById('field-audio');
+  if (audioField) audioField.style.display = eventsTableAvailable ? '' : 'none';
+  renderAdminEvents();
+}
+
+function renderAdminEvents(){
+  const el = document.getElementById('admin-events');
+  if (!el) return;
+  if (!eventsTableAvailable) {
+    el.innerHTML = '<div class="hint">Events table not found — run supabase-upgrade-2026-08-events-audio.sql in the Supabase SQL editor, then reload.</div>';
+    return;
+  }
+  if (!allEvents.length) {
+    el.innerHTML = '<div class="hint">No events yet — launch one above.</div>';
+    return;
+  }
+  const rows = allEvents.map((e) => {
+    const status = e.is_active ? '<span class="badge gold">ACTIVE</span>' : '';
+    const viewing = viewedEvent && viewedEvent.team === e.team ? ' 👁' : '';
+    const actions = [
+      `<a href="#" class="ev-view" data-team="${esc(e.team)}">View</a>`,
+      e.is_active ? '' : `<a href="#" class="ev-activate" data-team="${esc(e.team)}">Activate</a>`
+    ].filter(Boolean).join(' | ');
+    return `<tr><td>${esc(e.name)}${viewing}</td><td>${esc(e.start_date)} → ${esc(e.end_date)}</td><td>${status}</td><td>${actions}</td></tr>`;
+  });
+  el.innerHTML = `<table><thead><tr><th>Event</th><th>Window</th><th></th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  el.querySelectorAll('.ev-view').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const ev = allEvents.find((x) => x.team === a.getAttribute('data-team'));
+    if (ev) { switchViewedEvent(ev); toast(`Viewing ${ev.name}`, 'success'); }
+  }));
+  el.querySelectorAll('.ev-activate').forEach((a) => a.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const ev = allEvents.find((x) => x.team === a.getAttribute('data-team'));
+    if (!ev) return;
+    if (!confirm(`Make "${ev.name}" the active event? Users will only be able to log ${ev.start_date} → ${ev.end_date}.`)) return;
+    try {
+      await setActiveEvent(ev.team);
+      toast(`${ev.name} is now active`, 'success');
+    } catch (err) {
+      toast('Activate failed: ' + err.message, 'error');
+    }
+  }));
+}
+
+async function setActiveEvent(team){
+  if (!sb) throw new Error('Not connected');
+  // One atomic statement server-side (activate_event RPC): a failure between
+  // "deactivate all" and "activate new" can never strand zero active events.
+  const { error } = await sb.rpc('activate_event', { p_team: team });
+  if (error) throw error;
+  await loadEvents();
+  switchViewedEvent(activeEvent || viewedEvent);
+}
+
+async function launchEvent(){
+  if (!sb) { toast('Not connected yet — try again in a second', 'error'); return; }
+  const name = (document.getElementById('ev-name').value || '').trim();
+  const start = document.getElementById('ev-start').value;
+  const end = document.getElementById('ev-end').value;
+  if (!name || !start || !end) { toast('Name, start date and end date are required', 'warn'); return; }
+  if (end < start) { toast('End date must be on or after the start date', 'warn'); return; }
+  let team = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!/\d{4}/.test(team)) team += '-' + start.slice(0, 4);
+  const existing = allEvents.find((e) => e.team === team);
+  const msg = existing
+    ? `"${name}" already exists (${existing.start_date} → ${existing.end_date}). Update its window to ${start} → ${end} and make it the active event?`
+    : `Launch "${name}" (${start} → ${end})? This deactivates any current event and freezes its data.`;
+  if (!confirm(msg)) return;
+  try {
+    // Upsert the row first (inactive on insert), then flip activation in one
+    // atomic RPC — see setActiveEvent.
+    const { error } = await sb.from('events').upsert(
+      { name, team, start_date: start, end_date: end },
+      { onConflict: 'team' }
+    );
+    if (error) throw error;
+    await setActiveEvent(team);
+    toast(`${name} launched — logging window ${start} → ${end}`, 'success');
+  } catch (e) {
+    toast('Launch failed: ' + e.message, 'error');
+  }
+}
+
+function attachAdminEventHandlers(){
+  const yearEl = document.getElementById('ev-year');
+  const monthEl = document.getElementById('ev-month');
+  const startEl = document.getElementById('ev-start');
+  const endEl = document.getElementById('ev-end');
+  const nameEl = document.getElementById('ev-name');
+  const btn = document.getElementById('btn-launch-event');
+  if (!btn) return;
+  function prefill(){
+    const y = Number(yearEl.value);
+    const m = Number(monthEl.value);
+    if (!y || !m) return;
+    const last = new Date(y, m, 0).getDate(); // last day of that month
+    startEl.value = `${y}-${String(m).padStart(2, '0')}-01`;
+    endEl.value = `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
+    if (!nameEl.value.trim() || /^Surftober \d{4}$/.test(nameEl.value.trim())) nameEl.value = `Surftober ${y}`;
+  }
+  yearEl.addEventListener('input', prefill);
+  monthEl.addEventListener('change', prefill);
+  prefill();
+  btn.addEventListener('click', launchEvent);
+}
+
 async function fetchCloudSessions(){
   const { data, error } = await sb
     .from('sessions')
     .select('*')
-    .eq('team', TEAM)
+    .eq('team', (viewedEvent || DEFAULT_EVENT).team)
     .order('date', { ascending: true })
     .limit(5000);
   if (error) throw error;
   return (data || []).map((s) => ({
     _id: s.id,
+    user_id: s.user_id,
     user: s.user_name,
     date: s.date,
     type: s.type,
@@ -295,7 +529,8 @@ async function fetchCloudSessions(){
     notes: s.notes,
     no_wetsuit: s.no_wetsuit ? 1 : 0,
     costume: s.costume ? 1 : 0,
-    cleanup_items: s.cleanup_items || 0
+    cleanup_items: s.cleanup_items || 0,
+    audio_url: s.audio_url || null
   }));
 }
 
@@ -317,13 +552,16 @@ async function syncFromCloud(){
 
 async function insertCloud(row){
   if (!currentUser) throw new Error('Please sign in');
+  if (!activeEvent) throw new Error('No active event — logging is closed');
   const payload = {
-    team: TEAM,
+    team: activeEvent.team,
     user_id: currentUser.id,
     user_name: row.user,
     date: row.date,
     type: row.type,
-    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
+    // Store RAW minutes. The no-wetsuit ×2 is applied at scoring time
+    // (normalizeSession) — storing it doubled here made it count 4×.
+    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration),
     location: row.location || null,
     surf_craft: row.board || null,
     notes: row.notes || null,
@@ -332,6 +570,11 @@ async function insertCloud(row){
     cleanup_items: Number(row.cleanup_items || 0),
     client_entry_id: crypto.randomUUID()
   };
+  // The audio_url column exists only after the upgrade SQL has run (the same
+  // script that creates the events table). PostgREST rejects the WHOLE insert
+  // if the payload names an unknown column — even with a null value — so only
+  // attach the key once the upgrade is detected.
+  if (eventsTableAvailable) payload.audio_url = row.audio_url || null;
   const { error } = await sb.from('sessions').insert(payload);
   if (error) throw error;
 }
@@ -406,7 +649,7 @@ function attachAccountHandlers(){
 
       const rows = users.map(u => ({ email: u.email || '', name: nameById[u.id] || '' }));
       const html = [`<table><thead><tr><th>Email</th><th>Display Name</th></tr></thead><tbody>`]
-        .concat(rows.map(r=>`<tr><td>${r.email}</td><td>${r.name}</td></tr>`))
+        .concat(rows.map(r=>`<tr><td>${esc(r.email)}</td><td>${esc(r.name)}</td></tr>`))
         .concat(['</tbody></table>'])
         .join('');
       document.getElementById('admin-users').innerHTML = html || '<div class="hint">No users</div>';
@@ -461,7 +704,39 @@ async function blobToBase64(blob){
   });
 }
 
-/* Audio capture removed for now (branch: feature/voice-notes-wip) */
+// ===== Session audio notes (Supabase Storage, bucket: session-audio) =====
+
+const AUDIO_MAX_BYTES = 10 * 1024 * 1024; // keep in sync with the bucket's file_size_limit
+
+async function uploadSessionAudio(file){
+  if (!sb || !currentUser) throw new Error('Sign in to attach audio');
+  if (file.size > AUDIO_MAX_BYTES) throw new Error('Audio must be under 10 MB');
+  const ext = ((file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')) || 'audio';
+  const path = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await sb.storage.from('session-audio').upload(path, file, {
+    contentType: file.type || 'audio/mpeg',
+    upsert: false
+  });
+  if (error) throw new Error('Audio upload failed: ' + error.message);
+  const { data } = sb.storage.from('session-audio').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function audioPathFromUrl(url){
+  const m = String(url || '').match(/\/session-audio\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Best-effort cleanup when a session (or its audio) is removed/replaced.
+async function deleteSessionAudio(url){
+  const path = audioPathFromUrl(url);
+  if (!path || !sb || !currentUser) return;
+  try { await sb.storage.from('session-audio').remove([path]); } catch {}
+}
+
+function audioPlayerHtml(url){
+  return url ? `<audio controls preload="none" src="${esc(url)}"></audio>` : '';
+}
 
 // In production, replace with Supabase/Next.js API.
 
@@ -493,20 +768,55 @@ function appendSession(row) {
 }
 
 function toCSV(rows) {
-  const header = ['user', 'date', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items'];
-  const esc = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
+  const header = ['user', 'date', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items', 'audio_url'];
+  const quote = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0].map(esc).join(','));
+    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
   }
   return lines.join('\n');
 }
 
+// Proper CSV parser: honors quoted fields, "" escapes, and embedded newlines.
+// The old split-on-newline + regex tokenizer could not re-import its own
+// export once a note contained a quote or a line break.
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ',') {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+
 function renderTabs() {
   const hash = location.hash.replace('#', '') || 'log';
+  const el = document.getElementById('page-' + hash);
+  // Admin/Awards pages are hidden with inline display:none for non-admins,
+  // which overrides the .active class — bounce to Log instead of a blank page.
+  if (el && el.style.display === 'none') {
+    location.hash = '#log';
+    return;
+  }
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.remove('active'));
-  const el = document.getElementById('page-' + hash);
   const tab = document.querySelector(`.tabs a[data-tab="${hash}"]`);
   if (el) el.classList.add('active');
   if (tab) tab.classList.add('active');
@@ -514,9 +824,7 @@ function renderTabs() {
 
 function initForm() {
   const f = document.getElementById('log-form');
-  const _today = new Date();
-  const defaultDate = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
-  document.getElementById('log-date').value = defaultDate;
+  document.getElementById('log-date').value = defaultLogDate();
 
   function applyCleanupUI() {
     const type = document.getElementById('log-type').value;
@@ -569,18 +877,17 @@ function initForm() {
   }
 
   function costumeUsedForPeriod(user, dateStr) {
+    // One costume bonus per event window (was per calendar month, with a UTC
+    // parse that misfiled dates in Pacific time). Ignores the session being
+    // edited so editing your costume session doesn't strip the flag.
     try {
-      const d = new Date(dateStr);
-      const y = d.getFullYear();
-      const m = d.getMonth() + 1;
+      const ev = activeEvent || viewedEvent || DEFAULT_EVENT;
       const all = loadSessions();
       return all.some(
         (s) =>
           (s.user || '').trim() === user.trim() &&
-          (() => {
-            const ds = new Date(s.date);
-            return ds.getFullYear() === y && ds.getMonth() + 1 === m;
-          })() &&
+          (!editingId || s._id !== editingId) &&
+          SurftoberAwards.inRange(s.date, { start: ev.start_date, end: ev.end_date }) &&
           (s.costume === 1 || s.costume === true || String(s.costume) === '1')
       );
     } catch {
@@ -618,7 +925,6 @@ function initForm() {
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
-      // audio_b64: audioBlob ? await blobToBase64(audioBlob) : null, // removed for now
       no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
       costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
@@ -627,13 +933,40 @@ function initForm() {
       alert('Please fill required fields');
       return;
     }
+    if (!activeEvent) {
+      toast('No active event — logging is closed.', 'warn');
+      return;
+    }
+    if (todayStr() < activeEvent.start_date) {
+      toast(`${activeEvent.name} starts ${activeEvent.start_date} — logging opens then.`, 'warn');
+      return;
+    }
+    if (row.date < activeEvent.start_date || row.date > activeEvent.end_date) {
+      toast(`Sessions must be dated inside ${activeEvent.name} (${activeEvent.start_date} → ${activeEvent.end_date})`, 'warn');
+      return;
+    }
+    const audioInput = document.getElementById('log-audio');
+    const audioRemove = document.getElementById('log-audio-remove');
+    const audioFile = audioInput && audioInput.files && audioInput.files[0];
+    const previousAudioUrl = editingAudioUrl;
     try {
+      // Audio note: keep the existing one unless removed or replaced
+      let audioUrl = editingAudioUrl;
+      if (audioRemove && audioRemove.checked) audioUrl = null;
+      if (audioFile) {
+        if (sb && currentUser) {
+          audioUrl = await uploadSessionAudio(audioFile);
+        } else {
+          toast('Audio notes need a signed-in account — entry saved without audio.', 'warn');
+        }
+      }
+      row.audio_url = audioUrl || null;
+
       if (editingId && sb && currentUser) {
         await updateCloudSession(editingId, row);
+        if (previousAudioUrl && previousAudioUrl !== row.audio_url) deleteSessionAudio(previousAudioUrl);
         toast('Session updated', 'success');
-        editingId = null;
-        document.getElementById('btn-submit').textContent = 'Add Entry';
-        document.getElementById('btn-cancel-edit').style.display = 'none';
+        resetEditState();
         await syncFromCloud();
       } else {
         if (sb && currentUser) await insertCloud(row);
@@ -646,9 +979,15 @@ function initForm() {
       renderMyStats();
       renderLeaderboard();
       f.reset();
-      document.getElementById('log-date').value = defaultDate;
+      resetAudioField();
+      document.getElementById('log-date').value = defaultLogDate();
       // Restore the display name after reset
       enforceProfileNameOnUI();
+      // form.reset() restores values but not disabled/hidden state — without
+      // this, logging a cleanup leaves the duration inputs disabled for the
+      // next entry, which then silently saves as 01:00.
+      applyCleanupUI();
+      applyCostumeGuard();
     } catch (e) {
       const st = document.getElementById('status');
       if (st) st.textContent = 'Save failed: ' + e.message;
@@ -658,17 +997,35 @@ function initForm() {
   // Cancel edit
   const btnCancel = document.getElementById('btn-cancel-edit');
   if (btnCancel) btnCancel.addEventListener('click', () => {
-    editingId = null;
-    document.getElementById('btn-submit').textContent = 'Add Entry';
-    document.getElementById('btn-cancel-edit').style.display = 'none';
+    resetEditState();
     f.reset();
-    document.getElementById('log-date').value = defaultDate;
+    resetAudioField();
+    document.getElementById('log-date').value = defaultLogDate();
     enforceProfileNameOnUI();
+    applyCleanupUI();
+    applyCostumeGuard();
   });
 }
 
 // Editing state and helpers (top-level)
 let editingId = null; // UUID of session being edited (cloud), null when not editing
+let editingAudioUrl = null; // existing audio note of the session being edited
+
+function resetEditState(){
+  editingId = null;
+  editingAudioUrl = null;
+  document.getElementById('btn-submit').textContent = 'Add Entry';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+}
+
+function resetAudioField(){
+  const input = document.getElementById('log-audio');
+  if (input) input.value = '';
+  const remove = document.getElementById('log-audio-remove');
+  if (remove) remove.checked = false;
+  const hint = document.getElementById('log-audio-hint');
+  if (hint) hint.style.display = 'none';
+}
 
 function startEditSession(session){
   // Prefill form with session values, lock user field (already enforced), toggle submit button label
@@ -685,14 +1042,28 @@ function startEditSession(session){
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
   editingId = session._id || null; // we'll attach _id when rendering from cloud
+  editingAudioUrl = session.audio_url || null;
+  resetAudioFieldForEdit();
+  // Re-apply type-dependent UI (cleanup disables inputs, swim hides craft)
+  document.getElementById('log-type').dispatchEvent(new Event('change'));
+}
+
+function resetAudioFieldForEdit(){
+  const input = document.getElementById('log-audio');
+  if (input) input.value = '';
+  const remove = document.getElementById('log-audio-remove');
+  if (remove) remove.checked = false;
+  const hint = document.getElementById('log-audio-hint');
+  if (hint) hint.style.display = editingAudioUrl ? '' : 'none';
 }
 
 async function updateCloudSession(id, row){
-  // Update allowed only for owner; server RLS will enforce user_id = auth.uid()
+  // Owner-scoped explicitly. Without .eq('user_id', …), RLS silently matches 0
+  // rows for someone else's session and the app toasts a phantom success.
   const payload = {
     date: row.date,
     type: row.type,
-    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration) * (row.no_wetsuit ? 2 : 1),
+    duration_minutes: SurftoberAwards.hhmmToMinutes(row.duration), // raw — see insertCloud
     location: row.location || null,
     surf_craft: row.board || null,
     notes: row.notes || null,
@@ -701,29 +1072,35 @@ async function updateCloudSession(id, row){
     cleanup_items: Number(row.cleanup_items||0),
     user_name: profileName || row.user,
   };
-  const { error } = await sb.from('sessions').update(payload).eq('id', id);
+  if (eventsTableAvailable) payload.audio_url = row.audio_url || null; // see insertCloud
+  const { data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id');
   if (error) throw error;
+  if (!data || !data.length) throw new Error('Session not found or not yours');
 }
 
 async function deleteCloudSession(id){
-  // Delete allowed only for owner; server RLS will enforce user_id = auth.uid()
-  const { error } = await sb.from('sessions').delete().eq('id', id);
+  const { data, error } = await sb.from('sessions').delete().eq('id', id).eq('user_id', currentUser.id).select('id');
   if (error) throw error;
+  if (!data || !data.length) throw new Error('Session not found or not yours');
 }
 
 function renderRecent() {
   const container = document.getElementById('recent-entries');
-  const all = loadSessions().slice(-10).reverse();
+  // Normalize: cloud-synced rows don't carry base_minutes until normalized
+  // (it used to render as "NaN:NaN" after a sync).
+  const all = loadSessions().map(SurftoberAwards.normalizeSession).slice(-10).reverse();
   container.innerHTML = all
     .map((r) => {
-      const canEdit = !!currentUser && !!profileName && r.user === profileName && r._id;
-      const edit = canEdit ? `<div><a class="edit-link" data-id="${r._id}">Edit</a></div>` : '';
-      return `<div class="card"><div><b>${r.user}</b> · ${r.date} · ${r.type}</div>
-      <div>${r.location || ''} · ${r.board || ''}</div>
-      <div>${r.duration} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
+      // Ownership by user_id, not display name — two people sharing a name
+      // must not see edit links on each other's rows.
+      const canEdit = !!currentUser && r._id && r.user_id === currentUser.id && isViewingActiveEvent();
+      const edit = canEdit ? `<div><a class="edit-link" data-id="${esc(r._id)}">Edit</a></div>` : '';
+      return `<div class="card"><div><b>${esc(r.user)}</b> · ${esc(r.date)} · ${esc(r.type)}</div>
+      <div>${esc(r.location || '')} · ${esc(r.board || '')}</div>
+      <div>${esc(r.duration)} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No wetsuit</span>' : ''} ${
         r.costume ? '<span class="badge">Costume</span>' : ''
-      } ${r.cleanup_items ? `<span class="badge">Cleanup ${r.cleanup_items}</span>` : ''}</div>
-      <div>${r.notes || ''}</div>${edit}</div>`;
+      } ${r.cleanup_items ? `<span class="badge">Cleanup ${Number(r.cleanup_items)}</span>` : ''}</div>
+      <div>${esc(r.notes || '')}</div>${audioPlayerHtml(r.audio_url)}${edit}</div>`;
     })
     .join('');
   // Attach edit handlers
@@ -739,44 +1116,43 @@ function renderRecent() {
 
 function renderMyStats() {
   const user = document.getElementById('me-user').value.trim();
-  const year = Number(document.getElementById('me-year').value);
-  const month = Number(document.getElementById('me-month').value);
-  const all = loadSessions();
-  const normalized = all.map(SurftoberAwards.normalizeSession);
+  const ev = viewedEvent || DEFAULT_EVENT;
+  const range = { start: ev.start_date, end: ev.end_date };
+  const normalized = loadSessions().map(SurftoberAwards.normalizeSession);
   const mine = normalized.filter((s) => !user || s.user === user);
-  const totals = SurftoberAwards.rollupByUser(mine, { year, month });
+  const totals = SurftoberAwards.rollupByUser(mine, range);
   const summary = document.getElementById('me-summary');
   summary.innerHTML =
     totals
       .map(
         (t) => {
-          // Calculate on-track hours (formula: ((TODAY()-DATEVALUE("2026-9-30"))/31)*GoalHours)
-          const startDate = new Date('2026-09-30'); // Sept 30, 2026
-          const today = new Date();
-          const daysSinceStart = Math.max(0, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)));
-          const daysInOctober = 31;
-          
+          // On-track pace across the viewed event's window
+          const evStart = SurftoberAwards.localDate(ev.start_date);
+          const evEnd = SurftoberAwards.localDate(ev.end_date);
+          const totalDays = Math.round((evEnd - evStart) / 86400000) + 1;
+          const daysElapsed = Math.min(totalDays, Math.max(0, Math.floor((new Date() - evStart) / 86400000) + 1));
+
           // Get user's goal hours from profile
-          const goalHours = profileData && t.user === profileName && profileData.target_hours 
-            ? Number(profileData.target_hours) 
+          const goalHours = profileData && t.user === profileName && profileData.target_hours
+            ? Number(profileData.target_hours)
             : null;
-          
-          const onTrackHours = goalHours ? (daysSinceStart / daysInOctober) * goalHours : null;
+
+          const onTrackHours = goalHours ? (daysElapsed / totalDays) * goalHours : null;
           const progressPercent = goalHours ? (t.total_hours / goalHours * 100) : null;
-          
-          // Determine goal medal badge
+
+          // Determine goal medal badge (same thresholds as earned medals)
           let goalMedalBadge = '';
           if (goalHours) {
             let goalMedal = 'PARTICIPANT';
             if (goalHours >= 50) goalMedal = 'PLATINUM';
             else if (goalHours >= 40) goalMedal = 'GOLD';
             else if (goalHours >= 30) goalMedal = 'SILVER';
-            else if (goalHours >= 20) goalMedal = 'BRONZE';
+            else if (goalHours >= 25) goalMedal = 'BRONZE';
             goalMedalBadge = `<span class="badge ${goalMedal.toLowerCase()}">${goalMedal}</span>`;
           }
-          
-          let content = `<div class="card"><h3>${t.user}</h3>`;
-          
+
+          let content = `<div class="card"><h3>${esc(t.user)}</h3>`;
+
           if (goalHours) {
             const statusColor = t.total_hours >= onTrackHours ? '#5be37a' : '#ffb347';
             content += `
@@ -788,38 +1164,33 @@ function renderMyStats() {
           } else {
             content += `<div>Total Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>`;
           }
-          
+
           content += `</div>`;
           return content;
         }
       )
       .join('') || '<div class="hint">No data</div>';
 
-  // Table of sessions
-  const sessions = mine
-    .filter((s) => SurftoberAwards.minutesToHHMM)
-    .filter((s) => {
-      const d = new Date(s.date);
-      const okY = !year || d.getFullYear() === year;
-      const okM = !month || d.getMonth() + 1 === month;
-      return okY && okM;
-    });
-  // Determine which session (if any) gets the one-time costume +1h in this period
-  let costumeIdx = -1;
-  let earliest = null;
+  // Table of sessions (scoped to the viewed event)
+  const sessions = mine.filter((s) => SurftoberAwards.inRange(s.date, range));
+  // Determine which session gets the one-time costume +1h — PER USER (the
+  // name filter can be blank, showing everyone's sessions at once).
+  const costumeIdxByUser = new Map();
+  const costumeEarliestByUser = new Map();
   sessions.forEach((s, i) => {
     if (!s.costume) return;
-    const ts = new Date(s.date).getTime();
-    if (earliest === null || ts < earliest || (ts === earliest && i < costumeIdx)) {
-      earliest = ts;
-      costumeIdx = i;
+    const u = (s.user || '').trim();
+    const ts = SurftoberAwards.localDate(s.date).getTime();
+    if (!costumeEarliestByUser.has(u) || ts < costumeEarliestByUser.get(u)) {
+      costumeEarliestByUser.set(u, ts);
+      costumeIdxByUser.set(u, i);
     }
   });
   const tbl = [
-    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th><th></th></tr></thead><tbody>`
+    `<table><thead><tr><th>Date</th><th>Type</th><th>Dur</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th>Notes</th><th>Audio</th><th></th></tr></thead><tbody>`
   ];
   sessions.forEach((s, i) => {
-    const costumeApplied = i === costumeIdx;
+    const costumeApplied = costumeIdxByUser.get((s.user || '').trim()) === i;
     const scoredMins = s.base_minutes + (costumeApplied ? 60 : 0);
     const bonusBadges = [
       s.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : '',
@@ -828,12 +1199,12 @@ function renderMyStats() {
     ]
       .filter(Boolean)
       .join(' ');
-    const canEdit = !!currentUser && !!profileName && s.user === profileName && s._id;
-    const actions = canEdit ? `<a href="#" class="edit-link" data-id="${s._id}" style="cursor:pointer">Edit</a> | <a href="#" class="remove-link" data-id="${s._id}" style="color:#c00;cursor:pointer">Remove</a>` : '';
+    const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent();
+    const actions = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}" style="cursor:pointer">Edit</a> | <a href="#" class="remove-link" data-id="${esc(s._id)}" style="color:#c00;cursor:pointer">Remove</a>` : '';
     tbl.push(
-      `<tr><td>${s.date}</td><td>${s.type}</td><td>${s.duration}</td><td>${SurftoberAwards.minutesToHHMM(
+      `<tr><td>${esc(s.date)}</td><td>${esc(s.type)}</td><td>${esc(s.duration)}</td><td>${SurftoberAwards.minutesToHHMM(
         scoredMins
-      )}</td><td>${bonusBadges}</td><td>${s.location || ''}</td><td>${s.board || ''}</td><td>${s.notes || ''}</td><td>${actions}</td></tr>`
+      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td>${esc(s.notes || '')}</td><td>${audioPlayerHtml(s.audio_url)}</td><td>${actions}</td></tr>`
     );
   });
   tbl.push('</tbody></table>');
@@ -868,6 +1239,7 @@ function renderMyStats() {
         // Delete from cloud if authenticated
         if (sb && currentUser && s._id) {
           await deleteCloudSession(s._id);
+          if (s.audio_url) deleteSessionAudio(s.audio_url); // best-effort
           toast('Session deleted', 'success');
         }
         // Sync from cloud to update local storage
@@ -880,11 +1252,10 @@ function renderMyStats() {
 }
 
 function renderLeaderboard() {
-  const year = Number(document.getElementById('lb-year').value);
-  const month = Number(document.getElementById('lb-month').value);
-  const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
+  const ev = viewedEvent || DEFAULT_EVENT;
+  const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   const rows = totals.map(
-    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${t.user}" style="color:var(--accent);cursor:pointer;text-decoration:none">${t.user}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
   );
   document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   // Click a leaderboard name to view that person's sessions in My Stats
@@ -900,24 +1271,22 @@ function renderLeaderboard() {
 }
 
 function renderAwards() {
-  const year = Number(document.getElementById('aw-year').value);
-  const month = Number(document.getElementById('aw-month').value);
-  const { awards } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
+  const ev = viewedEvent || DEFAULT_EVENT;
+  const { awards } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   const cards = awards.map(
-    (a) => `<div class="card"><h3>${a.name}</h3><div>${a.desc}</div><div><b>${a.winner}</b> — ${a.value}</div></div>`
+    (a) => `<div class="card"><h3>${esc(a.name)}</h3><div>${esc(a.desc)}</div><div><b>${esc(a.winner)}</b> — ${esc(a.value)}</div></div>`
   );
   document.getElementById('awards').innerHTML = cards.join('') || '<div class="hint">No awards for period</div>';
 }
 
 function exportAwards() {
-  const year = Number(document.getElementById('aw-year').value);
-  const month = Number(document.getElementById('aw-month').value);
-  const data = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
+  const ev = viewedEvent || DEFAULT_EVENT;
+  const data = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `awards_${year}_${month || 'all'}.json`;
+  a.download = `awards_${ev.team}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -940,11 +1309,11 @@ function importCSV(file) {
     reader.onload = () => {
       try {
         const text = reader.result;
-        const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
-        const headers = headerLine.split(',').map((h) => h.replace(/^"|"$/g, ''));
+        const parsed = parseCSV(String(text));
+        if (!parsed.length) throw new Error('Empty CSV');
+        const [headers, ...lines] = parsed;
         const rows = [];
-        for (const line of lines) {
-          const cols = line.match(/\"([^\"]*)\"|[^,]+/g)?.map((s) => s.replace(/^\"|\"$/g, '')) || [];
+        for (const cols of lines) {
           const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || '']));
           row.no_wetsuit = Number(row.no_wetsuit || 0);
           row.costume = Number(row.costume || 0);
@@ -969,26 +1338,25 @@ function populateDataLists() {
   const users = Array.from(new Set(all.map((r) => r.user))).sort();
   const locs = Array.from(new Set(all.map((r) => r.location))).sort();
   const boards = Array.from(new Set(all.map((r) => r.board))).sort();
-  document.getElementById('user-list').innerHTML = users.map((u) => `<option value="${u}">`).join('');
-  document.getElementById('location-list').innerHTML = locs.map((u) => `<option value="${u}">`).join('');
-  document.getElementById('board-list').innerHTML = boards.map((u) => `<option value="${u}">`).join('');
+  document.getElementById('user-list').innerHTML = users.map((u) => `<option value="${esc(u)}">`).join('');
+  document.getElementById('location-list').innerHTML = locs.map((u) => `<option value="${esc(u)}">`).join('');
+  document.getElementById('board-list').innerHTML = boards.map((u) => `<option value="${esc(u)}">`).join('');
 }
 
 function openPrintSlides() {
   const w = window.open('', 'slides');
-  const year = Number(document.getElementById('aw-year').value);
-  const month = Number(document.getElementById('aw-month').value);
-  const { awards, totals } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { year, month });
+  const ev = viewedEvent || DEFAULT_EVENT;
+  const { awards, totals } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   const style = `<style>body{font-family:system-ui;margin:0;background:#111;color:#fff}section{page-break-after:always;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:5vw}h1{font-size:6vw;margin:0}.sub{opacity:.8;margin-top:1vw}table{width:80%;margin:2vw auto;border-collapse:collapse}td,th{border-bottom:1px solid #333;padding:.5vw 1vw;text-align:left}</style>`;
   const lbRows = totals
-    .map((t, i) => `<tr><td>${i + 1}</td><td>${t.user}</td><td>${t.total_hours.toFixed(1)}</td><td>${t.medal}</td></tr>`)
+    .map((t, i) => `<tr><td>${i + 1}</td><td>${esc(t.user)}</td><td>${t.total_hours.toFixed(1)}</td><td>${t.medal}</td></tr>`)
     .join('');
   const pages = [
-    `<section><div><h1>Surftober Awards</h1><div class="sub">${year}${month ? ` — Month ${month}` : ''}</div></div></section>`,
+    `<section><div><h1>${esc(ev.name)} Awards</h1><div class="sub">${esc(ev.start_date)} → ${esc(ev.end_date)}</div></div></section>`,
     `<section><div><h1>Leaderboard</h1><table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${lbRows}</tbody></table></div></section>`,
     ...awards.map(
       (a) =>
-        `<section><div><h1>${a.name}</h1><div class="sub">${a.desc}</div><h1>${a.winner}</h1><div class="sub">${a.value}</div></div></section>`
+        `<section><div><h1>${esc(a.name)}</h1><div class="sub">${esc(a.desc)}</div><h1>${esc(a.winner)}</h1><div class="sub">${esc(a.value)}</div></div></section>`
     )
   ];
   w.document.write(`<html><head><title>Surftober Slides</title>${style}</head><body>${pages.join('')}</body></html>`);
@@ -1011,25 +1379,17 @@ window.addEventListener('load', () => {
   renderTabs();
   initForm();
   attachAccountHandlers();
+  attachAdminEventHandlers();
+  reflectEventUI();
   renderRecent();
   renderMyStats();
   renderLeaderboard();
   renderAwards();
   // attachAudioHandlers(); // temporarily disabled (see feature/voice-notes-wip)
   registerSW();
-  // Handlers
-  document.getElementById('lb-year').addEventListener('input', renderLeaderboard);
-  document.getElementById('lb-month').addEventListener('change', renderLeaderboard);
+  // Handlers (period filters are gone — everything is scoped to the viewed event)
   document.getElementById('me-user').addEventListener('input', () => {
     renderMyStats();
-  });
-  document.getElementById('me-year').addEventListener('input', renderMyStats);
-  document.getElementById('me-month').addEventListener('change', renderMyStats);
-  document.getElementById('aw-year').addEventListener('input', () => {
-    renderAwards();
-  });
-  document.getElementById('aw-month').addEventListener('change', () => {
-    renderAwards();
   });
   document.getElementById('btn-compute-awards').addEventListener('click', renderAwards);
   document.getElementById('btn-export-awards').addEventListener('click', exportAwards);

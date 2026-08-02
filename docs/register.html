@@ -6,7 +6,7 @@
   <title>Register - Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=5" />
+  <link rel="stylesheet" href="./styles.css?v=6" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -170,7 +170,7 @@
       
       <label>
         First and Last Name (Display Name) *
-        <input type="text" id="display-name" placeholder="test" value="test" required />
+        <input type="text" id="display-name" placeholder="e.g. Chase Cooper" required />
       </label>
 
       <label>
@@ -179,7 +179,7 @@
         <select id="target-hours" required>
           <option value="">Select your goal...</option>
           <option value="10">10 hours (Participant)</option>
-          <option value="20">20 hours</option>
+          <option value="25">25 hours (Bronze)</option>
           <option value="30">30 hours (Silver)</option>
           <option value="40">40 hours (Gold)</option>
           <option value="50">50 hours (Platinum)</option>
@@ -189,30 +189,30 @@
       <label>
         What is your charitable contribution commitment? *
         <small>Consider your target surf hours.</small>
-        <input type="text" id="charity-commitment" placeholder="test" value="test" required />
+        <input type="text" id="charity-commitment" placeholder="e.g. $100" required />
       </label>
 
       <label>
         Do you have a sponsor to commit to matching your contribution? *
         <small>(Being sponsored is cool). Can always update later in the google sheet.</small>
-        <input type="text" id="sponsor-match" placeholder="test" value="test" required />
+        <input type="text" id="sponsor-match" placeholder="e.g. Company XYZ — or &quot;no&quot;" required />
       </label>
 
       <label>
         What Location are you based? *
         <small>(outer sunset, pacifica, etc..)</small>
-        <input type="text" id="location-based" placeholder="test" value="test" required />
+        <input type="text" id="location-based" placeholder="e.g. Outer Sunset" required />
       </label>
 
       <label>
         Would you like to be on the WhatsApp Group chat? *
         <small>If yes provide phone number here.</small>
-        <input type="text" id="whatsapp-phone" placeholder="test" value="test" required />
+        <input type="text" id="whatsapp-phone" placeholder="e.g. 916-622-6075 — or &quot;no&quot;" required />
       </label>
 
       <label>
         Write an opening fun comment if you'd like
-        <textarea id="fun-comment" rows="3" placeholder="test">test</textarea>
+        <textarea id="fun-comment" rows="3" placeholder="Say hi to the crew…"></textarea>
       </label>
 
       <label>
@@ -230,7 +230,7 @@
       <label>
         Additional Comments/Questions
         <small>Feel free to write here, message me at 916-622-6075 (Chase Cooper), or message the WhatsApp Group. If you have any leads on a "company donation match" let me know!</small>
-        <textarea id="additional-comments" rows="3" placeholder="test">test</textarea>
+        <textarea id="additional-comments" rows="3" placeholder="Questions, comments, donation-match leads…"></textarea>
       </label>
 
       <div class="actions">

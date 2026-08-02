@@ -37,10 +37,12 @@ const PROFILE_COLS = [
   'registered_at', 'created_at', 'updated_at'
 ];
 
+// NOTE: audio_url exists only after the v1.5 upgrade SQL has been run.
+// If your project predates it, remove 'audio_url' or the fetch will 400.
 const SESSION_COLS = [
   'id', 'team', 'user_id', 'user_name', 'date', 'type', 'duration_minutes',
   'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'cleanup_items',
-  'created_at'
+  'audio_url', 'created_at'
 ];
 
 /** Run this once by hand: first sync + creates the nightly trigger. */

@@ -13,8 +13,19 @@ function minutesToHHMM(mins) {
   return `${h}:${m.toString().padStart(2, '0')}`;
 }
 
-function monthFilter(dateStr, year, month) {
-  const d = new Date(dateStr);
+// 'YYYY-MM-DD' must be parsed as LOCAL midnight: new Date('2026-10-01') is UTC
+// midnight, i.e. Sep 30 17:00 in US Pacific, which misfiles the session a day early.
+function localDate(dateStr) {
+  const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+// Period filter: {start,end} ('YYYY-MM-DD', inclusive — used for events) wins
+// over the legacy {year,month} pair.
+function inRange(dateStr, { year, month, start, end } = {}) {
+  const key = String(dateStr).slice(0, 10);
+  if (start && end) return key >= start && key <= end;
+  const d = localDate(key);
   if (Number.isFinite(year) && year > 0 && d.getFullYear() !== Number(year)) return false;
   if (Number(month) > 0) return d.getMonth() + 1 === Number(month);
   return true;
@@ -39,10 +50,10 @@ function normalizeSession(raw) {
   };
 }
 
-function rollupByUser(sessions, { year, month } = {}) {
+function rollupByUser(sessions, range = {}) {
   const perUser = new Map();
   for (const s of sessions) {
-    if (!monthFilter(s.date, year, month)) continue;
+    if (!inRange(s.date, range)) continue;
     const u = s.user.trim();
     if (!perUser.has(u)) perUser.set(u, []);
     perUser.get(u).push(s);
@@ -63,16 +74,16 @@ function rollupByUser(sessions, { year, month } = {}) {
     const stddev = Math.sqrt(variance);
     const byDay = new Map();
     for (const s of arr) {
-      const d = new Date(s.date).toISOString().slice(0,10);
+      const d = String(s.date).slice(0, 10);
       byDay.set(d, (byDay.get(d) || 0) + 1);
     }
     const twofer_days = Array.from(byDay.values()).filter(v => v >= 2).length;
-    const weekdayShare = arr.filter(x => ![0,6].includes(new Date(x.date).getDay())).reduce((a,b)=>a+b.base_minutes,0) / (total_minutes || 1);
+    const weekdayShare = arr.filter(x => ![0,6].includes(localDate(x.date).getDay())).reduce((a,b)=>a+b.base_minutes,0) / (total_minutes || 1);
     const weekendShare = 1 - weekdayShare;
     // first vs last half
     let first = 0, last = 0;
     for (const s of arr) {
-      const day = new Date(s.date).getDate();
+      const day = localDate(s.date).getDate();
       if (day <= 15) first += s.base_minutes; else last += s.base_minutes;
     }
     result.push({ user, total_minutes, total_hours, medal, boards, locations, stddev, twofer_days, weekdayShare, weekendShare, firstHalfShare: (first/(first+last)||0), lastHalfShare: (last/(first+last)||0) });
@@ -80,8 +91,8 @@ function rollupByUser(sessions, { year, month } = {}) {
   return result.sort((a,b)=> b.total_minutes - a.total_minutes);
 }
 
-function computeAwards(sessions, { year, month } = {}) {
-  const filtered = sessions.filter(s => monthFilter(s.date, year, month));
+function computeAwards(sessions, range = {}) {
+  const filtered = sessions.filter(s => inRange(s.date, range));
   if (!filtered.length) return { awards: [], notes: 'No sessions for selected period.' };
   // helpers
   const byUser = new Map();
@@ -90,7 +101,7 @@ function computeAwards(sessions, { year, month } = {}) {
     if (!byUser.has(u)) byUser.set(u, []);
     byUser.get(u).push(s);
   }
-  const totals = rollupByUser(filtered, { year, month });
+  const totals = rollupByUser(filtered, range);
   function winner(arr, key, fn = x=>x[key], opts = {}) {
     const list = arr.map(x => ({...x, _value: fn(x)})).filter(x => Number.isFinite(x._value));
     list.sort((a,b)=> (opts.min ? a._value - b._value : b._value - a._value));
@@ -187,4 +198,6 @@ window.SurftoberAwards = {
   computeAwards,
   hhmmToMinutes,
   minutesToHHMM,
+  localDate,
+  inRange,
 };

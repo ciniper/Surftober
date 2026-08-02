@@ -76,6 +76,12 @@ come back empty or the project is unreachable — a dead backup never looks gree
    them by hand after a restore — check with
    `select tgname from pg_trigger where tgrelid = 'auth.users'::regclass;`
 
+One more caveat: pg_dump covers the **database** only. Session audio notes
+(v1.5+) live in Supabase **Storage**, not the database — the dump preserves each
+session's `audio_url` but not the audio file itself. If the project dies, audio
+is lost (the links go dead but nothing else breaks). Acceptable for voice notes;
+revisit if audio becomes precious.
+
 **Do one restore drill into a scratch Supabase project before October.** An
 untested backup is a hope, not a backup. The drill takes ~15 minutes and proves
 the whole loop. Include one **fresh sign-up** in the drill (not just existing

@@ -79,3 +79,13 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 .table .edit-link:hover { color: var(--accent-strong); }
 
 h2, h3 { color: var(--accent); }
+
+/* v1.5: events + audio notes */
+.event-banner { background: rgba(255, 165, 0, 0.12); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.event-banner a { color: var(--accent); }
+.event-notice { margin-bottom: 10px; color: var(--warn); }
+.event-scope { align-self: center; font-size: 13px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+#recent-entries audio, #me-sessions audio { max-width: 230px; height: 32px; vertical-align: middle; }
+#field-audio input[type="file"] { padding: 8px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
