@@ -88,4 +88,11 @@ h2, h3 { color: var(--accent); }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
 #recent-entries audio, #me-sessions audio { max-width: 230px; height: 32px; vertical-align: middle; }
 #field-audio input[type="file"] { padding: 8px; }
+#field-audio > label { margin-bottom: 6px; }
+.audio-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#btn-record-audio.recording { background: #c0392b; animation: rec-pulse 1.2s ease-in-out infinite; }
+@keyframes rec-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.5); } 50% { box-shadow: 0 0 0 8px rgba(255, 68, 68, 0); } }
+#audio-preview-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+#audio-preview-wrap a { color: var(--accent); }
+#audio-preview { max-width: 280px; height: 36px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
