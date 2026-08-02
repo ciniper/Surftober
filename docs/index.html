@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=10">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=8" />
+  <link rel="stylesheet" href="./styles.css?v=9" />
   <meta name="theme-color" content="#0b3d91" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -118,7 +118,7 @@
     <div class="brand"><img class="brand-logo" src="./logo.svg?v=10" alt="" aria-hidden="true" />Surftober</div>
     <nav class="tabs">
       <a href="#log" class="tab-link" data-tab="log">Log</a>
-      <a href="#me" class="tab-link" data-tab="me">My Stats</a>
+      <a href="#me" class="tab-link" data-tab="me">Sessions</a>
       <a href="#leaderboard" class="tab-link" data-tab="leaderboard">Leaderboard</a>
       <a href="#awards" id="tab-awards-link" class="tab-link" data-tab="awards">Awards</a>
       <a href="#admin" id="tab-admin-link" class="tab-link" data-tab="admin">Admin</a>
@@ -180,8 +180,8 @@
           </label>
         </div>
         <label>
-          Notes
-          <textarea id="log-notes" rows="3" placeholder="Short journal…"></textarea>
+          Journal
+          <textarea id="log-notes" rows="3" placeholder="How was it out there?"></textarea>
         </label>
         <div id="field-audio">
           <label>Audio note (optional, max 10 MB)</label>
@@ -211,17 +211,21 @@
       <div id="recent-entries" class="card-list"></div>
     </section>
 
-    <!-- My Stats Page -->
+    <!-- Sessions Page -->
     <section id="page-me" class="page">
-      <h2>My Stats</h2>
-      <div class="filters">
-        <label> Name
-          <input list="user-list" id="me-user" placeholder="Your name" />
-        </label>
+      <h2>Sessions</h2>
+      <div class="subtabs">
+        <button type="button" id="subtab-mine" class="subtab">My Sessions</button>
+        <button type="button" id="subtab-others" class="subtab">Other Surfers</button>
         <span class="event-scope hint" id="me-scope"></span>
       </div>
+      <div class="filters" id="other-user-wrap" style="display:none">
+        <label> Surfer
+          <select id="other-user-select"></select>
+        </label>
+      </div>
       <div id="me-summary" class="cards"></div>
-      <h3>Sessions</h3>
+      <h3>Session Log</h3>
       <div id="me-sessions" class="table"></div>
     </section>
 
@@ -309,11 +313,6 @@
           <button id="btn-export-csv">Export Sessions CSV</button>
         </div>
         <div class="card">
-          <h3>Seed Data (local demo only)</h3>
-          <button id="btn-load-sample">Load Sample Dataset</button>
-          <button id="btn-clear">Clear All Data</button>
-        </div>
-        <div class="card">
           <h3>Factory Reset</h3>
           <p>Signs out, clears local data and caches, and reloads.</p>
           <button id="btn-factory-reset" class="warn">Factory Reset (This device)</button>
@@ -397,6 +396,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=17"></script>
+  <script type="module" src="./app.js?v=18"></script>
 </body>
 </html>
