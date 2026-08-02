@@ -37,12 +37,14 @@ const PROFILE_COLS = [
   'registered_at', 'created_at', 'updated_at'
 ];
 
-// NOTE: audio_url exists only after the v1.5 upgrade SQL has been run.
-// If your project predates it, remove 'audio_url' or the fetch will 400.
+// NOTE: audio_url (v1.5) and deleted_at (v1.5.3) exist only after the upgrade
+// SQL has been run. If your project predates it, remove them or the fetch
+// will 400. deleted_at is the soft-delete tombstone: rows the app "deleted"
+// stay in the DB and show up here with a timestamp in that column.
 const SESSION_COLS = [
   'id', 'team', 'user_id', 'user_name', 'date', 'type', 'duration_minutes',
   'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'cleanup_items',
-  'audio_url', 'created_at'
+  'audio_url', 'deleted_at', 'created_at'
 ];
 
 /** Run this once by hand: first sync + creates the nightly trigger. */

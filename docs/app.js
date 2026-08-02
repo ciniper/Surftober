@@ -514,12 +514,26 @@ function attachAdminEventHandlers(){
 }
 
 async function fetchCloudSessions(){
-  const { data, error } = await sb
+  const team = (viewedEvent || DEFAULT_EVENT).team;
+  // Soft-deleted sessions (deleted_at set) stay in the DB for the backups but
+  // never reach the UI.
+  let { data, error } = await sb
     .from('sessions')
     .select('*')
-    .eq('team', (viewedEvent || DEFAULT_EVENT).team)
+    .eq('team', team)
+    .is('deleted_at', null)
     .order('date', { ascending: true })
     .limit(5000);
+  if (error && error.code === '42703') {
+    // deleted_at column doesn't exist yet (soft-delete SQL not run) — fall
+    // back to the unfiltered fetch so the app keeps working.
+    ({ data, error } = await sb
+      .from('sessions')
+      .select('*')
+      .eq('team', team)
+      .order('date', { ascending: true })
+      .limit(5000));
+  }
   if (error) throw error;
   return (data || []).map((s) => ({
     _id: s.id,
@@ -681,7 +695,9 @@ function attachAccountHandlers(){
     if (!currentUser) { toast('Sign in first', 'warn'); return; }
     if (!confirm('Delete ALL your cloud data (sessions + profile)? This cannot be undone.')) return;
     try {
-      let { error: err1 } = await sb.from('sessions').delete().eq('user_id', currentUser.id);
+      // Sessions are soft-deleted (tombstoned) so the backups keep them; ask
+      // the admin for a true purge if you need one.
+      const { error: err1 } = await sb.rpc('soft_delete_all_my_sessions');
       if (err1) throw err1;
       let { error: err2 } = await sb.from('profiles').delete().eq('id', currentUser.id);
       if (err2) throw err2;
@@ -1209,9 +1225,12 @@ async function updateCloudSession(id, row){
 }
 
 async function deleteCloudSession(id){
-  const { data, error } = await sb.from('sessions').delete().eq('id', id).eq('user_id', currentUser.id).select('id');
+  // Soft delete: the RPC stamps deleted_at instead of removing the row, so
+  // backups keep it and the admin can restore it (clear deleted_at in the
+  // dashboard). Ownership is enforced inside the function.
+  const { data, error } = await sb.rpc('soft_delete_session', { p_id: id });
   if (error) throw error;
-  if (!data || !data.length) throw new Error('Session not found or not yours');
+  if (!data) throw new Error('Session not found or not yours');
 }
 
 function renderRecent() {
@@ -1366,10 +1385,10 @@ function renderMyStats() {
       if (!confirm(confirmMsg)) return;
       
       try {
-        // Delete from cloud if authenticated
+        // Delete from cloud if authenticated (soft delete — the audio note
+        // stays in storage so an undeleted session keeps its recording)
         if (sb && currentUser && s._id) {
           await deleteCloudSession(s._id);
-          if (s.audio_url) deleteSessionAudio(s.audio_url); // best-effort
           toast('Session deleted', 'success');
         }
         // Sync from cloud to update local storage
