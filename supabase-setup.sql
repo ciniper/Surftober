@@ -116,6 +116,7 @@ create table if not exists public.sessions (
   cleanup_items integer default 0,
   client_entry_id uuid,
   audio_url text,
+  deleted_at timestamptz,           -- soft delete: hidden from the UI, kept for backups
   created_at timestamptz default now()
 );
 
@@ -157,7 +158,44 @@ create policy "Users can update own sessions" on public.sessions for update
         and sessions.date between e.start_date and e.end_date
     )
   );
-create policy "Users can delete own sessions" on public.sessions for delete using (auth.uid() = user_id);
+-- There is deliberately NO delete policy: "deleting" a session goes through
+-- soft_delete_session below, which stamps deleted_at instead. The row stays
+-- in the DB (and in every backup); the UI filters tombstones out. To restore
+-- one as admin: Table Editor → sessions → clear deleted_at.
+
+-- SECURITY DEFINER: bypasses the event-window WITH CHECK (a session from a
+-- past event can still be tombstoned); ownership is enforced by
+-- user_id = auth.uid(). WHERE clauses are required by pg_safeupdate.
+create or replace function public.soft_delete_session(p_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  update public.sessions
+     set deleted_at = now()
+   where id = p_id
+     and user_id = auth.uid()
+     and deleted_at is null
+  returning true;
+$$;
+
+-- Used by Account → "Delete My Cloud Data".
+create or replace function public.soft_delete_all_my_sessions()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  with upd as (
+    update public.sessions
+       set deleted_at = now()
+     where user_id = auth.uid()
+       and deleted_at is null
+    returning 1
+  )
+  select count(*)::int from upd;
+$$;
 
 -- Keep sessions.user_name in sync when a profile is renamed (everything
 -- groups by user_name, so old sessions would otherwise strand under the old

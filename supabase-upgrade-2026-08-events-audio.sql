@@ -162,6 +162,53 @@ create trigger trg_sync_session_names
   execute function public.sync_session_names();
 
 -- =========================================================
+-- soft delete : "deleting" a session tombstones it (v1.5.3)
+-- =========================================================
+alter table public.sessions add column if not exists deleted_at timestamptz;
+
+-- No more hard deletes through the API: with this policy gone, DELETE matches
+-- 0 rows for everyone. The app calls soft_delete_session instead, so removed
+-- sessions stay in the DB and in every backup (pg_dump + Sheet).
+drop policy if exists "Users can delete own sessions" on public.sessions;
+
+-- SECURITY DEFINER: bypasses the event-window WITH CHECK (a session from a
+-- past event can still be tombstoned); ownership is enforced by
+-- user_id = auth.uid(). WHERE clauses are required by pg_safeupdate.
+create or replace function public.soft_delete_session(p_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  update public.sessions
+     set deleted_at = now()
+   where id = p_id
+     and user_id = auth.uid()
+     and deleted_at is null
+  returning true;
+$$;
+
+-- Used by Account → "Delete My Cloud Data".
+create or replace function public.soft_delete_all_my_sessions()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  with upd as (
+    update public.sessions
+       set deleted_at = now()
+     where user_id = auth.uid()
+       and deleted_at is null
+    returning 1
+  )
+  select count(*)::int from upd;
+$$;
+
+-- To restore ("undelete") a session as admin: Table Editor → sessions → find
+-- the row → clear deleted_at. It reappears in the app on the next sync.
+
+-- =========================================================
 -- RUN ONCE — data repairs (do NOT blindly re-run this section)
 -- =========================================================
 -- (1) Pre-v1.5 app code stored no-wetsuit sessions with duration_minutes
