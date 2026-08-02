@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=10">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=7" />
+  <link rel="stylesheet" href="./styles.css?v=8" />
   <meta name="theme-color" content="#0b3d91" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -287,6 +287,19 @@
           <div id="admin-events" class="table"></div>
         </div>
         <div class="card">
+          <h3>Color Scheme</h3>
+          <p>Applies on <b>this device only</b> — tinker freely. When you pick a winner, we bake it into styles.css for everyone.</p>
+          <div id="theme-presets" class="theme-grid"></div>
+          <details id="theme-custom">
+            <summary>Custom…</summary>
+            <div id="theme-pickers" class="theme-pickers"></div>
+            <div class="actions">
+              <button type="button" id="btn-theme-copy">Copy current into pickers</button>
+              <button type="button" id="btn-theme-reset">Reset to default</button>
+            </div>
+          </details>
+        </div>
+        <div class="card">
           <h3>Import CSV</h3>
           <p>Columns (header expected): user,date(YYYY-MM-DD),type,duration(HH:MM),location,board,notes,no_wetsuit(0/1),costume(0/1),cleanup_items(int)</p>
           <input type="file" id="csv-file" accept=".csv,text/csv" />
@@ -384,6 +397,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=16"></script>
+  <script type="module" src="./app.js?v=17"></script>
 </body>
 </html>
