@@ -218,7 +218,7 @@ alter table public.sessions add column if not exists start_time time;
 -- with the owner's rights (security_invoker defaults to off), deliberately
 -- bypassing profiles RLS for JUST these competition-facing columns.
 create or replace view public.public_profiles as
-  select id, display_name, photo_base64, target_hours from public.profiles;
+  select id, display_name, photo_base64, target_hours, fun_comment from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
 

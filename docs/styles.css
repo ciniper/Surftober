@@ -166,6 +166,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .avatar-lg { width: 96px; height: 96px; margin-top: 6px; }
 .profile-head { display: flex; align-items: center; gap: 12px; }
 .profile-head h3 { margin: 0; }
+.fun-comment { font-style: italic; color: color-mix(in srgb, var(--text) 75%, transparent); margin: 8px 0 10px; }
 #me-sessions .card-list { margin-top: 4px; }
 #field-photo > label { margin-bottom: 8px; }
 #log-start-time { width: 140px; justify-self: start; } /* a time is 8 chars — no need for a full column */
