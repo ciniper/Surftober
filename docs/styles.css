@@ -34,6 +34,11 @@ main { padding: 12px; display: block; }
 .page { display: none; }
 .page.active { display: block; }
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-bottom: 12px; }
+/* Grid items refuse to shrink below their content by default (min-width:auto),
+   so the Type select's longest option overflowed its column and slid under the
+   Duration inputs on desktop. Let controls shrink to their track instead. */
+.grid label { min-width: 0; }
+.grid input, .grid select, .grid textarea { min-width: 0; width: 100%; }
 label { display: grid; gap: 6px; font-size: 14px; }
 .hidden { display: none !important; }
 /* 16px on form controls is load-bearing: anything smaller makes iOS Safari
