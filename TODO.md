@@ -1,6 +1,26 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
+      tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
+
+## Scoped, awaiting a go
+- [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
+      Function for the OAuth token exchange (Strava has no public-client flow),
+      owner-only token table, "Import from Strava" picker mapping start→date+
+      start_time, elapsed→duration, name/description→journal, strava_activity_id
+      for dedup. Gauge interest in the WhatsApp group before building — only pays
+      off for watch-trackers.
+- [ ] **Photo dropbox** — decide collect vs display first:
+      collect/archive → Google Drive (zero-code: file-upload Google Form + a
+      "📸 Drop photos" button; integrated: Apps Script Web App POST endpoint,
+      ~half a day, no Google login needed for friends);
+      display-in-app (photo wall) → Supabase `photos` bucket instead (Drive
+      hotlinking is unreliable).
+- [ ] **Watch Supabase egress during October** — free tier is 5 GB/month and
+      sessions are public, so big assets get re-downloaded per viewer. Check
+      dashboard → Settings → Usage weekly during the event. (Current usage:
+      ~1.2 MB audio / ~3.4 MB photos as of Aug 3 — under 1% of everything.)
 - [ ] **WhatsApp "Share to group" button** — after logging a session, offer a one-tap
       share via a `wa.me` deep link with a pre-filled message ("🏄 2h at Ocean Beach,
       day 12 of Surftober!"). Zero infrastructure, works on everyone's phone.
