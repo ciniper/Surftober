@@ -205,7 +205,13 @@ const publicProfileCache = new Map(); // user_id -> {photo_base64, target_hours}
 let pendingPhotoBase64;               // set when a new photo is picked, undefined otherwise
 
 function avatarSrc(b64){
-  return b64 ? (String(b64).startsWith('data:') ? b64 : 'data:image/jpeg;base64,' + b64) : null;
+  if (!b64) return null;
+  const s = String(b64);
+  if (s.startsWith('data:')) return s;
+  // Register-era photos are bare base64 with no MIME — sniff it (PNG starts
+  // "iVBOR", JPEG "/9j/") so the data URL is labeled correctly.
+  const mime = s.startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
+  return 'data:' + mime + ';base64,' + s;
 }
 
 async function fetchPublicProfile(userId){
