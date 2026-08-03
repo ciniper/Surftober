@@ -201,24 +201,31 @@ function reflectAuthUI(){
 // ===== Profile photos (stored in profiles.photo_base64, read for OTHER
 // users via the public_profiles view — name+photo only, PII stays private) ===
 
-const avatarCache = new Map(); // user_id -> base64/dataURL or null
-let pendingPhotoBase64;        // set when a new photo is picked, undefined otherwise
+const publicProfileCache = new Map(); // user_id -> {photo_base64, target_hours} | null
+let pendingPhotoBase64;               // set when a new photo is picked, undefined otherwise
 
 function avatarSrc(b64){
   return b64 ? (String(b64).startsWith('data:') ? b64 : 'data:image/jpeg;base64,' + b64) : null;
 }
 
-async function fetchAvatar(userId){
+async function fetchPublicProfile(userId){
   if (!sb || !userId) return null;
-  if (avatarCache.has(userId)) return avatarCache.get(userId);
+  if (publicProfileCache.has(userId)) return publicProfileCache.get(userId);
   try {
-    const { data, error } = await sb.from('public_profiles').select('photo_base64').eq('id', userId).maybeSingle();
+    let { data, error } = await sb.from('public_profiles').select('photo_base64, target_hours').eq('id', userId).maybeSingle();
+    if (error && error.code === '42703') {
+      // View predates target_hours — fall back to photo-only rather than
+      // losing avatars in the deploy window.
+      ({ data, error } = await sb.from('public_profiles').select('photo_base64').eq('id', userId).maybeSingle());
+    }
     if (error) throw error;
-    const v = (data && data.photo_base64) || null;
-    avatarCache.set(userId, v);
-    return v;
+    publicProfileCache.set(userId, data || null);
+    return data || null;
   } catch {
-    return null; // view not deployed yet — no avatars, nothing breaks
+    // View missing (or still on the pre-target_hours version) — cache the miss
+    // so we don't refetch in a loop; page just shows totals without goal info.
+    publicProfileCache.set(userId, null);
+    return null;
   }
 }
 
@@ -302,7 +309,7 @@ async function saveProfile(){
   const { error } = await sb.from('profiles').upsert(profileUpdate);
   if (error) throw error;
   pendingPhotoBase64 = undefined;
-  avatarCache.delete(currentUser.id); // Sessions page re-fetches the new photo
+  publicProfileCache.delete(currentUser.id); // Sessions page re-fetches the new photo/goal
   await fetchProfile();
   enforceProfileNameOnUI();
 }
@@ -1479,6 +1486,8 @@ function startEditSession(session){
   resetAudioFieldForEdit();
   // Re-apply type-dependent UI (cleanup disables inputs, swim hides craft)
   document.getElementById('log-type').dispatchEvent(new Event('change'));
+  // Arriving from a scrolled session list: put the edit form in view
+  window.scrollTo(0, 0);
 }
 
 function resetAudioFieldForEdit(){
@@ -1580,6 +1589,21 @@ function renderMyStats() {
 
   const mine = normalized.filter((s) => s.user === user);
   const totals = SurftoberAwards.rollupByUser(mine, range);
+
+  // Whose page is this? Own photo/goal come straight from profileData;
+  // other surfers' from the public_profiles view (photo + target hours).
+  const pageUserId = sessionsView === 'mine' ? (currentUser && currentUser.id) : (mine[0] && mine[0].user_id);
+  let pageProfile = null;
+  if (sessionsView === 'mine') {
+    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, target_hours: profileData.target_hours };
+  } else if (pageUserId) {
+    if (publicProfileCache.has(pageUserId)) {
+      pageProfile = publicProfileCache.get(pageUserId);
+    } else {
+      fetchPublicProfile(pageUserId).then(() => renderMyStats()); // one re-render when it lands
+    }
+  }
+
   const summary = document.getElementById('me-summary');
   summary.innerHTML =
     totals
@@ -1591,10 +1615,8 @@ function renderMyStats() {
           const totalDays = Math.round((evEnd - evStart) / 86400000) + 1;
           const daysElapsed = Math.min(totalDays, Math.max(0, Math.floor((new Date() - evStart) / 86400000) + 1));
 
-          // Get user's goal hours from profile
-          const goalHours = profileData && t.user === profileName && profileData.target_hours
-            ? Number(profileData.target_hours)
-            : null;
+          // Goal hours: yours or theirs (via public_profiles)
+          const goalHours = pageProfile && pageProfile.target_hours ? Number(pageProfile.target_hours) : null;
 
           const onTrackHours = goalHours ? (daysElapsed / totalDays) * goalHours : null;
           const progressPercent = goalHours ? (t.total_hours / goalHours * 100) : null;
@@ -1610,7 +1632,8 @@ function renderMyStats() {
             goalMedalBadge = `<span class="badge ${goalMedal.toLowerCase()}">${goalMedal}</span>`;
           }
 
-          let content = `<div class="card"><div class="profile-head"><img id="me-avatar" class="avatar" style="display:none" alt="" /><h3>${esc(t.user)}</h3></div>`;
+          const av = avatarSrc(pageProfile && pageProfile.photo_base64);
+          let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
 
           if (goalHours) {
             const statusColor = t.total_hours >= onTrackHours ? 'var(--ok)' : 'var(--warn)'; // theme-aware
@@ -1695,16 +1718,6 @@ function renderMyStats() {
     });
   });
   attachJournalToggles();
-
-  // Profile photo for whoever's page this is
-  const pageUserId = sessionsView === 'mine' ? (currentUser && currentUser.id) : (mine[0] && mine[0].user_id);
-  if (pageUserId) {
-    fetchAvatar(pageUserId).then((b64) => {
-      const img = document.getElementById('me-avatar');
-      const src = avatarSrc(b64);
-      if (img && src) { img.src = src; img.style.display = ''; }
-    });
-  }
 }
 
 function renderLeaderboard() {

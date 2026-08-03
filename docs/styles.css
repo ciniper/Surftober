@@ -168,6 +168,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .profile-head h3 { margin: 0; }
 #me-sessions .card-list { margin-top: 4px; }
 #field-photo > label { margin-bottom: 8px; }
+#log-start-time { width: 140px; justify-self: start; } /* a time is 8 chars — no need for a full column */
 
 /* Post-submit stoke splash */
 .celebrate { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg) 55%, transparent); pointer-events: none; animation: celebrate-fade 1.1s ease forwards; }
