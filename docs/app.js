@@ -218,12 +218,10 @@ async function fetchPublicProfile(userId){
   if (!sb || !userId) return null;
   if (publicProfileCache.has(userId)) return publicProfileCache.get(userId);
   try {
-    let { data, error } = await sb.from('public_profiles').select('photo_base64, target_hours').eq('id', userId).maybeSingle();
-    if (error && error.code === '42703') {
-      // View predates target_hours — fall back to photo-only rather than
-      // losing avatars in the deploy window.
-      ({ data, error } = await sb.from('public_profiles').select('photo_base64').eq('id', userId).maybeSingle());
-    }
+    // select('*'): the view only exposes public columns, so this picks up
+    // whatever the deployed view offers (photo/goal/fun comment) with no
+    // column-mismatch errors across SQL deploy windows.
+    const { data, error } = await sb.from('public_profiles').select('*').eq('id', userId).maybeSingle();
     if (error) throw error;
     publicProfileCache.set(userId, data || null);
     return data || null;
@@ -1601,7 +1599,7 @@ function renderMyStats() {
   const pageUserId = sessionsView === 'mine' ? (currentUser && currentUser.id) : (mine[0] && mine[0].user_id);
   let pageProfile = null;
   if (sessionsView === 'mine') {
-    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, target_hours: profileData.target_hours };
+    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, target_hours: profileData.target_hours, fun_comment: profileData.fun_comment };
   } else if (pageUserId) {
     if (publicProfileCache.has(pageUserId)) {
       pageProfile = publicProfileCache.get(pageUserId);
@@ -1639,7 +1637,9 @@ function renderMyStats() {
           }
 
           const av = avatarSrc(pageProfile && pageProfile.photo_base64);
+          const funComment = pageProfile && pageProfile.fun_comment ? String(pageProfile.fun_comment).trim() : '';
           let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
+          if (funComment) content += `<div class="fun-comment">“${esc(funComment)}”</div>`;
 
           if (goalHours) {
             const statusColor = t.total_hours >= onTrackHours ? 'var(--ok)' : 'var(--warn)'; // theme-aware

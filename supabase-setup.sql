@@ -47,7 +47,7 @@ create unique index if not exists profiles_display_name_unique_idx
 -- exposing the rest of the profile. Owner-rights view bypasses profiles RLS
 -- for just these competition-facing columns.
 create or replace view public.public_profiles as
-  select id, display_name, photo_base64, target_hours from public.profiles;
+  select id, display_name, photo_base64, target_hours, fun_comment from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
 
