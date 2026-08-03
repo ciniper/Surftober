@@ -829,10 +829,10 @@ function attachAccountHandlers(){
     }, 100);
   });
   
-  // Profile photo picker: compress immediately, save with Save Profile
-  const photoInput = document.getElementById('profile-photo');
-  if (photoInput) photoInput.addEventListener('change', async () => {
-    const file = photoInput.files && photoInput.files[0];
+  // Profile photo: pick from library OR take one with the camera (the hidden
+  // capture input opens the front camera directly on phones). Both funnel
+  // into the same compress-and-preview path; saved with Save Profile.
+  async function handlePhotoFile(file){
     if (!file) return;
     try {
       pendingPhotoBase64 = await compressImageToBase64(file);
@@ -842,7 +842,13 @@ function attachAccountHandlers(){
     } catch (e) {
       toast('Could not process that image: ' + e.message, 'error');
     }
-  });
+  }
+  const photoInput = document.getElementById('profile-photo');
+  if (photoInput) photoInput.addEventListener('change', () => handlePhotoFile(photoInput.files && photoInput.files[0]));
+  const cameraInput = document.getElementById('profile-photo-camera');
+  if (cameraInput) cameraInput.addEventListener('change', () => handlePhotoFile(cameraInput.files && cameraInput.files[0]));
+  const btnTakePhoto = document.getElementById('btn-take-photo');
+  if (btnTakePhoto) btnTakePhoto.addEventListener('click', () => { if (cameraInput) cameraInput.click(); });
 
   // New: Save full profile button
   const btnSaveProfile = document.getElementById('btn-save-profile');
@@ -1078,6 +1084,24 @@ async function deleteSessionAudio(url){
 
 function audioPlayerHtml(url){
   return url ? `<audio controls preload="none" src="${esc(url)}"></audio>` : '';
+}
+
+// ===== Post-submit celebration → land on My Sessions =====
+
+const STOKE_LINES = ['Session logged! 🤙', 'Stoke +1 🏄', 'Wave count rising 🌊', 'Logged. Go dry off 🧖'];
+
+function celebrateAndGoToSessions(){
+  const goToMySessions = () => {
+    sessionsView = 'mine';
+    location.hash = '#me';
+    renderMyStats();
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { goToMySessions(); return; }
+  const el = document.createElement('div');
+  el.className = 'celebrate';
+  el.innerHTML = `<div class="celebrate-inner">${STOKE_LINES[Math.floor(Math.random() * STOKE_LINES.length)]}</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.remove(); goToMySessions(); }, 1100);
 }
 
 // ===== Journal clamping (long entries collapse to 4 lines) =====
@@ -1341,7 +1365,7 @@ function initForm() {
       } else {
         if (sb && currentUser) await insertCloud(row);
         appendSession(row);
-        toast('Entry saved', 'success');
+        celebrateAndGoToSessions(); // its splash IS the success feedback
       }
       const st = document.getElementById('status');
       if (st) st.textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
@@ -1606,8 +1630,11 @@ function renderMyStats() {
       )
       .join('') || '<div class="hint">No data</div>';
 
-  // Table of sessions (scoped to the viewed event)
-  const sessions = mine.filter((s) => SurftoberAwards.inRange(s.date, range));
+  // Table of sessions (scoped to the viewed event), newest first — the
+  // session you just logged should greet you at the top.
+  const sessions = mine
+    .filter((s) => SurftoberAwards.inRange(s.date, range))
+    .sort((a, b) => String(b.date + (b.start_time || '')).localeCompare(String(a.date + (a.start_time || ''))));
   // Determine which session gets the one-time costume +1h — PER USER (the
   // name filter can be blank, showing everyone's sessions at once).
   const costumeIdxByUser = new Map();
