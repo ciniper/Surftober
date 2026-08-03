@@ -167,6 +167,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .profile-head { display: flex; align-items: center; gap: 12px; }
 .profile-head h3 { margin: 0; }
 #me-sessions .card-list { margin-top: 4px; }
+#field-photo > label { margin-bottom: 8px; }
+
+/* Post-submit stoke splash */
+.celebrate { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg) 55%, transparent); pointer-events: none; animation: celebrate-fade 1.1s ease forwards; }
+.celebrate-inner { font-size: 26px; font-weight: 700; color: var(--text); background: var(--panel); border: 2px solid var(--accent); border-radius: 16px; padding: 18px 28px; box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 35%, transparent); animation: celebrate-pop 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards; }
+@keyframes celebrate-fade { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes celebrate-pop { 0% { transform: scale(0.6) translateY(24px); } 30% { transform: scale(1.06) translateY(-4px); } 55% { transform: scale(1) translateY(0); } 100% { transform: scale(1) translateY(-10px); } }
 /* Journal entries are meant to be read, not squeezed into a sliver */
 .table th.journal-cell { min-width: 340px; }
 .table td.journal-cell { min-width: 340px; max-width: 560px; line-height: 1.5; }
