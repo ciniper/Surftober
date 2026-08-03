@@ -10,6 +10,15 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Compress register-era profile photos** — photos uploaded via register.html
+      are stored raw (Smile joshua's is a 3.4 MB PNG that every visitor downloads
+      when viewing their Sessions page); Account-flow uploads compress to ~25 KB.
+      Short term: ask affected friends to re-upload via Account → Save Profile.
+      Better: (a) add the same canvas compression to register.html's photo upload
+      so new October sign-ups never store huge originals, and (b) one-time
+      recompress of existing oversized profiles.photo_base64 rows (find them:
+      `select display_name, length(photo_base64) from public.profiles
+      where length(photo_base64) > 100000;`).
 - [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
       events tab + start_time + audio_url/deleted_at all mirrored)
 - [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
