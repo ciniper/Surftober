@@ -11,9 +11,10 @@
 
 ## Open items
 - [ ] **Google Sheet mirror: re-paste the updated template** — `backup/sheets-mirror.gs`
-      now also mirrors the `events` table (new tab + count in `meta`). The required
-      column fix (audio_url/deleted_at in SESSION_COLS) is already done; this adds
-      the events tab. Re-paste the whole file over the Apps Script, run `mirror` once.
+      now also mirrors the `events` table (new tab + count in `meta`) and the
+      sessions `start_time` column (v1.7). The audio_url/deleted_at column fix is
+      already done. Re-paste the whole file over the Apps Script AFTER running the
+      v1.7 SQL, then run `mirror` once.
 - [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
       not null`) in the Admin tab with a Restore button per row (sets `deleted_at`
       back to null). Today restoring requires the Supabase dashboard (Table Editor →

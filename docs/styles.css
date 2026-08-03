@@ -104,11 +104,12 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 /* Live status */
 .live { color: var(--ok); font-weight: 600; }
 
-/* Edit icons and links — padding/negative-margin expands the tap target without moving layout */
-.table .edit-link, .table .ev-view, .table .ev-activate { color: var(--accent-text); text-decoration: underline; cursor: pointer; }
-.table .edit-link, .table .remove-link, .table .ev-view, .table .ev-activate { display: inline-block; padding: 8px 6px; margin: -8px -6px; }
-.table .remove-link { color: color-mix(in srgb, var(--danger) 60%, var(--text)); cursor: pointer; text-decoration: underline; }
-.table .edit-link:hover, .table .ev-view:hover, .table .ev-activate:hover { color: var(--accent-strong); }
+/* Edit icons and links — padding/negative-margin expands the tap target without moving layout.
+   .edit-link is global (tiles use it outside .table) so it always reads as a link. */
+.edit-link, .table .ev-view, .table .ev-activate { color: var(--accent-text); text-decoration: underline; cursor: pointer; }
+.table .edit-link, .table .ev-view, .table .ev-activate { display: inline-block; padding: 8px 6px; margin: -8px -6px; }
+.edit-link:hover, .table .ev-view:hover, .table .ev-activate:hover { color: var(--accent-strong); }
+.table td.nowrap { white-space: nowrap; }
 
 /* Heading hierarchy: accent for page titles, plain text for section heads —
    when everything was orange, nothing was */
@@ -123,7 +124,7 @@ h3 { color: var(--text); font-size: 16px; margin: 24px 0 10px; }
 .event-notice { margin-bottom: 10px; color: var(--warn); }
 .event-scope { align-self: center; font-size: 13px; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
-#recent-entries audio, #me-sessions audio { max-width: 230px; height: 32px; vertical-align: middle; }
+#me-sessions audio { max-width: 230px; height: 32px; vertical-align: middle; }
 #field-audio input[type="file"] { padding: 8px; }
 #field-audio > label { margin-bottom: 6px; }
 .audio-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -157,6 +158,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .subtab { background: var(--muted); color: var(--text); box-shadow: none; border: 2px solid var(--card-border); font-weight: 600; }
 .subtab.active { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); border-color: transparent; color: #fff; }
 .subtabs .event-scope { margin-left: auto; }
+.view-toggle { display: inline-flex; gap: 4px; margin-left: 6px; }
+.subtab.small { padding: 8px 10px; font-size: 13px; }
+
+/* v1.7: avatars + tile view */
+.avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--card-border); }
+.avatar-lg { width: 96px; height: 96px; margin-top: 6px; }
+.profile-head { display: flex; align-items: center; gap: 12px; }
+.profile-head h3 { margin: 0; }
+#me-sessions .card-list { margin-top: 4px; }
 /* Journal entries are meant to be read, not squeezed into a sliver */
 .table th.journal-cell { min-width: 340px; }
 .table td.journal-cell { min-width: 340px; max-width: 560px; line-height: 1.5; }

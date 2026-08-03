@@ -91,6 +91,15 @@ function fmtDay(d){
   catch { return String(d); }
 }
 
+// '7:15 AM' from the DB's 'HH:MM[:SS]'
+function fmtTime(t){
+  if (!t) return '';
+  try {
+    const [h, m] = String(t).split(':').map(Number);
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  } catch { return String(t); }
+}
+
 function toast(msg, type='success'){
   const box = document.getElementById('toast-container');
   if (!box) { console.log(`[${type}]`, msg); return; }
@@ -189,6 +198,52 @@ function reflectAuthUI(){
   }
 }
 
+// ===== Profile photos (stored in profiles.photo_base64, read for OTHER
+// users via the public_profiles view — name+photo only, PII stays private) ===
+
+const avatarCache = new Map(); // user_id -> base64/dataURL or null
+let pendingPhotoBase64;        // set when a new photo is picked, undefined otherwise
+
+function avatarSrc(b64){
+  return b64 ? (String(b64).startsWith('data:') ? b64 : 'data:image/jpeg;base64,' + b64) : null;
+}
+
+async function fetchAvatar(userId){
+  if (!sb || !userId) return null;
+  if (avatarCache.has(userId)) return avatarCache.get(userId);
+  try {
+    const { data, error } = await sb.from('public_profiles').select('photo_base64').eq('id', userId).maybeSingle();
+    if (error) throw error;
+    const v = (data && data.photo_base64) || null;
+    avatarCache.set(userId, v);
+    return v;
+  } catch {
+    return null; // view not deployed yet — no avatars, nothing breaks
+  }
+}
+
+// Shrink whatever the camera roll hands us to a small square-ish JPEG so the
+// profiles table doesn't fill up with 8 MB originals.
+async function compressImageToBase64(file, maxDim = 256, quality = 0.82){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('could not read that image'));
+      i.src = url;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function fetchProfile(){
   if (!currentUser) { 
     profileName = null; 
@@ -216,7 +271,14 @@ async function fetchProfile(){
     const el = document.getElementById(id);
     if (el) el.value = value;
   }
-  
+
+  const photoPreview = document.getElementById('profile-photo-preview');
+  if (photoPreview) {
+    const src = avatarSrc(data && data.photo_base64);
+    if (src) { photoPreview.src = src; photoPreview.style.display = ''; }
+    else photoPreview.style.display = 'none';
+  }
+
   enforceProfileNameOnUI();
 }
 
@@ -233,10 +295,14 @@ async function saveProfile(){
     location_based: document.getElementById('profile-location').value.trim(),
     whatsapp_phone: document.getElementById('profile-whatsapp').value.trim(),
     fun_comment: document.getElementById('profile-fun-comment').value.trim(),
-    additional_comments: document.getElementById('profile-comments').value.trim()
+    additional_comments: document.getElementById('profile-comments').value.trim(),
+    // keep the existing photo unless a new one was picked this session
+    photo_base64: pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : ((profileData && profileData.photo_base64) || null)
   };
   const { error } = await sb.from('profiles').upsert(profileUpdate);
   if (error) throw error;
+  pendingPhotoBase64 = undefined;
+  avatarCache.delete(currentUser.id); // Sessions page re-fetches the new photo
   await fetchProfile();
   enforceProfileNameOnUI();
 }
@@ -665,7 +731,8 @@ async function fetchCloudSessions(){
     no_wetsuit: s.no_wetsuit ? 1 : 0,
     costume: s.costume ? 1 : 0,
     cleanup_items: s.cleanup_items || 0,
-    audio_url: s.audio_url || null
+    audio_url: s.audio_url || null,
+    start_time: s.start_time || null
   }));
 }
 
@@ -674,7 +741,6 @@ async function syncFromCloud(){
     const cloud = await fetchCloudSessions();
     saveSessions(cloud);
     populateDataLists();
-    renderRecent();
     renderMyStats();
     renderLeaderboard();
     renderAwards();
@@ -710,7 +776,13 @@ async function insertCloud(row){
   // if the payload names an unknown column — even with a null value — so only
   // attach the key once the upgrade is detected.
   if (eventsTableAvailable) payload.audio_url = row.audio_url || null;
-  const { error } = await sb.from('sessions').insert(payload);
+  payload.start_time = row.start_time || null;
+  let { error } = await sb.from('sessions').insert(payload);
+  if (error && error.code === 'PGRST204' && 'start_time' in payload) {
+    // start_time column not there yet (v1.7 SQL not run) — save without it
+    delete payload.start_time;
+    ({ error } = await sb.from('sessions').insert(payload));
+  }
   if (error) throw error;
 }
 
@@ -757,6 +829,21 @@ function attachAccountHandlers(){
     }, 100);
   });
   
+  // Profile photo picker: compress immediately, save with Save Profile
+  const photoInput = document.getElementById('profile-photo');
+  if (photoInput) photoInput.addEventListener('change', async () => {
+    const file = photoInput.files && photoInput.files[0];
+    if (!file) return;
+    try {
+      pendingPhotoBase64 = await compressImageToBase64(file);
+      const preview = document.getElementById('profile-photo-preview');
+      if (preview) { preview.src = pendingPhotoBase64; preview.style.display = ''; }
+      toast('Photo ready — hit Save Profile to keep it', 'success');
+    } catch (e) {
+      toast('Could not process that image: ' + e.message, 'error');
+    }
+  });
+
   // New: Save full profile button
   const btnSaveProfile = document.getElementById('btn-save-profile');
   if (btnSaveProfile) btnSaveProfile.addEventListener('click', async () => {
@@ -823,7 +910,6 @@ function attachAccountHandlers(){
       // Clear local mirror and UI
       saveSessions([]);
       populateDataLists();
-      renderRecent();
       renderMyStats();
       renderLeaderboard();
       renderAwards();
@@ -1043,11 +1129,11 @@ function appendSession(row) {
 }
 
 function toCSV(rows) {
-  const header = ['user', 'date', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items', 'audio_url'];
+  const header = ['user', 'date', 'start_time', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items', 'audio_url'];
   const quote = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
+    lines.push([r.user, r.date, r.start_time || '', r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
   }
   return lines.join('\n');
 }
@@ -1194,6 +1280,7 @@ function initForm() {
     const row = {
       user: document.getElementById('log-user').value.trim(),
       date: document.getElementById('log-date').value,
+      start_time: document.getElementById('log-start-time').value || null,
       type: document.getElementById('log-type').value,
       duration: isCleanup
         ? '01:00'
@@ -1258,7 +1345,6 @@ function initForm() {
       }
       const st = document.getElementById('status');
       if (st) st.textContent = 'Saved entry for ' + row.user + ' on ' + row.date + (currentUser ? ' (cloud + local)' : ' (local)');
-      renderRecent();
       renderMyStats();
       renderLeaderboard();
       f.reset();
@@ -1288,6 +1374,26 @@ function initForm() {
     applyCleanupUI();
     applyCostumeGuard();
   });
+  // Delete (soft) — offered inside edit mode instead of on the session lists
+  const btnDelete = document.getElementById('btn-delete-session');
+  if (btnDelete) btnDelete.addEventListener('click', async () => {
+    if (!editingId || !sb || !currentUser) return;
+    if (!confirm('Delete this session? (The admin can restore it if needed.)')) return;
+    try {
+      await deleteCloudSession(editingId);
+      toast('Session deleted', 'success');
+      resetEditState();
+      f.reset();
+      resetAudioField();
+      document.getElementById('log-date').value = defaultLogDate();
+      enforceProfileNameOnUI();
+      applyCleanupUI();
+      applyCostumeGuard();
+      await syncFromCloud();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
+    }
+  });
 }
 
 // Editing state and helpers (top-level)
@@ -1305,6 +1411,9 @@ function setEditModeUI(editing){
   const headSlot = document.getElementById('log-head-actions');
   const home = document.getElementById('log-actions-home');
   if (actions && headSlot && home) (editing ? headSlot : home).appendChild(actions);
+  // Delete lives in the edit view (cloud sessions only), not on the lists
+  const del = document.getElementById('btn-delete-session');
+  if (del) del.style.display = editing && editingId && sb && currentUser ? '' : 'none';
 }
 
 function resetEditState(){
@@ -1328,6 +1437,7 @@ function resetAudioField(){
 function startEditSession(session){
   // Prefill form with session values, lock user field (already enforced), toggle submit button label
   document.getElementById('log-date').value = session.date;
+  document.getElementById('log-start-time').value = session.start_time ? String(session.start_time).slice(0, 5) : '';
   document.getElementById('log-type').value = session.type;
   const [h,m] = session.duration.split(':').map(x=>Number(x));
   document.getElementById('log-duration-h').value = h;
@@ -1339,9 +1449,9 @@ function startEditSession(session){
   document.getElementById('log-costume').checked = !!session.costume;
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
-  setEditModeUI(true);
   editingId = session._id || null; // we'll attach _id when rendering from cloud
   editingAudioUrl = session.audio_url || null;
+  setEditModeUI(true); // after editingId is set — the Delete button needs it
   resetAudioFieldForEdit();
   // Re-apply type-dependent UI (cleanup disables inputs, swim hides craft)
   document.getElementById('log-type').dispatchEvent(new Event('change'));
@@ -1373,7 +1483,12 @@ async function updateCloudSession(id, row){
     user_name: profileName || row.user,
   };
   if (eventsTableAvailable) payload.audio_url = row.audio_url || null; // see insertCloud
-  const { data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id');
+  payload.start_time = row.start_time || null;
+  let { data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id');
+  if (error && error.code === 'PGRST204' && 'start_time' in payload) {
+    delete payload.start_time; // column not there yet — see insertCloud
+    ({ data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id'));
+  }
   if (error) throw error;
   if (!data || !data.length) throw new Error('Session not found or not yours');
 }
@@ -1387,45 +1502,13 @@ async function deleteCloudSession(id){
   if (!data) throw new Error('Session not found or not yours');
 }
 
-function renderRecent() {
-  const container = document.getElementById('recent-entries');
-  // Normalize: cloud-synced rows don't carry base_minutes until normalized
-  // (it used to render as "NaN:NaN" after a sync).
-  const all = loadSessions().map(SurftoberAwards.normalizeSession).slice(-10).reverse();
-  if (!all.length) {
-    container.innerHTML = '<div class="hint">No sessions yet — paddle out and log the first one.</div>';
-    return;
-  }
-  container.innerHTML = all
-    .map((r) => {
-      // Ownership by user_id, not display name — two people sharing a name
-      // must not see edit links on each other's rows.
-      const canEdit = !!currentUser && r._id && r.user_id === currentUser.id && isViewingActiveEvent();
-      const edit = canEdit ? `<div><a class="edit-link" data-id="${esc(r._id)}">Edit</a></div>` : '';
-      const where = [r.location, r.board].filter(Boolean).map(esc).join(' · ');
-      return `<div class="card"><div><b>${esc(r.user)}</b> · ${fmtDay(r.date)} · ${esc(r.type)}</div>
-      ${where ? `<div>${where}</div>` : ''}
-      <div>${esc(r.duration)} (${SurftoberAwards.minutesToHHMM(r.base_minutes)}) ${r.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : ''} ${
-        r.costume ? '<span class="badge">Costume</span>' : ''
-      } ${r.cleanup_items ? `<span class="badge">Cleanup ${Number(r.cleanup_items)}</span>` : ''}</div>
-      ${journalHtml(r.notes)}${audioPlayerHtml(r.audio_url)}${edit}</div>`;
-    })
-    .join('');
-  // Attach edit handlers
-  container.querySelectorAll('.edit-link').forEach((a) => {
-    a.addEventListener('click', () => {
-      const id = a.getAttribute('data-id');
-      const allSess = loadSessions();
-      const s = allSess.find((x) => x._id === id);
-      if (s) startEditSession(s);
-    });
-  });
-  attachJournalToggles();
-}
+// (Recent Entries removed from the Log page — the Sessions tab's tile view
+// replaced it in v1.7.0)
 
 // Sessions page state: your own sessions, or one other surfer's page
 let sessionsView = 'mine';   // 'mine' | 'others'
 let otherUserSelected = '';
+let sessionsLayout = localStorage.getItem('surftober.sessionsLayout') || 'list'; // 'list' | 'tiles'
 
 function renderMyStats() {
   const ev = viewedEvent || DEFAULT_EVENT;
@@ -1437,6 +1520,10 @@ function renderMyStats() {
   const othersBtn = document.getElementById('subtab-others');
   if (mineBtn) mineBtn.classList.toggle('active', sessionsView === 'mine');
   if (othersBtn) othersBtn.classList.toggle('active', sessionsView === 'others');
+  const listBtn = document.getElementById('view-list');
+  const tilesBtn = document.getElementById('view-tiles');
+  if (listBtn) listBtn.classList.toggle('active', sessionsLayout === 'list');
+  if (tilesBtn) tilesBtn.classList.toggle('active', sessionsLayout === 'tiles');
   const otherWrap = document.getElementById('other-user-wrap');
   if (otherWrap) otherWrap.style.display = sessionsView === 'others' ? '' : 'none';
 
@@ -1499,7 +1586,7 @@ function renderMyStats() {
             goalMedalBadge = `<span class="badge ${goalMedal.toLowerCase()}">${goalMedal}</span>`;
           }
 
-          let content = `<div class="card"><h3>${esc(t.user)}</h3>`;
+          let content = `<div class="card"><div class="profile-head"><img id="me-avatar" class="avatar" style="display:none" alt="" /><h3>${esc(t.user)}</h3></div>`;
 
           if (goalHours) {
             const statusColor = t.total_hours >= onTrackHours ? 'var(--ok)' : 'var(--warn)'; // theme-aware
@@ -1534,9 +1621,11 @@ function renderMyStats() {
       costumeIdxByUser.set(u, i);
     }
   });
-  const tbl = [
-    `<table><thead><tr><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th></tr></thead><tbody>`
-  ];
+  const isTiles = sessionsLayout === 'tiles';
+  const out = [];
+  if (!isTiles) {
+    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th></tr></thead><tbody>`);
+  }
   sessions.forEach((s, i) => {
     const costumeApplied = costumeIdxByUser.get((s.user || '').trim()) === i;
     const scoredMins = s.base_minutes + (costumeApplied ? 60 : 0);
@@ -1548,56 +1637,47 @@ function renderMyStats() {
       .filter(Boolean)
       .join(' ');
     const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent();
-    const actions = canEdit ? `<div><a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a> <a href="#" class="remove-link" data-id="${esc(s._id)}">Remove</a></div>` : '';
-    tbl.push(
-      `<tr><td>${fmtDay(s.date)}</td><td>${esc(s.type)}</td><td>${SurftoberAwards.minutesToHHMM(
-        scoredMins
-      )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}${actions}</td></tr>`
-    );
+    const editLink = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a>` : '';
+    const when = `${fmtDay(s.date)}${s.start_time ? ` · ${fmtTime(s.start_time)}` : ''}`;
+    if (isTiles) {
+      const where = [s.location, s.board].filter(Boolean).map(esc).join(' · ');
+      out.push(`<div class="card"><div><b>${when}</b> · ${esc(s.type)}</div>
+      ${where ? `<div>${where}</div>` : ''}
+      <div>Scored ${SurftoberAwards.minutesToHHMM(scoredMins)} ${bonusBadges}</div>
+      ${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${editLink ? `<div>${editLink}</div>` : ''}</div>`);
+    } else {
+      out.push(
+        `<tr><td>${editLink}</td><td class="nowrap">${when}</td><td>${esc(s.type)}</td><td>${SurftoberAwards.minutesToHHMM(
+          scoredMins
+        )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}</td></tr>`
+      );
+    }
   });
-  tbl.push('</tbody></table>');
-  document.getElementById('me-sessions').innerHTML = tbl.join('');
-  // Attach edit handlers in My Stats
+  if (!isTiles) out.push('</tbody></table>');
+  document.getElementById('me-sessions').innerHTML = isTiles ? `<div class="card-list">${out.join('')}</div>` : out.join('');
+  // Attach edit handlers (Remove now lives inside the edit view)
   document.querySelectorAll('#me-sessions .edit-link').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       const id = a.getAttribute('data-id');
-      const allSess = loadSessions();
-      const s = allSess.find((x) => x._id === id);
+      const s = loadSessions().find((x) => x._id === id);
       if (s) {
         location.hash = '#log';
         startEditSession(s);
       }
     });
   });
-  // Attach remove handlers in My Stats
-  document.querySelectorAll('#me-sessions .remove-link').forEach((a) => {
-    a.addEventListener('click', async (e) => {
-      e.preventDefault();
-      const id = a.getAttribute('data-id');
-      const allSess = loadSessions();
-      const s = allSess.find((x) => x._id === id);
-      if (!s) return;
-      
-      // Confirmation dialog
-      const confirmMsg = `Are you sure you want to delete this session?\n\n${s.date} - ${s.type} - ${s.duration}\n${s.location || ''} ${s.board || ''}`;
-      if (!confirm(confirmMsg)) return;
-      
-      try {
-        // Delete from cloud if authenticated (soft delete — the audio note
-        // stays in storage so an undeleted session keeps its recording)
-        if (sb && currentUser && s._id) {
-          await deleteCloudSession(s._id);
-          toast('Session deleted', 'success');
-        }
-        // Sync from cloud to update local storage
-        await syncFromCloud();
-      } catch (e) {
-        toast('Delete failed: ' + e.message, 'error');
-      }
-    });
-  });
   attachJournalToggles();
+
+  // Profile photo for whoever's page this is
+  const pageUserId = sessionsView === 'mine' ? (currentUser && currentUser.id) : (mine[0] && mine[0].user_id);
+  if (pageUserId) {
+    fetchAvatar(pageUserId).then((b64) => {
+      const img = document.getElementById('me-avatar');
+      const src = avatarSrc(b64);
+      if (img && src) { img.src = src; img.style.display = ''; }
+    });
+  }
 }
 
 function renderLeaderboard() {
@@ -1744,7 +1824,6 @@ window.addEventListener('load', () => {
   attachAdminEventHandlers();
   attachAudioHandlers();
   reflectEventUI();
-  renderRecent();
   renderMyStats();
   renderLeaderboard();
   renderAwards();
@@ -1753,6 +1832,8 @@ window.addEventListener('load', () => {
   // Handlers (period filters are gone — everything is scoped to the viewed event)
   document.getElementById('subtab-mine').addEventListener('click', () => { sessionsView = 'mine'; renderMyStats(); });
   document.getElementById('subtab-others').addEventListener('click', () => { sessionsView = 'others'; renderMyStats(); });
+  document.getElementById('view-list').addEventListener('click', () => { sessionsLayout = 'list'; localStorage.setItem('surftober.sessionsLayout', 'list'); renderMyStats(); });
+  document.getElementById('view-tiles').addEventListener('click', () => { sessionsLayout = 'tiles'; localStorage.setItem('surftober.sessionsLayout', 'tiles'); renderMyStats(); });
   document.getElementById('other-user-select').addEventListener('change', (e) => {
     otherUserSelected = e.target.value;
     renderMyStats();
@@ -1774,7 +1855,6 @@ window.addEventListener('load', () => {
       const n = await importCSV(f);
       if (st) st.textContent = `Imported ${n} rows`;
       populateDataLists();
-      renderRecent();
       renderMyStats();
       renderLeaderboard();
       renderAwards();
