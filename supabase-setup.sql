@@ -43,6 +43,14 @@ create unique index if not exists profiles_display_name_unique_idx
   on public.profiles (lower(display_name))
   where display_name is not null and display_name <> '';
 
+-- Everyone can see each surfer's name + photo (Sessions page avatars) without
+-- exposing the rest of the profile. Owner-rights view bypasses profiles RLS
+-- for just these two columns.
+create or replace view public.public_profiles as
+  select id, display_name, photo_base64 from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;
+
 -- =========================================================
 -- events : one row per Surftober season, at most one active
 -- (must exist BEFORE the sessions policies below, which reference it)
@@ -117,6 +125,7 @@ create table if not exists public.sessions (
   client_entry_id uuid,
   audio_url text,
   deleted_at timestamptz,           -- soft delete: hidden from the UI, kept for backups
+  start_time time,                  -- optional "when did you paddle out"
   created_at timestamptz default now()
 );
 

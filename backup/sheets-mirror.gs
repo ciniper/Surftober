@@ -42,7 +42,7 @@ const PROFILE_COLS = [
 // will 400. deleted_at is the soft-delete tombstone: rows the app "deleted"
 // stay in the DB and show up here with a timestamp in that column.
 const SESSION_COLS = [
-  'id', 'team', 'user_id', 'user_name', 'date', 'type', 'duration_minutes',
+  'id', 'team', 'user_id', 'user_name', 'date', 'start_time', 'type', 'duration_minutes',
   'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'cleanup_items',
   'audio_url', 'deleted_at', 'created_at'
 ];

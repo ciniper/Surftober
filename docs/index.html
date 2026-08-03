@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=12" />
+  <link rel="stylesheet" href="./styles.css?v=13" />
   <meta name="theme-color" content="#152238" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -77,7 +77,15 @@
       }catch(_){ /* noop */ }
     }
     window.addEventListener('error', function(e){
-      var info = (e && e.message ? e.message : 'Script error') + (e && e.filename ? ('\n' + e.filename + ':' + e.lineno + ':' + e.colno) : '');
+      // Cross-origin scripts (the Supabase CDN, browser extensions) surface as
+      // a bare "Script error." with no file, line, or stack — there is nothing
+      // actionable in it, so don't scare users with the overlay.
+      var msg = (e && e.message) || '';
+      if (/^Script error\.?$/.test(msg) && !(e && e.error && e.error.stack)) {
+        console.warn('[suppressed cross-origin error overlay]', e);
+        return;
+      }
+      var info = (msg || 'Script error') + (e && e.filename ? ('\n' + e.filename + ':' + e.lineno + ':' + e.colno) : '');
       if (e && e.error && e.error.stack) info += '\n' + e.error.stack;
       showError(info);
     });
@@ -164,6 +172,10 @@
             </div>
           </label>
           <label>
+            Start time (optional)
+            <input type="time" id="log-start-time" />
+          </label>
+          <label>
             Location
             <input list="location-list" id="log-location" placeholder="e.g., OB - Lawton" autocapitalize="words" enterkeyhint="next" />
             <datalist id="location-list"></datalist>
@@ -187,19 +199,17 @@
           <textarea id="log-notes" rows="3" placeholder="How was it out there?" enterkeyhint="done"></textarea>
         </label>
         <div id="field-audio">
-          <label>Audio note (optional, max 10 MB)</label>
+          <label>Audio note (optional, max 5 min)</label>
           <div class="audio-controls">
             <button type="button" id="btn-record-audio" class="btn-secondary">🎙 Record</button>
             <span id="record-timer" class="hint" style="display:none">0:00</span>
-            <span class="hint">or</span>
-            <input type="file" id="log-audio" accept="audio/*" />
           </div>
           <div id="audio-preview-wrap" style="display:none">
             <audio id="audio-preview" controls></audio>
             <a href="#" id="btn-discard-audio">Discard recording</a>
           </div>
           <div class="hint" id="log-audio-hint" style="display:none">
-            This session has an audio note — record or pick a new one to replace it, or
+            This session has an audio note — record a new one to replace it, or
             <label class="checkbox" style="display:inline-flex"><input type="checkbox" id="log-audio-remove" /> remove it</label>
           </div>
         </div>
@@ -208,12 +218,10 @@
           <div class="actions" id="log-actions">
             <button type="submit" id="btn-submit" form="log-form">Add Entry</button>
             <button type="button" id="btn-cancel-edit" form="log-form" class="btn-secondary" style="display:none">Cancel Edit</button>
+            <button type="button" id="btn-delete-session" form="log-form" class="warn" style="display:none">Delete</button>
           </div>
         </div>
       </form>
-
-      <h3>Recent Entries</h3>
-      <div id="recent-entries" class="card-list"></div>
     </section>
 
     <!-- Sessions Page -->
@@ -222,6 +230,10 @@
       <div class="subtabs">
         <button type="button" id="subtab-mine" class="subtab">My Sessions</button>
         <button type="button" id="subtab-others" class="subtab">Other Surfers</button>
+        <span class="view-toggle">
+          <button type="button" id="view-list" class="subtab small" title="List view">☰ List</button>
+          <button type="button" id="view-tiles" class="subtab small" title="Tile view">▦ Tiles</button>
+        </span>
         <span class="event-scope hint" id="me-scope"></span>
       </div>
       <div class="filters" id="other-user-wrap" style="display:none">
@@ -353,6 +365,10 @@
             <label>Display Name
               <input type="text" id="display-name" placeholder="Your public name" />
             </label>
+            <label>Profile Photo
+              <input type="file" id="profile-photo" accept="image/*" />
+              <img id="profile-photo-preview" class="avatar avatar-lg" style="display:none" alt="Profile photo preview" />
+            </label>
             <label>Target Hours Goal
               <select id="profile-target-hours">
                 <option value="">Select your goal...</option>
@@ -401,6 +417,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=20"></script>
+  <script type="module" src="./app.js?v=21"></script>
 </body>
 </html>

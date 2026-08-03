@@ -209,6 +209,20 @@ $$;
 -- the row → clear deleted_at. It reappears in the app on the next sync.
 
 -- =========================================================
+-- v1.7 : optional session start time + public profile photos
+-- =========================================================
+alter table public.sessions add column if not exists start_time time;
+
+-- Profiles are owner-only (they hold phone numbers), but everyone should see
+-- each surfer's name + photo on their Sessions page. This view runs with the
+-- owner's rights (security_invoker defaults to off), deliberately bypassing
+-- profiles RLS for JUST these two columns.
+create or replace view public.public_profiles as
+  select id, display_name, photo_base64 from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;
+
+-- =========================================================
 -- RUN ONCE — data repairs (do NOT blindly re-run this section)
 -- =========================================================
 -- (1) Pre-v1.5 app code stored no-wetsuit sessions with duration_minutes
