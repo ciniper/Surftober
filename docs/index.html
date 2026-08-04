@@ -393,8 +393,9 @@
               </select>
             </label>
             <label>Charitable Contribution Commitment
-              <small>Dollars per hour surfed — feeds the leaderboard's live "Total pledged" tracker.</small>
+              <small>Dollars per hour surfed — feeds the leaderboard's "Total pledged" tracker (only the group total is public).</small>
               <input type="text" id="profile-charity" placeholder="e.g., $2 per hour" />
+              <small id="account-pledge" class="hint"></small>
             </label>
             <label>Sponsor Match
               <input type="text" id="profile-sponsor" placeholder="e.g., Company XYZ" />
@@ -431,6 +432,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=26"></script>
+  <script type="module" src="./app.js?v=27"></script>
 </body>
 </html>
