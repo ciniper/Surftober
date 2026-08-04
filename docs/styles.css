@@ -195,3 +195,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 
 /* v1.8: leaderboard pledge tracker */
 .pledge-total { margin-top: 10px; font-size: 14px; }
+
+/* v1.8.2: Ocean Beach surf report on the leaderboard */
+.surf-report { margin-bottom: 16px; }
+.surf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.surf-title { font-weight: 700; }
+.surf-updated { font-size: 12px; opacity: 0.6; }
+.surf-zones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.surf-zone { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px 0; overflow: hidden; min-width: 0; }
+.surf-zone-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+.surf-label { font-size: 13px; font-weight: 600; opacity: 0.85; }
+.surf-chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: #10202e; white-space: nowrap; }
+.surf-ft { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.surf-rel { font-size: 12px; opacity: 0.7; min-height: 1.2em; }
+.surf-zone svg { display: block; width: calc(100% + 24px); margin: 6px -12px 0; height: 40px; }
+@media (max-width: 560px) {
+  .surf-zones { grid-template-columns: 1fr; }
+  .surf-zone { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; }
+  .surf-zone-top { grid-column: 1 / -1; }
+  .surf-zone svg { grid-column: 1 / -1; width: calc(100% + 24px); margin: 4px -12px -10px; height: 26px; }
+  .surf-ft { font-size: 18px; }
+}
