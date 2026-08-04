@@ -11,12 +11,18 @@
       start_time, elapsed→duration, name/description→journal, strava_activity_id
       for dedup. Gauge interest in the WhatsApp group before building — only pays
       off for watch-trackers.
-- [ ] **Photo dropbox** — decide collect vs display first:
-      collect/archive → Google Drive (zero-code: file-upload Google Form + a
-      "📸 Drop photos" button; integrated: Apps Script Web App POST endpoint,
-      ~half a day, no Google login needed for friends);
-      display-in-app (photo wall) → Supabase `photos` bucket instead (Drive
-      hotlinking is unreliable).
+- [ ] **Supabase Pro for the event** — upgrade ~mid/late September, keep for 1–2
+      months, downgrade after October. $25/mo buys 250 GB egress, 100 GB storage,
+      8 GB DB, no auto-pause during the event, and Supabase daily backups layered
+      on top of ours. Decision locked 2026-08-03 (stay on Supabase; Firebase/Drive
+      alternatives evaluated and rejected — Google One 2 TB doesn't apply to any
+      Google backend).
+- [ ] **Photo bucket + Drive archive** (direction locked 2026-08-03): Supabase
+      `photos` bucket for in-app display (same pattern as session-audio; viable
+      egress-wise once on Pro), and extend the Apps Script mirror to copy new
+      Storage files (photos + audio) into a Drive folder nightly using the
+      service key — Chase's 2 TB Google One becomes the durable archive tier and
+      plugs the "Storage files aren't in pg_dump" gap.
 - [ ] **Watch Supabase egress during October** — free tier is 5 GB/month and
       sessions are public, so big assets get re-downloaded per viewer. Check
       dashboard → Settings → Usage weekly during the event. (Current usage:
