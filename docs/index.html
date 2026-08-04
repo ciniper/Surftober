@@ -7,14 +7,14 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=16" />
+  <link rel="stylesheet" href="./styles.css?v=17" />
   <meta name="theme-color" content="#152238" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
   (function() {
     const urlParams = new URLSearchParams(window.location.search);
     const fromAuth = sessionStorage.getItem('surftober_authenticated');
-    
+
     // Check for any Supabase auth token in localStorage
     // (supabase-js v2 stores it as 'sb-<project-ref>-auth-token')
     let hasSession = false;
@@ -30,9 +30,16 @@
         }
       }
     } catch (e) {}
-    
-    // If no auth session and not coming from registration/sign-in, redirect to landing
-    if (!fromAuth && !hasSession && !urlParams.has('mode')) {
+
+    // Who gets in without bouncing to the landing page:
+    //  - anyone with a Supabase session or fresh from the auth flow
+    //  - mode=signin (app.js forwards to the register page's sign-in)
+    //  - mode=view WITH the club password flag (set on the landing page)
+    // Everything else — including made-up mode= values — goes to landing.
+    const mode = urlParams.get('mode');
+    const clubpass = localStorage.getItem('surftober.clubpass') === '1';
+    const modeAllowed = mode === 'signin' || (mode === 'view' && clubpass);
+    if (!fromAuth && !hasSession && !modeAllowed) {
       window.location.replace('./landing.html');
       return;
     }
@@ -386,7 +393,8 @@
               </select>
             </label>
             <label>Charitable Contribution Commitment
-              <input type="text" id="profile-charity" placeholder="e.g., $100" />
+              <small>Dollars per hour surfed — feeds the leaderboard's live "Total pledged" tracker.</small>
+              <input type="text" id="profile-charity" placeholder="e.g., $2 per hour" />
             </label>
             <label>Sponsor Match
               <input type="text" id="profile-sponsor" placeholder="e.g., Company XYZ" />
@@ -423,6 +431,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=25"></script>
+  <script type="module" src="./app.js?v=26"></script>
 </body>
 </html>

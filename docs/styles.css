@@ -192,3 +192,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .page-head .actions { margin: 0; }
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+/* v1.8: leaderboard pledge tracker */
+.pledge-total { margin-top: 10px; font-size: 14px; }

@@ -5,6 +5,24 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
+- [ ] **Surfline conditions widget for Ocean Beach** (scoped 2026-08-04 —
+      feasible in ~half a day, no account/creds needed). One browser-callable
+      endpoint returns rating + wave height for all three OB zones:
+      `https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47`
+      → each spot has `conditions.value` (e.g. POOR_TO_FAIR) and
+      `waveHeight.min/max/humanRelation` (e.g. "3-4 Waist to chest").
+      CORS is open (`access-control-allow-origin: *`) so the PWA can fetch it
+      directly; only bare curl gets 403 (bot detection). Spot IDs: South OB
+      `5842041f4e65fad6a77087f9`, North OB `5d9b68deab58860001c7359e`, Central
+      OB `638e32a4f052ba4ed06d0e3e`. The garmin-connect-export-master-chaz repo
+      also has per-spot forecast endpoints (wind/wave/rating/conditions under
+      `services.surfline.com/kbyg/spots/forecasts/*`) plus a 3,830-entry
+      name→spotId map in `gs_import/locations.py` if this ever grows beyond OB.
+      Caveats: unofficial API (could change/require auth anytime — build it to
+      fail quietly), and the old token-auth flow in that repo isn't needed for
+      these public endpoints. NOTE for Chase: that notebook has a hardcoded
+      Surfline client secret committed to its git history — worth scrubbing
+      independently of Surftober.
 - [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
@@ -37,13 +55,17 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
-- [ ] **Add photo compression to register.html's upload** — register stores the
-      raw original while the Account flow compresses to ~25 KB; without this,
-      every October sign-up with a big camera-roll photo re-creates the 3.4 MB
-      problem. (The existing oversized photos are already fixed — both profiles
-      re-uploaded and are now 11–25 KB as of Aug 3. To spot any future stragglers:
-      `select display_name, length(photo_base64) from public.profiles
+- [x] ~~Add photo compression to register.html's upload~~ (shipped in v1.8.0 —
+      register now canvas-compresses to 256px JPEG like the Account flow. To
+      spot any stragglers from before: `select display_name,
+      length(photo_base64) from public.profiles
       where length(photo_base64) > 100000;`)
+- [ ] **Nudge existing registrants to per-hour pledge values** — the v1.8.0
+      leaderboard computes Pledged = charity_commitment × hours surfed, so a
+      legacy lump-sum answer like "$100" reads as $100/hour. Registration and
+      Account now say "$ per hour", but pre-v1.8.0 profiles should update
+      their Account field (or Chase edits profiles.charity_commitment in the
+      Table Editor).
 - [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
       events tab + start_time + audio_url/deleted_at all mirrored)
 - [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is

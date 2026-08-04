@@ -43,11 +43,13 @@ create unique index if not exists profiles_display_name_unique_idx
   on public.profiles (lower(display_name))
   where display_name is not null and display_name <> '';
 
--- Everyone can see each surfer's name, photo, and goal (Sessions page) without
--- exposing the rest of the profile. Owner-rights view bypasses profiles RLS
--- for just these competition-facing columns.
+-- Everyone can see each surfer's name, photo, goal, and pledge rate (Sessions
+-- page, leaderboard $ tracker) without exposing the rest of the profile.
+-- Owner-rights view bypasses profiles RLS for just these competition-facing
+-- columns.
 create or replace view public.public_profiles as
-  select id, display_name, photo_base64, target_hours, fun_comment from public.profiles;
+  select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment
+  from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
 
