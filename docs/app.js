@@ -233,6 +233,39 @@ async function fetchPublicProfile(userId){
   }
 }
 
+// ===== Roster (everyone who registered, sessions or not) ==================
+// Lightweight list from public_profiles — no photos, those stay lazy via
+// fetchPublicProfile — so registrants appear on the leaderboard and Sessions
+// pages before their first session, and pledge rates feed the $ tracker.
+let roster = []; // [{id, display_name, target_hours, charity_commitment?, fun_comment?}]
+
+async function loadRoster(){
+  if (!sb) return;
+  const columnSets = [
+    'id, display_name, target_hours, charity_commitment, fun_comment',
+    'id, display_name, target_hours' // view predates charity_commitment
+  ];
+  for (const cols of columnSets) {
+    let res;
+    try { res = await sb.from('public_profiles').select(cols); } catch { return; }
+    if (!res.error) {
+      roster = (res.data || []).filter((p) => p && String(p.display_name || '').trim());
+      return;
+    }
+    // 42703 = unknown column (older deployed view) — retry with fewer columns.
+    // Any other error (network blip, view missing) keeps the PREVIOUS roster:
+    // wiping it would yank zero-hour registrants off a board that rendered
+    // fine a second ago. syncFromCloud runs often; a later pass will heal it.
+    if (res.error.code !== '42703') return;
+  }
+}
+
+// "$2/hour", "2 per hour", "$1.50" → 2, 2, 1.5. First number wins; junk → 0.
+function parsePledgeRate(text){
+  const m = String(text || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/);
+  return m ? parseFloat(m[0]) : 0;
+}
+
 // Shrink whatever the camera roll hands us to a small square-ish JPEG so the
 // profiles table doesn't fill up with 8 MB originals.
 async function compressImageToBase64(file, maxDim = 256, quality = 0.82){
@@ -751,6 +784,7 @@ async function syncFromCloud(){
   try {
     const cloud = await fetchCloudSessions();
     saveSessions(cloud);
+    await loadRoster();
     populateDataLists();
     renderMyStats();
     renderLeaderboard();
@@ -1567,9 +1601,19 @@ function renderMyStats() {
   // Resolve whose page we're showing
   let user;
   if (sessionsView === 'others') {
-    const names = Array.from(new Set(
-      normalized.filter((s) => SurftoberAwards.inRange(s.date, range)).map((s) => (s.user || '').trim())
-    )).filter((n) => n && n !== profileName).sort((a, b) => a.localeCompare(b));
+    // Sessions in this event ∪ the registration roster — registrants show
+    // up in the picker before their first log. The roster is season-agnostic
+    // (one profile per person), so it only augments the ACTIVE event; an
+    // archived event's picker stays limited to people who actually surfed it.
+    const sessionNames = normalized
+      .filter((s) => SurftoberAwards.inRange(s.date, range))
+      .map((s) => (s.user || '').trim());
+    const rosterNames = isViewingActiveEvent()
+      ? roster.map((p) => String(p.display_name || '').trim())
+      : [];
+    const names = Array.from(new Set([...sessionNames, ...rosterNames]))
+      .filter((n) => n && n !== profileName)
+      .sort((a, b) => a.localeCompare(b));
     const select = document.getElementById('other-user-select');
     if (select) {
       if (!names.includes(otherUserSelected)) otherUserSelected = names[0] || '';
@@ -1585,18 +1629,28 @@ function renderMyStats() {
       ? (currentUser
           ? 'Set your display name in Account to see your sessions.'
           : 'Sign in to see your sessions — or browse Other Surfers.')
-      : 'No other surfers have logged sessions in this event yet.';
+      : 'No other surfers have registered yet.';
     document.getElementById('me-summary').innerHTML = `<div class="hint">${hint}</div>`;
     document.getElementById('me-sessions').innerHTML = '';
     return;
   }
 
   const mine = normalized.filter((s) => s.user === user);
-  const totals = SurftoberAwards.rollupByUser(mine, range);
+  let totals = SurftoberAwards.rollupByUser(mine, range);
+  if (!totals.length) {
+    // Registered but nothing logged this event — show the profile card at
+    // 0 hours instead of a blank page.
+    totals = [{ user, total_hours: 0, total_minutes: 0, medal: 'OBSERVER' }];
+  }
 
   // Whose page is this? Own photo/goal come straight from profileData;
   // other surfers' from the public_profiles view (photo + target hours).
-  const pageUserId = sessionsView === 'mine' ? (currentUser && currentUser.id) : (mine[0] && mine[0].user_id);
+  // Zero-session surfers have no session rows to read user_id from, so
+  // fall back to the roster.
+  const rosterEntry = roster.find((p) => String(p.display_name || '').trim() === user);
+  const pageUserId = sessionsView === 'mine'
+    ? (currentUser && currentUser.id)
+    : ((mine[0] && mine[0].user_id) || (rosterEntry && rosterEntry.id));
   let pageProfile = null;
   if (sessionsView === 'mine') {
     if (profileData) pageProfile = { photo_base64: profileData.photo_base64, target_hours: profileData.target_hours, fun_comment: profileData.fun_comment };
@@ -1710,7 +1764,9 @@ function renderMyStats() {
     }
   });
   if (!isTiles) out.push('</tbody></table>');
-  document.getElementById('me-sessions').innerHTML = isTiles ? `<div class="card-list">${out.join('')}</div>` : out.join('');
+  document.getElementById('me-sessions').innerHTML = sessions.length
+    ? (isTiles ? `<div class="card-list">${out.join('')}</div>` : out.join(''))
+    : '<div class="hint">No sessions logged yet.</div>';
   // Attach edit handlers (Remove now lives inside the edit view)
   document.querySelectorAll('#me-sessions .edit-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -1729,14 +1785,44 @@ function renderMyStats() {
 function renderLeaderboard() {
   const ev = viewedEvent || DEFAULT_EVENT;
   const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
+  // Roster rows and pledge money are live-event concepts: the roster is
+  // season-agnostic (one profile per person), so merging it into an archived
+  // event would list people who never surfed it and price old hours at
+  // today's pledge rates.
+  const live = isViewingActiveEvent();
+  if (live) {
+    // Registrants without a session yet still get a 0-hour row — you're on
+    // the board the moment you sign up.
+    const seen = new Set(totals.map((t) => t.user));
+    roster.forEach((p) => {
+      const name = String(p.display_name || '').trim();
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        totals.push({ user: name, total_hours: 0, total_minutes: 0, medal: 'OBSERVER' });
+      }
+    });
+  }
   if (!totals.length) {
     document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet. First wave wins.</div>';
     return;
   }
-  const rows = totals.map(
-    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
-  );
-  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  totals.sort((a, b) => b.total_minutes - a.total_minutes || a.user.localeCompare(b.user));
+
+  // Pledged = each surfer's $/hour commitment (from registration) × hours
+  // surfed so far. Rounded per row and summed AFTER rounding, so the column
+  // always adds up to the total line.
+  const rateByName = new Map(roster.map((p) => [String(p.display_name || '').trim(), parsePledgeRate(p.charity_commitment)]));
+  let totalPledged = 0;
+  const rows = totals.map((t, i) => {
+    const pledged = live ? Math.round((rateByName.get(t.user) || 0) * t.total_hours) : 0;
+    totalPledged += pledged;
+    const pledgedCell = live ? `<td>${pledged > 0 ? '$' + pledged : '—'}</td>` : '';
+    return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td>${pledgedCell}<td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`;
+  });
+  const pledgeLine = live && totalPledged > 0
+    ? `<div class="pledge-total">💰 Total pledged so far: <strong>$${totalPledged}</strong></div>`
+    : '';
+  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th>${live ? '<th>Pledged</th>' : ''}<th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>${pledgeLine}`;
   // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {

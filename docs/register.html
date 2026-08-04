@@ -6,7 +6,7 @@
   <title>Register - Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=16" />
+  <link rel="stylesheet" href="./styles.css?v=17" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -46,11 +46,13 @@
     }
     .auth-method {
       display: flex;
+      flex-wrap: wrap;
       gap: 1rem;
-      margin: 2rem 0;
+      margin: 1.25rem 0 0.5rem;
     }
     .auth-method button {
       flex: 1;
+      min-width: 200px;
       padding: 1rem;
       font-size: 1rem;
     }
@@ -66,9 +68,20 @@
     .form-section h2 {
       color: #ff6b35;
       margin-top: 0;
+      margin-bottom: 0.75rem;
     }
     .form-section label {
       color: #e8f4f8;
+      display: block;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .form-section label small {
+      display: block;
+      font-weight: 400;
+      margin: 2px 0 0;
+      line-height: 1.45;
     }
     .form-section p,
     .form-section small {
@@ -82,6 +95,45 @@
       border: 1px solid #2d4a62;
       font-size: 15px;
       border-radius: 8px;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+    #magic-email-section {
+      margin-top: 1rem;
+    }
+    #btn-send-magic {
+      margin-top: 0.25rem;
+    }
+    .actions {
+      margin-top: 0.5rem;
+    }
+    .actions button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+    }
+    .gate-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .gate-row input {
+      flex: 1;
+      min-width: 180px;
+      margin-top: 0;
+      width: auto;
+    }
+    .gate-row button {
+      padding: 10px 20px;
+    }
+    @media (max-width: 640px) {
+      .register-container { padding: 1.25rem 1rem; }
+      .form-section { padding: 1.25rem; }
+      .welcome-message { padding: 1.1rem 1.25rem; }
     }
     .form-section input:focus,
     .form-section select:focus,
@@ -115,15 +167,16 @@
       color: #7a9bb5;
     }
     .photo-preview {
-      max-width: 200px;
-      max-height: 200px;
-      margin: 1rem auto;
+      margin: 1rem auto 0;
+      text-align: center;
       display: none;
     }
     .photo-preview img {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #2d4a62;
     }
     .hidden {
       display: none;
@@ -148,7 +201,18 @@
       </ul>
     </div>
 
-    <div class="form-section">
+    <div class="form-section" id="club-gate">
+      <h2>Club Password</h2>
+      <p>Surftober is friends-and-friends-of-friends — enter the password from
+         the crew (ask whoever sent you here, or the WhatsApp group).</p>
+      <div class="gate-row">
+        <input type="text" id="club-pass" placeholder="Password"
+               autocapitalize="none" autocomplete="off" autocorrect="off" />
+        <button id="btn-club-pass" type="button" class="btn-register">Enter</button>
+      </div>
+    </div>
+
+    <div class="form-section hidden" id="auth-section">
       <h2>Choose Sign In Method</h2>
       <div class="auth-method">
         <button id="btn-google-auth" class="btn-register">Sign in with Google</button>
@@ -188,8 +252,9 @@
 
       <label>
         What is your charitable contribution commitment? *
-        <small>Consider your target surf hours.</small>
-        <input type="text" id="charity-commitment" placeholder="e.g. $100" required />
+        <small>Dollars per hour surfed — it feeds the live "Total pledged" tracker
+        on the leaderboard (e.g. $2/hour × 30 hours = $60 at season's end).</small>
+        <input type="text" id="charity-commitment" placeholder="e.g. $2 per hour" required />
       </label>
 
       <label>
@@ -252,6 +317,46 @@
     let currentUser = null;
     let photoBase64 = null;
 
+    // Club password gate — a friends-only speed bump, not real security.
+    // Shared flag with View Mode (landing.html) via localStorage.
+    (function clubGate(){
+      const gate = document.getElementById('club-gate');
+      const auth = document.getElementById('auth-section');
+      function unlock(){
+        gate.classList.add('hidden');
+        auth.classList.remove('hidden');
+      }
+      // A Supabase session means they're already in the club — don't flash a
+      // password prompt at returning members while the redirect resolves.
+      let hasSession = false;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-') && key.includes('-auth-token') &&
+              (localStorage.getItem(key) || '').length > 10) {
+            hasSession = true;
+            break;
+          }
+        }
+      } catch (e) {}
+      if (localStorage.getItem('surftober.clubpass') === '1' || hasSession) { unlock(); return; }
+      function tryPass(){
+        const guess = (document.getElementById('club-pass').value || '')
+          .trim().toLowerCase().replace(/\s+/g, ' ');
+        if (guess === 'snowy plover') {
+          localStorage.setItem('surftober.clubpass', '1');
+          toast('Welcome in 🐦', 'success');
+          unlock();
+        } else {
+          toast('Not quite — ask the crew about the bird.', 'error');
+        }
+      }
+      document.getElementById('btn-club-pass').addEventListener('click', tryPass);
+      document.getElementById('club-pass').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); tryPass(); }
+      });
+    })();
+
     function toast(msg, type='success'){
       const box = document.getElementById('toast-container');
       if (!box) { console.log(`[${type}]`, msg); return; }
@@ -294,6 +399,9 @@
     }
 
     async function showRegistrationForm() {
+      // Reaching here means they authenticated — that counts as being in the
+      // club (covers magic links opened on a device that never saw the gate).
+      localStorage.setItem('surftober.clubpass', '1');
       // Check if user already has a profile
       const { data, error } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
       
@@ -305,7 +413,11 @@
           window.location.href = './index.html';
         }, 1000);
       } else {
-        // New user, show registration form
+        // New user, show registration form. They're already authenticated
+        // (e.g. a magic link opened on another device), so the gate and
+        // sign-in sections are no longer relevant.
+        document.getElementById('club-gate').classList.add('hidden');
+        document.getElementById('auth-section').classList.add('hidden');
         document.getElementById('registration-form').classList.remove('hidden');
         toast('Authentication successful! Please complete your registration.', 'success');
       }
@@ -357,18 +469,39 @@
       document.getElementById('photo-upload').click();
     });
 
+    // Shrink camera-roll originals to a small JPEG before storing — same
+    // routine as the Account tab, so no more multi-MB photos in profiles.
+    async function compressImageToDataURL(file, maxDim = 256, quality = 0.82){
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('could not read that image'));
+          i.src = url;
+        });
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', quality);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
     document.getElementById('photo-upload').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      
-      // Show preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById('photo-preview-img').src = e.target.result;
+      try {
+        const dataUrl = await compressImageToDataURL(file);
+        document.getElementById('photo-preview-img').src = dataUrl;
         document.getElementById('photo-preview').style.display = 'block';
-        photoBase64 = e.target.result.split(',')[1]; // Store base64 without prefix
-      };
-      reader.readAsDataURL(file);
+        photoBase64 = dataUrl; // full data URL, same format the Account tab saves
+      } catch (err) {
+        toast('Could not read that image: ' + err.message, 'error');
+      }
     });
 
     // Registration form submission

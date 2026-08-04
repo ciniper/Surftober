@@ -6,7 +6,7 @@
   <title>Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=16" />
+  <link rel="stylesheet" href="./styles.css?v=17" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -106,11 +106,35 @@
       <div class="landing-buttons">
         <a href="./register.html" class="landing-btn btn-register">Register for Surftober</a>
         <a href="./index.html?mode=signin" class="landing-btn btn-signin" onclick="sessionStorage.setItem('surftober_authenticated', '1')">Sign In</a>
-        <a href="./index.html?mode=view" class="landing-btn btn-view" onclick="sessionStorage.setItem('surftober_authenticated', '1')">View Mode (Read Only)</a>
+        <a href="./index.html?mode=view" id="btn-view-mode" class="landing-btn btn-view">View Mode (Read Only)</a>
       </div>
       <div class="app-version" style="margin-top:1.5rem;"></div>
     </div>
   </div>
   <script src="./version.js"></script>
+  <script>
+    // Club gate for View Mode — a friends-only speed bump, not real security
+    // (the password lives in the WhatsApp group).
+    document.getElementById('btn-view-mode').addEventListener('click', function (e) {
+      if (localStorage.getItem('surftober.clubpass') === '1') {
+        sessionStorage.setItem('surftober_authenticated', '1');
+        return;
+      }
+      e.preventDefault();
+      var guess = (prompt('Club password?') || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!guess) return;
+      if (guess === 'snowy plover') {
+        localStorage.setItem('surftober.clubpass', '1');
+        sessionStorage.setItem('surftober_authenticated', '1');
+        window.location.href = this.href;
+      } else {
+        alert('Not quite — ask the crew about the bird 🐦');
+      }
+    });
+    // Sign In keeps its pass-through flag (no password — existing accounts)
+    document.querySelector('a[href*="mode=signin"]').addEventListener('click', function () {
+      sessionStorage.setItem('surftober_authenticated', '1');
+    });
+  </script>
 </body>
 </html>
