@@ -324,6 +324,7 @@ async function fetchProfile(){
   }
 
   enforceProfileNameOnUI();
+  renderAccountPledge();
 }
 
 async function saveProfile(){
@@ -789,6 +790,7 @@ async function syncFromCloud(){
     renderMyStats();
     renderLeaderboard();
     renderAwards();
+    renderAccountPledge();
     const st = document.getElementById('status');
     if (st) st.textContent = 'Synced from cloud';
   } catch (e) {
@@ -1808,21 +1810,20 @@ function renderLeaderboard() {
   }
   totals.sort((a, b) => b.total_minutes - a.total_minutes || a.user.localeCompare(b.user));
 
-  // Pledged = each surfer's $/hour commitment (from registration) × hours
-  // surfed so far. Rounded per row and summed AFTER rounding, so the column
-  // always adds up to the total line.
+  // Pledges stay private per person — the board shows only the aggregate.
+  // Each surfer's own accrual lives on their Account page (renderAccountPledge).
+  // Rounded per surfer and summed AFTER rounding, so the total matches what
+  // each person sees on their own Account.
   const rateByName = new Map(roster.map((p) => [String(p.display_name || '').trim(), parsePledgeRate(p.charity_commitment)]));
   let totalPledged = 0;
-  const rows = totals.map((t, i) => {
-    const pledged = live ? Math.round((rateByName.get(t.user) || 0) * t.total_hours) : 0;
-    totalPledged += pledged;
-    const pledgedCell = live ? `<td>${pledged > 0 ? '$' + pledged : '—'}</td>` : '';
-    return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td>${pledgedCell}<td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`;
-  });
+  if (live) totals.forEach((t) => { totalPledged += Math.round((rateByName.get(t.user) || 0) * t.total_hours); });
+  const rows = totals.map(
+    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+  );
   const pledgeLine = live && totalPledged > 0
     ? `<div class="pledge-total">💰 Total pledged so far: <strong>$${totalPledged}</strong></div>`
     : '';
-  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th>${live ? '<th>Pledged</th>' : ''}<th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>${pledgeLine}`;
+  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>${pledgeLine}`;
   // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -1838,6 +1839,21 @@ function renderLeaderboard() {
       renderMyStats();
     });
   });
+}
+
+// Your own pledge accrual, shown only to you on the Account page — the
+// leaderboard publishes just the group total.
+function renderAccountPledge(){
+  const el = document.getElementById('account-pledge');
+  if (!el) return;
+  const rate = parsePledgeRate(profileData && profileData.charity_commitment);
+  if (!rate || !profileName || !activeEvent) { el.textContent = ''; return; }
+  const totals = SurftoberAwards.rollupByUser(
+    loadSessions().map(SurftoberAwards.normalizeSession).filter((s) => s.user === profileName),
+    { start: activeEvent.start_date, end: activeEvent.end_date }
+  );
+  const hours = totals[0] ? totals[0].total_hours : 0;
+  el.textContent = `Your pledge so far: $${Math.round(rate * hours)} ($${rate}/hour × ${hours.toFixed(1)} h)`;
 }
 
 function renderAwards() {
