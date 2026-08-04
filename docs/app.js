@@ -1785,6 +1785,7 @@ function renderMyStats() {
 }
 
 function renderLeaderboard() {
+  renderSurfReport(); // cache-guarded: hits Surfline at most once an hour
   const ev = viewedEvent || DEFAULT_EVENT;
   const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   // Roster rows and pledge money are live-event concepts: the roster is
@@ -1839,6 +1840,104 @@ function renderLeaderboard() {
       renderMyStats();
     });
   });
+}
+
+// ===== Ocean Beach surf report (Surfline, unofficial API) ==================
+// One CORS-open call covers all three OB zones. Cached in localStorage for an
+// hour so 50 phones don't hammer Surfline. Conditions are garnish: ANY
+// failure (endpoint gone, schema change, offline) just leaves the widget
+// hidden — never an error state.
+
+const SURF_SPOTS = [
+  { id: '5d9b68deab58860001c7359e', label: 'North OB' },
+  { id: '638e32a4f052ba4ed06d0e3e', label: 'Central OB' },
+  { id: '5842041f4e65fad6a77087f9', label: 'South OB' }
+];
+const SURF_URL = 'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47';
+const SURF_CACHE_KEY = 'surftober.surfReport.v1';
+const SURF_TTL_MS = 60 * 60 * 1000;
+let surfFetchInFlight = false;
+
+// Surfline's LOLA rating scale → chip label + a color that reads on every theme
+const SURF_RATING = {
+  FLAT:         { label: 'Flat',       color: '#9aa7b3' },
+  VERY_POOR:    { label: 'Very poor',  color: '#c25b5b' },
+  POOR:         { label: 'Poor',       color: '#d98a4e' },
+  POOR_TO_FAIR: { label: 'Poor–fair',  color: '#e0b23e' },
+  FAIR:         { label: 'Fair',       color: '#c9c94b' },
+  FAIR_TO_GOOD: { label: 'Fair–good',  color: '#8fc95f' },
+  GOOD:         { label: 'Good',       color: '#4bbf7a' },
+  VERY_GOOD:    { label: 'Very good',  color: '#3aa9a0' },
+  GOOD_TO_EPIC: { label: 'Good–epic',  color: '#4b96d9' },
+  EPIC:         { label: 'Epic',       color: '#8a6fd9' }
+};
+
+function renderSurfReport(){
+  const box = document.getElementById('surf-report');
+  if (!box) return;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(SURF_CACHE_KEY) || 'null'); } catch {}
+  if (cached && Array.isArray(cached.zones) && cached.zones.length) paintSurfReport(cached);
+  if ((cached && Date.now() - cached.fetchedAt < SURF_TTL_MS) || surfFetchInFlight) return;
+  surfFetchInFlight = true;
+  fetch(SURF_URL)
+    .then((r) => { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then((body) => {
+      const spots = (body && body.data && body.data.spots) || [];
+      const zones = SURF_SPOTS.map((z) => {
+        const s = spots.find((x) => x && x._id === z.id);
+        if (!s || !s.waveHeight) return null;
+        return {
+          label: z.label,
+          min: Number(s.waveHeight.min) || 0,
+          max: Number(s.waveHeight.max) || 0,
+          rel: s.waveHeight.humanRelation || '',
+          rating: (s.conditions && s.conditions.value) || null
+        };
+      }).filter(Boolean);
+      if (!zones.length) return;
+      const report = { fetchedAt: Date.now(), zones };
+      try { localStorage.setItem(SURF_CACHE_KEY, JSON.stringify(report)); } catch {}
+      paintSurfReport(report);
+    })
+    .catch(() => {})
+    .finally(() => { surfFetchInFlight = false; });
+}
+
+function paintSurfReport(report){
+  const box = document.getElementById('surf-report');
+  if (!box) return;
+  const mins = Math.max(0, Math.round((Date.now() - report.fetchedAt) / 60000));
+  const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
+  box.innerHTML =
+    `<div class="surf-head"><span class="surf-title">🌊 Ocean Beach right now</span>` +
+    `<span class="surf-updated">Surfline · ${esc(when)}</span></div>` +
+    `<div class="surf-zones">${report.zones.map(surfZoneTile).join('')}</div>`;
+  box.hidden = false;
+}
+
+function surfZoneTile(z){
+  const r = SURF_RATING[z.rating] || null;
+  const color = r ? r.color : '#8aa0b8';
+  const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
+  return `<div class="surf-zone">
+    <div class="surf-zone-top"><span class="surf-label">${esc(z.label)}</span>${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}</div>
+    <div class="surf-ft">${esc(ft)}</div>
+    <div class="surf-rel">${esc(z.rel)}</div>
+    ${surfWaveSvg((z.min + z.max) / 2, color)}
+  </div>`;
+}
+
+// A little water line whose swell scales with the wave height — flat day,
+// flat line; 10 ft pins the amplitude.
+function surfWaveSvg(hFt, color){
+  const amp = Math.max(2, Math.min(14, hFt * 2.4));
+  const wave = (a, y0) => `M -20 ${y0} q 15 -${a} 30 0 t 30 0 t 30 0 t 30 0 t 30 0 V 44 H -20 Z`;
+  return `<svg viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${wave(amp * 0.7, 27)}" fill="${color}" opacity="0.16"></path>
+    <path d="${wave(amp, 24)}" fill="${color}" opacity="0.28"></path>
+    <path d="${wave(amp, 24).replace(/ V 44 H -20 Z$/, '')}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" vector-effect="non-scaling-stroke"></path>
+  </svg>`;
 }
 
 // Your own pledge accrual, shown only to you on the Account page — the
