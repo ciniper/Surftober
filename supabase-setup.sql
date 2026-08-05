@@ -263,3 +263,98 @@ create policy "Users upload own session audio" on storage.objects for insert to 
   with check (bucket_id = 'session-audio' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Users delete own session audio" on storage.objects for delete to authenticated
   using (bucket_id = 'session-audio' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =========================================================
+-- surf_report : Ocean Beach conditions, fetched server-side
+-- =========================================================
+-- Surfline's API only sets CORS headers for its own domains and localhost,
+-- so browsers on surftober.com can't call it directly. pg_cron runs
+-- refresh_surf_report() twice an hour: it harvests the response fired on the
+-- previous tick (pg_net is async) into the surf_report singleton row, then
+-- fires the next request. Clients read surf_report through the anon API.
+
+create extension if not exists pg_net;
+create extension if not exists pg_cron;
+
+create table if not exists public.surf_report (
+  id int primary key default 1 check (id = 1),   -- singleton row
+  fetched_at timestamptz,
+  last_request_id bigint,
+  zones jsonb
+);
+insert into public.surf_report (id) values (1) on conflict (id) do nothing;
+
+alter table public.surf_report enable row level security;
+drop policy if exists "surf report is public" on public.surf_report;
+create policy "surf report is public" on public.surf_report for select using (true);
+grant select on public.surf_report to anon, authenticated;
+
+create or replace function public.refresh_surf_report()
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  prev record;
+  new_zones jsonb;
+  req_id bigint;
+begin
+  -- 1. Harvest the response from the request fired on the previous tick.
+  --    Guarded so a bad/expired response never blocks step 2.
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.last_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        'id',     sp->>'_id',
+        'min',    sp->'waveHeight'->'min',
+        'max',    sp->'waveHeight'->'max',
+        'rel',    sp->'waveHeight'->>'humanRelation',
+        'rating', sp->'conditions'->>'value'))
+      into new_zones
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'spots') sp
+      where sp->>'_id' in (
+        '5d9b68deab58860001c7359e',  -- North Ocean Beach
+        '638e32a4f052ba4ed06d0e3e',  -- Central Ocean Beach
+        '5842041f4e65fad6a77087f9'   -- South Ocean Beach
+      );
+
+      if new_zones is not null then
+        update public.surf_report
+        set zones = new_zones, fetched_at = now()
+        where id = 1;
+      end if;
+    end if;
+  exception when others then
+    null;  -- unparseable/expired response: skip it, still fire the next request
+  end;
+
+  -- 2. Fire the next request. The browser User-Agent matters — Surfline's
+  --    bot layer 403s bare server UAs.
+  select net.http_get(
+    'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
+    headers := jsonb_build_object(
+      'User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      'Accept', 'application/json'
+    )
+  ) into req_id;
+
+  update public.surf_report set last_request_id = req_id where id = 1;
+end;
+$$;
+
+-- Twice an hour, offset from the top of the hour to be polite
+do $$
+begin
+  perform cron.unschedule('surf-report-refresh');
+exception when others then
+  null;  -- first install: nothing to unschedule yet
+end $$;
+select cron.schedule('surf-report-refresh', '7,37 * * * *', 'select public.refresh_surf_report()');
+
+-- Prime it now instead of waiting for the first two cron ticks. Run the
+-- refresh once more ~30 seconds later to harvest this first response.
+select public.refresh_surf_report();

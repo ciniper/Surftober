@@ -5,14 +5,21 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
-- [x] ~~Surfline conditions widget for Ocean Beach~~ (shipped v1.8.2 —
-      leaderboard header with three OB zone tiles: wave height, condition
-      chip, swell-scaled wave graphic. Cached 1 h in localStorage
-      (`surftober.surfReport.v1`), fails invisibly. Unofficial API — if
-      Surfline changes it, the widget silently disappears; endpoint + spot
-      IDs live in app.js `SURF_SPOTS`/`SURF_URL`. Per-spot forecast endpoints
-      and the 3,830-entry name→spotId map in garmin-connect-export-master-chaz's
-      `gs_import/locations.py` remain available if this ever grows beyond OB.
+- [x] ~~Surfline conditions widget for Ocean Beach~~ (shipped v1.8.2, reworked
+      v1.8.3 — leaderboard header with three OB zone tiles: wave height,
+      condition chip, swell-scaled wave graphic; fails invisibly, hides if the
+      reading is >24 h old. IMPORTANT lesson: Surfline only sets CORS headers
+      for its own domains and localhost, so the v1.8.2 browser-direct fetch
+      worked in dev and died on surftober.com. v1.8.3 fetches server-side
+      instead: pg_cron runs `refresh_surf_report()` twice an hour via pg_net
+      into the `surf_report` singleton table (SQL in both setup/upgrade
+      files), and clients read it through the anon API with a 1 h localStorage
+      cache (`surftober.surfReport.v2`). If tiles ever vanish, check
+      `select status_code from net._http_response order by id desc limit 1;`
+      — a 403 means Surfline started blocking AWS/datacenter IPs, a real risk
+      with unofficial APIs. Spot IDs live in app.js `SURF_SPOTS`; the
+      3,830-entry name→spotId map in garmin-connect-export-master-chaz's
+      `gs_import/locations.py` remains available if this grows beyond OB.
       NOTE for Chase: that repo has a hardcoded Surfline client secret in its
       git history — worth scrubbing, independent of Surftober.)
 - [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
