@@ -203,7 +203,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .surf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
 .surf-title { font-weight: 700; }
 .surf-updated { font-size: 12px; opacity: 0.6; }
-.surf-zones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.surf-zones { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .surf-zone { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px 0; overflow: hidden; min-width: 0; }
 .surf-zone-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
 .surf-label { font-size: 13px; font-weight: 600; opacity: 0.85; }
@@ -218,6 +218,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
   .surf-zone svg { grid-column: 1 / -1; width: calc(100% + 24px); margin: 4px -12px -10px; height: 26px; }
   .surf-ft { font-size: 18px; }
 }
+
+/* v1.9.3: tide + water share a row when the page is wide enough */
+.surf-strips { display: flex; flex-wrap: wrap; gap: 0 10px; }
+.surf-strips .surf-tide, .surf-strips .surf-water { flex: 1 1 340px; min-width: 0; }
 
 /* v1.9: tide strip under the surf zones */
 .surf-tide { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; }
