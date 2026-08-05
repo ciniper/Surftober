@@ -271,7 +271,7 @@ declare
   new_tides jsonb;
   new_water jsonb;
   req_id bigint;
-  ua constant text := 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  ua constant text := 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36';
 begin
   -- 1. Harvest the responses from the requests fired on the previous tick.
   --    Each block is guarded so a bad/expired response never blocks the rest.
@@ -373,20 +373,38 @@ begin
   end;
 
   -- 2. Fire the next requests. The browser User-Agent matters — Surfline's
-  --    bot layer 403s bare server UAs.
-  select net.http_get(
-    'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
-    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json'),
-    timeout_milliseconds := 15000
-  ) into req_id;
-  update public.surf_report set last_request_id = req_id where id = 1;
+  --    bot layer 403s bare server UAs. Surfline gets polite treatment (its
+  --    edge 403-blocked the shared egress IP on 2026-08-05): only the :07
+  --    tick fires (hourly), after 0-45 s of random jitter so requests don't
+  --    land dead on the same second every time. Harvests above still run on
+  --    every tick, so recovery after a block is automatic.
+  if extract(minute from now()) < 30 then
+    perform pg_sleep(floor(random() * 45));
 
-  select net.http_get(
-    'https://services.surfline.com/kbyg/spots/forecasts/tides?spotId=5842041f4e65fad6a77087f9&days=2',
-    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json'),
-    timeout_milliseconds := 15000
-  ) into req_id;
-  update public.surf_report set tide_request_id = req_id where id = 1;
+    select net.http_get(
+      'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set last_request_id = req_id where id = 1;
+
+    select net.http_get(
+      'https://services.surfline.com/kbyg/spots/forecasts/tides?spotId=5842041f4e65fad6a77087f9&days=2',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set tide_request_id = req_id where id = 1;
+  end if;
 
   -- No custom headers here: pg_net always adds its own User-Agent, so a
   -- custom one creates a DUPLICATE User-Agent header and SFPUC's IIS rejects

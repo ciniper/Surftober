@@ -75,6 +75,17 @@
       Table Editor).
 - [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
       events tab + start_time + audio_url/deleted_at all mirrored)
+- [ ] **Watch: Surfline 403-blocked Supabase's egress IP** (2026-08-05, ~00:07
+      PDT — 403 status with a "502 Bad Gateway" body; SFPUC unaffected; same
+      requests fine from residential IPs). Free-tier egress IPs are SHARED
+      across tenants, so it may not be our 48 req/day and may decay on its
+      own. Mitigation shipped same day: Surfline fetches hourly (the :07 tick
+      only) with 0–45 s jitter, current Chrome UA, Referer + Accept-Language;
+      harvests still run every tick so recovery is automatic. Check
+      `select fetched_at from surf_report;` — if still stale after a couple
+      of days, stage 2 is a Supabase Edge Function proxy for just the two
+      Surfline calls (clean single UA, different TLS fingerprint + egress
+      IPs), invoked by the same cron, writing to the same table.
 - [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
       Water Task Force branding to the leaderboard water reading. Nuance: the
       live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
