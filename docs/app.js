@@ -1889,7 +1889,9 @@ function renderSurfReport(){
   surfFetchInFlight = true;
   (async () => {
     try {
-      const { data, error } = await sb.from('surf_report').select('fetched_at, zones').eq('id', 1).maybeSingle();
+      // select('*'): the singleton row is tiny, and this stays
+      // deploy-order-safe as columns (tides, water quality) get added.
+      const { data, error } = await sb.from('surf_report').select('*').eq('id', 1).maybeSingle();
       if (error || !data || !data.fetched_at || !Array.isArray(data.zones)) return;
       const byId = new Map(data.zones.filter(Boolean).map((z) => [z.id, z]));
       const zones = SURF_SPOTS.map((spot) => {
@@ -1905,6 +1907,12 @@ function renderSurfReport(){
       }).filter(Boolean);
       if (!zones.length) return;
       const report = { checkedAt: Date.now(), fetchedAt: new Date(data.fetched_at).getTime(), zones };
+      if (Array.isArray(data.tides) && data.tides.length && data.tides_at) {
+        report.tides = { at: new Date(data.tides_at).getTime(), list: data.tides };
+      }
+      if (Array.isArray(data.water) && data.water.length && data.water_at) {
+        report.water = { at: new Date(data.water_at).getTime(), stations: data.water };
+      }
       try { localStorage.setItem(SURF_CACHE_KEY, JSON.stringify(report)); } catch {}
       paintSurfReport(report);
     } catch {
@@ -1923,11 +1931,104 @@ function paintSurfReport(report){
   if (!report.fetchedAt || Date.now() - report.fetchedAt > SURF_MAX_AGE_MS) return;
   const mins = Math.max(0, Math.round((Date.now() - report.fetchedAt) / 60000));
   const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
+  let tideHtml = '';
+  if (report.tides && Array.isArray(report.tides.list) &&
+      report.tides.at && Date.now() - report.tides.at < SURF_MAX_AGE_MS) {
+    tideHtml = surfTideStrip(report.tides.list);
+  }
+  let waterHtml = '';
+  if (report.water && Array.isArray(report.water.stations) &&
+      report.water.at && Date.now() - report.water.at < SURF_MAX_AGE_MS) {
+    waterHtml = surfWaterStrip(report.water);
+  }
   box.innerHTML =
     `<div class="surf-head"><span class="surf-title">🌊 Ocean Beach right now</span>` +
     `<span class="surf-updated">Surfline · ${esc(when)}</span></div>` +
-    `<div class="surf-zones">${report.zones.map(surfZoneTile).join('')}</div>`;
+    `<div class="surf-zones">${report.zones.map(surfZoneTile).join('')}</div>` +
+    tideHtml + waterHtml;
   box.hidden = false;
+}
+
+// Water quality from SFPUC's real-time beach status (the same feed behind
+// the official posted/safe map). One line: SAFE when every sampled Ocean
+// Beach station is clear, an advisory naming the posted stations otherwise.
+// Stations marked W/Y (not sampled) don't count either way.
+const SFPUC_MAP_URL = 'https://webapps.sfpuc.org/sapps/beachesandbay.html';
+
+function surfWaterStrip(water){
+  const stations = (water.stations || []).filter(Boolean);
+  if (!stations.length) return '';
+  const up = (v) => String(v || '').trim().toUpperCase();
+  const shortName = (n) => String(n || '').replace(/^Ocean Beach at /i, '');
+  const cso = stations.filter((s) => s.cso);
+  const posted = stations.filter((s) => up(s.s) === 'R' || (s.posted && up(s.p) === 'R'));
+  const sampled = stations.filter((s) => up(s.s) !== 'W' && up(s.s) !== 'Y');
+  if (!sampled.length && !cso.length) return ''; // nothing measured — say nothing
+  let chip, color, text;
+  if (cso.length) {
+    chip = 'SEWAGE ALERT'; color = '#c25b5b';
+    text = 'Sewer overflow advisory: ' + cso.map((s) => shortName(s.name)).join(', ');
+  } else if (posted.length) {
+    chip = 'ADVISORY'; color = '#d9714e';
+    text = 'Water contact advisory posted: ' + posted.map((s) => shortName(s.name)).join(', ');
+  } else {
+    chip = 'SAFE'; color = '#4bbf7a';
+    text = `Water quality clear at all ${sampled.length} sampled Ocean Beach stations`;
+  }
+  const mins = Math.max(0, Math.round((Date.now() - water.at) / 60000));
+  const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
+  return `<div class="surf-water">
+    <span class="surf-chip" style="background:${color}">${esc(chip)}</span>
+    <span class="surf-water-text">${esc(text)}</span>
+    <span class="surf-water-meta">checked ${esc(when)} · <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC map</a></span>
+  </div>`;
+}
+
+// "Tide: 3.2 ft rising · High 5.9 ft at 3:42 PM" plus a day curve with a
+// "now" dot. The server stores two days of predictions; show a rolling
+// window around now.
+function surfTideStrip(list){
+  const now = Date.now() / 1000;
+  const pts = list
+    .filter((e) => e && typeof e.t === 'number' && typeof e.h === 'number')
+    .filter((e) => e.t > now - 3 * 3600 && e.t < now + 21 * 3600)
+    .sort((a, b) => a.t - b.t);
+  if (pts.length < 2) return '';
+  let before = null, after = null;
+  for (const p of pts) {
+    if (p.t <= now) before = p;
+    else { after = p; break; }
+  }
+  if (!before || !after) return '';
+  const frac = (now - before.t) / ((after.t - before.t) || 1);
+  const h = before.h + (after.h - before.h) * frac;
+  const rising = after.h > before.h;
+  const next = pts.find((p) => p.t > now && (p.type === 'HIGH' || p.type === 'LOW'));
+  const fmtT = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  let text = `Tide: <strong>${h.toFixed(1)} ft</strong> ${rising ? 'rising' : 'falling'}`;
+  if (next) text += ` · ${next.type === 'HIGH' ? 'High' : 'Low'} ${Number(next.h).toFixed(1)} ft at ${esc(fmtT(next.t))}`;
+  return `<div class="surf-tide"><div class="surf-tide-text">${text}</div>${surfTideCurveSvg(pts, now, h)}</div>`;
+}
+
+function surfTideCurveSvg(pts, now, hNow){
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const hs = pts.map((p) => p.h);
+  const hMin = Math.min(...hs), hMax = Math.max(...hs);
+  const W = 120, H = 32, PAD = 5;
+  const x = (t) => ((t - t0) / ((t1 - t0) || 1)) * W;
+  const y = (h) => H - PAD - ((h - hMin) / ((hMax - hMin) || 1)) * (H - 2 * PAD);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${y(p.h).toFixed(1)}`).join(' ');
+  // The svg stretches to fill (preserveAspectRatio none), which would smear a
+  // <circle> into a blob — so the "now" dot is an HTML element positioned in %
+  const dotLeft = ((x(now) / W) * 100).toFixed(1);
+  const dotTop = ((y(hNow) / H) * 100).toFixed(1);
+  return `<div class="surf-tide-curve">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="currentColor" opacity="0.1"></path>
+      <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6" vector-effect="non-scaling-stroke"></path>
+    </svg>
+    <span class="surf-tide-now" style="left:${dotLeft}%;top:${dotTop}%"></span>
+  </div>`;
 }
 
 function surfZoneTile(z){

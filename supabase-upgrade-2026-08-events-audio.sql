@@ -245,6 +245,16 @@ create table if not exists public.surf_report (
 );
 insert into public.surf_report (id) values (1) on conflict (id) do nothing;
 
+-- v1.9: tide predictions (same Surfline setup, one extra request per tick)
+alter table public.surf_report add column if not exists tides jsonb;
+alter table public.surf_report add column if not exists tides_at timestamptz;
+alter table public.surf_report add column if not exists tide_request_id bigint;
+
+-- v1.9: water quality from SFPUC's real-time beach status feed
+alter table public.surf_report add column if not exists water jsonb;
+alter table public.surf_report add column if not exists water_at timestamptz;
+alter table public.surf_report add column if not exists water_request_id bigint;
+
 alter table public.surf_report enable row level security;
 drop policy if exists "surf report is public" on public.surf_report;
 create policy "surf report is public" on public.surf_report for select using (true);
@@ -258,10 +268,15 @@ as $$
 declare
   prev record;
   new_zones jsonb;
+  new_tides jsonb;
+  new_water jsonb;
   req_id bigint;
+  ua constant text := 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 begin
-  -- 1. Harvest the response from the request fired on the previous tick.
-  --    Guarded so a bad/expired response never blocks step 2.
+  -- 1. Harvest the responses from the requests fired on the previous tick.
+  --    Each block is guarded so a bad/expired response never blocks the rest.
+
+  -- 1a. Conditions (wave height + rating per OB zone)
   begin
     select r.status_code, r.content into prev
     from net._http_response r
@@ -293,17 +308,89 @@ begin
     null;  -- unparseable/expired response: skip it, still fire the next request
   end;
 
-  -- 2. Fire the next request. The browser User-Agent matters — Surfline's
+  -- 1b. Tides (two days of predictions from the Ocean Beach tide station)
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.tide_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        't',    (e->>'timestamp')::bigint,
+        'type', e->>'type',
+        'h',    e->'height'))
+      into new_tides
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'tides') e;
+
+      if new_tides is not null then
+        update public.surf_report
+        set tides = new_tides, tides_at = now()
+        where id = 1;
+      end if;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 1c. Water quality (SFPUC real-time beach status — the feed behind the
+  --     official posted/safe map). The response is JSON wrapped in an XML
+  --     envelope, so pull the JSON array out with a regex.
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.water_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        'id',     st->>'stationid',
+        'name',   st->>'stationname',
+        's',      st->>'s_color',
+        'p',      st->>'p_color',
+        'posted', st->>'posted',
+        'cso',    st->>'cso',
+        'date',   st->>'sample_date'))
+      into new_water
+      from jsonb_array_elements(((regexp_match(prev.content, '\[.*\]'))[1])::jsonb) st
+      where st->>'stationid' in (
+        '4601',  -- Fort Funston
+        '4602',  -- Ocean Beach at Sloat Boulevard
+        '4603',  -- Ocean Beach at Vicente Street
+        '4604',  -- Ocean Beach at Balboa Street
+        '4605',  -- Ocean Beach at Lincoln Way
+        '4606'   -- Ocean Beach at Pacheco Street
+      );
+
+      if new_water is not null then
+        update public.surf_report
+        set water = new_water, water_at = now()
+        where id = 1;
+      end if;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 2. Fire the next requests. The browser User-Agent matters — Surfline's
   --    bot layer 403s bare server UAs.
   select net.http_get(
     'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
-    headers := jsonb_build_object(
-      'User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-      'Accept', 'application/json'
-    )
+    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json')
   ) into req_id;
-
   update public.surf_report set last_request_id = req_id where id = 1;
+
+  select net.http_get(
+    'https://services.surfline.com/kbyg/spots/forecasts/tides?spotId=5842041f4e65fad6a77087f9&days=2',
+    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json')
+  ) into req_id;
+  update public.surf_report set tide_request_id = req_id where id = 1;
+
+  select net.http_get(
+    'https://infrastructure.sfwater.org/lims.asmx/getBeaches',
+    headers := jsonb_build_object('User-Agent', ua)
+  ) into req_id;
+  update public.surf_report set water_request_id = req_id where id = 1;
 end;
 $$;
 
