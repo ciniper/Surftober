@@ -75,6 +75,14 @@
       Table Editor).
 - [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
       events tab + start_time + audio_url/deleted_at all mirrored)
+- [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
+      Water Task Force branding to the leaderboard water reading. Nuance: the
+      live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
+      volunteer lab. Options: credit both ("SFPUC · Surfrider BWTF" with links),
+      or actually blend in BWTF's latest enterococcus readings — the GraphQL
+      API is already scoped (lab 76; OB sites 9172 Lincoln Way + 9005 Vicente;
+      public map `bwtf.surfrider.org/explore/76`; public x-api-key in the BWTF
+      repo's bwtf_api.py). Chase's call on direction.
 - [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
       not null`) in the Admin tab with a Restore button per row (sets `deleted_at`
       back to null). Today restoring requires the Supabase dashboard (Table Editor →
@@ -98,6 +106,11 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
+- New bonus-hour categories (Chase, 2026-08-05): take a water-quality reading
+  (BWTF volunteer sampling) for bonus hours; teach someone to surf/swim for
+  bonus hours. If adopted for Surftober 2026: add to the bonus list in
+  register.html's welcome text and wire scoring like costume/cleanup
+  (checkbox on the log form + rollup handling in awards.js).
 - Engagement: streak tracking, daily prompt.
   (Photo wall graduated to the scoped "Photo bucket + Drive archive" item.
   Voice-memo recording shipped in v1.5.1.)
