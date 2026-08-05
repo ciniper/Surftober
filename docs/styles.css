@@ -193,8 +193,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .page-head .actions { margin: 0; }
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
-/* v1.8: leaderboard pledge tracker */
-.pledge-total { margin-top: 10px; font-size: 14px; }
+/* v1.8.3: pledged total lives in the leaderboard page header */
+.pledge-banner { text-align: right; }
+.pledge-banner .pledge-label { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.65; }
+.pledge-banner .pledge-amount { font-size: 24px; font-weight: 800; color: var(--accent-text); line-height: 1.1; }
 
 /* v1.8.2: Ocean Beach surf report on the leaderboard */
 .surf-report { margin-bottom: 16px; }

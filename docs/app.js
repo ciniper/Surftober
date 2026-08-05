@@ -1821,10 +1821,14 @@ function renderLeaderboard() {
   const rows = totals.map(
     (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
   );
-  const pledgeLine = live && totalPledged > 0
-    ? `<div class="pledge-total">💰 Total pledged so far: <strong>$${totalPledged}</strong></div>`
-    : '';
-  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>${pledgeLine}`;
+  // Total pledged lives in the page header, next to the "Leaderboard" title
+  const banner = document.getElementById('pledge-banner');
+  if (banner) {
+    banner.hidden = !(live && totalPledged > 0);
+    const amt = banner.querySelector('.pledge-amount');
+    if (amt) amt.textContent = '$' + totalPledged;
+  }
+  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -1842,20 +1846,23 @@ function renderLeaderboard() {
   });
 }
 
-// ===== Ocean Beach surf report (Surfline, unofficial API) ==================
-// One CORS-open call covers all three OB zones. Cached in localStorage for an
-// hour so 50 phones don't hammer Surfline. Conditions are garnish: ANY
-// failure (endpoint gone, schema change, offline) just leaves the widget
-// hidden — never an error state.
+// ===== Ocean Beach surf report (Surfline via our Supabase cache) ===========
+// Surfline's API only sets CORS headers for its own domains and localhost —
+// a browser on surftober.com can never call it directly (works in dev, dies
+// in prod). So a pg_cron job in Supabase fetches it server-side twice an
+// hour into the surf_report table (see the SQL files), and clients read that
+// through our own API. Conditions are garnish: ANY failure (table missing,
+// cron dead, schema change, offline) just leaves the widget hidden — never
+// an error state.
 
 const SURF_SPOTS = [
   { id: '5d9b68deab58860001c7359e', label: 'North OB' },
   { id: '638e32a4f052ba4ed06d0e3e', label: 'Central OB' },
   { id: '5842041f4e65fad6a77087f9', label: 'South OB' }
 ];
-const SURF_URL = 'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47';
-const SURF_CACHE_KEY = 'surftober.surfReport.v1';
-const SURF_TTL_MS = 60 * 60 * 1000;
+const SURF_CACHE_KEY = 'surftober.surfReport.v2';
+const SURF_TTL_MS = 60 * 60 * 1000;   // how often a client re-checks our table
+const SURF_MAX_AGE_MS = 24 * 60 * 60 * 1000; // hide the widget if the cron died
 let surfFetchInFlight = false;
 
 // Surfline's LOLA rating scale → chip label + a color that reads on every theme
@@ -1878,35 +1885,42 @@ function renderSurfReport(){
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(SURF_CACHE_KEY) || 'null'); } catch {}
   if (cached && Array.isArray(cached.zones) && cached.zones.length) paintSurfReport(cached);
-  if ((cached && Date.now() - cached.fetchedAt < SURF_TTL_MS) || surfFetchInFlight) return;
+  if ((cached && Date.now() - cached.checkedAt < SURF_TTL_MS) || surfFetchInFlight || !sb) return;
   surfFetchInFlight = true;
-  fetch(SURF_URL)
-    .then((r) => { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-    .then((body) => {
-      const spots = (body && body.data && body.data.spots) || [];
-      const zones = SURF_SPOTS.map((z) => {
-        const s = spots.find((x) => x && x._id === z.id);
-        if (!s || !s.waveHeight) return null;
+  (async () => {
+    try {
+      const { data, error } = await sb.from('surf_report').select('fetched_at, zones').eq('id', 1).maybeSingle();
+      if (error || !data || !data.fetched_at || !Array.isArray(data.zones)) return;
+      const byId = new Map(data.zones.filter(Boolean).map((z) => [z.id, z]));
+      const zones = SURF_SPOTS.map((spot) => {
+        const z = byId.get(spot.id);
+        if (!z) return null;
         return {
-          label: z.label,
-          min: Number(s.waveHeight.min) || 0,
-          max: Number(s.waveHeight.max) || 0,
-          rel: s.waveHeight.humanRelation || '',
-          rating: (s.conditions && s.conditions.value) || null
+          label: spot.label,
+          min: Number(z.min) || 0,
+          max: Number(z.max) || 0,
+          rel: z.rel || '',
+          rating: z.rating || null
         };
       }).filter(Boolean);
       if (!zones.length) return;
-      const report = { fetchedAt: Date.now(), zones };
+      const report = { checkedAt: Date.now(), fetchedAt: new Date(data.fetched_at).getTime(), zones };
       try { localStorage.setItem(SURF_CACHE_KEY, JSON.stringify(report)); } catch {}
       paintSurfReport(report);
-    })
-    .catch(() => {})
-    .finally(() => { surfFetchInFlight = false; });
+    } catch {
+      // table not deployed yet / offline — widget just stays hidden
+    } finally {
+      surfFetchInFlight = false;
+    }
+  })();
 }
 
 function paintSurfReport(report){
   const box = document.getElementById('surf-report');
   if (!box) return;
+  // A reading older than a day means the server cron died — hide rather than
+  // show week-old "right now" conditions.
+  if (!report.fetchedAt || Date.now() - report.fetchedAt > SURF_MAX_AGE_MS) return;
   const mins = Math.max(0, Math.round((Date.now() - report.fetchedAt) / 60000));
   const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
   box.innerHTML =
