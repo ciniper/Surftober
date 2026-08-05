@@ -1885,7 +1885,10 @@ function renderSurfReport(){
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(SURF_CACHE_KEY) || 'null'); } catch {}
   if (cached && Array.isArray(cached.zones) && cached.zones.length) paintSurfReport(cached);
-  if ((cached && Date.now() - cached.checkedAt < SURF_TTL_MS) || surfFetchInFlight || !sb) return;
+  // A complete report is good for an hour; one missing tides/water re-checks
+  // every 5 min so newly-deployed data doesn't hide behind a stale cache.
+  const cacheTtl = cached && cached.tides && cached.water ? SURF_TTL_MS : 5 * 60 * 1000;
+  if ((cached && Date.now() - cached.checkedAt < cacheTtl) || surfFetchInFlight || !sb) return;
   surfFetchInFlight = true;
   (async () => {
     try {

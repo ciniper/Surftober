@@ -415,19 +415,22 @@ begin
   --    bot layer 403s bare server UAs.
   select net.http_get(
     'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
-    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json')
+    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json'),
+    timeout_milliseconds := 15000
   ) into req_id;
   update public.surf_report set last_request_id = req_id where id = 1;
 
   select net.http_get(
     'https://services.surfline.com/kbyg/spots/forecasts/tides?spotId=5842041f4e65fad6a77087f9&days=2',
-    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json')
+    headers := jsonb_build_object('User-Agent', ua, 'Accept', 'application/json'),
+    timeout_milliseconds := 15000
   ) into req_id;
   update public.surf_report set tide_request_id = req_id where id = 1;
 
   select net.http_get(
     'https://infrastructure.sfwater.org/lims.asmx/getBeaches',
-    headers := jsonb_build_object('User-Agent', ua)
+    headers := jsonb_build_object('User-Agent', ua),
+    timeout_milliseconds := 15000
   ) into req_id;
   update public.surf_report set water_request_id = req_id where id = 1;
 end;
