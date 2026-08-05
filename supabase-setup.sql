@@ -427,9 +427,11 @@ begin
   ) into req_id;
   update public.surf_report set tide_request_id = req_id where id = 1;
 
+  -- No custom headers here: pg_net always adds its own User-Agent, so a
+  -- custom one creates a DUPLICATE User-Agent header and SFPUC's IIS rejects
+  -- the request with 400. SFPUC doesn't bot-filter, so the default UA is fine.
   select net.http_get(
     'https://infrastructure.sfwater.org/lims.asmx/getBeaches',
-    headers := jsonb_build_object('User-Agent', ua),
     timeout_milliseconds := 15000
   ) into req_id;
   update public.surf_report set water_request_id = req_id where id = 1;
