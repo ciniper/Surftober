@@ -21,7 +21,15 @@
       3,830-entry name→spotId map in garmin-connect-export-master-chaz's
       `gs_import/locations.py` remains available if this grows beyond OB.
       NOTE for Chase: that repo has a hardcoded Surfline client secret in its
-      git history — worth scrubbing, independent of Surftober.)
+      git history — worth scrubbing, independent of Surftober.
+      v1.9.0 additions on the same cron: a tide strip (Surfline tides endpoint,
+      South OB spot, days=2 → `tides`/`tides_at` columns) and a water-quality
+      line (SFPUC `infrastructure.sfwater.org/lims.asmx/getBeaches` — the
+      real-time feed behind the official posted/safe map; JSON wrapped in an
+      XML envelope; stations 4601–4606; safe = no `s_color` R and no `cso`
+      among sampled stations, W/Y stations ignored → `water`/`water_at`).
+      Related find from the BWTF repo dig: ~/Personal/BWTF/token.txt holds an
+      unused GitHub PAT (`ghp_…`) in the working tree — rotate/remove it.)
 - [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+

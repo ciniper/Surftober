@@ -218,3 +218,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
   .surf-zone svg { grid-column: 1 / -1; width: calc(100% + 24px); margin: 4px -12px -10px; height: 26px; }
   .surf-ft { font-size: 18px; }
 }
+
+/* v1.9: tide strip under the surf zones */
+.surf-tide { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; }
+.surf-tide-text { flex: 0 0 auto; font-size: 13px; }
+.surf-tide-curve { position: relative; flex: 1 1 120px; min-width: 100px; }
+.surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
+.surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+.surf-water-meta { margin-left: auto; opacity: 0.7; font-size: 12px; white-space: nowrap; }
+.surf-water-meta a { color: var(--accent-text); }
