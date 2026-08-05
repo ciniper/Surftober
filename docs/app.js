@@ -1944,11 +1944,17 @@ function paintSurfReport(report){
       report.water.at && Date.now() - report.water.at < SURF_MAX_AGE_MS) {
     waterHtml = surfWaterStrip(report.water);
   }
+  // One tile: Central OB speaks for the beach (all three zones stay in the
+  // data in case we want them back). Fall back to whatever zones exist.
+  const central = report.zones.filter((z) => z.label === 'Central OB');
+  const zonesToShow = central.length ? central : report.zones;
+  // Tide + water share a row when the page is wide enough (flex wraps them)
+  const strips = (tideHtml || waterHtml) ? `<div class="surf-strips">${tideHtml}${waterHtml}</div>` : '';
   box.innerHTML =
     `<div class="surf-head"><span class="surf-title">🌊 Ocean Beach right now</span>` +
     `<span class="surf-updated">Surfline · ${esc(when)}</span></div>` +
-    `<div class="surf-zones">${report.zones.map(surfZoneTile).join('')}</div>` +
-    tideHtml + waterHtml;
+    `<div class="surf-zones">${zonesToShow.map(surfZoneTile).join('')}</div>` +
+    strips;
   box.hidden = false;
 }
 
