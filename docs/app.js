@@ -2083,12 +2083,19 @@ const HOFF_SVG = `<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet" 
   <rect x="20.5" y="93" width="8.5" height="6" rx="2.5" fill="#b97a44"></rect>
 </svg>`;
 
-// "Thigh to stomach" → 0.62 of a person, "Head high" → 1, "Double overhead"
-// → 2 stacked. Falls back to feet ÷ a 5.6 ft person when no keyword matches.
+// "Thigh to stomach" → 0.62 of a person, "Head to 2ft overhead" → 1.3,
+// "2-3x overhead" → 3 stacked. Vocabulary sampled from live Surfline spots
+// worldwide (2026-08-05): Flat, Shin to knee, Knee to thigh, Thigh to
+// waist/stomach, Waist to chest/shoulder/head, Chest to head/1ft overhead/
+// overhead, Head to 2ft/well overhead, Overhead to well overhead,
+// 2x overhead, 2-3x overhead. Falls back to feet ÷ a 5.6 ft person.
 function hoffFraction(rel, maxFt){
   const s = String(rel || '').toLowerCase();
+  const mult = s.match(/(\d+)(?:\s*-\s*(\d+))?\s*x\s*overhead/); // "2x overhead", "2-3x overhead"
+  if (mult) return Math.min(4, Number(mult[2] || mult[1]) || 2);
   if (s.includes('triple')) return 3;
   if (s.includes('double')) return 2;
+  if (s.includes('well overhead')) return 1.6;
   if (s.includes('overhead')) return 1.3;
   const parts = [
     ['head', 1], ['shoulder', 0.85], ['chest', 0.73], ['stomach', 0.62],
