@@ -86,6 +86,15 @@
       of days, stage 2 is a Supabase Edge Function proxy for just the two
       Surfline calls (clean single UA, different TLS fingerprint + egress
       IPs), invoked by the same cron, writing to the same table.
+- [ ] **Dark mode / light mode color refinement** (Chase, 2026-08-05) — refine
+      the text and background colors across the dark and light themes. Where
+      to work: the THEME presets in docs/app.js (13 CSS vars each: --bg,
+      --panel, --muted, --text, --input-bg, --card-border, --on-accent,
+      --accent-text, etc.). Past practice worth repeating: verify contrast
+      with a quick node WCAG script (the v1.6.0 audit caught 3 bad
+      on-accent/accent-text values that way), and re-check the pieces that
+      hardcode colors against both modes (surf chips #10202e text, Hoff
+      skin/trunks, medal badges).
 - [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
       Water Task Force branding to the leaderboard water reading. Nuance: the
       live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
