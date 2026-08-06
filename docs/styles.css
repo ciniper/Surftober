@@ -203,25 +203,30 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .surf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
 .surf-title { font-weight: 700; }
 .surf-updated { font-size: 12px; opacity: 0.6; }
-/* v1.9.4: one compact conditions card at every width — it shares the strips
-   row with tide + water instead of hogging a full-width tile */
-.surf-zone { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px; overflow: hidden; min-width: 0; display: grid; grid-template-columns: 1fr auto; column-gap: 10px; align-content: space-between; }
-.surf-zone-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; grid-column: 1 / -1; }
+/* v1.10: combined conditions + tide card with the Hoff-o-meter */
+.surf-main { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.surf-main-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.surf-main-left { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; align-self: flex-start; }
+.surf-main-right { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
+.surf-main-height { text-align: right; }
 .surf-label { font-size: 13px; font-weight: 600; opacity: 0.85; }
 .surf-chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: #10202e; white-space: nowrap; }
-.surf-ft { font-size: 18px; font-weight: 800; margin-top: 4px; }
-.surf-rel { font-size: 12px; opacity: 0.7; min-height: 1.2em; align-self: center; }
-.surf-zone svg { display: block; grid-column: 1 / -1; width: calc(100% + 24px); margin: 4px -12px -10px; height: 26px; }
+.surf-ft { font-size: 20px; font-weight: 800; }
+.surf-rel { font-size: 12px; opacity: 0.7; }
+.hoff { position: relative; width: 28px; overflow: hidden; flex: 0 0 auto; }
+.hoff-fig { position: absolute; left: 0; width: 100%; height: 64px; }
+.hoff-fig svg { display: block; width: 100%; height: 100%; }
+.hoff-waterline { position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 2px; opacity: 0.85; }
+.surf-main-tide { margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; }
+.surf-main-tide .surf-tide-text { font-size: 13px; margin-top: 6px; }
 
 /* v1.9.3: tide + water share a row when the page is wide enough */
 .surf-strips { display: flex; flex-wrap: wrap; gap: 0 10px; }
-.surf-strips .surf-tide, .surf-strips .surf-water { flex: 1 1 320px; min-width: 0; }
-.surf-strips .surf-zone { flex: 1 1 260px; min-width: 0; margin-top: 10px; }
+.surf-strips .surf-main { flex: 3 1 380px; margin-top: 10px; }
+.surf-strips .surf-water { flex: 2 1 320px; min-width: 0; margin-top: 10px; }
 
-/* v1.9: tide strip under the surf zones */
-.surf-tide { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; }
-.surf-tide-text { flex: 0 0 auto; font-size: 13px; }
-.surf-tide-curve { position: relative; flex: 1 1 120px; min-width: 100px; }
+/* v1.9: tide curve + now-dot (curve fills the combined card's width) */
+.surf-tide-curve { position: relative; }
 .surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
 .surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
 .surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; font-size: 13px; }
