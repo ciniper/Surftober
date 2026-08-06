@@ -1934,26 +1934,22 @@ function paintSurfReport(report){
   if (!report.fetchedAt || Date.now() - report.fetchedAt > SURF_MAX_AGE_MS) return;
   const mins = Math.max(0, Math.round((Date.now() - report.fetchedAt) / 60000));
   const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
-  let tideHtml = '';
-  if (report.tides && Array.isArray(report.tides.list) &&
-      report.tides.at && Date.now() - report.tides.at < SURF_MAX_AGE_MS) {
-    tideHtml = surfTideStrip(report.tides.list);
-  }
   let waterHtml = '';
   if (report.water && Array.isArray(report.water.stations) &&
       report.water.at && Date.now() - report.water.at < SURF_MAX_AGE_MS) {
     waterHtml = surfWaterStrip(report.water);
   }
-  // One tile: Central OB speaks for the beach (all three zones stay in the
-  // data in case we want them back). Fall back to whatever zones exist.
+  // One zone: Central OB speaks for the beach (all three stay in the data in
+  // case we want them back). Conditions + tide share one combined card, which
+  // sits in a wrapping row next to the water-quality card.
   const central = report.zones.filter((z) => z.label === 'Central OB');
-  const zonesToShow = central.length ? central : report.zones;
-  // Conditions, tide, and water share one wrapping row — three compact cards
-  // side by side on desktop, stacked on phones.
+  const zone = (central.length ? central : report.zones)[0];
+  const tides = (report.tides && Array.isArray(report.tides.list) &&
+    report.tides.at && Date.now() - report.tides.at < SURF_MAX_AGE_MS) ? report.tides : null;
   box.innerHTML =
     `<div class="surf-head"><span class="surf-title">🌊 Ocean Beach right now</span>` +
     `<span class="surf-updated">Surfline · ${esc(when)}</span></div>` +
-    `<div class="surf-strips">${zonesToShow.map(surfZoneTile).join('')}${tideHtml}${waterHtml}</div>`;
+    `<div class="surf-strips">${surfMainCard(zone, tides)}${waterHtml}</div>`;
   box.hidden = false;
 }
 
@@ -1992,10 +1988,35 @@ function surfWaterStrip(water){
   </div>`;
 }
 
-// "Tide: 3.2 ft rising · High 5.9 ft at 3:42 PM" plus a day curve with a
-// "now" dot. The server stores two days of predictions; show a rolling
-// window around now.
-function surfTideStrip(list){
+// The combined conditions + tide card: location & rating on the left, wave
+// height & the Hoff-o-meter on the right, tide curve spanning the bottom
+// with its text underneath. The tide line takes the rating's color.
+function surfMainCard(z, tides){
+  const r = SURF_RATING[z.rating] || null;
+  const color = r ? r.color : '#8aa0b8';
+  const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
+  return `<div class="surf-main">
+    <div class="surf-main-top">
+      <div class="surf-main-left">
+        <span class="surf-label">${esc(z.label)}</span>
+        ${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}
+      </div>
+      <div class="surf-main-right">
+        <div class="surf-main-height">
+          <div class="surf-ft">${esc(ft)}</div>
+          <div class="surf-rel">${esc(z.rel)}</div>
+        </div>
+        ${hoffMeter(z.rel, z.max, color)}
+      </div>
+    </div>
+    ${tides ? surfTideSection(tides.list, color) : ''}
+  </div>`;
+}
+
+// Tide section for the combined card: curve on top (line in the rating's
+// color), "Tide: 3.2 ft rising · High 5.9 ft at 3:42 PM" underneath. The
+// server stores two days of predictions; show a rolling window around now.
+function surfTideSection(list, color){
   const now = Date.now() / 1000;
   const pts = list
     .filter((e) => e && typeof e.t === 'number' && typeof e.h === 'number')
@@ -2015,10 +2036,10 @@ function surfTideStrip(list){
   const fmtT = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   let text = `Tide: <strong>${h.toFixed(1)} ft</strong> ${rising ? 'rising' : 'falling'}`;
   if (next) text += ` · ${next.type === 'HIGH' ? 'High' : 'Low'} ${Number(next.h).toFixed(1)} ft at ${esc(fmtT(next.t))}`;
-  return `<div class="surf-tide"><div class="surf-tide-text">${text}</div>${surfTideCurveSvg(pts, now, h)}</div>`;
+  return `<div class="surf-main-tide">${surfTideCurveSvg(pts, now, h, color)}<div class="surf-tide-text">${text}</div></div>`;
 }
 
-function surfTideCurveSvg(pts, now, hNow){
+function surfTideCurveSvg(pts, now, hNow, color){
   const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
   const hs = pts.map((p) => p.h);
   const hMin = Math.min(...hs), hMax = Math.max(...hs);
@@ -2030,37 +2051,65 @@ function surfTideCurveSvg(pts, now, hNow){
   // <circle> into a blob — so the "now" dot is an HTML element positioned in %
   const dotLeft = ((x(now) / W) * 100).toFixed(1);
   const dotTop = ((y(hNow) / H) * 100).toFixed(1);
+  const stroke = color || 'currentColor';
   return `<div class="surf-tide-curve">
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="currentColor" opacity="0.1"></path>
-      <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6" vector-effect="non-scaling-stroke"></path>
+      <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="${stroke}" opacity="0.12"></path>
+      <path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.5" opacity="0.8" vector-effect="non-scaling-stroke"></path>
     </svg>
     <span class="surf-tide-now" style="left:${dotLeft}%;top:${dotTop}%"></span>
   </div>`;
 }
 
-function surfZoneTile(z){
-  const r = SURF_RATING[z.rating] || null;
-  const color = r ? r.color : '#8aa0b8';
-  const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
-  return `<div class="surf-zone">
-    <div class="surf-zone-top"><span class="surf-label">${esc(z.label)}</span>${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}</div>
-    <div class="surf-ft">${esc(ft)}</div>
-    <div class="surf-rel">${esc(z.rel)}</div>
-    ${surfWaveSvg((z.min + z.max) / 2, color)}
-  </div>`;
+// ===== The Hoff-o-meter ====================================================
+// An original Baywatch-homage lifeguard (not an actual Hasselhoff photo —
+// that's copyrighted art we can't ship), drawn so the body landmarks sit at
+// true height fractions: knees 0.28, waist 0.55, stomach 0.62, chest 0.73,
+// head 1.0. The figure is clipped from the feet up to the wave height, with
+// a rating-colored waterline on top; overhead days stack whole figures.
+const HOFF_PERSON_PX = 64;
+const HOFF_SVG = `<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+  <path d="M12 9 Q11 1 20 1 Q29 1 28 9 Q28 13 26 14 L14 14 Q12 13 12 9 Z" fill="#4a2f1d"></path>
+  <rect x="14.5" y="6" width="11" height="10.5" rx="4.5" fill="#c98850"></rect>
+  <rect x="17.5" y="15" width="5" height="5" fill="#b97a44"></rect>
+  <path d="M11 21 Q20 17 29 21 L28 45 L12 45 Z" fill="#c98850"></path>
+  <path d="M16 27 Q20 30 24 27" stroke="#a86a38" stroke-width="1" fill="none"></path>
+  <rect x="7.2" y="21" width="4.6" height="27" rx="2.3" fill="#c98850"></rect>
+  <rect x="28.2" y="21" width="4.6" height="27" rx="2.3" fill="#c98850"></rect>
+  <path d="M12 45 L28 45 L28 57 L22.5 57 L22.5 51 L17.5 51 L17.5 57 L12 57 Z" fill="#e23b3b"></path>
+  <rect x="12.5" y="57" width="6" height="36" rx="2.5" fill="#c98850"></rect>
+  <rect x="21.5" y="57" width="6" height="36" rx="2.5" fill="#c98850"></rect>
+  <rect x="11" y="93" width="8.5" height="6" rx="2.5" fill="#b97a44"></rect>
+  <rect x="20.5" y="93" width="8.5" height="6" rx="2.5" fill="#b97a44"></rect>
+</svg>`;
+
+// "Thigh to stomach" → 0.62 of a person, "Head high" → 1, "Double overhead"
+// → 2 stacked. Falls back to feet ÷ a 5.6 ft person when no keyword matches.
+function hoffFraction(rel, maxFt){
+  const s = String(rel || '').toLowerCase();
+  if (s.includes('triple')) return 3;
+  if (s.includes('double')) return 2;
+  if (s.includes('overhead')) return 1.3;
+  const parts = [
+    ['head', 1], ['shoulder', 0.85], ['chest', 0.73], ['stomach', 0.62],
+    ['belly', 0.62], ['waist', 0.55], ['thigh', 0.42], ['knee', 0.28],
+    ['shin', 0.16], ['ankle', 0.08]
+  ];
+  let f = 0;
+  for (const [k, v] of parts) if (s.includes(k)) f = Math.max(f, v);
+  if (f) return f;
+  if (s.includes('flat')) return 0.06;
+  const ft = Number(maxFt) || 0;
+  return ft > 0 ? Math.min(3, ft / 5.6) : 0.5;
 }
 
-// A little water line whose swell scales with the wave height — flat day,
-// flat line; 10 ft pins the amplitude.
-function surfWaveSvg(hFt, color){
-  const amp = Math.max(2, Math.min(14, hFt * 2.4));
-  const wave = (a, y0) => `M -20 ${y0} q 15 -${a} 30 0 t 30 0 t 30 0 t 30 0 t 30 0 V 44 H -20 Z`;
-  return `<svg viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true">
-    <path d="${wave(amp * 0.7, 27)}" fill="${color}" opacity="0.16"></path>
-    <path d="${wave(amp, 24)}" fill="${color}" opacity="0.28"></path>
-    <path d="${wave(amp, 24).replace(/ V 44 H -20 Z$/, '')}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" vector-effect="non-scaling-stroke"></path>
-  </svg>`;
+function hoffMeter(rel, maxFt, color){
+  const frac = hoffFraction(rel, maxFt);
+  const h = Math.max(6, Math.round(frac * HOFF_PERSON_PX));
+  const count = Math.max(1, Math.ceil(frac));
+  const figs = Array.from({ length: count }, (_, i) =>
+    `<span class="hoff-fig" style="bottom:${i * HOFF_PERSON_PX}px">${HOFF_SVG}</span>`).join('');
+  return `<div class="hoff" style="height:${h}px" title="${esc(rel || '')}">${figs}<span class="hoff-waterline" style="background:${color}"></span></div>`;
 }
 
 // Your own pledge accrual, shown only to you on the Account page — the
