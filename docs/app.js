@@ -418,10 +418,14 @@ async function saveDisplayName(){
 const THEME_KEY = 'surftober.theme.v1';
 // on-accent = ink on accent-filled surfaces; accent-text = accent used AS text
 // (darkened on light themes). Every pairing is WCAG-checked >= 4.5:1.
-const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border', 'on-accent', 'accent-text'];
+// btn-bg/btn-bg-strong (optional): a deeper orange for button/active-tab
+// fills so on-accent can be WHITE and still pass — white on the bright brand
+// orange #ff6b35 is only 2.8:1, but on #d1470f→#c2410c it's 4.6–5.2:1.
+// Themes without them fall back to accent/accent-strong via CSS var defaults.
+const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border', 'on-accent', 'accent-text', 'btn-bg', 'btn-bg-strong'];
 
 const THEMES = {
-  'sunset-surf': { label: 'Sunset Surf (current)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
+  'sunset-surf': { label: 'Sunset Surf (dark mode)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#ffffff', 'accent-text': '#ff6b35', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c' } },
   'sunset-ember': { label: 'Sunset Surf · accent borders', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#9c4d31', 'card-border': '#9c4d31', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
   'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e', 'on-accent': '#26140a', 'accent-text': '#ff8b5e' } },
   'board-wax': { label: 'Board Wax', vars: { 'bg': '#181310', 'panel': '#241c16', 'muted': '#33271d', 'accent': '#f4703a', 'accent-strong': '#dd4f0e', 'text': '#f3eae2', 'ok': '#57cfa8', 'warn': '#ffb54d', 'input-bg': '#33271d', 'input-border': '#85684c', 'card-border': '#4a3728', 'on-accent': '#140a04', 'accent-text': '#f4703a' } },
@@ -433,29 +437,69 @@ const THEMES = {
   'deep-kelp': { label: 'Deep Kelp', vars: { 'bg': '#0a1f14', 'panel': '#12301f', 'muted': '#1a4029', 'accent': '#ffc857', 'accent-strong': '#f4a300', 'text': '#eaf6ec', 'ok': '#4ecdc4', 'warn': '#ff9f1c', 'input-bg': '#1a4029', 'input-border': '#2a5a3c', 'card-border': '#2a5a3c', 'on-accent': '#1f1503', 'accent-text': '#ffc857' } },
   'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349', 'on-accent': '#02060c', 'accent-text': '#4da3ff' } },
   'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
-  'pumpkin-spice': { label: 'Pumpkin Spice (light)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8', 'on-accent': '#26140a', 'accent-text': '#b54a17' } },
+  'pumpkin-spice': { label: 'Pumpkin Spice (light mode · default)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8', 'on-accent': '#ffffff', 'accent-text': '#b54a17', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c' } },
   'pumpkin-ember': { label: 'Pumpkin Spice · accent borders', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#e2a380', 'card-border': '#e2a380', 'on-accent': '#26140a', 'accent-text': '#b54a17' } },
   'sandbar': { label: 'Sandbar (light)', vars: { 'bg': '#f8efe2', 'panel': '#fffaf2', 'muted': '#eddcc2', 'accent': '#c8480f', 'accent-strong': '#b83c05', 'text': '#38271a', 'ok': '#1e7a52', 'warn': '#a95410', 'input-bg': '#ffffff', 'input-border': '#94795a', 'card-border': '#d8c3a2', 'on-accent': '#ffffff', 'accent-text': '#b23f07' } },
   'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#9a5c0d', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4', 'on-accent': '#ffffff', 'accent-text': '#0e7c86' } },
 };
 
+const DEFAULT_THEME = 'pumpkin-spice'; // light mode is the app default
+
 function currentThemeSelection(){
-  try { return JSON.parse(localStorage.getItem(THEME_KEY)) || { name: 'sunset-surf' }; }
-  catch { return { name: 'sunset-surf' }; }
+  try { return JSON.parse(localStorage.getItem(THEME_KEY)) || { name: DEFAULT_THEME }; }
+  catch { return { name: DEFAULT_THEME }; }
 }
 
 function themeVarsFor(sel){
-  if (sel.name === 'custom') return { ...THEMES['sunset-surf'].vars, ...(sel.vars || {}) };
-  return (THEMES[sel.name] || THEMES['sunset-surf']).vars;
+  if (sel.name === 'custom') return { ...THEMES[DEFAULT_THEME].vars, ...(sel.vars || {}) };
+  return (THEMES[sel.name] || THEMES[DEFAULT_THEME]).vars;
 }
 
 function applyThemeVars(vars){
   for (const k of THEME_VAR_NAMES) {
+    // Clear optional vars a theme doesn't define (btn-bg etc.) so switching
+    // away from a theme that set them falls back to the CSS defaults.
     if (vars[k]) document.documentElement.style.setProperty('--' + k, vars[k]);
+    else document.documentElement.style.removeProperty('--' + k);
   }
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta && vars.panel) meta.setAttribute('content', vars.panel);
+  reflectModeToggle();
 }
+
+// ===== Dark / light toggle (header ☀️🌙, available to everyone) ============
+// Dark = Sunset Surf, light = Pumpkin Spice. Same storage as the admin theme
+// selector, so the two stay consistent; an admin-picked exotic theme is
+// classified by its background luminance.
+function appliedThemeIsDark(){
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  const m = bg.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) < 128;
+}
+
+function reflectModeToggle(){
+  const btn = document.getElementById('mode-toggle');
+  if (btn) btn.textContent = appliedThemeIsDark() ? '☀️' : '🌙';
+}
+
+function initModeToggle(){
+  const btn = document.getElementById('mode-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const name = appliedThemeIsDark() ? 'pumpkin-spice' : 'sunset-surf';
+    localStorage.setItem(THEME_KEY, JSON.stringify({ name }));
+    applyThemeVars(themeVarsFor({ name }));
+    seedThemePickers(themeVarsFor({ name }));
+    reflectThemeChips();
+  });
+  reflectModeToggle();
+}
+
+// Apply the saved theme the moment this module evaluates — waiting for the
+// window load event painted one frame of the wrong mode first.
+applyThemeVars(themeVarsFor(currentThemeSelection()));
 
 function reflectThemeChips(){
   const sel = currentThemeSelection();
@@ -521,8 +565,8 @@ function initThemeUI(){
   const resetBtn = document.getElementById('btn-theme-reset');
   if (resetBtn) resetBtn.addEventListener('click', () => {
     localStorage.removeItem(THEME_KEY);
-    applyThemeVars(THEMES['sunset-surf'].vars);
-    seedThemePickers(THEMES['sunset-surf'].vars);
+    applyThemeVars(THEMES[DEFAULT_THEME].vars);
+    seedThemePickers(THEMES[DEFAULT_THEME].vars);
     reflectThemeChips();
   });
 
@@ -2244,6 +2288,7 @@ window.addEventListener('hashchange', renderTabs);
 window.addEventListener('load', () => {
   applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
   initThemeUI();
+  initModeToggle();
   renderTabs();
   initForm();
   attachAccountHandlers();
