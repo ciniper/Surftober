@@ -1,20 +1,27 @@
-/* OPTION 1: Sunset Surf - Dark navy with warm orange accents */
+/* Default = Pumpkin Spice (light mode). Dark mode = Sunset Surf, applied by
+   app.js via the header toggle / admin theme selector. These values must
+   mirror the 'pumpkin-spice' preset in app.js THEMES. */
 * { box-sizing: border-box; }
 :root {
-  --bg: #0a1628;          /* deep navy blue */
-  --panel: #152238;       /* lighter navy panel */
-  --muted: #1e3a52;       /* muted blue-grey */
-  --accent: #ff6b35;      /* vibrant sunset orange */
-  --accent-strong: #ff4500; /* deep orange */
-  --text: #e8f4f8;        /* light blue-white */
-  --ok: #4ecdc4;          /* turquoise */
-  --warn: #ffa500;        /* orange warn */
-  --input-bg: #1e3a52;    /* muted blue input */
-  --input-border: #2d4a62; /* lighter border */
-  --card-border: #2d4a62;
-  --on-accent: #26140a;   /* ink on accent-filled surfaces (buttons, active tabs) */
-  --accent-text: #ff6b35; /* accent used AS text — darkened on light themes for contrast */
+  --bg: #f5f0e8;          /* warm cream */
+  --panel: #fff8f0;       /* lighter cream panel */
+  --muted: #e8dcc8;       /* warm sand */
+  --accent: #ff6b35;      /* the brand orange (chips, rings, highlights) */
+  --accent-strong: #e85d2a;
+  --text: #2d2416;        /* espresso ink */
+  --ok: #2d8659;
+  --warn: #a8560f;
+  --input-bg: #ffffff;
+  --input-border: #d4c4a8;
+  --card-border: #d4c4a8;
+  --on-accent: #ffffff;   /* text on button/active-tab fills — white passes on btn-bg */
+  --accent-text: #b54a17; /* accent used AS text — darkened for light-bg contrast */
   --danger: #ff4444;      /* one red for all destructive UI */
+  /* Button/active-tab fill: deeper than the brand orange so WHITE text passes
+     WCAG (white on #ff6b35 is 2.8:1; on this pair it's 4.6-5.2:1). Themes
+     without these fall back to accent/accent-strong. */
+  --btn-bg: #d1470f;
+  --btn-bg-strong: #c2410c;
 }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
 .app-header, .app-footer { background: var(--panel); padding: 10px 14px; display: flex; align-items: center; gap: 12px; z-index: 10; border-bottom: 2px solid var(--accent); }
@@ -29,7 +36,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: 
 .tabs::-webkit-scrollbar { display: none; }
 .tabs a { color: var(--text); text-decoration: none; padding: 10px 12px; border-radius: 6px; background: transparent; transition: all 0.2s ease; flex: 0 0 auto; white-space: nowrap; }
 .tabs a:hover { background: var(--muted); }
-.tabs a.active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.tabs a.active { background: var(--btn-bg, var(--accent)); color: var(--on-accent); font-weight: 600; }
 main { padding: 12px; display: block; }
 .page { display: none; }
 .page.active { display: block; }
@@ -50,7 +57,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--text) 45%, transparent); }
 input:disabled, select:disabled, textarea:disabled { opacity: 0.5; cursor: not-allowed; }
 /* Shadows follow the theme's accent — a fixed orange glow looked wrong on teal/blue/pink themes */
-button { border-radius: 8px; padding: 10px 12px; font-size: 15px; transition: all 0.2s ease; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: var(--on-accent); font-weight: 600; border: none; box-shadow: 0 4px 6px color-mix(in srgb, var(--accent) 30%, transparent); cursor: pointer; }
+button { border-radius: 8px; padding: 10px 12px; font-size: 15px; transition: all 0.2s ease; background: linear-gradient(135deg, var(--btn-bg, var(--accent)) 0%, var(--btn-bg-strong, var(--accent-strong)) 100%); color: var(--on-accent); font-weight: 600; border: none; box-shadow: 0 4px 6px color-mix(in srgb, var(--accent) 30%, transparent); cursor: pointer; }
 button:active { transform: translateY(2px); box-shadow: 0 2px 4px color-mix(in srgb, var(--accent) 30%, transparent); }
 /* Button hierarchy: primary = accent gradient (default), secondary = quiet, warn = destructive */
 button.btn-secondary { background: var(--muted); color: var(--text); border: 1px solid var(--card-border); box-shadow: none; }
@@ -236,3 +243,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 /* v1.9.2: medal thresholds as real chips instead of a text line */
 .medal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
 .medal-key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: color-mix(in srgb, var(--text) 72%, transparent); white-space: nowrap; }
+
+/* v1.11: dark/light toggle in the header */
+.mode-toggle { background: transparent; border: 1px solid transparent; box-shadow: none; padding: 8px 10px; font-size: 17px; line-height: 1; flex: 0 0 auto; }
+.mode-toggle:hover { background: var(--muted); filter: none; }
+.mode-toggle:active { transform: translateY(1px); box-shadow: none; }
