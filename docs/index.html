@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=29" />
+  <link rel="stylesheet" href="./styles.css?v=30" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -163,19 +163,20 @@
             <input required type="date" id="log-date" />
           </label>
           <label>
-            Type
+            Session Type
             <select id="log-type">
               <option value="surf">Surf</option>
-              <option value="windsport">Windsport (Kite/Wing)</option>
-              <option value="swim">Swim/Dip/Bodysurf</option>
-              <option value="other">Other (Kayak/In-water Photo/Boogie)</option>
-              <option value="cleanup">Cleanup</option>
+              <option value="windsport">Windsport</option>
+              <option value="swim">Swim</option>
+              <option value="other">Other</option>
+              <option value="cleanup">Beach Cleanup</option>
             </select>
+            <span class="hint type-hint" id="log-type-hint"></span>
           </label>
           <label>
             Duration
             <div class="duration-inputs">
-              <input type="number" id="log-duration-h" min="0" max="24" value="1" inputmode="numeric" aria-label="Hours" /> h
+              <input type="number" id="log-duration-h" min="0" max="24" value="0" inputmode="numeric" aria-label="Hours" /> h
               <input type="number" id="log-duration-m" min="0" max="59" step="1" value="0" inputmode="numeric" aria-label="Minutes" /> m
             </div>
           </label>
@@ -195,11 +196,25 @@
           </label>
         </div>
         <div class="grid">
-          <label class="checkbox">
-            <input type="checkbox" id="log-no-wetsuit" /> No Wetsuit (double minutes)
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" id="log-costume" /> Costume Bonus (+1h once)
+          <label id="field-bonuses" for="bonus-dd">
+            Bonuses
+            <details class="bonus-dd" id="bonus-dd">
+              <summary id="bonus-summary">None</summary>
+              <div class="bonus-menu">
+                <label class="checkbox">
+                  <input type="checkbox" id="log-no-wetsuit" />
+                  <span><strong>No Wetsuit</strong> — 2× your time <span class="hint">(cold-water bravery)</span></span>
+                </label>
+                <label class="checkbox">
+                  <input type="checkbox" id="log-costume" />
+                  <span><strong>Costume</strong> — +1 hour, once per event <span class="hint">(near Halloween)</span></span>
+                </label>
+                <label class="checkbox">
+                  <input type="checkbox" id="log-cleanup" />
+                  <span><strong>Beach Cleanup</strong> — +1 hour, sets session type <span class="hint">(trash pickup)</span></span>
+                </label>
+              </div>
+            </details>
           </label>
         </div>
         <label>
@@ -438,6 +453,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=7"></script>
-  <script type="module" src="./app.js?v=40"></script>
+  <script type="module" src="./app.js?v=41"></script>
 </body>
 </html>
