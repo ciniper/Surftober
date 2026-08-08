@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=26" />
+  <link rel="stylesheet" href="./styles.css?v=27" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -260,7 +260,7 @@
         <h2>Leaderboard</h2>
         <div id="pledge-banner" class="pledge-banner" hidden>
           <span class="pledge-label">Total pledged</span>
-          <span class="pledge-amount"></span>
+          <span class="pledge-amount"><svg class="money-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect><circle cx="12" cy="12" r="2.7" fill="currentColor"></circle><circle cx="6.2" cy="12" r="0.9" fill="currentColor"></circle><circle cx="17.8" cy="12" r="0.9" fill="currentColor"></circle></svg><span class="pledge-amount-num"></span></span>
         </div>
       </div>
       <div id="surf-report" class="surf-report" hidden></div>
@@ -276,7 +276,6 @@
         <span class="medal-key"><span class="badge silver">SILVER</span> 30h+</span>
         <span class="medal-key"><span class="badge bronze">BRONZE</span> 25h+</span>
         <span class="medal-key"><span class="badge participant">PARTICIPANT</span> 10h+</span>
-        <span class="medal-key"><span class="badge observer">OBSERVER</span> under 10h</span>
       </div>
     </section>
 
@@ -439,6 +438,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=7"></script>
-  <script type="module" src="./app.js?v=37"></script>
+  <script type="module" src="./app.js?v=38"></script>
 </body>
 </html>
