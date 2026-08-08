@@ -47,7 +47,9 @@ main { padding: 12px; display: block; }
    Duration inputs on desktop. Let controls shrink to their track instead. */
 .grid label { min-width: 0; }
 .grid input, .grid select, .grid textarea { min-width: 0; width: 100%; }
-label { display: grid; gap: 6px; font-size: 14px; }
+/* align-content start: without it a tall neighbor in the same .grid row
+   (photo cell, textarea) stretches every input in the row to match */
+label { display: grid; gap: 6px; font-size: 14px; align-content: start; }
 .hidden { display: none !important; }
 /* 16px on form controls is load-bearing: anything smaller makes iOS Safari
    auto-zoom on every field focus and strand the user zoomed-in. */
@@ -264,3 +266,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .streak-icon { width: 13px; height: 13px; color: var(--accent); flex: 0 0 auto; }
 th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .sort-arrow { opacity: 0.85; }
+
+/* v1.12.2: iOS date/time inputs have an intrinsic native width that
+   overflows narrow grid columns — flatten to plain fields */
+input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; }
+/* Static "Name" display on the log form (name is profile-owned, not editable here) */
+.log-as { display: grid; gap: 6px; font-size: 14px; align-content: start; }
+.log-as strong { font-size: 16px; padding: 10px 0; }

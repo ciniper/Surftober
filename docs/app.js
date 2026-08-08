@@ -304,14 +304,25 @@ async function saveProfile(){
 }
 
 function enforceProfileNameOnUI(){
-  // Log form user field
+  // Log form user field. With a profile name it's plain text, not an input —
+  // the name is profile-owned and was never editable here anyway. The hidden
+  // input keeps its value so the submit path is unchanged.
   const userEl = document.getElementById('log-user');
-  if (userEl) {
-    if (currentUser && profileName) {
-      userEl.value = profileName;
-      userEl.readOnly = true;
-      userEl.title = 'Name comes from your profile. Edit in Account tab.';
-    } else if (currentUser && !profileName) {
+  const labelEl = document.getElementById('log-user-label');
+  const staticEl = document.getElementById('log-user-static');
+  if (!userEl) return;
+  if (currentUser && profileName) {
+    userEl.value = profileName;
+    userEl.readOnly = true;
+    if (labelEl) labelEl.classList.add('hidden');
+    if (staticEl) {
+      staticEl.style.display = '';
+      staticEl.innerHTML = `<span>Name</span><strong>${esc(profileName)}</strong>`;
+    }
+  } else {
+    if (labelEl) labelEl.classList.remove('hidden');
+    if (staticEl) staticEl.style.display = 'none';
+    if (currentUser && !profileName) {
       userEl.value = '';
       userEl.readOnly = true;
       userEl.placeholder = 'Set your name in Account tab';
