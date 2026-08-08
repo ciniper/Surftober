@@ -34,10 +34,14 @@ function inRange(dateStr, { year, month, start, end } = {}) {
 function normalizeSession(raw) {
   // raw: {user,date,type,duration(HH:MM),location,board,notes,no_wetsuit,costume,cleanup_items,audio_b64}
   const duration_minutes = hhmmToMinutes(raw.duration);
-  const no_wetsuit = raw.no_wetsuit === true || raw.no_wetsuit === 1 || `${raw.no_wetsuit}` === '1';
-  const costume = raw.costume === true || raw.costume === 1 || `${raw.costume}` === '1';
+  const flag = (v) => v === true || v === 1 || `${v}` === '1';
+  const no_wetsuit = flag(raw.no_wetsuit);
+  const costume = flag(raw.costume);
+  const taught_kook = flag(raw.taught_kook);
+  const water_reading = flag(raw.water_reading);
   const cleanup_items = Number(raw.cleanup_items || 0);
-  // Costume bonus: one-time +60 minutes per user per month/year selection is handled at rollup stage
+  // One-time +60 min bonuses (costume, teach-a-kook, water reading) are
+  // applied at the rollup stage, once per user per period.
   const base_minutes = duration_minutes * (no_wetsuit ? 2 : 1);
   return {
     ...raw,
@@ -45,6 +49,8 @@ function normalizeSession(raw) {
     base_minutes,
     no_wetsuit,
     costume,
+    taught_kook,
+    water_reading,
     cleanup_items,
     audio_b64: raw.audio_b64 || null,
   };
@@ -60,9 +66,11 @@ function rollupByUser(sessions, range = {}) {
   }
   const result = [];
   for (const [user, arr] of perUser.entries()) {
-    // one-time costume bonus: +60 minutes if any session has costume=true in the period
-    const costume_bonus = arr.some(s=>s.costume) ? 60 : 0;
-    const total_minutes = arr.reduce((a, b) => a + b.base_minutes, 0) + costume_bonus;
+    // one-time bonuses: +60 minutes each (once per period) for costume,
+    // teach-a-kook, and water-quality reading
+    const one_time_bonus = ['costume', 'taught_kook', 'water_reading']
+      .reduce((a, k) => a + (arr.some(s => s[k]) ? 60 : 0), 0);
+    const total_minutes = arr.reduce((a, b) => a + b.base_minutes, 0) + one_time_bonus;
     const total_hours = total_minutes / 60;
     const medal = total_hours >= 50 ? 'PLATINUM' : total_hours >= 40 ? 'GOLD' : total_hours >= 30 ? 'SILVER' : total_hours >= 25 ? 'BRONZE' : total_hours >= 10 ? 'PARTICIPANT' : 'OBSERVER';
     const boards = new Set(arr.map(x => (x.board || '').trim()).filter(Boolean)).size;

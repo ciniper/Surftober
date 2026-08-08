@@ -43,8 +43,8 @@ const PROFILE_COLS = [
 // stay in the DB and show up here with a timestamp in that column.
 const SESSION_COLS = [
   'id', 'team', 'user_id', 'user_name', 'date', 'start_time', 'type', 'duration_minutes',
-  'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'cleanup_items',
-  'audio_url', 'deleted_at', 'created_at'
+  'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'taught_kook',
+  'water_reading', 'cleanup_items', 'audio_url', 'deleted_at', 'created_at'
 ];
 
 // v1.5+: the admin-launched seasons table.

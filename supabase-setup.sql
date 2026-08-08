@@ -123,6 +123,8 @@ create table if not exists public.sessions (
   notes text,
   no_wetsuit boolean default false,
   costume boolean default false,
+  taught_kook boolean default false,   -- one-time +1h: took a newbie out surfing
+  water_reading boolean default false, -- one-time +1h: BWTF water-quality sampling
   cleanup_items integer default 0,
   client_entry_id uuid,
   audio_url text,
