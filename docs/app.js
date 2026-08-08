@@ -2180,41 +2180,98 @@ function hoffMeter(rel, maxFt, color){
 }
 
 // ===== "Today at Surftober" tile ===========================================
-// Session count + hours logged today, plus one featured journal/audio from
-// today's sessions. The feature is deterministic (day number modulo the
-// candidate count) so everyone sees the same pick and it rotates daily.
+// Day stats plus a featured session. Arrows page backward through previous
+// days (event start → today) and through that day's sessions; the default
+// pick per day is deterministic (day number modulo count) so everyone sees
+// the same feature until they start browsing. Browse state lives in module
+// vars so realtime re-renders don't yank the reader elsewhere.
+let todayTileDate = null; // 'YYYY-MM-DD' being viewed; null = today
+let todayTileIdx = null;  // session index within the day; null = daily default
+
 function renderTodayTile(){
   const box = document.getElementById('today-tile');
   if (!box) return;
   // "Today" only makes sense on the live event — hide on archived views
   if (!isViewingActiveEvent()) { box.hidden = true; return; }
+  const ev = viewedEvent || DEFAULT_EVENT;
   const today = todayStr();
+  let day = todayTileDate || today;
+  if (day > today) day = today;
+  if (day < ev.start_date) day = ev.start_date;
+
+  const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const shiftDay = (from, off) => { const d = SurftoberAwards.localDate(from); d.setDate(d.getDate() + off); return iso(d); };
+
   const sessions = loadSessions().map(SurftoberAwards.normalizeSession)
-    .filter((s) => String(s.date).slice(0, 10) === today);
+    .filter((s) => String(s.date).slice(0, 10) === day)
+    .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
   const totalMins = sessions.reduce((a, s) => a + s.base_minutes, 0);
   const surfers = new Set(sessions.map((s) => (s.user || '').trim()).filter(Boolean));
+  const isToday = day === today;
   const stat = sessions.length
     ? `<strong>${sessions.length}</strong> session${sessions.length === 1 ? '' : 's'} · <strong>${(totalMins / 60).toFixed(1)} h</strong> · ${surfers.size} surfer${surfers.size === 1 ? '' : 's'}`
-    : 'No sessions yet — first wave wins';
+    : (isToday ? 'No sessions yet — first wave wins' : 'No sessions this day');
 
-  const candidates = sessions.filter((s) => (s.notes && s.notes.trim()) || s.audio_url);
+  let idx = todayTileIdx;
+  if (idx == null) {
+    const dayN = Math.floor(SurftoberAwards.localDate(day).getTime() / 86400000);
+    idx = sessions.length ? dayN % sessions.length : 0;
+  }
+  idx = Math.min(Math.max(0, idx), Math.max(0, sessions.length - 1));
+
   let feature = '';
-  if (candidates.length) {
-    const dayN = Math.floor(SurftoberAwards.localDate(today).getTime() / 86400000);
-    const s = candidates[dayN % candidates.length];
+  if (sessions.length) {
+    const s = sessions[idx];
     const text = String(s.notes || '').trim();
     const snippet = text.length > 240 ? text.slice(0, 240).trimEnd() + '…' : text;
+    const bits = [
+      s.location ? `at ${esc(s.location)}` : '',
+      s.start_time ? esc(fmtTime(s.start_time)) : '',
+      SurftoberAwards.minutesToHHMM(s.base_minutes)
+    ].filter(Boolean).join(' · ');
+    const sessNav = sessions.length > 1
+      ? `<span class="today-sess-nav"><button type="button" class="today-nav" data-nav="sess-prev" aria-label="Previous session">‹</button> ${idx + 1} / ${sessions.length} <button type="button" class="today-nav" data-nav="sess-next" aria-label="Next session">›</button></span>`
+      : '';
     feature = `<div class="today-feature">
-      <div class="today-feature-head">Featured session — <strong>${esc(s.user || '')}</strong>${s.location ? ` at ${esc(s.location)}` : ''}</div>
+      <div class="today-feature-head"><span><a href="#me" class="today-user" data-user="${esc(s.user || '')}">${esc(s.user || '')}</a> ${bits}</span>${sessNav}</div>
       ${snippet ? `<blockquote class="today-quote">“${esc(snippet)}”</blockquote>` : ''}
       ${s.audio_url ? audioPlayerHtml(s.audio_url) : ''}
     </div>`;
   }
+
+  const label = isToday ? 'Today at Surftober' : `${esc(fmtDay(day))} at Surftober`;
+  const dayNav =
+    `<button type="button" class="today-nav" data-nav="day-prev" aria-label="Previous day"${day > ev.start_date ? '' : ' disabled'}>‹</button>` +
+    ` <span class="surf-label">📅 ${label}</span> ` +
+    `<button type="button" class="today-nav" data-nav="day-next" aria-label="Next day"${isToday ? ' disabled' : ''}>›</button>`;
+
   box.innerHTML = `<div class="surf-main today-card">
-    <div class="today-head"><span class="surf-label">📅 Today at Surftober</span><span class="today-stat">${stat}</span></div>
+    <div class="today-head"><span class="today-day-nav">${dayNav}</span><span class="today-stat">${stat}</span></div>
     ${feature}
   </div>`;
   box.hidden = false;
+
+  box.querySelectorAll('.today-nav').forEach((b) => b.addEventListener('click', () => {
+    const nav = b.getAttribute('data-nav');
+    if (nav === 'day-prev') { todayTileDate = shiftDay(day, -1); todayTileIdx = null; }
+    else if (nav === 'day-next') { todayTileDate = shiftDay(day, 1); todayTileIdx = null; }
+    else if (nav === 'sess-prev') todayTileIdx = (idx - 1 + sessions.length) % sessions.length;
+    else if (nav === 'sess-next') todayTileIdx = (idx + 1) % sessions.length;
+    renderTodayTile();
+  }));
+  const link = box.querySelector('.today-user');
+  if (link) link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const name = link.getAttribute('data-user');
+    if (profileName && name === profileName) {
+      sessionsView = 'mine';
+    } else {
+      sessionsView = 'others';
+      otherUserSelected = name;
+    }
+    location.hash = '#me';
+    renderMyStats();
+  });
 }
 
 // Your own pledge accrual, shown only to you on the Account page — the
