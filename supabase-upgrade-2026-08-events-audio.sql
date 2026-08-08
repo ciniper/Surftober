@@ -493,3 +493,14 @@ $$;
 -- create unique index if not exists profiles_display_name_unique_idx
 --   on public.profiles (lower(display_name))
 --   where display_name is not null and display_name <> '';
+
+-- =========================================================
+-- v1.14 : two new one-time +1h bonuses on the log form
+-- =========================================================
+-- Teach a Kook (take a newbie out surfing) and Water Quality Reading
+-- (volunteer sampling with the SF Blue Water Task Force). Scored like the
+-- costume bonus: once per event per person, +60 minutes. The app tolerates
+-- these columns being absent (PGRST204 retry strips them), so deploy order
+-- doesn't matter — but run this before anyone tries to claim one.
+alter table public.sessions add column if not exists taught_kook boolean default false;
+alter table public.sessions add column if not exists water_reading boolean default false;

@@ -98,9 +98,8 @@
       explaining the event, scoring, and UI at a glance. (The other two parts
       of this item shipped in v1.13.0: session types simplified to
       Surf/Windsport/Swim/Other/Beach Cleanup with per-type eligibility hints,
-      and bonuses moved into a Bonuses dropdown with plain-word descriptions.
-      Remaining wording sync: register.html's welcome-text bonus list should
-      match the new dropdown copy.)
+      and bonuses moved into a Bonuses dropdown with plain-word descriptions;
+      v1.14.0 synced register.html's welcome-text bonus list to all 5 bonuses.)
 - [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
       Water Task Force branding to the leaderboard water reading. Nuance: the
       live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
@@ -133,11 +132,11 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
-- New bonus-hour categories (Chase, 2026-08-05): take a water-quality reading
-  (BWTF volunteer sampling) for bonus hours; teach someone to surf/swim for
-  bonus hours. If adopted for Surftober 2026: add to the bonus list in
-  register.html's welcome text and wire scoring like costume/cleanup
-  (checkbox on the log form + rollup handling in awards.js).
+- [x] ~~New bonus-hour categories~~ (shipped v1.14.0 — "Teach a Kook" and
+  "Water Quality Reading", both one-time +1h like costume: `taught_kook` /
+  `water_reading` boolean columns on sessions, Bonuses-dropdown checkboxes
+  with once-per-event guards, rollup in awards.js, CSV + sheets-mirror
+  columns, register.html welcome list updated to all 5 bonuses.)
 - Engagement: streak tracking, daily prompt.
   (Photo wall graduated to the scoped "Photo bucket + Drive archive" item.
   Voice-memo recording shipped in v1.5.1.)

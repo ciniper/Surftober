@@ -781,6 +781,8 @@ async function fetchCloudSessions(){
     notes: s.notes,
     no_wetsuit: s.no_wetsuit ? 1 : 0,
     costume: s.costume ? 1 : 0,
+    taught_kook: s.taught_kook ? 1 : 0,
+    water_reading: s.water_reading ? 1 : 0,
     cleanup_items: s.cleanup_items || 0,
     audio_url: s.audio_url || null,
     start_time: s.start_time || null
@@ -830,9 +832,18 @@ async function insertCloud(row){
   // attach the key once the upgrade is detected.
   if (eventsTableAvailable) payload.audio_url = row.audio_url || null;
   payload.start_time = row.start_time || null;
+  payload.taught_kook = !!row.taught_kook;
+  payload.water_reading = !!row.water_reading;
   let { error } = await sb.from('sessions').insert(payload);
+  // Deploy-order safety: PostgREST rejects the whole insert when the payload
+  // names a column the deployed schema lacks. Strip the newest columns first
+  // and retry, then the older start_time (v1.7 SQL not run yet).
+  if (error && error.code === 'PGRST204' && 'taught_kook' in payload) {
+    delete payload.taught_kook;
+    delete payload.water_reading;
+    ({ error } = await sb.from('sessions').insert(payload));
+  }
   if (error && error.code === 'PGRST204' && 'start_time' in payload) {
-    // start_time column not there yet (v1.7 SQL not run) — save without it
     delete payload.start_time;
     ({ error } = await sb.from('sessions').insert(payload));
   }
@@ -1206,11 +1217,11 @@ function appendSession(row) {
 }
 
 function toCSV(rows) {
-  const header = ['user', 'date', 'start_time', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'cleanup_items', 'audio_url'];
+  const header = ['user', 'date', 'start_time', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'taught_kook', 'water_reading', 'cleanup_items', 'audio_url'];
   const quote = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.start_time || '', r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
+    lines.push([r.user, r.date, r.start_time || '', r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.taught_kook ? 1 : 0, r.water_reading ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
   }
   return lines.join('\n');
 }
@@ -1280,6 +1291,8 @@ function initForm() {
     const parts = [];
     if (document.getElementById('log-no-wetsuit').checked) parts.push('No Wetsuit ×2');
     if (document.getElementById('log-costume').checked) parts.push('Costume +1h');
+    if (document.getElementById('log-kook').checked) parts.push('Teach a Kook +1h');
+    if (document.getElementById('log-water').checked) parts.push('Water Reading +1h');
     if (document.getElementById('log-cleanup').checked) parts.push('Beach Cleanup');
     document.getElementById('bonus-summary').textContent = parts.length ? parts.join(' · ') : 'None';
   }
@@ -1289,49 +1302,54 @@ function initForm() {
     const isCleanup = type === 'cleanup';
     const h = document.getElementById('log-duration-h');
     const m = document.getElementById('log-duration-m');
-    const wetsuit = document.getElementById('log-no-wetsuit');
-    const costume = document.getElementById('log-costume');
-    // Cleanup is a fixed one-time +1h bonus, so its duration is locked;
-    // surf craft and location stay editable for every type.
+    const otherBonuses = ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water']
+      .map((id) => document.getElementById(id));
+    // Cleanup is a fixed one-time +1h bonus, so its duration is locked and
+    // the other bonuses don't apply; surf craft and location stay editable
+    // for every type.
     if (isCleanup) {
       h.value = 1;
       m.value = 0;
-      wetsuit.checked = false;
-      costume.checked = false;
+      otherBonuses.forEach((el) => { el.checked = false; });
     }
     h.disabled = isCleanup;
     m.disabled = isCleanup;
-    wetsuit.disabled = isCleanup;
-    costume.disabled = isCleanup;
+    otherBonuses.forEach((el) => { el.disabled = isCleanup; });
     const hint = document.getElementById('log-type-hint');
     if (hint) hint.textContent = TYPE_HINTS[type] || '';
     updateBonusSummary();
   }
+
+  // Once-per-event bonuses: costume, teach-a-kook, water-quality reading.
+  // Each checkbox locks once that user has already claimed it this event.
+  const ONE_TIME_BONUSES = [
+    { id: 'log-costume', key: 'costume', label: 'Costume' },
+    { id: 'log-kook', key: 'taught_kook', label: 'Teach a Kook' },
+    { id: 'log-water', key: 'water_reading', label: 'Water reading' }
+  ];
 
   function applyCostumeGuard() {
     const type = document.getElementById('log-type').value;
     if (type === 'cleanup') return; // already disabled
     const user = document.getElementById('log-user').value.trim();
     const dateStr = document.getElementById('log-date').value;
-    const costumeEl = document.getElementById('log-costume');
-    if (!user || !dateStr) {
-      costumeEl.disabled = false;
-      return;
-    }
-    if (costumeUsedForPeriod(user, dateStr)) {
-      costumeEl.checked = false;
-      costumeEl.disabled = true;
-      costumeEl.title = 'Costume bonus already used this month for this user';
-    } else {
-      costumeEl.disabled = false;
-      costumeEl.title = '';
+    for (const b of ONE_TIME_BONUSES) {
+      const el = document.getElementById(b.id);
+      if (!user || !dateStr) { el.disabled = false; continue; }
+      if (bonusUsedForPeriod(user, dateStr, b.key)) {
+        el.checked = false;
+        el.disabled = true;
+        el.title = `${b.label} bonus already used this event`;
+      } else {
+        el.disabled = false;
+        el.title = '';
+      }
     }
   }
 
-  function costumeUsedForPeriod(user, dateStr) {
-    // One costume bonus per event window (was per calendar month, with a UTC
-    // parse that misfiled dates in Pacific time). Ignores the session being
-    // edited so editing your costume session doesn't strip the flag.
+  function bonusUsedForPeriod(user, dateStr, key) {
+    // One bonus per event window. Ignores the session being edited so
+    // editing your own bonus session doesn't strip the flag.
     try {
       const ev = activeEvent || viewedEvent || DEFAULT_EVENT;
       const all = loadSessions();
@@ -1340,7 +1358,7 @@ function initForm() {
           (s.user || '').trim() === user.trim() &&
           (!editingId || s._id !== editingId) &&
           SurftoberAwards.inRange(s.date, { start: ev.start_date, end: ev.end_date }) &&
-          (s.costume === 1 || s.costume === true || String(s.costume) === '1')
+          (s[key] === 1 || s[key] === true || String(s[key]) === '1')
       );
     } catch {
       return false;
@@ -1359,7 +1377,7 @@ function initForm() {
   // TYPE directly doesn't check the bonus box).
   const bonusDd = document.getElementById('bonus-dd');
   const cleanupBonus = document.getElementById('log-cleanup');
-  ['log-no-wetsuit', 'log-costume'].forEach((id) =>
+  ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water'].forEach((id) =>
     document.getElementById(id).addEventListener('change', updateBonusSummary));
   cleanupBonus.addEventListener('change', () => {
     const typeEl = document.getElementById('log-type');
@@ -1399,6 +1417,8 @@ function initForm() {
       notes: document.getElementById('log-notes').value,
       no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
       costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
+      taught_kook: isCleanup ? 0 : document.getElementById('log-kook').checked ? 1 : 0,
+      water_reading: isCleanup ? 0 : document.getElementById('log-water').checked ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
     };
     if (!row.user || !row.date || !row.duration) {
@@ -1554,6 +1574,8 @@ function startEditSession(session){
   document.getElementById('log-notes').value = session.notes||'';
   document.getElementById('log-no-wetsuit').checked = !!session.no_wetsuit;
   document.getElementById('log-costume').checked = !!session.costume;
+  document.getElementById('log-kook').checked = !!session.taught_kook;
+  document.getElementById('log-water').checked = !!session.water_reading;
   // Editing a cleanup session: reflect it in the Bonuses dropdown so
   // unchecking there reverts the type
   document.getElementById('log-cleanup').checked = session.type === 'cleanup';
@@ -1596,7 +1618,14 @@ async function updateCloudSession(id, row){
   };
   if (eventsTableAvailable) payload.audio_url = row.audio_url || null; // see insertCloud
   payload.start_time = row.start_time || null;
+  payload.taught_kook = !!row.taught_kook;
+  payload.water_reading = !!row.water_reading;
   let { data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id');
+  if (error && error.code === 'PGRST204' && 'taught_kook' in payload) {
+    delete payload.taught_kook; // columns not there yet — see insertCloud
+    delete payload.water_reading;
+    ({ data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id'));
+  }
   if (error && error.code === 'PGRST204' && 'start_time' in payload) {
     delete payload.start_time; // column not there yet — see insertCloud
     ({ data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id'));
@@ -1761,30 +1790,41 @@ function renderMyStats() {
   const sessions = mine
     .filter((s) => SurftoberAwards.inRange(s.date, range))
     .sort((a, b) => String(b.date + (b.start_time || '')).localeCompare(String(a.date + (a.start_time || ''))));
-  // Determine which session gets the one-time costume +1h — PER USER (the
-  // name filter can be blank, showing everyone's sessions at once).
-  const costumeIdxByUser = new Map();
-  const costumeEarliestByUser = new Map();
-  sessions.forEach((s, i) => {
-    if (!s.costume) return;
-    const u = (s.user || '').trim();
-    const ts = SurftoberAwards.localDate(s.date).getTime();
-    if (!costumeEarliestByUser.has(u) || ts < costumeEarliestByUser.get(u)) {
-      costumeEarliestByUser.set(u, ts);
-      costumeIdxByUser.set(u, i);
-    }
-  });
+  // Determine which session gets each one-time +1h bonus (costume, teach a
+  // kook, water reading) — PER USER (the name filter can be blank, showing
+  // everyone's sessions at once). Earliest flagged session wins, matching
+  // the rollup's once-per-event scoring.
+  const ONE_TIME_FLAGS = [
+    { key: 'costume', badge: 'Costume +1h' },
+    { key: 'taught_kook', badge: 'Teach a Kook +1h' },
+    { key: 'water_reading', badge: 'Water Reading +1h' }
+  ];
+  const bonusIdxByUser = new Map(ONE_TIME_FLAGS.map((f) => [f.key, new Map()]));
+  for (const f of ONE_TIME_FLAGS) {
+    const earliest = new Map();
+    const idx = bonusIdxByUser.get(f.key);
+    sessions.forEach((s, i) => {
+      if (!s[f.key]) return;
+      const u = (s.user || '').trim();
+      const ts = SurftoberAwards.localDate(s.date).getTime();
+      if (!earliest.has(u) || ts < earliest.get(u)) {
+        earliest.set(u, ts);
+        idx.set(u, i);
+      }
+    });
+  }
   const isTiles = sessionsLayout === 'tiles';
   const out = [];
   if (!isTiles) {
     out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
-    const costumeApplied = costumeIdxByUser.get((s.user || '').trim()) === i;
-    const scoredMins = s.base_minutes + (costumeApplied ? 60 : 0);
+    const u = (s.user || '').trim();
+    const appliedFlags = ONE_TIME_FLAGS.filter((f) => bonusIdxByUser.get(f.key).get(u) === i);
+    const scoredMins = s.base_minutes + appliedFlags.length * 60;
     const bonusBadges = [
       s.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : '',
-      costumeApplied ? '<span class="badge">Costume +1h</span>' : '',
+      ...appliedFlags.map((f) => `<span class="badge">${f.badge}</span>`),
       s.type === 'cleanup' ? '<span class="badge">Cleanup</span>' : ''
     ]
       .filter(Boolean)
@@ -2369,6 +2409,8 @@ function importCSV(file) {
           const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || '']));
           row.no_wetsuit = Number(row.no_wetsuit || 0);
           row.costume = Number(row.costume || 0);
+          row.taught_kook = Number(row.taught_kook || 0);
+          row.water_reading = Number(row.water_reading || 0);
           row.cleanup_items = Number(row.cleanup_items || 0);
           rows.push(row);
         }
