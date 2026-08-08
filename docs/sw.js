@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v45';
+const CACHE = 'surftober-demo-v46';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
