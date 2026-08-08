@@ -94,6 +94,17 @@
       (white on brand #ff6b35 is only 2.8:1). Other 14 admin themes keep
       their old ink via CSS fallback. landing/register stay always-dark with
       pinned .app-version/.hint colors.)
+- [ ] **Info overlay + clearer wording** (Chase, 2026-08-08) — three parts:
+      (1) an info overlay (likely an ⓘ button opening a modal/sheet) explaining
+      the event, scoring, and UI at a glance; (2) clearer session type names —
+      the Log form's Type select currently reads "Surf / Windsport (Kite/Wing) /
+      Swim/Dip/Bodysurf / Other (Kayak/In-water Photo/Boogie) / Cleanup"
+      (index.html #log-type); (3) clearer bonus names + descriptions — the
+      "No Wetsuit (double minutes)" and "Costume Bonus (+1h once)" checkboxes
+      on the log form, the bonus list in register.html's welcome text, and the
+      bonus badges on Sessions tables should all tell the same story in plain
+      words (2x time without a wetsuit; one-time +1h costume near Halloween;
+      cleanup counts as water time).
 - [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
       Water Task Force branding to the leaderboard water reading. Nuance: the
       live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
