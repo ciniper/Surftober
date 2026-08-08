@@ -1267,34 +1267,45 @@ function initForm() {
   const f = document.getElementById('log-form');
   document.getElementById('log-date').value = defaultLogDate();
 
-  function applyCleanupUI() {
+  // What counts for each session type — shown as a hint under the select
+  const TYPE_HINTS = {
+    surf: 'Surf, boogie, paddleboard, kayak, bodysurf',
+    windsport: 'Windsurfing, kitesurfing, wing foiling',
+    swim: 'Open water swim, dipping, in-water photography',
+    other: 'Any other open water (ocean, river, lake) activity! Including kayaking, stand up paddle, etc…',
+    cleanup: 'Beach trash pickup — a one-time +1 hour bonus'
+  };
+
+  function updateBonusSummary(){
+    const parts = [];
+    if (document.getElementById('log-no-wetsuit').checked) parts.push('No Wetsuit ×2');
+    if (document.getElementById('log-costume').checked) parts.push('Costume +1h');
+    if (document.getElementById('log-cleanup').checked) parts.push('Beach Cleanup');
+    document.getElementById('bonus-summary').textContent = parts.length ? parts.join(' · ') : 'None';
+  }
+
+  function applyTypeUI() {
     const type = document.getElementById('log-type').value;
     const isCleanup = type === 'cleanup';
-    const isSwim = type === 'swim';
     const h = document.getElementById('log-duration-h');
     const m = document.getElementById('log-duration-m');
-    const board = document.getElementById('log-board');
-    const boardField = document.getElementById('field-craft');
     const wetsuit = document.getElementById('log-no-wetsuit');
     const costume = document.getElementById('log-costume');
+    // Cleanup is a fixed one-time +1h bonus, so its duration is locked;
+    // surf craft and location stay editable for every type.
     if (isCleanup) {
       h.value = 1;
       m.value = 0;
-      h.disabled = true;
-      m.disabled = true;
-      board.value = 'cleanup';
-      boardField.classList.add('hidden');
       wetsuit.checked = false;
-      wetsuit.disabled = true;
       costume.checked = false;
-      costume.disabled = true;
-    } else {
-      h.disabled = false;
-      m.disabled = false;
-      boardField.classList.toggle('hidden', isSwim);
-      wetsuit.disabled = false;
-      costume.disabled = false;
     }
+    h.disabled = isCleanup;
+    m.disabled = isCleanup;
+    wetsuit.disabled = isCleanup;
+    costume.disabled = isCleanup;
+    const hint = document.getElementById('log-type-hint');
+    if (hint) hint.textContent = TYPE_HINTS[type] || '';
+    updateBonusSummary();
   }
 
   function applyCostumeGuard() {
@@ -1337,12 +1348,31 @@ function initForm() {
   }
 
   document.getElementById('log-type').addEventListener('change', () => {
-    applyCleanupUI();
+    applyTypeUI();
     applyCostumeGuard();
   });
   document.getElementById('log-user').addEventListener('input', applyCostumeGuard);
   document.getElementById('log-date').addEventListener('change', applyCostumeGuard);
-  applyCleanupUI();
+
+  // Bonuses dropdown: summary text mirrors the checked boxes; the Beach
+  // Cleanup entry drives the session type (one-way — picking the cleanup
+  // TYPE directly doesn't check the bonus box).
+  const bonusDd = document.getElementById('bonus-dd');
+  const cleanupBonus = document.getElementById('log-cleanup');
+  ['log-no-wetsuit', 'log-costume'].forEach((id) =>
+    document.getElementById(id).addEventListener('change', updateBonusSummary));
+  cleanupBonus.addEventListener('change', () => {
+    const typeEl = document.getElementById('log-type');
+    if (cleanupBonus.checked) typeEl.value = 'cleanup';
+    else if (typeEl.value === 'cleanup') typeEl.value = 'surf';
+    typeEl.dispatchEvent(new Event('change'));
+    updateBonusSummary();
+  });
+  document.addEventListener('click', (e) => {
+    if (bonusDd && bonusDd.open && !bonusDd.contains(e.target)) bonusDd.removeAttribute('open');
+  });
+
+  applyTypeUI();
   applyCostumeGuard();
 
   f.addEventListener('submit', async (e) => {
@@ -1432,7 +1462,7 @@ function initForm() {
       // form.reset() restores values but not disabled/hidden state — without
       // this, logging a cleanup leaves the duration inputs disabled for the
       // next entry, which then silently saves as 01:00.
-      applyCleanupUI();
+      applyTypeUI();
       applyCostumeGuard();
     } catch (e) {
       const st = document.getElementById('status');
@@ -1448,7 +1478,7 @@ function initForm() {
     resetAudioField();
     document.getElementById('log-date').value = defaultLogDate();
     enforceProfileNameOnUI();
-    applyCleanupUI();
+    applyTypeUI();
     applyCostumeGuard();
   });
   // Delete (soft) — offered inside edit mode instead of on the session lists
@@ -1464,7 +1494,7 @@ function initForm() {
       resetAudioField();
       document.getElementById('log-date').value = defaultLogDate();
       enforceProfileNameOnUI();
-      applyCleanupUI();
+      applyTypeUI();
       applyCostumeGuard();
       await syncFromCloud();
     } catch (e) {
@@ -1524,13 +1554,16 @@ function startEditSession(session){
   document.getElementById('log-notes').value = session.notes||'';
   document.getElementById('log-no-wetsuit').checked = !!session.no_wetsuit;
   document.getElementById('log-costume').checked = !!session.costume;
+  // Editing a cleanup session: reflect it in the Bonuses dropdown so
+  // unchecking there reverts the type
+  document.getElementById('log-cleanup').checked = session.type === 'cleanup';
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
   editingId = session._id || null; // we'll attach _id when rendering from cloud
   editingAudioUrl = session.audio_url || null;
   setEditModeUI(true); // after editingId is set — the Delete button needs it
   resetAudioFieldForEdit();
-  // Re-apply type-dependent UI (cleanup disables inputs, swim hides craft)
+  // Re-apply type-dependent UI (cleanup locks duration, hint text, bonus summary)
   document.getElementById('log-type').dispatchEvent(new Event('change'));
   // Arriving from a scrolled session list: put the edit form in view
   window.scrollTo(0, 0);

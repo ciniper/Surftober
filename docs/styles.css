@@ -282,3 +282,14 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 .today-sess-nav { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
 .today-feature-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .today-user { color: var(--accent-text); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+
+/* v1.13: bonuses dropdown + session-type hint */
+.type-hint { font-size: 12px; line-height: 1.4; }
+.bonus-dd { position: relative; }
+.bonus-dd summary { list-style: none; cursor: pointer; user-select: none; border: 1px solid var(--input-border); background: var(--input-bg); border-radius: 8px; padding: 10px 12px; font-size: 16px; }
+.bonus-dd summary::-webkit-details-marker { display: none; }
+.bonus-dd summary::after { content: '▾'; float: right; opacity: 0.6; }
+.bonus-dd[open] summary { border-color: var(--accent); }
+.bonus-menu { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; background: var(--panel); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; display: grid; gap: 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); }
+.bonus-menu .checkbox { margin: 0; font-weight: 400; }
+.bonus-menu .checkbox strong { font-weight: 700; }
