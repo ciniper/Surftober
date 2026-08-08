@@ -373,10 +373,10 @@ const THEME_KEY = 'surftober.theme.v1';
 // fills so on-accent can be WHITE and still pass — white on the bright brand
 // orange #ff6b35 is only 2.8:1, but on #d1470f→#c2410c it's 4.6–5.2:1.
 // Themes without them fall back to accent/accent-strong via CSS var defaults.
-const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border', 'on-accent', 'accent-text', 'btn-bg', 'btn-bg-strong'];
+const THEME_VAR_NAMES = ['bg', 'panel', 'muted', 'accent', 'accent-strong', 'text', 'ok', 'warn', 'input-bg', 'input-border', 'card-border', 'on-accent', 'accent-text', 'btn-bg', 'btn-bg-strong', 'money'];
 
 const THEMES = {
-  'sunset-surf': { label: 'Sunset Surf (dark mode)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#ffffff', 'accent-text': '#ff6b35', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c' } },
+  'sunset-surf': { label: 'Sunset Surf (dark mode)', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#2d4a62', 'card-border': '#2d4a62', 'on-accent': '#ffffff', 'accent-text': '#ff6b35', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c', 'money': '#4bbf7a' } },
   'sunset-ember': { label: 'Sunset Surf · accent borders', vars: { 'bg': '#0a1628', 'panel': '#152238', 'muted': '#1e3a52', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#e8f4f8', 'ok': '#4ecdc4', 'warn': '#ffa500', 'input-bg': '#1e3a52', 'input-border': '#9c4d31', 'card-border': '#9c4d31', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
   'sunset-soft': { label: 'Sunset Soft', vars: { 'bg': '#0d1b30', 'panel': '#182842', 'muted': '#22405c', 'accent': '#ff8b5e', 'accent-strong': '#ff6b35', 'text': '#eef6f9', 'ok': '#4ecdc4', 'warn': '#ffb347', 'input-bg': '#22405c', 'input-border': '#33516e', 'card-border': '#33516e', 'on-accent': '#26140a', 'accent-text': '#ff8b5e' } },
   'board-wax': { label: 'Board Wax', vars: { 'bg': '#181310', 'panel': '#241c16', 'muted': '#33271d', 'accent': '#f4703a', 'accent-strong': '#dd4f0e', 'text': '#f3eae2', 'ok': '#57cfa8', 'warn': '#ffb54d', 'input-bg': '#33271d', 'input-border': '#85684c', 'card-border': '#4a3728', 'on-accent': '#140a04', 'accent-text': '#f4703a' } },
@@ -388,7 +388,7 @@ const THEMES = {
   'deep-kelp': { label: 'Deep Kelp', vars: { 'bg': '#0a1f14', 'panel': '#12301f', 'muted': '#1a4029', 'accent': '#ffc857', 'accent-strong': '#f4a300', 'text': '#eaf6ec', 'ok': '#4ecdc4', 'warn': '#ff9f1c', 'input-bg': '#1a4029', 'input-border': '#2a5a3c', 'card-border': '#2a5a3c', 'on-accent': '#1f1503', 'accent-text': '#ffc857' } },
   'midnight-set': { label: 'Midnight Set', vars: { 'bg': '#05080f', 'panel': '#0d1420', 'muted': '#16202f', 'accent': '#4da3ff', 'accent-strong': '#1f7ae0', 'text': '#e6eefc', 'ok': '#54e0b0', 'warn': '#ffb347', 'input-bg': '#16202f', 'input-border': '#243349', 'card-border': '#243349', 'on-accent': '#02060c', 'accent-text': '#4da3ff' } },
   'neon-beach': { label: 'Neon Beach', vars: { 'bg': '#0d0d0f', 'panel': '#1a1a1e', 'muted': '#2a2a32', 'accent': '#ff6b35', 'accent-strong': '#ff4500', 'text': '#f5f5f5', 'ok': '#00ff88', 'warn': '#ffaa00', 'input-bg': '#1a1a1e', 'input-border': '#3a3a42', 'card-border': '#2a2a32', 'on-accent': '#26140a', 'accent-text': '#ff6b35' } },
-  'pumpkin-spice': { label: 'Pumpkin Spice (light mode · default)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8', 'on-accent': '#ffffff', 'accent-text': '#b54a17', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c' } },
+  'pumpkin-spice': { label: 'Pumpkin Spice (light mode · default)', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#d4c4a8', 'card-border': '#d4c4a8', 'on-accent': '#ffffff', 'accent-text': '#b54a17', 'btn-bg': '#d1470f', 'btn-bg-strong': '#c2410c', 'money': '#1e7a47' } },
   'pumpkin-ember': { label: 'Pumpkin Spice · accent borders', vars: { 'bg': '#f5f0e8', 'panel': '#fff8f0', 'muted': '#e8dcc8', 'accent': '#ff6b35', 'accent-strong': '#e85d2a', 'text': '#2d2416', 'ok': '#2d8659', 'warn': '#a8560f', 'input-bg': '#ffffff', 'input-border': '#e2a380', 'card-border': '#e2a380', 'on-accent': '#26140a', 'accent-text': '#b54a17' } },
   'sandbar': { label: 'Sandbar (light)', vars: { 'bg': '#f8efe2', 'panel': '#fffaf2', 'muted': '#eddcc2', 'accent': '#c8480f', 'accent-strong': '#b83c05', 'text': '#38271a', 'ok': '#1e7a52', 'warn': '#a95410', 'input-bg': '#ffffff', 'input-border': '#94795a', 'card-border': '#d8c3a2', 'on-accent': '#ffffff', 'accent-text': '#b23f07' } },
   'sea-glass': { label: 'Sea Glass (light)', vars: { 'bg': '#f2f7f7', 'panel': '#ffffff', 'muted': '#e3edee', 'accent': '#0e7c86', 'accent-strong': '#0a5c64', 'text': '#17323a', 'ok': '#1a936f', 'warn': '#9a5c0d', 'input-bg': '#ffffff', 'input-border': '#c2d4d6', 'card-border': '#d5e3e4', 'on-accent': '#ffffff', 'accent-text': '#0e7c86' } },
@@ -1689,19 +1689,21 @@ function renderMyStats() {
 
           const av = avatarSrc(pageProfile && pageProfile.photo_base64);
           const funComment = pageProfile && pageProfile.fun_comment ? String(pageProfile.fun_comment).trim() : '';
+          // No badge under 10h (OBSERVER stays internal-only)
+          const medalBadge = t.medal === 'OBSERVER' ? '' : `<span class="badge ${t.medal.toLowerCase()}">${t.medal}</span>`;
           let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
           if (funComment) content += `<div class="fun-comment">“${esc(funComment)}”</div>`;
 
           if (goalHours) {
             const statusColor = t.total_hours >= onTrackHours ? 'var(--ok)' : 'var(--warn)'; // theme-aware
             content += `
-              <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>
+              <div>Current Hours: <strong>${t.total_hours.toFixed(1)}</strong> ${medalBadge}</div>
               <div>On-Track Hours: <strong style="color:${statusColor}">${onTrackHours.toFixed(1)}</strong></div>
               <div>Goal Hours: <strong>${goalHours}</strong> ${goalMedalBadge}</div>
               <div>Progress: <strong>${progressPercent.toFixed(0)}%</strong> ${progressPercent >= 100 ? '🎉' : ''}</div>
             `;
           } else {
-            content += `<div>Total Hours: <strong>${t.total_hours.toFixed(1)}</strong> <span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></div>`;
+            content += `<div>Total Hours: <strong>${t.total_hours.toFixed(1)}</strong> ${medalBadge}</div>`;
           }
 
           content += `</div>`;
@@ -1802,6 +1804,10 @@ function currentStreaks(normalized, range){
   return streaks;
 }
 
+let leaderboardSort = 'hours'; // 'hours' (default) | 'name' | 'streak'
+
+const STREAK_FLAME = `<svg class="streak-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.7 3.4-.3 5.8-1.8 7.7C8.7 11.6 7 13.3 7 16a5 5 0 0 0 10 0c0-1.7-.7-3.2-1.7-4.6-.4 1.1-1 1.9-2 2.4.6-3 .2-8-1.3-11.8z"></path></svg>`;
+
 function renderLeaderboard() {
   renderSurfReport(); // cache-guarded: hits Surfline at most once an hour
   renderTodayTile();
@@ -1830,7 +1836,14 @@ function renderLeaderboard() {
     document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet. First wave wins.</div>';
     return;
   }
-  totals.sort((a, b) => b.total_minutes - a.total_minutes || a.user.localeCompare(b.user));
+  totals.sort((a, b) => {
+    if (leaderboardSort === 'name') return a.user.localeCompare(b.user);
+    if (leaderboardSort === 'streak') {
+      return (streaks.get(b.user) || 0) - (streaks.get(a.user) || 0) ||
+        b.total_minutes - a.total_minutes || a.user.localeCompare(b.user);
+    }
+    return b.total_minutes - a.total_minutes || a.user.localeCompare(b.user);
+  });
 
   // Pledges stay private per person — the board shows only the aggregate.
   // Each surfer's own accrual lives on their Account page (renderAccountPledge).
@@ -1842,18 +1855,29 @@ function renderLeaderboard() {
   const rows = totals.map(
     (t, i) => {
       const n = streaks.get(t.user) || 0;
-      const streakCell = n >= 2 ? `${n} 🔥` : n === 1 ? '1' : '—';
-      return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td class="nowrap">${streakCell}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`;
+      const streakCell = n >= 2 ? `<span class="streak-cell">${STREAK_FLAME}${n}</span>` : n === 1 ? '1' : '—';
+      // No badge under 10h — OBSERVER exists in the data but never on screen
+      const medalCell = t.medal === 'OBSERVER' ? '' : `<span class="badge ${t.medal.toLowerCase()}">${t.medal}</span>`;
+      return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td class="nowrap">${streakCell}</td><td>${medalCell}</td></tr>`;
     }
   );
   // Total pledged lives in the page header, next to the "Leaderboard" title
   const banner = document.getElementById('pledge-banner');
   if (banner) {
     banner.hidden = !(live && totalPledged > 0);
-    const amt = banner.querySelector('.pledge-amount');
+    const amt = banner.querySelector('.pledge-amount-num');
     if (amt) amt.textContent = '$' + totalPledged;
   }
-  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Streak</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const th = (key, label) =>
+    `<th class="sortable" data-key="${key}">${label}${leaderboardSort === key ? ' <span class="sort-arrow">▾</span>' : ''}</th>`;
+  document.getElementById('leaderboard').innerHTML =
+    `<table><thead><tr><th>#</th>${th('name', 'User')}${th('hours', 'Hours')}${th('streak', 'Streak')}<th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  document.querySelectorAll('#leaderboard th.sortable').forEach((el) => {
+    el.addEventListener('click', () => {
+      leaderboardSort = el.getAttribute('data-key');
+      renderLeaderboard();
+    });
+  });
   // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {
