@@ -1284,7 +1284,8 @@ function initForm() {
     windsport: 'Windsurfing, kitesurfing, wing foiling',
     swim: 'Open water swim, dipping, in-water photography',
     other: 'Any other open water (ocean, river, lake) activity! Including kayaking, stand up paddle, etc…',
-    cleanup: 'Beach trash pickup — a one-time +1 hour bonus'
+    cleanup: 'Beach trash pickup — a one-time +1 hour bonus',
+    water: 'Water sampling with the SF Blue Water Task Force — a one-time +1 hour bonus'
   };
 
   function updateBonusSummary(){
@@ -1315,6 +1316,12 @@ function initForm() {
     h.disabled = isCleanup;
     m.disabled = isCleanup;
     otherBonuses.forEach((el) => { el.disabled = isCleanup; });
+    // The type drives its matching bonus box: Beach Cleanup mirrors the type
+    // both ways, and picking the Water Quality Reading type claims the +1h
+    // water bonus (unless the once-per-event guard has locked it).
+    document.getElementById('log-cleanup').checked = isCleanup;
+    const waterEl = document.getElementById('log-water');
+    if (type === 'water' && !waterEl.disabled) waterEl.checked = true;
     const hint = document.getElementById('log-type-hint');
     if (hint) hint.textContent = TYPE_HINTS[type] || '';
     updateBonusSummary();
@@ -1345,6 +1352,7 @@ function initForm() {
         el.title = '';
       }
     }
+    updateBonusSummary(); // guard may have just unchecked a claimed bonus
   }
 
   function bonusUsedForPeriod(user, dateStr, key) {
@@ -1373,8 +1381,8 @@ function initForm() {
   document.getElementById('log-date').addEventListener('change', applyCostumeGuard);
 
   // Bonuses dropdown: summary text mirrors the checked boxes; the Beach
-  // Cleanup entry drives the session type (one-way — picking the cleanup
-  // TYPE directly doesn't check the bonus box).
+  // Cleanup entry drives the session type (and applyTypeUI mirrors the type
+  // back into the box, so the two stay in sync from either direction).
   const bonusDd = document.getElementById('bonus-dd');
   const cleanupBonus = document.getElementById('log-cleanup');
   ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water'].forEach((id) =>
@@ -1651,6 +1659,17 @@ let sessionsView = 'mine';   // 'mine' | 'others'
 let otherUserSelected = '';
 let sessionsLayout = localStorage.getItem('surftober.sessionsLayout') || 'list'; // 'list' | 'tiles'
 
+// Display names for the session-type values stored in the DB.
+const TYPE_LABELS = {
+  surf: 'Surf',
+  windsport: 'Windsport',
+  swim: 'Swim',
+  other: 'Other',
+  cleanup: 'Beach Cleanup',
+  water: 'Water Reading'
+};
+const typeLabel = (t) => TYPE_LABELS[t] || t || '';
+
 function renderMyStats() {
   const ev = viewedEvent || DEFAULT_EVENT;
   const range = { start: ev.start_date, end: ev.end_date };
@@ -1834,13 +1853,13 @@ function renderMyStats() {
     const when = `${fmtDay(s.date)}${s.start_time ? ` · ${fmtTime(s.start_time)}` : ''}`;
     if (isTiles) {
       const where = [s.location, s.board].filter(Boolean).map(esc).join(' · ');
-      out.push(`<div class="card"><div><b>${when}</b> · ${esc(s.type)}</div>
+      out.push(`<div class="card"><div><b>${when}</b> · ${esc(typeLabel(s.type))}</div>
       ${where ? `<div>${where}</div>` : ''}
       <div>Scored ${SurftoberAwards.minutesToHHMM(scoredMins)} ${bonusBadges}</div>
       ${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${editLink ? `<div>${editLink}</div>` : ''}</div>`);
     } else {
       out.push(
-        `<tr><td>${editLink}</td><td class="nowrap">${when}</td><td>${esc(s.type)}</td><td>${SurftoberAwards.minutesToHHMM(
+        `<tr><td>${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
           scoredMins
         )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}</td></tr>`
       );
