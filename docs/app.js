@@ -1,52 +1,3 @@
-// Factory Reset helper
-async function factoryResetThisDevice() {
-  try {
-    // Sign out first
-    if (window.supabase && sb) {
-      try { await sb.auth.signOut(); } catch {}
-    }
-    // Clear localStorage (including supabase session keys)
-    localStorage.clear();
-    sessionStorage.clear?.();
-    // Unregister all service workers
-    if (navigator.serviceWorker) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const r of regs) { try { await r.unregister(); } catch {} }
-    }
-    // Clear caches
-    if (window.caches) {
-      const names = await caches.keys();
-      await Promise.all(names.map((n) => caches.delete(n)));
-    }
-    // Reload
-    location.reload();
-  } catch (e) {
-    alert('Factory reset failed: ' + e.message);
-  }
-}
-
-// Nuclear wipe: requires a privileged backend. Here, we call a Supabase Edge Function.
-async function nuclearWipeAll(){
-  if (!confirm('This will DELETE ALL users and ALL data. Type OK on the next prompt to continue.')) return;
-  const confirmText = prompt('Type OK to confirm nuclear wipe (ALL users + data):');
-  if ((confirmText||'').toUpperCase() !== 'OK') { toast('Cancelled', 'warn'); return; }
-  try {
-    if (!sb) throw new Error('Supabase client not ready');
-    // Invoke via Supabase client so auth/apikey headers are handled for you
-    const { data, error } = await sb.functions.invoke('nuclear_wipe', {
-      body: { confirm: 'OK' }
-    });
-    if (error) throw new Error(error.message || JSON.stringify(error));
-    toast('Nuclear wipe triggered', 'success');
-  } catch (e) {
-    toast('Nuclear wipe failed: ' + e.message, 'error');
-  }
-}
-
-// Ensure global access for event handlers
-// @ts-ignore
-window.nuclearWipeAll = nuclearWipeAll;
-
 // Simple client-side Surftober demo using localStorage as the DB
 // Supabase integration (Auth + DB)
 const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
@@ -954,26 +905,26 @@ function attachAccountHandlers(){
       toast('Save profile failed: ' + e.message, 'error');
     }
   });
-  // Admin: List users (emails + display names)
+  // Admin: List users. admin_list_users is a SECURITY DEFINER SQL function
+  // with a server-side admin-email gate — non-admins simply get zero rows.
+  // (Replaces the list_users edge function that died with the old project.)
   const btnListUsers = document.getElementById('btn-list-users');
   if (btnListUsers) btnListUsers.addEventListener('click', async () => {
     try {
-      // Fetch emails via admin-only function (returns limited fields)
-      const { data: usersData, error } = await sb.functions.invoke('list_users');
-      if (error) throw new Error(error.message || JSON.stringify(error));
-      const users = Array.isArray(usersData?.users) ? usersData.users : [];
-
-      // Fetch profiles (display names)
-      const { data: profs, error: pErr } = await sb.from('profiles').select('id, display_name');
-      if (pErr) throw pErr;
-      const nameById = Object.fromEntries((profs||[]).map(p=>[p.id, p.display_name||'']));
-
-      const rows = users.map(u => ({ email: u.email || '', name: nameById[u.id] || '' }));
-      const html = [`<table><thead><tr><th>Email</th><th>Display Name</th></tr></thead><tbody>`]
-        .concat(rows.map(r=>`<tr><td>${esc(r.email)}</td><td>${esc(r.name)}</td></tr>`))
+      const { data, error } = await sb.rpc('admin_list_users');
+      if (error) throw error;
+      const rows = data || [];
+      if (!rows.length) {
+        document.getElementById('admin-users').innerHTML =
+          '<div class="hint">Nothing returned — the SQL gate only answers the admin account (and the admin_list_users function must be deployed).</div>';
+        return;
+      }
+      const html = ['<table><thead><tr><th>Email</th><th>Name</th><th>Sessions</th><th>Registered</th><th>Last sign-in</th></tr></thead><tbody>']
+        .concat(rows.map((r) =>
+          `<tr><td>${esc(r.email || '')}</td><td>${esc(r.display_name || '')}</td><td>${esc(String(r.session_count ?? ''))}</td><td>${r.registered_at ? esc(fmtDay(String(r.registered_at).slice(0, 10))) : ''}</td><td>${r.last_sign_in_at ? esc(fmtDay(String(r.last_sign_in_at).slice(0, 10))) : ''}</td></tr>`))
         .concat(['</tbody></table>'])
         .join('');
-      document.getElementById('admin-users').innerHTML = html || '<div class="hint">No users</div>';
+      document.getElementById('admin-users').innerHTML = html;
     } catch (e) {
       toast('List users failed: ' + e.message, 'error');
     }
@@ -1828,10 +1779,36 @@ function renderMyStats() {
   attachJournalToggles();
 }
 
+// Current streak per user: consecutive days surfed ending today — or ending
+// yesterday, since a streak stays alive until a full day is actually missed.
+function currentStreaks(normalized, range){
+  const dates = new Map(); // user -> Set('YYYY-MM-DD')
+  normalized.filter((s) => SurftoberAwards.inRange(s.date, range)).forEach((s) => {
+    const u = (s.user || '').trim();
+    if (!u) return;
+    if (!dates.has(u)) dates.set(u, new Set());
+    dates.get(u).add(String(s.date).slice(0, 10));
+  });
+  const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const stepBack = (d) => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; };
+  const streaks = new Map();
+  for (const [u, set] of dates) {
+    let d = SurftoberAwards.localDate(todayStr());
+    if (!set.has(iso(d))) d = stepBack(d); // no surf yet today — count from yesterday
+    let n = 0;
+    while (set.has(iso(d))) { n++; d = stepBack(d); }
+    streaks.set(u, n);
+  }
+  return streaks;
+}
+
 function renderLeaderboard() {
   renderSurfReport(); // cache-guarded: hits Surfline at most once an hour
+  renderTodayTile();
   const ev = viewedEvent || DEFAULT_EVENT;
-  const totals = SurftoberAwards.rollupByUser(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
+  const normalized = loadSessions().map(SurftoberAwards.normalizeSession);
+  const totals = SurftoberAwards.rollupByUser(normalized, { start: ev.start_date, end: ev.end_date });
+  const streaks = currentStreaks(normalized, { start: ev.start_date, end: ev.end_date });
   // Roster rows and pledge money are live-event concepts: the roster is
   // season-agnostic (one profile per person), so merging it into an archived
   // event would list people who never surfed it and price old hours at
@@ -1863,7 +1840,11 @@ function renderLeaderboard() {
   let totalPledged = 0;
   if (live) totals.forEach((t) => { totalPledged += Math.round((rateByName.get(t.user) || 0) * t.total_hours); });
   const rows = totals.map(
-    (t, i) => `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`
+    (t, i) => {
+      const n = streaks.get(t.user) || 0;
+      const streakCell = n >= 2 ? `${n} 🔥` : n === 1 ? '1' : '—';
+      return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td class="nowrap">${streakCell}</td><td><span class="badge ${t.medal.toLowerCase()}">${t.medal}</span></td></tr>`;
+    }
   );
   // Total pledged lives in the page header, next to the "Leaderboard" title
   const banner = document.getElementById('pledge-banner');
@@ -1872,7 +1853,7 @@ function renderLeaderboard() {
     const amt = banner.querySelector('.pledge-amount');
     if (amt) amt.textContent = '$' + totalPledged;
   }
-  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  document.getElementById('leaderboard').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Hours</th><th>Streak</th><th>Medal</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
   // Click a leaderboard name to open that surfer's Sessions page
   document.querySelectorAll('#leaderboard .user-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -2163,6 +2144,44 @@ function hoffMeter(rel, maxFt, color){
   return `<div class="hoff" style="height:${h}px" title="${esc(rel || '')}">${figs}<span class="hoff-waterline" style="background:${color}"></span></div>`;
 }
 
+// ===== "Today at Surftober" tile ===========================================
+// Session count + hours logged today, plus one featured journal/audio from
+// today's sessions. The feature is deterministic (day number modulo the
+// candidate count) so everyone sees the same pick and it rotates daily.
+function renderTodayTile(){
+  const box = document.getElementById('today-tile');
+  if (!box) return;
+  // "Today" only makes sense on the live event — hide on archived views
+  if (!isViewingActiveEvent()) { box.hidden = true; return; }
+  const today = todayStr();
+  const sessions = loadSessions().map(SurftoberAwards.normalizeSession)
+    .filter((s) => String(s.date).slice(0, 10) === today);
+  const totalMins = sessions.reduce((a, s) => a + s.base_minutes, 0);
+  const surfers = new Set(sessions.map((s) => (s.user || '').trim()).filter(Boolean));
+  const stat = sessions.length
+    ? `<strong>${sessions.length}</strong> session${sessions.length === 1 ? '' : 's'} · <strong>${(totalMins / 60).toFixed(1)} h</strong> · ${surfers.size} surfer${surfers.size === 1 ? '' : 's'}`
+    : 'No sessions yet — first wave wins';
+
+  const candidates = sessions.filter((s) => (s.notes && s.notes.trim()) || s.audio_url);
+  let feature = '';
+  if (candidates.length) {
+    const dayN = Math.floor(SurftoberAwards.localDate(today).getTime() / 86400000);
+    const s = candidates[dayN % candidates.length];
+    const text = String(s.notes || '').trim();
+    const snippet = text.length > 240 ? text.slice(0, 240).trimEnd() + '…' : text;
+    feature = `<div class="today-feature">
+      <div class="today-feature-head">Featured session — <strong>${esc(s.user || '')}</strong>${s.location ? ` at ${esc(s.location)}` : ''}</div>
+      ${snippet ? `<blockquote class="today-quote">“${esc(snippet)}”</blockquote>` : ''}
+      ${s.audio_url ? audioPlayerHtml(s.audio_url) : ''}
+    </div>`;
+  }
+  box.innerHTML = `<div class="surf-main today-card">
+    <div class="today-head"><span class="surf-label">📅 Today at Surftober</span><span class="today-stat">${stat}</span></div>
+    ${feature}
+  </div>`;
+  box.hidden = false;
+}
+
 // Your own pledge accrual, shown only to you on the Account page — the
 // leaderboard publishes just the group total.
 function renderAccountPledge(){
@@ -2313,10 +2332,6 @@ window.addEventListener('load', () => {
   document.getElementById('btn-export-awards').addEventListener('click', exportAwards);
   document.getElementById('btn-awards-slides').addEventListener('click', openPrintSlides);
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-  const btnFactory = document.getElementById('btn-factory-reset');
-  if (btnFactory) btnFactory.addEventListener('click', factoryResetThisDevice);
-  const btnNuclear = document.getElementById('btn-nuclear-wipe');
-  if (btnNuclear) btnNuclear.addEventListener('click', nuclearWipeAll);
   document.getElementById('csv-file').addEventListener('change', async (e) => {
     const f = e.target.files[0];
     if (!f) return;

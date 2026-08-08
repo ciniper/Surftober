@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=25" />
+  <link rel="stylesheet" href="./styles.css?v=26" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -264,6 +264,7 @@
         </div>
       </div>
       <div id="surf-report" class="surf-report" hidden></div>
+      <div id="today-tile" hidden></div>
       <div class="filters">
         <span class="event-scope hint" id="lb-scope"></span>
       </div>
@@ -352,23 +353,13 @@
           <h3>Export</h3>
           <button id="btn-export-csv" class="btn-secondary">Export Sessions CSV</button>
         </div>
-        <div class="card">
-          <h3>Factory Reset</h3>
-          <p>Signs out, clears local data and caches, and reloads.</p>
-          <button id="btn-factory-reset" class="warn">Factory Reset (This device)</button>
-        </div>
         <div class="card" id="admin-users-card">
           <h3>Registered Users</h3>
-          <p>Admins only — list of emails and display names.</p>
+          <p>Admins only — email, name, session count, sign-up and last sign-in.</p>
           <div class="actions">
             <button id="btn-list-users" class="btn-secondary">List Users</button>
           </div>
           <div id="admin-users" class="table"></div>
-        </div>
-        <div class="card">
-          <h3>Nuclear Wipe</h3>
-          <p>Deletes ALL users and ALL logged data for this project. Requires the backend Edge Function to be deployed. This cannot be undone.</p>
-          <button id="btn-nuclear-wipe" class="warn">Nuclear Wipe (All users + data)</button>
         </div>
         <div class="card">
           <h3>Status</h3>
@@ -447,7 +438,7 @@
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./version.js"></script>
-  <script src="./awards.js?v=6"></script>
-  <script type="module" src="./app.js?v=36"></script>
+  <script src="./awards.js?v=7"></script>
+  <script type="module" src="./app.js?v=37"></script>
 </body>
 </html>

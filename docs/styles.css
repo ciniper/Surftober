@@ -248,3 +248,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .mode-toggle { background: transparent; border: 1px solid transparent; box-shadow: none; padding: 8px 10px; font-size: 17px; line-height: 1; flex: 0 0 auto; }
 .mode-toggle:hover { background: var(--muted); filter: none; }
 .mode-toggle:active { transform: translateY(1px); box-shadow: none; }
+
+/* v1.12: "Today at Surftober" tile under the OB conditions row */
+#today-tile .surf-main { margin-top: 10px; }
+.today-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.today-stat { font-size: 14px; }
+.today-feature { margin-top: 8px; border-top: 1px solid var(--card-border); padding-top: 8px; }
+.today-feature-head { font-size: 12px; opacity: 0.75; }
+.today-quote { margin: 6px 0 4px; font-size: 14px; font-style: italic; line-height: 1.45; }
+.today-feature audio { width: 100%; max-width: 420px; margin-top: 4px; display: block; }

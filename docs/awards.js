@@ -148,6 +148,20 @@ function computeAwards(sessions, range = {}) {
   if (consistent) awards.push({ name: 'The Consistent Award', desc: 'Smallest session length variance', winner: consistent.user, value: `${Math.round(consistent.stddev)} min std dev` });
   const inconsistent = winner(totals, 'stddev', x=> x.stddev);
   if (inconsistent) awards.push({ name: 'The Inconsistent Award', desc: 'Largest session length variance', winner: inconsistent.user, value: `${Math.round(inconsistent.stddev)} min std dev` });
+  // Streak: most consecutive days with at least one session
+  const streaks = Array.from(byUser.entries()).map(([user, arr]) => {
+    const days = Array.from(new Set(arr.map(x => String(x.date).slice(0, 10)))).sort();
+    let best = 0, run = 0, prev = null;
+    for (const d of days) {
+      // 1.5-day tolerance so a DST hour shift can't break a real streak
+      run = (prev && (localDate(d) - localDate(prev)) <= 86400000 * 1.5) ? run + 1 : 1;
+      best = Math.max(best, run);
+      prev = d;
+    }
+    return { user, best };
+  });
+  const streaker = winner(streaks, 'best', x => x.best);
+  if (streaker && streaker.best >= 2) awards.push({ name: 'The Streak Award', desc: 'Most consecutive days surfed', winner: streaker.user, value: `${streaker.best} days in a row` });
   // Twofer, Weekend, Work allergic
   const twofer = winner(totals, 'twofer_days');
   if (twofer) awards.push({ name: 'The Twofer Award', desc: 'Most days with 2+ sessions', winner: twofer.user, value: `${twofer.twofer_days} days` });

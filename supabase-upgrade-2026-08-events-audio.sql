@@ -431,6 +431,35 @@ select cron.schedule('surf-report-refresh', '7,37 * * * *', 'select public.refre
 select public.refresh_surf_report();
 
 -- =========================================================
+-- v1.12 : admin_list_users — replaces the dead list_users edge function
+-- =========================================================
+-- SECURITY DEFINER so it can read auth.users + profiles. The WHERE gate
+-- means anyone other than the admin gets zero rows (same admin email list
+-- as the events policies — keep them in sync).
+create or replace function public.admin_list_users()
+returns table (
+  email text,
+  display_name text,
+  registered_at timestamptz,
+  last_sign_in_at timestamptz,
+  session_count bigint
+)
+language sql
+security definer set search_path = public
+as $$
+  select u.email::text,
+         p.display_name,
+         p.registered_at,
+         u.last_sign_in_at,
+         (select count(*) from public.sessions s
+           where s.user_id = u.id and s.deleted_at is null) as session_count
+  from auth.users u
+  left join public.profiles p on p.id = u.id
+  where lower(auth.jwt() ->> 'email') in ('ciniper@gmail.com')
+  order by u.created_at
+$$;
+
+-- =========================================================
 -- RUN ONCE — data repairs (do NOT blindly re-run this section)
 -- =========================================================
 -- (1) Pre-v1.5 app code stored no-wetsuit sessions with duration_minutes

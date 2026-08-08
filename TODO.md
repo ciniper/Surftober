@@ -107,11 +107,12 @@
       back to null). Today restoring requires the Supabase dashboard (Table Editor →
       sessions → clear `deleted_at`). Needs an admin-gated RPC, since the anon API
       can only see rows, not un-tombstone others' sessions.
-- [ ] Fix the dead admin buttons — the `list_users` and `nuclear_wipe` Edge
-      Functions died with the old Supabase project, so both buttons error.
-      Lean take: rebuild List Users (genuinely useful — a small edge function or
-      an events-style view); just REMOVE Nuclear Wipe (obsolete now that seasons
-      are handled by launching events and deletes are soft).
+- [x] ~~Fix the dead admin buttons~~ (shipped v1.12.0 — Factory Reset and
+      Nuclear Wipe removed; List Users rebuilt on `admin_list_users()`, a
+      SECURITY DEFINER SQL function (no edge function needed) whose WHERE
+      gate returns zero rows to non-admins. Shows email, name, session
+      count, registered and last sign-in. Admin email list must stay in
+      sync with the events policies.)
 - [ ] Rotate the Google OAuth client secret (the old one passed through chat during
       the June 2026 recovery). Google Cloud Console → create new secret → paste into
       Supabase Auth provider → delete old secret.
