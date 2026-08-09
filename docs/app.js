@@ -1160,11 +1160,9 @@ function audioPlayerHtml(url){
 // ===== Session photos (Supabase Storage, bucket: session-photos) =====
 // One photo per session, compressed in the browser before upload. Batch
 // photos and videos live in the crew's shared Google Photos album instead
-// (CREW_ALBUM_URL below) — storage/egress there is Google's problem.
-
-// Paste the Google Photos shared-album link here to light up the 📷 header
-// button and the log-form hint. Empty string hides both.
-const CREW_ALBUM_URL = 'https://photos.app.goo.gl/DJin8nEzrymarTFv9';
+// — storage/egress there is Google's problem. The album link is
+// window.CREW_ALBUM_URL, set in version.js (network-first, so editing it
+// there goes live without a cache bump).
 
 const PHOTO_MAX_EDGE = 1600;   // long-edge px after compression (~200-400 KB JPEG)
 const PHOTO_QUALITY = 0.82;
@@ -1264,14 +1262,15 @@ function attachPhotoHandlers(){
     discardPickedPhoto();
   });
   // Crew album entry points (header 📷 + log-form hint) appear only once
-  // the shared-album link is configured.
-  if (CREW_ALBUM_URL) {
+  // the shared-album link is configured (in version.js).
+  const albumUrl = window.CREW_ALBUM_URL || '';
+  if (albumUrl) {
     const headerLink = document.getElementById('album-link');
-    if (headerLink) { headerLink.href = CREW_ALBUM_URL; headerLink.style.display = ''; }
+    if (headerLink) { headerLink.href = albumUrl; headerLink.style.display = ''; }
     const formHint = document.getElementById('log-photo-album-hint');
     if (formHint) {
       const a = formHint.querySelector('a');
-      if (a) a.href = CREW_ALBUM_URL;
+      if (a) a.href = albumUrl;
       formHint.style.display = '';
     }
   }
