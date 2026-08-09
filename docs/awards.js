@@ -66,9 +66,10 @@ function rollupByUser(sessions, range = {}) {
   }
   const result = [];
   for (const [user, arr] of perUser.entries()) {
-    // one-time bonuses: +60 minutes each (once per period) for costume,
-    // teach-a-kook, and water-quality reading
-    const one_time_bonus = ['costume', 'taught_kook', 'water_reading']
+    // one-time bonuses: +60 minutes each (once per period) for costume and
+    // teach-a-kook. Water readings are their own fixed 1h session type, so
+    // the water_reading flag adds nothing here — the hour is in base_minutes.
+    const one_time_bonus = ['costume', 'taught_kook']
       .reduce((a, k) => a + (arr.some(s => s[k]) ? 60 : 0), 0);
     const total_minutes = arr.reduce((a, b) => a + b.base_minutes, 0) + one_time_bonus;
     const total_hours = total_minutes / 60;
