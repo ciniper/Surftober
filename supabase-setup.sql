@@ -128,6 +128,7 @@ create table if not exists public.sessions (
   cleanup_items integer default 0,
   client_entry_id uuid,
   audio_url text,
+  photo_url text,                   -- one compressed session photo (session-photos bucket)
   deleted_at timestamptz,           -- soft delete: hidden from the UI, kept for backups
   start_time time,                  -- optional "when did you paddle out"
   created_at timestamptz default now()
@@ -265,6 +266,25 @@ create policy "Users upload own session audio" on storage.objects for insert to 
   with check (bucket_id = 'session-audio' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Users delete own session audio" on storage.objects for delete to authenticated
   using (bucket_id = 'session-audio' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =========================================================
+-- storage : public bucket for session photos (v1.16)
+-- =========================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('session-photos', 'session-photos', true, 8388608, array['image/*'])
+on conflict (id) do update
+  set public = true, file_size_limit = 8388608, allowed_mime_types = array['image/*'];
+
+drop policy if exists "Anyone can read session photos"  on storage.objects;
+drop policy if exists "Users upload own session photos" on storage.objects;
+drop policy if exists "Users delete own session photos" on storage.objects;
+
+create policy "Anyone can read session photos" on storage.objects for select
+  using (bucket_id = 'session-photos');
+create policy "Users upload own session photos" on storage.objects for insert to authenticated
+  with check (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users delete own session photos" on storage.objects for delete to authenticated
+  using (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =========================================================
 -- surf_report : Ocean Beach conditions, fetched server-side

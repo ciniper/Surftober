@@ -504,3 +504,27 @@ $$;
 -- doesn't matter — but run this before anyone tries to claim one.
 alter table public.sessions add column if not exists taught_kook boolean default false;
 alter table public.sessions add column if not exists water_reading boolean default false;
+
+-- =========================================================
+-- v1.16 : one photo per session (bucket: session-photos)
+-- =========================================================
+-- Same pattern as session-audio: public-read bucket, owner-scoped uploads
+-- and deletes (first folder segment must be the uploader's uid). The app
+-- compresses to ~1600px JPEG (~200-400 KB) before upload, so the 8 MB cap
+-- is just a backstop.
+alter table public.sessions add column if not exists photo_url text;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('session-photos', 'session-photos', true, 8388608, array['image/*'])
+on conflict (id) do nothing;
+
+drop policy if exists "Anyone can read session photos"  on storage.objects;
+drop policy if exists "Users upload own session photos" on storage.objects;
+drop policy if exists "Users delete own session photos" on storage.objects;
+
+create policy "Anyone can read session photos" on storage.objects for select
+  using (bucket_id = 'session-photos');
+create policy "Users upload own session photos" on storage.objects for insert to authenticated
+  with check (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users delete own session photos" on storage.objects for delete to authenticated
+  using (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);

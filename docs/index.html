@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=30" />
+  <link rel="stylesheet" href="./styles.css?v=31" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -130,7 +130,7 @@
 
 <body>
   <header class="app-header">
-    <div class="brand"><img class="brand-logo" src="./logo.svg?v=10" alt="" aria-hidden="true" />Surftober<button id="mode-toggle" class="mode-toggle" type="button" aria-label="Toggle dark or light mode" title="Dark / light mode">🌙</button></div>
+    <div class="brand"><img class="brand-logo" src="./logo.svg?v=10" alt="" aria-hidden="true" />Surftober<button id="mode-toggle" class="mode-toggle" type="button" aria-label="Toggle dark or light mode" title="Dark / light mode">🌙</button><a id="album-link" class="mode-toggle" style="display:none" target="_blank" rel="noopener" aria-label="Crew photo album" title="Crew photo album">📷</a></div>
     <nav class="tabs">
       <a href="#log" class="tab-link" data-tab="log">Log</a>
       <a href="#me" class="tab-link" data-tab="me">Sessions</a>
@@ -230,6 +230,22 @@
           Journal
           <textarea id="log-notes" rows="3" placeholder="How was it out there?" enterkeyhint="done"></textarea>
         </label>
+        <div id="field-photo">
+          <label for="log-photo">Photo (optional, 1 per session)</label>
+          <input type="file" id="log-photo" accept="image/*" />
+          <div id="photo-preview-wrap" style="display:none">
+            <img id="photo-preview" alt="Session photo preview" />
+            <a href="#" id="btn-discard-photo">Remove photo</a>
+          </div>
+          <div class="hint" id="log-photo-hint" style="display:none">
+            This session has a photo — pick a new one to replace it, or
+            <label class="checkbox" style="display:inline-flex"><input type="checkbox" id="log-photo-remove" /> remove it</label>
+          </div>
+          <div class="hint" id="log-photo-album-hint" style="display:none">
+            Got a batch of photos or a video? Drop them in the
+            <a href="#" target="_blank" rel="noopener">crew photo album ↗</a>
+          </div>
+        </div>
         <div id="field-audio">
           <label>Audio note (optional, max 5 min)</label>
           <div class="audio-controls">
@@ -462,6 +478,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=9"></script>
-  <script type="module" src="./app.js?v=44"></script>
+  <script type="module" src="./app.js?v=45"></script>
 </body>
 </html>
