@@ -1293,35 +1293,42 @@ function initForm() {
     if (document.getElementById('log-no-wetsuit').checked) parts.push('No Wetsuit ×2');
     if (document.getElementById('log-costume').checked) parts.push('Costume +1h');
     if (document.getElementById('log-kook').checked) parts.push('Teach a Kook +1h');
-    if (document.getElementById('log-water').checked) parts.push('Water Reading +1h');
+    if (document.getElementById('log-water').checked) parts.push('Water Reading');
     if (document.getElementById('log-cleanup').checked) parts.push('Beach Cleanup');
     document.getElementById('bonus-summary').textContent = parts.length ? parts.join(' · ') : 'None';
   }
 
+  // Session types whose bonus box drives the type (and vice versa). Both are
+  // fixed +1h sessions: duration locks at 1:00 and no other bonus can stack.
+  const FIXED_TYPE_BOX = { cleanup: 'log-cleanup', water: 'log-water' };
+  const ALL_BONUS_BOXES = ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water', 'log-cleanup'];
+
   function applyTypeUI() {
     const type = document.getElementById('log-type').value;
-    const isCleanup = type === 'cleanup';
+    const isFixed = type in FIXED_TYPE_BOX;
     const h = document.getElementById('log-duration-h');
     const m = document.getElementById('log-duration-m');
-    const otherBonuses = ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water']
+    // Every bonus box except the one belonging to this type (that one stays
+    // enabled so unchecking it reverts the type); surf craft and location
+    // stay editable for every type.
+    const otherBonuses = ALL_BONUS_BOXES
+      .filter((id) => id !== FIXED_TYPE_BOX[type])
       .map((id) => document.getElementById(id));
-    // Cleanup is a fixed one-time +1h bonus, so its duration is locked and
-    // the other bonuses don't apply; surf craft and location stay editable
-    // for every type.
-    if (isCleanup) {
+    if (isFixed) {
       h.value = 1;
       m.value = 0;
       otherBonuses.forEach((el) => { el.checked = false; });
     }
-    h.disabled = isCleanup;
-    m.disabled = isCleanup;
-    otherBonuses.forEach((el) => { el.disabled = isCleanup; });
-    // The type drives its matching bonus box: Beach Cleanup mirrors the type
-    // both ways, and picking the Water Quality Reading type claims the +1h
-    // water bonus (unless the once-per-event guard has locked it).
-    document.getElementById('log-cleanup').checked = isCleanup;
-    const waterEl = document.getElementById('log-water');
-    if (type === 'water' && !waterEl.disabled) waterEl.checked = true;
+    h.disabled = isFixed;
+    m.disabled = isFixed;
+    otherBonuses.forEach((el) => { el.disabled = isFixed; });
+    // Mirror the type into its own bonus box, both ways. The own box is
+    // always re-enabled (it may have been disabled by another fixed type or
+    // the once-per-event guard) so unchecking it can revert the type; a
+    // duplicate water reading is rejected at submit instead.
+    if (isFixed) document.getElementById(FIXED_TYPE_BOX[type]).disabled = false;
+    document.getElementById('log-cleanup').checked = type === 'cleanup';
+    document.getElementById('log-water').checked = type === 'water';
     const hint = document.getElementById('log-type-hint');
     if (hint) hint.textContent = TYPE_HINTS[type] || '';
     updateBonusSummary();
@@ -1337,7 +1344,7 @@ function initForm() {
 
   function applyCostumeGuard() {
     const type = document.getElementById('log-type').value;
-    if (type === 'cleanup') return; // already disabled
+    if (type in FIXED_TYPE_BOX) return; // applyTypeUI already disabled the boxes
     const user = document.getElementById('log-user').value.trim();
     const dateStr = document.getElementById('log-date').value;
     for (const b of ONE_TIME_BONUSES) {
@@ -1381,19 +1388,22 @@ function initForm() {
   document.getElementById('log-date').addEventListener('change', applyCostumeGuard);
 
   // Bonuses dropdown: summary text mirrors the checked boxes; the Beach
-  // Cleanup entry drives the session type (and applyTypeUI mirrors the type
-  // back into the box, so the two stay in sync from either direction).
+  // Cleanup and Water Quality Reading entries drive the session type (and
+  // applyTypeUI mirrors the type back into the box, so the two stay in sync
+  // from either direction).
   const bonusDd = document.getElementById('bonus-dd');
-  const cleanupBonus = document.getElementById('log-cleanup');
-  ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water'].forEach((id) =>
+  ['log-no-wetsuit', 'log-costume', 'log-kook'].forEach((id) =>
     document.getElementById(id).addEventListener('change', updateBonusSummary));
-  cleanupBonus.addEventListener('change', () => {
-    const typeEl = document.getElementById('log-type');
-    if (cleanupBonus.checked) typeEl.value = 'cleanup';
-    else if (typeEl.value === 'cleanup') typeEl.value = 'surf';
-    typeEl.dispatchEvent(new Event('change'));
-    updateBonusSummary();
-  });
+  for (const [typeValue, boxId] of Object.entries(FIXED_TYPE_BOX)) {
+    const box = document.getElementById(boxId);
+    box.addEventListener('change', () => {
+      const typeEl = document.getElementById('log-type');
+      if (box.checked) typeEl.value = typeValue;
+      else if (typeEl.value === typeValue) typeEl.value = 'surf';
+      typeEl.dispatchEvent(new Event('change'));
+      updateBonusSummary();
+    });
+  }
   document.addEventListener('click', (e) => {
     if (bonusDd && bonusDd.open && !bonusDd.contains(e.target)) bonusDd.removeAttribute('open');
   });
@@ -1409,13 +1419,16 @@ function initForm() {
       location.hash = '#account';
       return;
     }
-    const isCleanup = document.getElementById('log-type').value === 'cleanup';
+    const logType = document.getElementById('log-type').value;
+    const isCleanup = logType === 'cleanup';
+    const isWater = logType === 'water';
+    const isFixed = isCleanup || isWater; // fixed 1h session, no stacked bonuses
     const row = {
       user: document.getElementById('log-user').value.trim(),
       date: document.getElementById('log-date').value,
       start_time: document.getElementById('log-start-time').value || null,
-      type: document.getElementById('log-type').value,
-      duration: isCleanup
+      type: logType,
+      duration: isFixed
         ? '01:00'
         : `${String(Number(document.getElementById('log-duration-h').value || 0)).padStart(2, '0')}:${String(
             Number(document.getElementById('log-duration-m').value || 0)
@@ -1423,14 +1436,20 @@ function initForm() {
       location: document.getElementById('log-location').value,
       board: document.getElementById('log-board').value,
       notes: document.getElementById('log-notes').value,
-      no_wetsuit: isCleanup ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
-      costume: isCleanup ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
-      taught_kook: isCleanup ? 0 : document.getElementById('log-kook').checked ? 1 : 0,
-      water_reading: isCleanup ? 0 : document.getElementById('log-water').checked ? 1 : 0,
+      no_wetsuit: isFixed ? 0 : document.getElementById('log-no-wetsuit').checked ? 1 : 0,
+      costume: isFixed ? 0 : document.getElementById('log-costume').checked ? 1 : 0,
+      taught_kook: isFixed ? 0 : document.getElementById('log-kook').checked ? 1 : 0,
+      // The water flag marks the one water-reading session per event; its
+      // +1h is the locked session hour itself (no extra rollup bonus).
+      water_reading: isWater ? 1 : 0,
       cleanup_items: isCleanup ? 1 : 0
     };
     if (!row.user || !row.date || !row.duration) {
       alert('Please fill required fields');
+      return;
+    }
+    if (isWater && bonusUsedForPeriod(row.user, row.date, 'water_reading')) {
+      toast('Water Quality Reading already claimed this event — it\'s a one-time bonus.', 'warn');
       return;
     }
     if (!activeEvent) {
@@ -1583,10 +1602,8 @@ function startEditSession(session){
   document.getElementById('log-no-wetsuit').checked = !!session.no_wetsuit;
   document.getElementById('log-costume').checked = !!session.costume;
   document.getElementById('log-kook').checked = !!session.taught_kook;
-  document.getElementById('log-water').checked = !!session.water_reading;
-  // Editing a cleanup session: reflect it in the Bonuses dropdown so
-  // unchecking there reverts the type
-  document.getElementById('log-cleanup').checked = session.type === 'cleanup';
+  // (log-cleanup / log-water mirror the type via applyTypeUI on the
+  // change dispatch below)
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
   editingId = session._id || null; // we'll attach _id when rendering from cloud
@@ -1810,13 +1827,13 @@ function renderMyStats() {
     .filter((s) => SurftoberAwards.inRange(s.date, range))
     .sort((a, b) => String(b.date + (b.start_time || '')).localeCompare(String(a.date + (a.start_time || ''))));
   // Determine which session gets each one-time +1h bonus (costume, teach a
-  // kook, water reading) — PER USER (the name filter can be blank, showing
-  // everyone's sessions at once). Earliest flagged session wins, matching
-  // the rollup's once-per-event scoring.
+  // kook) — PER USER (the name filter can be blank, showing everyone's
+  // sessions at once). Earliest flagged session wins, matching the rollup's
+  // once-per-event scoring. Water readings are their own 1h session type,
+  // badged below like cleanup.
   const ONE_TIME_FLAGS = [
     { key: 'costume', badge: 'Costume +1h' },
-    { key: 'taught_kook', badge: 'Teach a Kook +1h' },
-    { key: 'water_reading', badge: 'Water Reading +1h' }
+    { key: 'taught_kook', badge: 'Teach a Kook +1h' }
   ];
   const bonusIdxByUser = new Map(ONE_TIME_FLAGS.map((f) => [f.key, new Map()]));
   for (const f of ONE_TIME_FLAGS) {
@@ -1844,7 +1861,8 @@ function renderMyStats() {
     const bonusBadges = [
       s.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : '',
       ...appliedFlags.map((f) => `<span class="badge">${f.badge}</span>`),
-      s.type === 'cleanup' ? '<span class="badge">Cleanup</span>' : ''
+      s.type === 'cleanup' ? '<span class="badge">Cleanup</span>' : '',
+      s.type === 'water' ? '<span class="badge">Water Reading</span>' : ''
     ]
       .filter(Boolean)
       .join(' ');
