@@ -69,6 +69,12 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Swap the crew album link for the real October album** (Chase,
+      2026-08-08) — `window.CREW_ALBUM_URL` in docs/version.js currently
+      points at the August TEST album (photos.app.goo.gl/DJin8nEzrymarTFv9).
+      Before October: create the Surftober 2026 shared album (Share →
+      Create link + Collaborate on), paste the new link there, push. No
+      cache bump needed — version.js is network-first.
 - [x] ~~Add photo compression to register.html's upload~~ (shipped in v1.8.0 —
       register now canvas-compresses to 256px JPEG like the Account flow. To
       spot any stragglers from before: `select display_name,
