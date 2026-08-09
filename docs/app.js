@@ -1234,10 +1234,22 @@ function discardPickedPhoto(){
   if (wrap) wrap.style.display = 'none';
   const img = document.getElementById('photo-preview');
   if (img) img.removeAttribute('src');
+  setPickPhotoLabel();
+}
+
+// The picker button reads "Replace" whenever a photo is staged or the
+// session being edited already has one.
+function setPickPhotoLabel(){
+  const btn = document.getElementById('btn-pick-photo');
+  if (btn) btn.textContent = (pickedPhotoBlob || editingPhotoUrl) ? '📷 Replace Photo' : '📷 Add Photo';
 }
 
 function attachPhotoHandlers(){
   const input = document.getElementById('log-photo');
+  // The native file input is hidden — the styled 📷 button (a sibling of
+  // the audio field's 🎙 one) proxies clicks to it.
+  const pick = document.getElementById('btn-pick-photo');
+  if (pick && input) pick.addEventListener('click', () => input.click());
   if (input) input.addEventListener('change', async () => {
     const file = input.files && input.files[0];
     if (!file) return;
@@ -1250,6 +1262,7 @@ function attachPhotoHandlers(){
       const wrap = document.getElementById('photo-preview-wrap');
       if (img) img.src = pickedPhotoUrl;
       if (wrap) wrap.style.display = '';
+      setPickPhotoLabel();
     } catch (e) {
       input.value = '';
       toast('Could not read that photo: ' + (e.message || e), 'error');
