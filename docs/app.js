@@ -1164,7 +1164,7 @@ function audioPlayerHtml(url){
 
 // Paste the Google Photos shared-album link here to light up the 📷 header
 // button and the log-form hint. Empty string hides both.
-const CREW_ALBUM_URL = '';
+const CREW_ALBUM_URL = 'https://photos.app.goo.gl/DJin8nEzrymarTFv9';
 
 const PHOTO_MAX_EDGE = 1600;   // long-edge px after compression (~200-400 KB JPEG)
 const PHOTO_QUALITY = 0.82;
