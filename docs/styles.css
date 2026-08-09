@@ -300,4 +300,8 @@ a.mode-toggle { display: inline-flex; align-items: center; border-radius: 8px; t
 .session-photo-card { width: 100%; max-height: 340px; object-fit: cover; border-radius: 10px; display: block; margin: 6px 0; border: 1px solid var(--card-border); }
 #photo-preview { max-width: 220px; max-height: 220px; border-radius: 10px; display: block; margin: 8px 0 4px; border: 1px solid var(--card-border); }
 #photo-preview-wrap a { font-size: 13px; }
-#field-photo a { color: var(--accent-text); }
+/* Photo field mirrors the audio field's layout so the two stack evenly */
+#field-session-photo { margin: 16px 0 6px; }
+#field-session-photo > label { display: block; margin-bottom: 8px; }
+#field-session-photo a { color: var(--accent-text); }
+.photo-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
