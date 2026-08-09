@@ -42,12 +42,19 @@
       on top of ours. Decision locked 2026-08-03 (stay on Supabase; Firebase/Drive
       alternatives evaluated and rejected — Google One 2 TB doesn't apply to any
       Google backend).
-- [ ] **Photo bucket + Drive archive** (direction locked 2026-08-03): Supabase
-      `photos` bucket for in-app display (same pattern as session-audio; viable
-      egress-wise once on Pro), and extend the Apps Script mirror to copy new
-      Storage files (photos + audio) into a Drive folder nightly using the
-      service key — Chase's 2 TB Google One becomes the durable archive tier and
-      plugs the "Storage files aren't in pg_dump" gap.
+- [x] ~~Photo bucket (in-app session photos)~~ (shipped v1.16.0 — one photo
+      per session: `session-photos` bucket + `photo_url` column, browser-side
+      compression to 1600px JPEG (strips EXIF/GPS), thumbnails in the
+      sessions table Media column / tiles / Today feature, lazy-loaded.
+      Batch photos + videos route to a shared Google Photos album instead:
+      paste the album link into `CREW_ALBUM_URL` in app.js to light up the
+      header 📷 button and log-form hint.)
+- [ ] **Drive archive of Storage files** (remainder of the 2026-08-03 plan):
+      extend the Apps Script mirror to copy new Storage files (photos +
+      audio) into a Drive folder nightly using the service key — Chase's
+      2 TB Google One becomes the durable archive tier and plugs the
+      "Storage files aren't in pg_dump" gap. More useful now that photos
+      ship; egress fine once on Pro.
 - [ ] **Watch Supabase egress during October** — free tier is 5 GB/month and
       sessions are public, so big assets get re-downloaded per viewer. Check
       dashboard → Settings → Usage weekly during the event. (As of Aug 3:
@@ -137,6 +144,12 @@
   `water_reading` boolean columns on sessions, Bonuses-dropdown checkboxes
   with once-per-event guards, rollup in awards.js, CSV + sheets-mirror
   columns, register.html welcome list updated to all 5 bonuses.)
-- Engagement: streak tracking, daily prompt.
-  (Photo wall graduated to the scoped "Photo bucket + Drive archive" item.
-  Voice-memo recording shipped in v1.5.1.)
+- Photo wall page (Chase, 2026-08-08): a gallery tab/page. Two sources:
+  (a) in-app session photos — fully supported, we own the bucket; (b) the
+  shared Google Photos album — Google killed third-party API reads of user
+  albums (March 2025 Library API scope change), so pulling the album means
+  the unofficial public-link scrape (parse the shared-album page's embedded
+  JSON for lh3 image URLs — could ride the existing pg_cron fetcher, but
+  fragile). Recommendation: build from session photos, treat album scrape
+  as optional garnish later.
+- Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)

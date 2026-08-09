@@ -785,6 +785,7 @@ async function fetchCloudSessions(){
     water_reading: s.water_reading ? 1 : 0,
     cleanup_items: s.cleanup_items || 0,
     audio_url: s.audio_url || null,
+    photo_url: s.photo_url || null,
     start_time: s.start_time || null
   }));
 }
@@ -834,10 +835,16 @@ async function insertCloud(row){
   payload.start_time = row.start_time || null;
   payload.taught_kook = !!row.taught_kook;
   payload.water_reading = !!row.water_reading;
+  payload.photo_url = row.photo_url || null;
   let { error } = await sb.from('sessions').insert(payload);
   // Deploy-order safety: PostgREST rejects the whole insert when the payload
   // names a column the deployed schema lacks. Strip the newest columns first
-  // and retry, then the older start_time (v1.7 SQL not run yet).
+  // and retry, then progressively older ones (photo_url v1.16 → bonus flags
+  // v1.14 → start_time v1.7).
+  if (error && error.code === 'PGRST204' && 'photo_url' in payload) {
+    delete payload.photo_url;
+    ({ error } = await sb.from('sessions').insert(payload));
+  }
   if (error && error.code === 'PGRST204' && 'taught_kook' in payload) {
     delete payload.taught_kook;
     delete payload.water_reading;
@@ -1150,6 +1157,126 @@ function audioPlayerHtml(url){
   return url ? `<audio controls preload="none" src="${esc(url)}"></audio>` : '';
 }
 
+// ===== Session photos (Supabase Storage, bucket: session-photos) =====
+// One photo per session, compressed in the browser before upload. Batch
+// photos and videos live in the crew's shared Google Photos album instead
+// (CREW_ALBUM_URL below) — storage/egress there is Google's problem.
+
+// Paste the Google Photos shared-album link here to light up the 📷 header
+// button and the log-form hint. Empty string hides both.
+const CREW_ALBUM_URL = '';
+
+const PHOTO_MAX_EDGE = 1600;   // long-edge px after compression (~200-400 KB JPEG)
+const PHOTO_QUALITY = 0.82;
+
+let pickedPhotoBlob = null; // compressed image waiting to be saved with the entry
+let pickedPhotoUrl = null;  // object URL backing the preview <img>
+
+// Camera-roll originals are 3-8 MB (and HEIC on iPhones — Safari hands the
+// file input a decodable image). Canvas re-encode caps the long edge and
+// strips EXIF, including the GPS position of someone's house.
+async function compressSessionPhoto(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('could not read that image'));
+      i.src = url;
+    });
+    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', PHOTO_QUALITY));
+    if (!blob) throw new Error('could not process that image');
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function uploadSessionPhoto(blob){
+  if (!sb || !currentUser) throw new Error('Sign in to attach photos');
+  const path = `${currentUser.id}/${crypto.randomUUID()}.jpg`;
+  const { error } = await sb.storage.from('session-photos').upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: false
+  });
+  if (error) throw new Error('Photo upload failed: ' + error.message);
+  const { data } = sb.storage.from('session-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function photoPathFromUrl(url){
+  const m = String(url || '').match(/\/session-photos\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Best-effort cleanup when a session photo is removed or replaced.
+async function deleteSessionPhoto(url){
+  const path = photoPathFromUrl(url);
+  if (!path || !sb || !currentUser) return;
+  try { await sb.storage.from('session-photos').remove([path]); } catch {}
+}
+
+// Thumbnail that opens the full-size image in a new tab. lazy-loading keeps
+// a long session list from pulling every photo on page load (public bucket
+// egress is metered).
+function photoThumbHtml(url, cls = 'session-photo-thumb'){
+  if (!url) return '';
+  return `<a href="${esc(url)}" target="_blank" rel="noopener"><img class="${cls}" loading="lazy" src="${esc(url)}" alt="Session photo" /></a>`;
+}
+
+function discardPickedPhoto(){
+  pickedPhotoBlob = null;
+  if (pickedPhotoUrl) { URL.revokeObjectURL(pickedPhotoUrl); pickedPhotoUrl = null; }
+  const wrap = document.getElementById('photo-preview-wrap');
+  if (wrap) wrap.style.display = 'none';
+  const img = document.getElementById('photo-preview');
+  if (img) img.removeAttribute('src');
+}
+
+function attachPhotoHandlers(){
+  const input = document.getElementById('log-photo');
+  if (input) input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const blob = await compressSessionPhoto(file);
+      discardPickedPhoto();
+      pickedPhotoBlob = blob;
+      pickedPhotoUrl = URL.createObjectURL(blob);
+      const img = document.getElementById('photo-preview');
+      const wrap = document.getElementById('photo-preview-wrap');
+      if (img) img.src = pickedPhotoUrl;
+      if (wrap) wrap.style.display = '';
+    } catch (e) {
+      input.value = '';
+      toast('Could not read that photo: ' + (e.message || e), 'error');
+    }
+  });
+  const discard = document.getElementById('btn-discard-photo');
+  if (discard) discard.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (input) input.value = '';
+    discardPickedPhoto();
+  });
+  // Crew album entry points (header 📷 + log-form hint) appear only once
+  // the shared-album link is configured.
+  if (CREW_ALBUM_URL) {
+    const headerLink = document.getElementById('album-link');
+    if (headerLink) { headerLink.href = CREW_ALBUM_URL; headerLink.style.display = ''; }
+    const formHint = document.getElementById('log-photo-album-hint');
+    if (formHint) {
+      const a = formHint.querySelector('a');
+      if (a) a.href = CREW_ALBUM_URL;
+      formHint.style.display = '';
+    }
+  }
+}
+
 // ===== Post-submit celebration → land on My Sessions =====
 
 const STOKE_LINES = ['Session logged! 🤙', 'Stoke +1 🏄', 'Wave count rising 🌊', 'Logged. Go dry off 🧖'];
@@ -1217,11 +1344,11 @@ function appendSession(row) {
 }
 
 function toCSV(rows) {
-  const header = ['user', 'date', 'start_time', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'taught_kook', 'water_reading', 'cleanup_items', 'audio_url'];
+  const header = ['user', 'date', 'start_time', 'type', 'duration', 'location', 'board', 'notes', 'no_wetsuit', 'costume', 'taught_kook', 'water_reading', 'cleanup_items', 'audio_url', 'photo_url'];
   const quote = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.join(',')];
   for (const r of rows) {
-    lines.push([r.user, r.date, r.start_time || '', r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.taught_kook ? 1 : 0, r.water_reading ? 1 : 0, r.cleanup_items || 0, r.audio_url || ''].map(quote).join(','));
+    lines.push([r.user, r.date, r.start_time || '', r.type, r.duration, r.location, r.board, r.notes, r.no_wetsuit ? 1 : 0, r.costume ? 1 : 0, r.taught_kook ? 1 : 0, r.water_reading ? 1 : 0, r.cleanup_items || 0, r.audio_url || '', r.photo_url || ''].map(quote).join(','));
   }
   return lines.join('\n');
 }
@@ -1473,6 +1600,8 @@ function initForm() {
     // A fresh recording wins; otherwise a picked file.
     const audioSource = recordedBlob || (audioInput && audioInput.files && audioInput.files[0]) || null;
     const previousAudioUrl = editingAudioUrl;
+    const photoRemove = document.getElementById('log-photo-remove');
+    const previousPhotoUrl = editingPhotoUrl;
     try {
       // Audio note: keep the existing one unless removed or replaced
       let audioUrl = editingAudioUrl;
@@ -1486,9 +1615,22 @@ function initForm() {
       }
       row.audio_url = audioUrl || null;
 
+      // Photo: same keep-unless-removed-or-replaced dance
+      let photoUrl = editingPhotoUrl;
+      if (photoRemove && photoRemove.checked) photoUrl = null;
+      if (pickedPhotoBlob) {
+        if (sb && currentUser) {
+          photoUrl = await uploadSessionPhoto(pickedPhotoBlob);
+        } else {
+          toast('Photos need a signed-in account — entry saved without the photo.', 'warn');
+        }
+      }
+      row.photo_url = photoUrl || null;
+
       if (editingId && sb && currentUser) {
         await updateCloudSession(editingId, row);
         if (previousAudioUrl && previousAudioUrl !== row.audio_url) deleteSessionAudio(previousAudioUrl);
+        if (previousPhotoUrl && previousPhotoUrl !== row.photo_url) deleteSessionPhoto(previousPhotoUrl);
         toast('Session updated', 'success');
         resetEditState();
         await syncFromCloud();
@@ -1503,6 +1645,7 @@ function initForm() {
       renderLeaderboard();
       f.reset();
       resetAudioField();
+      resetPhotoField();
       document.getElementById('log-date').value = defaultLogDate();
       // Restore the display name after reset
       enforceProfileNameOnUI();
@@ -1523,6 +1666,7 @@ function initForm() {
     resetEditState();
     f.reset();
     resetAudioField();
+    resetPhotoField();
     document.getElementById('log-date').value = defaultLogDate();
     enforceProfileNameOnUI();
     applyTypeUI();
@@ -1539,6 +1683,7 @@ function initForm() {
       resetEditState();
       f.reset();
       resetAudioField();
+      resetPhotoField();
       document.getElementById('log-date').value = defaultLogDate();
       enforceProfileNameOnUI();
       applyTypeUI();
@@ -1553,6 +1698,7 @@ function initForm() {
 // Editing state and helpers (top-level)
 let editingId = null; // UUID of session being edited (cloud), null when not editing
 let editingAudioUrl = null; // existing audio note of the session being edited
+let editingPhotoUrl = null; // existing photo of the session being edited
 
 // Make edit mode unmistakable: title flips to "Editing Session", the action
 // buttons jump up next to it, and the form gets an accent outline.
@@ -1573,6 +1719,7 @@ function setEditModeUI(editing){
 function resetEditState(){
   editingId = null;
   editingAudioUrl = null;
+  editingPhotoUrl = null;
   document.getElementById('btn-submit').textContent = 'Add Entry';
   document.getElementById('btn-cancel-edit').style.display = 'none';
   setEditModeUI(false);
@@ -1586,6 +1733,16 @@ function resetAudioField(){
   const hint = document.getElementById('log-audio-hint');
   if (hint) hint.style.display = 'none';
   discardRecording();
+}
+
+function resetPhotoField(){
+  const input = document.getElementById('log-photo');
+  if (input) input.value = '';
+  const remove = document.getElementById('log-photo-remove');
+  if (remove) remove.checked = false;
+  const hint = document.getElementById('log-photo-hint');
+  if (hint) hint.style.display = 'none';
+  discardPickedPhoto();
 }
 
 function startEditSession(session){
@@ -1608,8 +1765,10 @@ function startEditSession(session){
   document.getElementById('btn-cancel-edit').style.display = '';
   editingId = session._id || null; // we'll attach _id when rendering from cloud
   editingAudioUrl = session.audio_url || null;
+  editingPhotoUrl = session.photo_url || null;
   setEditModeUI(true); // after editingId is set — the Delete button needs it
   resetAudioFieldForEdit();
+  resetPhotoFieldForEdit();
   // Re-apply type-dependent UI (cleanup locks duration, hint text, bonus summary)
   document.getElementById('log-type').dispatchEvent(new Event('change'));
   // Arriving from a scrolled session list: put the edit form in view
@@ -1624,6 +1783,16 @@ function resetAudioFieldForEdit(){
   const hint = document.getElementById('log-audio-hint');
   if (hint) hint.style.display = editingAudioUrl ? '' : 'none';
   discardRecording();
+}
+
+function resetPhotoFieldForEdit(){
+  const input = document.getElementById('log-photo');
+  if (input) input.value = '';
+  const remove = document.getElementById('log-photo-remove');
+  if (remove) remove.checked = false;
+  const hint = document.getElementById('log-photo-hint');
+  if (hint) hint.style.display = editingPhotoUrl ? '' : 'none';
+  discardPickedPhoto();
 }
 
 async function updateCloudSession(id, row){
@@ -1645,7 +1814,12 @@ async function updateCloudSession(id, row){
   payload.start_time = row.start_time || null;
   payload.taught_kook = !!row.taught_kook;
   payload.water_reading = !!row.water_reading;
+  payload.photo_url = row.photo_url || null;
   let { data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id');
+  if (error && error.code === 'PGRST204' && 'photo_url' in payload) {
+    delete payload.photo_url; // column not there yet — see insertCloud
+    ({ data, error } = await sb.from('sessions').update(payload).eq('id', id).eq('user_id', currentUser.id).select('id'));
+  }
   if (error && error.code === 'PGRST204' && 'taught_kook' in payload) {
     delete payload.taught_kook; // columns not there yet — see insertCloud
     delete payload.water_reading;
@@ -1852,7 +2026,7 @@ function renderMyStats() {
   const isTiles = sessionsLayout === 'tiles';
   const out = [];
   if (!isTiles) {
-    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Audio</th></tr></thead><tbody>`);
+    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
     const u = (s.user || '').trim();
@@ -1874,12 +2048,12 @@ function renderMyStats() {
       out.push(`<div class="card"><div><b>${when}</b> · ${esc(typeLabel(s.type))}</div>
       ${where ? `<div>${where}</div>` : ''}
       <div>Scored ${SurftoberAwards.minutesToHHMM(scoredMins)} ${bonusBadges}</div>
-      ${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${editLink ? `<div>${editLink}</div>` : ''}</div>`);
+      ${photoThumbHtml(s.photo_url, 'session-photo-card')}${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${editLink ? `<div>${editLink}</div>` : ''}</div>`);
     } else {
       out.push(
         `<tr><td>${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
           scoredMins
-        )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${audioPlayerHtml(s.audio_url)}</td></tr>`
+        )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
       );
     }
   });
@@ -2345,6 +2519,7 @@ function renderTodayTile(){
     feature = `<div class="today-feature">
       <div class="today-feature-head"><span><a href="#me" class="today-user" data-user="${esc(s.user || '')}">${esc(s.user || '')}</a> ${bits}</span>${sessNav}</div>
       ${snippet ? `<blockquote class="today-quote">“${esc(snippet)}”</blockquote>` : ''}
+      ${photoThumbHtml(s.photo_url, 'session-photo-card')}
       ${s.audio_url ? audioPlayerHtml(s.audio_url) : ''}
     </div>`;
   }
@@ -2517,6 +2692,7 @@ window.addEventListener('load', () => {
   attachAccountHandlers();
   attachAdminEventHandlers();
   attachAudioHandlers();
+  attachPhotoHandlers();
   reflectEventUI();
   renderMyStats();
   renderLeaderboard();

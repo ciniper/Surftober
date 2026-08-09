@@ -44,7 +44,7 @@ const PROFILE_COLS = [
 const SESSION_COLS = [
   'id', 'team', 'user_id', 'user_name', 'date', 'start_time', 'type', 'duration_minutes',
   'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'taught_kook',
-  'water_reading', 'cleanup_items', 'audio_url', 'deleted_at', 'created_at'
+  'water_reading', 'cleanup_items', 'audio_url', 'photo_url', 'deleted_at', 'created_at'
 ];
 
 // v1.5+: the admin-launched seasons table.
