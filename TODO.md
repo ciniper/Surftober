@@ -113,6 +113,11 @@
       Surf/Windsport/Swim/Other/Beach Cleanup with per-type eligibility hints,
       and bonuses moved into a Bonuses dropdown with plain-word descriptions;
       v1.14.0 synced register.html's welcome-text bonus list to all 5 bonuses.)
+      Also include (Chase, 2026-08-08): install / save-the-link instructions —
+      iPhone: Safari Share → "Add to Home Screen"; Android: Chrome menu →
+      "Add to Home screen"/"Install app"; desktop: the install icon at the
+      right end of Chrome's address bar. The PWA manifest already makes these
+      installs open app-style without browser chrome.
 - [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
       Water Task Force branding to the leaderboard water reading. Nuance: the
       live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
