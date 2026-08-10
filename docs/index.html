@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=32" />
+  <link rel="stylesheet" href="./styles.css?v=33" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -301,16 +301,9 @@
     <section id="page-leaderboard" class="page">
       <div class="page-head">
         <h2>Leaderboard</h2>
-        <div id="pledge-banner" class="pledge-banner" hidden>
-          <span class="pledge-label">Total pledged</span>
-          <span class="pledge-amount"><svg class="money-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect><circle cx="12" cy="12" r="2.7" fill="currentColor"></circle><circle cx="6.2" cy="12" r="0.9" fill="currentColor"></circle><circle cx="17.8" cy="12" r="0.9" fill="currentColor"></circle></svg><span class="pledge-amount-num"></span></span>
-        </div>
       </div>
-      <div id="surf-report" class="surf-report" hidden></div>
+      <div id="totals-tile" class="totals-tile" hidden></div>
       <div id="today-tile" hidden></div>
-      <div class="filters">
-        <span class="event-scope hint" id="lb-scope"></span>
-      </div>
       <div id="leaderboard" class="table"></div>
       <div class="medal-legend">
         <span class="hint">Medals:</span>
@@ -320,6 +313,7 @@
         <span class="medal-key"><span class="badge bronze">BRONZE</span> 25h+</span>
         <span class="medal-key"><span class="badge participant">PARTICIPANT</span> 10h+</span>
       </div>
+      <div id="surf-report" class="surf-report" hidden></div>
     </section>
 
     <!-- Awards Page -->
@@ -474,6 +468,7 @@
 
   <footer class="app-footer">
     <span>Surftober <span id="live-status" class="live" style="display:none">• LIVE</span></span>
+    <span class="event-scope hint" id="footer-scope"></span>
     <span><span id="sw-status" style="display:none"></span><span class="app-version"></span></span>
   </footer>
 
@@ -481,6 +476,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=9"></script>
-  <script type="module" src="./app.js?v=47"></script>
+  <script type="module" src="./app.js?v=48"></script>
 </body>
 </html>
