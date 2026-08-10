@@ -20,6 +20,7 @@ create table if not exists public.profiles (
   photo_base64 text,
   additional_comments text,
   registered_at timestamptz default now(),
+  registered_event_id uuid,           -- which event this person (re-)registered for
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -48,7 +49,7 @@ create unique index if not exists profiles_display_name_unique_idx
 -- Owner-rights view bypasses profiles RLS for just these competition-facing
 -- columns.
 create or replace view public.public_profiles as
-  select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment
+  select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment, registered_event_id
   from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
