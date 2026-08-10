@@ -62,18 +62,33 @@ function toast(msg, type='success'){
   setTimeout(()=> el.remove(), 4000);
 }
 
-// Admin UI gating based on NUKE_ADMINS allowlist
+// Admin UI gating based on NUKE_ADMINS allowlist. Awards + Admin have no
+// header tabs anymore — admins reach them via the Account page's Admin
+// Tools card; the pages themselves stay display:none for everyone else.
 function reflectAdminVisibility(adminEmailList = []){
-  const tab = document.getElementById('tab-admin-link');
   const page = document.getElementById('page-admin');
-  const awardsTab = document.getElementById('tab-awards-link');
   const awardsPage = document.getElementById('page-awards');
+  const accountCard = document.getElementById('account-admin-card');
   const isAdmin = !!currentUser && currentUser.email && adminEmailList.includes(currentUser.email.toLowerCase());
-  if (tab) tab.style.display = isAdmin ? '' : 'none';
   if (page) page.style.display = isAdmin ? '' : 'none';
-  if (awardsTab) awardsTab.style.display = isAdmin ? '' : 'none';
   if (awardsPage) awardsPage.style.display = isAdmin ? '' : 'none';
+  if (accountCard) accountCard.style.display = isAdmin ? '' : 'none';
   renderTabs(); // bounce off #admin/#awards if the current page just got hidden
+}
+
+// Viewers (in-app via the club password, not signed in) are read-only:
+// no Log or Account, and a Home tab back to the landing page instead.
+function reflectViewerNav(){
+  const viewer = !currentUser;
+  for (const key of ['log', 'account']) {
+    const tab = document.querySelector(`.tabs a[data-tab="${key}"]`);
+    const page = document.getElementById('page-' + key);
+    if (tab) tab.style.display = viewer ? 'none' : '';
+    if (page) page.style.display = viewer ? 'none' : '';
+  }
+  const home = document.getElementById('tab-home-link');
+  if (home) home.style.display = viewer ? '' : 'none';
+  renderTabs(); // bounce off #log/#account if they just got hidden
 }
 
 async function initSupabase(){
@@ -94,6 +109,7 @@ async function initSupabase(){
   }
   
   reflectAuthUI();
+  reflectViewerNav();
   await fetchProfile();
   enforceProfileNameOnUI();
   reflectAdminVisibility(adminEmails);
@@ -106,6 +122,7 @@ async function initSupabase(){
   sb.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
     reflectAuthUI();
+    reflectViewerNav();
     reflectAdminVisibility(adminEmails);
     if (currentUser) {
       fetchProfile();
@@ -1398,15 +1415,19 @@ function parseCSV(text) {
 function renderTabs() {
   const hash = location.hash.replace('#', '') || 'log';
   const el = document.getElementById('page-' + hash);
-  // Admin/Awards pages are hidden with inline display:none for non-admins,
-  // which overrides the .active class — bounce to Log instead of a blank page.
+  // Hidden pages (admin-only, or Log/Account in viewer mode) use inline
+  // display:none, which overrides the .active class — bounce to Log, or to
+  // the Leaderboard when Log itself is hidden (viewer), not a blank page.
   if (el && el.style.display === 'none') {
-    location.hash = '#log';
+    const log = document.getElementById('page-log');
+    location.hash = log && log.style.display === 'none' ? '#leaderboard' : '#log';
     return;
   }
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.remove('active'));
-  const tab = document.querySelector(`.tabs a[data-tab="${hash}"]`);
+  // Awards/Admin live under Account now — keep that tab lit while on them
+  const tabKey = hash === 'awards' || hash === 'admin' ? 'account' : hash;
+  const tab = document.querySelector(`.tabs a[data-tab="${tabKey}"]`);
   if (el) el.classList.add('active');
   if (tab) tab.classList.add('active');
   // Journals rendered while this page was hidden couldn't be measured for the
