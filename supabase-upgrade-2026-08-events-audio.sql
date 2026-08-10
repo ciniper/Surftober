@@ -528,3 +528,25 @@ create policy "Users upload own session photos" on storage.objects for insert to
   with check (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Users delete own session photos" on storage.objects for delete to authenticated
   using (bucket_id = 'session-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =========================================================
+-- v1.19 : per-event registration
+-- =========================================================
+-- Each new event requires a quick re-registration (existing account and
+-- profile carry over — no new email verification). profiles gains a
+-- registered_event_id stamp; register.html sets it to the active event on
+-- save, and the app gates logging + the 0-hour roster rows on it (admins
+-- exempt). The backfill grandfathers everyone already registered into the
+-- CURRENT active event so nothing breaks on deploy — the re-register
+-- requirement first bites when the NEXT event goes active.
+alter table public.profiles add column if not exists registered_event_id uuid;
+
+update public.profiles
+   set registered_event_id = (select id from public.events where is_active limit 1)
+ where registered_event_id is null;
+
+create or replace view public.public_profiles as
+  select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment, registered_event_id
+  from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;

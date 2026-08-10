@@ -236,8 +236,9 @@
     </div>
 
     <form id="registration-form" class="form-section hidden">
-      <h2>Registration Details</h2>
-      
+      <h2 id="registration-title">Registration Details</h2>
+      <p class="hint hidden" id="rereg-note"></p>
+
       <label>
         First and Last Name (Display Name) *
         <input type="text" id="display-name" placeholder="e.g. Chase Cooper" required />
@@ -322,6 +323,7 @@
     let sb = null;
     let currentUser = null;
     let photoBase64 = null;
+    let activeEvent = null; // set once signed in; stamped onto the profile on save
 
     // Club password gate — a friends-only speed bump, not real security.
     // Shared flag with View Mode (landing.html) via localStorage.
@@ -404,27 +406,75 @@
       });
     }
 
+    // The event currently open for registration. null when none is active or
+    // the fetch fails — registration then works the pre-v1.19 way (no stamp).
+    async function fetchActiveEvent() {
+      try {
+        const { data, error } = await sb.from('events').select('id, name').eq('is_active', true).limit(1).maybeSingle();
+        if (error) return null;
+        return data || null;
+      } catch { return null; }
+    }
+
     async function showRegistrationForm() {
       // Reaching here means they authenticated — that counts as being in the
       // club (covers magic links opened on a device that never saw the gate).
       localStorage.setItem('surftober.clubpass', '1');
-      // Check if user already has a profile
-      const { data, error } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
-      
-      if (data && data.display_name) {
-        // User already registered, redirect to main app
+      // select('*') stays deploy-order-safe while registered_event_id rolls out
+      const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+      activeEvent = await fetchActiveEvent();
+
+      // Already registered for the CURRENT event (or the per-event column
+      // isn't deployed yet) → straight into the app, old behavior.
+      const eventCovered = !activeEvent || !data || !('registered_event_id' in data) ||
+        data.registered_event_id === activeEvent.id;
+      if (data && data.display_name && eventCovered) {
         toast('Welcome back! Redirecting...', 'success');
         setTimeout(() => {
           sessionStorage.setItem('surftober_authenticated', '1');
           window.location.href = './index.html';
         }, 1000);
+        return;
+      }
+
+      // New user, or a returning member facing a new event: show the form.
+      // They're already authenticated (e.g. a magic link opened on another
+      // device), so the gate and sign-in sections are no longer relevant.
+      document.getElementById('club-gate').classList.add('hidden');
+      document.getElementById('auth-section').classList.add('hidden');
+      document.getElementById('registration-form').classList.remove('hidden');
+
+      if (data && data.display_name) {
+        // Returning member re-registering for a new event: prefill everything
+        // so it's a confirm-and-submit, and keep their photo unless replaced.
+        const fields = {
+          'display-name': data.display_name || '',
+          'target-hours': data.target_hours || '',
+          'charity-commitment': data.charity_commitment || '',
+          'sponsor-match': data.sponsor_match || '',
+          'location-based': data.location_based || '',
+          'whatsapp-phone': data.whatsapp_phone || '',
+          'fun-comment': data.fun_comment || '',
+          'additional-comments': data.additional_comments || ''
+        };
+        for (const [id, value] of Object.entries(fields)) {
+          const el = document.getElementById(id);
+          if (el) el.value = value;
+        }
+        if (data.photo_base64) {
+          photoBase64 = data.photo_base64;
+          const src = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
+          document.getElementById('photo-preview-img').src = src;
+          document.getElementById('photo-preview').style.display = 'block';
+        }
+        document.getElementById('registration-title').textContent =
+          `Welcome back${activeEvent ? ' — ' + activeEvent.name : ''}!`;
+        const note = document.getElementById('rereg-note');
+        note.textContent = 'New event, quick re-registration: your details are prefilled — update anything that changed (goal, pledge) and hit submit.';
+        note.classList.remove('hidden');
+        document.getElementById('btn-submit-registration').textContent = 'Confirm Registration';
+        toast('Confirm your details for the new event.', 'success');
       } else {
-        // New user, show registration form. They're already authenticated
-        // (e.g. a magic link opened on another device), so the gate and
-        // sign-in sections are no longer relevant.
-        document.getElementById('club-gate').classList.add('hidden');
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('registration-form').classList.remove('hidden');
         toast('Authentication successful! Please complete your registration.', 'success');
       }
     }
@@ -532,9 +582,16 @@
         additional_comments: document.getElementById('additional-comments').value.trim(),
         registered_at: new Date().toISOString()
       };
+      // Stamp which event this registration is for (per-event re-registration)
+      if (activeEvent) profileData.registered_event_id = activeEvent.id;
 
       try {
-        const { error } = await sb.from('profiles').upsert(profileData);
+        let { error } = await sb.from('profiles').upsert(profileData);
+        if (error && error.code === 'PGRST204' && 'registered_event_id' in profileData) {
+          // registered_event_id column not deployed yet — save without it
+          delete profileData.registered_event_id;
+          ({ error } = await sb.from('profiles').upsert(profileData));
+        }
         if (error) throw error;
         
         toast('Registration complete! Redirecting to app...', 'success');

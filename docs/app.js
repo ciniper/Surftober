@@ -62,6 +62,45 @@ function toast(msg, type='success'){
   setTimeout(()=> el.remove(), 4000);
 }
 
+function isAdminUser(){
+  return !!currentUser && !!currentUser.email && adminEmails.includes(currentUser.email.toLowerCase());
+}
+
+// ===== Per-event registration =====
+// Every event requires a (re-)registration: profiles.registered_event_id
+// must match the active event. Existing accounts carry over — re-registering
+// is just confirming the prefilled form on register.html, no new email
+// verification. Admins are exempt.
+// Deploy-order safety: while the SQL migration hasn't run, the column is
+// absent from fetched rows and everyone counts as registered (old behavior).
+
+// A signed-in non-admin who registered for a previous event must re-register
+// before logging into the active one.
+function needsReRegistration(){
+  if (!currentUser || !activeEvent || isAdminUser()) return false;
+  if (!profileData || !('registered_event_id' in profileData)) return false;
+  return profileData.registered_event_id !== activeEvent.id;
+}
+
+// Same test for roster rows (public_profiles) — used for the 0-hour
+// leaderboard rows, so only people signed up for THIS event appear.
+function isProfileRegistered(p){
+  if (!activeEvent || !p || !('registered_event_id' in p)) return true;
+  return p.registered_event_id === activeEvent.id;
+}
+
+function updateReRegBanner(){
+  const el = document.getElementById('rereg-banner');
+  if (!el) return;
+  if (needsReRegistration()) {
+    el.innerHTML = `🌊 <b>${esc(activeEvent.name)}</b> is here — ` +
+      `<a href="./register.html">re-register to join</a>! Your profile carries over; it takes 30 seconds.`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 // Admin UI gating based on NUKE_ADMINS allowlist. Awards + Admin have no
 // header tabs anymore — admins reach them via the Account page's Admin
 // Tools card; the pages themselves stay display:none for everyone else.
@@ -210,7 +249,8 @@ let roster = []; // [{id, display_name, target_hours, charity_commitment?, fun_c
 async function loadRoster(){
   if (!sb) return;
   const columnSets = [
-    'id, display_name, target_hours, charity_commitment, fun_comment',
+    'id, display_name, target_hours, charity_commitment, fun_comment, registered_event_id',
+    'id, display_name, target_hours, charity_commitment, fun_comment', // view predates registered_event_id
     'id, display_name, target_hours' // view predates charity_commitment
   ];
   for (const cols of columnSets) {
@@ -257,10 +297,11 @@ async function compressImageToBase64(file, maxDim = 256, quality = 0.82){
 }
 
 async function fetchProfile(){
-  if (!currentUser) { 
-    profileName = null; 
+  if (!currentUser) {
+    profileName = null;
     profileData = null;
-    return; 
+    updateReRegBanner();
+    return;
   }
   const { data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) { console.warn('profile fetch error', error); return; }
@@ -293,6 +334,7 @@ async function fetchProfile(){
 
   enforceProfileNameOnUI();
   renderAccountPledge();
+  updateReRegBanner();
 }
 
 async function saveProfile(){
@@ -628,6 +670,7 @@ function reflectEventUI(){
     const el = document.getElementById(id);
     if (el) el.textContent = scopeText;
   }
+  updateReRegBanner(); // activeEvent just resolved — the re-register nag may apply now
   // Log form window
   const dateEl = document.getElementById('log-date');
   if (dateEl) {
@@ -1617,6 +1660,10 @@ function initForm() {
       toast('No active event — logging is closed.', 'warn');
       return;
     }
+    if (needsReRegistration()) {
+      toast(`Re-register for ${activeEvent.name} first — your profile carries over (see the banner up top).`, 'warn');
+      return;
+    }
     if (todayStr() < activeEvent.start_date) {
       toast(`${activeEvent.name} starts ${fmtDay(activeEvent.start_date)} — logging opens then.`, 'warn');
       return;
@@ -2151,11 +2198,12 @@ function renderLeaderboard() {
   const live = isViewingActiveEvent();
   if (live) {
     // Registrants without a session yet still get a 0-hour row — you're on
-    // the board the moment you sign up.
+    // the board the moment you sign up FOR THIS EVENT (per-event
+    // registration; profiles from earlier events wait until they re-register).
     const seen = new Set(totals.map((t) => t.user));
     roster.forEach((p) => {
       const name = String(p.display_name || '').trim();
-      if (name && !seen.has(name)) {
+      if (name && !seen.has(name) && isProfileRegistered(p)) {
         seen.add(name);
         totals.push({ user: name, total_hours: 0, total_minutes: 0, medal: 'OBSERVER' });
       }
