@@ -98,6 +98,7 @@ textarea { resize: vertical; }
 .badge.bronze { background: linear-gradient(90deg, #cd7f32, #b8722c); color: #241505; font-weight: 700; }
 .badge.participant { background: linear-gradient(90deg, #48ba74, #339363); color: #06130c; font-weight: 700; }
 .badge.ok { background: color-mix(in srgb, var(--ok) 20%, var(--panel)); color: var(--text); border: 1px solid var(--ok); }
+.badge.frozen { background: color-mix(in srgb, #6ea8d8 22%, var(--panel)); color: var(--text); border: 1px solid #6ea8d8; }
 pre { white-space: pre-wrap; word-wrap: break-word; }
 
 /* Toasts */

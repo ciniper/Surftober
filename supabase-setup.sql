@@ -65,6 +65,7 @@ create table if not exists public.events (
   start_date date not null,
   end_date date not null,
   is_active boolean not null default false,
+  logging_frozen boolean not null default false, -- admin cutoff: event stays active/visible, logging closed
   created_at timestamptz default now(),
   constraint events_range_ok check (start_date <= end_date)
 );
