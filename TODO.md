@@ -5,31 +5,6 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
-- [x] ~~Surfline conditions widget for Ocean Beach~~ (shipped v1.8.2, reworked
-      v1.8.3 — leaderboard header with three OB zone tiles: wave height,
-      condition chip, swell-scaled wave graphic; fails invisibly, hides if the
-      reading is >24 h old. IMPORTANT lesson: Surfline only sets CORS headers
-      for its own domains and localhost, so the v1.8.2 browser-direct fetch
-      worked in dev and died on surftober.com. v1.8.3 fetches server-side
-      instead: pg_cron runs `refresh_surf_report()` twice an hour via pg_net
-      into the `surf_report` singleton table (SQL in both setup/upgrade
-      files), and clients read it through the anon API with a 1 h localStorage
-      cache (`surftober.surfReport.v2`). If tiles ever vanish, check
-      `select status_code from net._http_response order by id desc limit 1;`
-      — a 403 means Surfline started blocking AWS/datacenter IPs, a real risk
-      with unofficial APIs. Spot IDs live in app.js `SURF_SPOTS`; the
-      3,830-entry name→spotId map in garmin-connect-export-master-chaz's
-      `gs_import/locations.py` remains available if this grows beyond OB.
-      NOTE for Chase: that repo has a hardcoded Surfline client secret in its
-      git history — worth scrubbing, independent of Surftober.
-      v1.9.0 additions on the same cron: a tide strip (Surfline tides endpoint,
-      South OB spot, days=2 → `tides`/`tides_at` columns) and a water-quality
-      line (SFPUC `infrastructure.sfwater.org/lims.asmx/getBeaches` — the
-      real-time feed behind the official posted/safe map; JSON wrapped in an
-      XML envelope; stations 4601–4606; safe = no `s_color` R and no `cso`
-      among sampled stations, W/Y stations ignored → `water`/`water_at`).
-      Related find from the BWTF repo dig: ~/Personal/BWTF/token.txt holds an
-      unused GitHub PAT (`ghp_…`) in the working tree — rotate/remove it.)
 - [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
@@ -42,13 +17,6 @@
       on top of ours. Decision locked 2026-08-03 (stay on Supabase; Firebase/Drive
       alternatives evaluated and rejected — Google One 2 TB doesn't apply to any
       Google backend).
-- [x] ~~Photo bucket (in-app session photos)~~ (shipped v1.16.0 — one photo
-      per session: `session-photos` bucket + `photo_url` column, browser-side
-      compression to 1600px JPEG (strips EXIF/GPS), thumbnails in the
-      sessions table Media column / tiles / Today feature, lazy-loaded.
-      Batch photos + videos route to a shared Google Photos album instead:
-      paste the album link into `CREW_ALBUM_URL` in app.js to light up the
-      header 📷 button and log-form hint.)
 - [ ] **Drive archive of Storage files** (remainder of the 2026-08-03 plan):
       extend the Apps Script mirror to copy new Storage files (photos +
       audio) into a Drive folder nightly using the service key — Chase's
@@ -75,19 +43,13 @@
       Before October: create the Surftober 2026 shared album (Share →
       Create link + Collaborate on), paste the new link there, push. No
       cache bump needed — version.js is network-first.
-- [x] ~~Add photo compression to register.html's upload~~ (shipped in v1.8.0 —
-      register now canvas-compresses to 256px JPEG like the Account flow. To
-      spot any stragglers from before: `select display_name,
-      length(photo_base64) from public.profiles
-      where length(photo_base64) > 100000;`)
 - [ ] **Nudge existing registrants to per-hour pledge values** — the v1.8.0
       leaderboard computes Pledged = charity_commitment × hours surfed, so a
       legacy lump-sum answer like "$100" reads as $100/hour. Registration and
       Account now say "$ per hour", but pre-v1.8.0 profiles should update
       their Account field (or Chase edits profiles.charity_commitment in the
-      Table Editor).
-- [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
-      events tab + start_time + audio_url/deleted_at all mirrored)
+      Table Editor). Largely self-solving since v1.19.0: everyone re-registers
+      per event through the prefilled form, which surfaces the pledge field.
 - [ ] **Watch: Surfline 403-blocked Supabase's egress IP** (2026-08-05, ~00:07
       PDT — 403 status with a "502 Bad Gateway" body; SFPUC unaffected; same
       requests fine from residential IPs). Free-tier egress IPs are SHARED
@@ -99,14 +61,6 @@
       of days, stage 2 is a Supabase Edge Function proxy for just the two
       Surfline calls (clean single UA, different TLS fingerprint + egress
       IPs), invoked by the same cron, writing to the same table.
-- [x] ~~Dark mode / light mode~~ (shipped v1.11.0 — header ☀️🌙 toggle for
-      everyone; dark = Sunset Surf, light = Pumpkin Spice, LIGHT IS DEFAULT
-      (styles.css :root now mirrors pumpkin-spice — keep them in sync).
-      Buttons/active tabs use new optional --btn-bg/--btn-bg-strong vars
-      (#d1470f→#c2410c) so button text is WHITE and still passes WCAG
-      (white on brand #ff6b35 is only 2.8:1). Other 14 admin themes keep
-      their old ink via CSS fallback. landing/register stay always-dark with
-      pinned .app-version/.hint colors.)
 - [ ] **Info overlay** (Chase, 2026-08-08) — an ⓘ button opening a modal/sheet
       explaining the event, scoring, and UI at a glance. (The other two parts
       of this item shipped in v1.13.0: session types simplified to
@@ -131,12 +85,6 @@
       back to null). Today restoring requires the Supabase dashboard (Table Editor →
       sessions → clear `deleted_at`). Needs an admin-gated RPC, since the anon API
       can only see rows, not un-tombstone others' sessions.
-- [x] ~~Fix the dead admin buttons~~ (shipped v1.12.0 — Factory Reset and
-      Nuclear Wipe removed; List Users rebuilt on `admin_list_users()`, a
-      SECURITY DEFINER SQL function (no edge function needed) whose WHERE
-      gate returns zero rows to non-admins. Shows email, name, session
-      count, registered and last sign-in. Admin email list must stay in
-      sync with the events policies.)
 - [ ] Rotate the Google OAuth client secret (the old one passed through chat during
       the June 2026 recovery). Google Cloud Console → create new secret → paste into
       Supabase Auth provider → delete old secret.
@@ -150,11 +98,6 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
-- [x] ~~New bonus-hour categories~~ (shipped v1.14.0 — "Teach a Kook" and
-  "Water Quality Reading", both one-time +1h like costume: `taught_kook` /
-  `water_reading` boolean columns on sessions, Bonuses-dropdown checkboxes
-  with once-per-event guards, rollup in awards.js, CSV + sheets-mirror
-  columns, register.html welcome list updated to all 5 bonuses.)
 - Photo wall page (Chase, 2026-08-08): a gallery tab/page. Two sources:
   (a) in-app session photos — fully supported, we own the bucket; (b) the
   shared Google Photos album — Google killed third-party API reads of user
@@ -164,3 +107,68 @@
   fragile). Recommendation: build from session photos, treat album scrape
   as optional garnish later.
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
+
+## Done
+- [x] ~~New bonus-hour categories~~ (shipped v1.14.0 — "Teach a Kook" and
+      "Water Quality Reading", both one-time +1h like costume: `taught_kook` /
+      `water_reading` boolean columns on sessions, Bonuses-dropdown checkboxes
+      with once-per-event guards, rollup in awards.js, CSV + sheets-mirror
+      columns, register.html welcome list updated to all 5 bonuses. v1.15.1
+      made Water Quality Reading a fixed 1h session type with full Beach
+      Cleanup parity.)
+- [x] ~~Photo bucket (in-app session photos)~~ (shipped v1.16.0 — one photo
+      per session: `session-photos` bucket + `photo_url` column, browser-side
+      compression to 1600px JPEG (strips EXIF/GPS), thumbnails in the
+      sessions table Media column / tiles / Today feature, lazy-loaded.
+      Batch photos + videos route to a shared Google Photos album instead:
+      paste the album link into `CREW_ALBUM_URL` in docs/version.js (moved
+      there in v1.16.1, network-first) to light up the header pinwheel
+      button and log-form hint.)
+- [x] ~~Fix the dead admin buttons~~ (shipped v1.12.0 — Factory Reset and
+      Nuclear Wipe removed; List Users rebuilt on `admin_list_users()`, a
+      SECURITY DEFINER SQL function (no edge function needed) whose WHERE
+      gate returns zero rows to non-admins. Shows email, name, session
+      count, registered and last sign-in. Admin email list must stay in
+      sync with the events policies.)
+- [x] ~~Dark mode / light mode~~ (shipped v1.11.0 — header ☀️🌙 toggle for
+      everyone; dark = Sunset Surf, light = Pumpkin Spice, LIGHT IS DEFAULT
+      (styles.css :root now mirrors pumpkin-spice — keep them in sync).
+      Buttons/active tabs use new optional --btn-bg/--btn-bg-strong vars
+      (#d1470f→#c2410c) so button text is WHITE and still passes WCAG
+      (white on brand #ff6b35 is only 2.8:1). Other 14 admin themes keep
+      their old ink via CSS fallback. landing/register stay always-dark with
+      pinned .app-version/.hint colors.)
+- [x] ~~Surfline conditions widget for Ocean Beach~~ (shipped v1.8.2, reworked
+      v1.8.3 — leaderboard header with three OB zone tiles: wave height,
+      condition chip, swell-scaled wave graphic; fails invisibly, hides if the
+      reading is >24 h old. IMPORTANT lesson: Surfline only sets CORS headers
+      for its own domains and localhost, so the v1.8.2 browser-direct fetch
+      worked in dev and died on surftober.com. v1.8.3 fetches server-side
+      instead: pg_cron runs `refresh_surf_report()` twice an hour via pg_net
+      into the `surf_report` singleton table (SQL in both setup/upgrade
+      files), and clients read it through the anon API with a 1 h localStorage
+      cache (`surftober.surfReport.v2`). If tiles ever vanish, check
+      `select status_code from net._http_response order by id desc limit 1;`
+      — a 403 means Surfline started blocking AWS/datacenter IPs, a real risk
+      with unofficial APIs. Spot IDs live in app.js `SURF_SPOTS`; the
+      3,830-entry name→spotId map in garmin-connect-export-master-chaz's
+      `gs_import/locations.py` remains available if this grows beyond OB.
+      NOTE for Chase: that repo has a hardcoded Surfline client secret in its
+      git history — worth scrubbing, independent of Surftober.
+      v1.9.0 additions on the same cron: a tide strip (Surfline tides endpoint,
+      South OB spot, days=2 → `tides`/`tides_at` columns) and a water-quality
+      line (SFPUC `infrastructure.sfwater.org/lims.asmx/getBeaches` — the
+      real-time feed behind the official posted/safe map; JSON wrapped in an
+      XML envelope; stations 4601–4606; safe = no `s_color` R and no `cso`
+      among sampled stations, W/Y stations ignored → `water`/`water_at`).
+      Related find from the BWTF repo dig: ~/Personal/BWTF/token.txt holds an
+      unused GitHub PAT (`ghp_…`) in the working tree — rotate/remove it.)
+- [x] ~~Add photo compression to register.html's upload~~ (shipped in v1.8.0 —
+      register now canvas-compresses to 256px JPEG like the Account flow. To
+      spot any stragglers from before: `select display_name,
+      length(photo_base64) from public.profiles
+      where length(photo_base64) > 100000;`)
+- [x] ~~Google Sheet mirror: re-paste the updated template~~ (done 2026-08-02 —
+      events tab + start_time + audio_url/deleted_at all mirrored. NOTE:
+      needs another re-paste for the v1.14.0 taught_kook/water_reading
+      columns if not done yet.)
