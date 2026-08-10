@@ -604,9 +604,10 @@ function reflectEventUI(){
       banner.style.display = 'none';
     }
   }
-  // Scope labels on Sessions / Leaderboard / Awards
+  // Scope labels: Sessions / Awards keep theirs inline; the Leaderboard's
+  // moved to the global footer so it shows on every page.
   const scopeText = `${ev.name} · ${fmtDay(ev.start_date)} – ${fmtDay(ev.end_date)}`;
-  for (const id of ['me-scope', 'lb-scope', 'aw-scope']) {
+  for (const id of ['me-scope', 'aw-scope', 'footer-scope']) {
     const el = document.getElementById(id);
     if (el) el.textContent = scopeText;
   }
@@ -2140,6 +2141,8 @@ function renderLeaderboard() {
     });
   }
   if (!totals.length) {
+    const tile = document.getElementById('totals-tile');
+    if (tile) tile.hidden = true;
     document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet. First wave wins.</div>';
     return;
   }
@@ -2168,12 +2171,20 @@ function renderLeaderboard() {
       return `<tr><td>${i + 1}</td><td><a href="#me" class="user-link" data-user="${esc(t.user)}" style="color:var(--accent-text);cursor:pointer;text-decoration:none">${esc(t.user)}</a></td><td>${t.total_hours.toFixed(1)}</td><td class="nowrap">${streakCell}</td><td>${medalCell}</td></tr>`;
     }
   );
-  // Total pledged lives in the page header, next to the "Leaderboard" title
-  const banner = document.getElementById('pledge-banner');
-  if (banner) {
-    banner.hidden = !(live && totalPledged > 0);
-    const amt = banner.querySelector('.pledge-amount-num');
-    if (amt) amt.textContent = '$' + totalPledged;
+  // Totals tile: dollars raised + hours surfed, side by side. Pledge money
+  // is a live-event concept (see above), so archives show hours only.
+  const tile = document.getElementById('totals-tile');
+  if (tile) {
+    const totalHours = totals.reduce((a, t) => a + (t.total_minutes || 0), 0) / 60;
+    const moneyIcon = '<svg class="money-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect><circle cx="12" cy="12" r="2.7" fill="currentColor"></circle><circle cx="6.2" cy="12" r="0.9" fill="currentColor"></circle><circle cx="17.8" cy="12" r="0.9" fill="currentColor"></circle></svg>';
+    const waveIcon = '<svg class="money-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M14 13c0-4.5-2.5-7.5-7-8 2 1.5 2.6 3.4 2.8 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    const showMoney = live && totalPledged > 0;
+    tile.hidden = !(showMoney || totalHours > 0);
+    tile.innerHTML =
+      (showMoney
+        ? `<div class="total-stat"><span class="total-label">Total pledged</span><span class="total-value money">${moneyIcon}$${totalPledged}</span></div>`
+        : '') +
+      `<div class="total-stat"><span class="total-label">Total hours</span><span class="total-value">${waveIcon}${totalHours.toFixed(1)} h</span></div>`;
   }
   const th = (key, label) =>
     `<th class="sortable" data-key="${key}">${label}${leaderboardSort === key ? ' <span class="sort-arrow">▾</span>' : ''}</th>`;
@@ -2288,25 +2299,23 @@ function paintSurfReport(report){
   // A reading older than a day means the server cron died — hide rather than
   // show week-old "right now" conditions.
   if (!report.fetchedAt || Date.now() - report.fetchedAt > SURF_MAX_AGE_MS) return;
-  const mins = Math.max(0, Math.round((Date.now() - report.fetchedAt) / 60000));
-  const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
-  let waterHtml = '';
-  if (report.water && Array.isArray(report.water.stations) &&
-      report.water.at && Date.now() - report.water.at < SURF_MAX_AGE_MS) {
-    waterHtml = surfWaterStrip(report.water);
-  }
   // One zone: Central OB speaks for the beach (all three stay in the data in
-  // case we want them back). Conditions + tide share one combined card, which
-  // sits in a wrapping row next to the water-quality card.
+  // case we want them back). Conditions, tide, and water quality all share
+  // the one combined card — no heading above it.
+  const water = (report.water && Array.isArray(report.water.stations) &&
+    report.water.at && Date.now() - report.water.at < SURF_MAX_AGE_MS) ? report.water : null;
   const central = report.zones.filter((z) => z.label === 'Central OB');
   const zone = (central.length ? central : report.zones)[0];
   const tides = (report.tides && Array.isArray(report.tides.list) &&
     report.tides.at && Date.now() - report.tides.at < SURF_MAX_AGE_MS) ? report.tides : null;
-  box.innerHTML =
-    `<div class="surf-head"><span class="surf-title">🌊 Ocean Beach right now</span>` +
-    `<span class="surf-updated">Surfline · ${esc(when)}</span></div>` +
-    `<div class="surf-strips">${surfMainCard(zone, tides)}${waterHtml}</div>`;
+  box.innerHTML = `<div class="surf-strips">${surfMainCard(zone, tides, water, report.fetchedAt)}</div>`;
   box.hidden = false;
+}
+
+// "12 min ago" / "3 h ago" for freshness stamps
+function agoText(ts){
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  return mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
 }
 
 // Water quality from SFPUC's real-time beach status (the same feed behind
@@ -2315,7 +2324,7 @@ function paintSurfReport(report){
 // Stations marked W/Y (not sampled) don't count either way.
 const SFPUC_MAP_URL = 'https://webapps.sfpuc.org/sapps/beachesandbay.html';
 
-function surfWaterStrip(water){
+function surfWaterLine(water){
   const stations = (water.stations || []).filter(Boolean);
   if (!stations.length) return '';
   const up = (v) => String(v || '').trim().toUpperCase();
@@ -2335,22 +2344,23 @@ function surfWaterStrip(water){
     chip = 'SAFE'; color = '#4bbf7a';
     text = `Water quality clear at all ${sampled.length} sampled Ocean Beach stations`;
   }
-  const mins = Math.max(0, Math.round((Date.now() - water.at) / 60000));
-  const when = mins < 1 ? 'just now' : mins < 60 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago';
   return `<div class="surf-water">
     <span class="surf-chip" style="background:${color}">${esc(chip)}</span>
     <span class="surf-water-text">${esc(text)}</span>
-    <span class="surf-water-meta">checked ${esc(when)} · <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC map</a></span>
   </div>`;
 }
 
-// The combined conditions + tide card: location & rating on the left, wave
-// height & the Hoff-o-meter on the right, tide curve spanning the bottom
-// with its text underneath. The tide line takes the rating's color.
-function surfMainCard(z, tides){
+// The combined conditions card: location & rating on the left, wave height
+// & the Hoff-o-meter on the right, tide curve spanning the middle, water
+// quality along the bottom, one shared meta line for freshness + sources.
+// The tide line takes the rating's color.
+function surfMainCard(z, tides, water, fetchedAt){
   const r = SURF_RATING[z.rating] || null;
   const color = r ? r.color : '#8aa0b8';
   const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
+  const waterHtml = water ? surfWaterLine(water) : '';
+  const meta = `Surfline · ${esc(agoText(fetchedAt))}` +
+    (waterHtml ? ` · water <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC</a> · checked ${esc(agoText(water.at))}` : '');
   return `<div class="surf-main">
     <div class="surf-main-top">
       <div class="surf-main-left">
@@ -2366,6 +2376,8 @@ function surfMainCard(z, tides){
       </div>
     </div>
     ${tides ? surfTideSection(tides.list, color) : ''}
+    ${waterHtml}
+    <div class="surf-card-meta">${meta}</div>
   </div>`;
 }
 

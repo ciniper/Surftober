@@ -203,16 +203,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* v1.8.3: pledged total lives in the leaderboard page header */
-.pledge-banner { text-align: right; }
-.pledge-banner .pledge-label { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.65; }
-.pledge-banner .pledge-amount { font-size: 24px; font-weight: 800; color: var(--money, #1e7a47); line-height: 1.1; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+/* Totals tile: dollars raised + hours surfed side by side */
+.totals-tile { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.total-stat { flex: 1 1 150px; min-width: 0; background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
+.total-label { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.65; }
+.total-value { font-size: 24px; font-weight: 800; line-height: 1.3; display: inline-flex; align-items: center; gap: 7px; }
+.total-value.money { color: var(--money, #1e7a47); }
 .money-icon { width: 21px; height: 21px; flex: 0 0 auto; }
 
 /* v1.8.2: Ocean Beach surf report on the leaderboard */
 .surf-report { margin-bottom: 16px; }
-.surf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-.surf-title { font-weight: 700; }
-.surf-updated { font-size: 12px; opacity: 0.6; }
 /* v1.10: combined conditions + tide card with the Hoff-o-meter */
 .surf-main { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .surf-main-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
@@ -231,17 +231,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .surf-main-tide .surf-tide-text { font-size: 13px; margin-top: 6px; }
 
 /* v1.9.3: tide + water share a row when the page is wide enough */
-.surf-strips { display: flex; flex-wrap: wrap; gap: 0 10px; }
-.surf-strips .surf-main { flex: 3 1 380px; margin-top: 10px; }
-.surf-strips .surf-water { flex: 2 1 320px; min-width: 0; margin-top: 10px; }
+.surf-strips .surf-main { margin-top: 10px; }
 
 /* v1.9: tide curve + now-dot (curve fills the combined card's width) */
 .surf-tide-curve { position: relative; }
 .surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
 .surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
-.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border: 1px solid var(--card-border); background: var(--panel); border-radius: 12px; padding: 8px 12px; font-size: 13px; }
-.surf-water-meta { margin-left: auto; opacity: 0.7; font-size: 12px; white-space: nowrap; }
-.surf-water-meta a { color: var(--accent-text); }
+/* Water-quality line lives inside the combined conditions card */
+.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; font-size: 13px; }
+.surf-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+.surf-card-meta a { color: var(--accent-text); }
 
 /* v1.9.2: medal thresholds as real chips instead of a text line */
 .medal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }
