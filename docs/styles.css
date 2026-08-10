@@ -203,9 +203,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* v1.8.3: pledged total lives in the leaderboard page header */
-/* Totals tile: dollars raised + hours surfed side by side */
-.totals-tile { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-.total-stat { flex: 1 1 150px; min-width: 0; background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
+/* Totals tile: one card, dollars raised + hours surfed side by side */
+.totals-tile { display: flex; flex-wrap: wrap; gap: 10px 0; margin-top: 10px; background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
+.total-stat { flex: 1 1 140px; min-width: 0; }
+.total-stat + .total-stat { border-left: 1px solid var(--card-border); padding-left: 18px; margin-left: 18px; }
 .total-label { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.65; }
 .total-value { font-size: 24px; font-weight: 800; line-height: 1.3; display: inline-flex; align-items: center; gap: 7px; }
 .total-value.money { color: var(--money, #1e7a47); }
@@ -237,8 +238,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 .surf-tide-curve { position: relative; }
 .surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
 .surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
-/* Water-quality line lives inside the combined conditions card */
-.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; font-size: 13px; }
+/* Inside the conditions card: conditions + tide on the left, water quality
+   as a divided column on the right; both wrap to stacked on narrow screens */
+.surf-cols { display: flex; flex-wrap: wrap; gap: 10px 0; }
+.surf-col-main { flex: 3 1 320px; min-width: 0; }
+.surf-col-water { flex: 1 1 190px; min-width: 0; border-left: 1px solid var(--card-border); padding-left: 16px; margin-left: 16px; }
+.surf-water { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 13px; }
+@media (max-width: 640px) {
+  .surf-col-water { border-left: none; padding-left: 0; margin-left: 0; border-top: 1px solid var(--card-border); padding-top: 10px; }
+}
 .surf-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
 .surf-card-meta a { color: var(--accent-text); }
 
