@@ -165,6 +165,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 #log-form .actions { margin-top: 20px; }
 .subtabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .subtab { background: var(--muted); color: var(--text); box-shadow: none; border: 2px solid var(--card-border); font-weight: 600; }
+/* subtabs rendered as <a> (Account → Awards/Admin) look like the buttons */
+a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; border-radius: 8px; font-size: 15px; }
 .subtab.active { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); border-color: transparent; color: #fff; }
 .subtabs .event-scope { margin-left: auto; }
 .view-toggle { display: inline-flex; gap: 4px; margin-left: 6px; }
