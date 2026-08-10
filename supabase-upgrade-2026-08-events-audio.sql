@@ -566,3 +566,11 @@ as $$
   update public.events set is_active = false where is_active and team <> p_team;
   update public.events set is_active = true  where team = p_team and not is_active;
 $$;
+
+-- =========================================================
+-- v1.20 : freeze logging for the active event
+-- =========================================================
+-- Admin cutoff switch: the event stays active (board, pledges, archive view
+-- all keep working) but nobody can add, edit, or delete sessions until it's
+-- unfrozen. Toggled from the Admin events list.
+alter table public.events add column if not exists logging_frozen boolean not null default false;

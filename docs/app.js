@@ -683,15 +683,20 @@ function reflectEventUI(){
       dateEl.removeAttribute('max');
     }
   }
-  // Logging is closed with no active event AND before the window opens —
-  // clamping the date forward would silently misdate pre-season entries.
+  // Logging is closed with no active event, before the window opens (clamping
+  // the date forward would silently misdate pre-season entries), and while the
+  // admin has logging frozen (event stays active, board is final).
   const preWindow = !!activeEvent && todayStr() < activeEvent.start_date;
+  const frozen = !!activeEvent && !!activeEvent.logging_frozen;
   const submitBtn = document.getElementById('btn-submit');
-  if (submitBtn) submitBtn.disabled = !activeEvent || preWindow;
+  if (submitBtn) submitBtn.disabled = !activeEvent || preWindow || frozen;
   const notice = document.getElementById('event-notice');
   if (notice) {
     if (!activeEvent) {
       notice.textContent = 'No active event — logging opens when the admin launches one.';
+      notice.style.display = '';
+    } else if (frozen) {
+      notice.textContent = `Logging for ${activeEvent.name} is frozen — the board is final unless the admin reopens it.`;
       notice.style.display = '';
     } else if (preWindow) {
       notice.textContent = `${activeEvent.name} starts ${fmtDay(activeEvent.start_date)} — logging opens then.`;
@@ -718,23 +723,30 @@ function renderAdminEvents(){
     return;
   }
   const rows = allEvents.map((e) => {
-    const status = e.is_active ? '<span class="badge ok">ACTIVE</span>' : ''; // not a medal — gold means 40h here
+    const status = [
+      e.is_active ? '<span class="badge ok">ACTIVE</span>' : '', // not a medal — gold means 40h here
+      e.logging_frozen ? '<span class="badge frozen">FROZEN</span>' : ''
+    ].filter(Boolean).join(' ');
     const viewing = viewedEvent && viewedEvent.team === e.team ? ' 👁' : '';
     const actions = [
       `<a href="#" class="ev-view" data-team="${esc(e.team)}">View</a>`,
-      e.is_active ? '' : `<a href="#" class="ev-activate" data-team="${esc(e.team)}">Activate</a>`
+      e.is_active ? '' : `<a href="#" class="ev-activate" data-team="${esc(e.team)}">Activate</a>`,
+      `<a href="#" class="ev-edit" data-team="${esc(e.team)}">Edit</a>`,
+      // The freeze flag only has teeth on the active event — that's where the toggle lives
+      e.is_active ? `<a href="#" class="ev-freeze" data-team="${esc(e.team)}">${e.logging_frozen ? 'Unfreeze' : 'Freeze logging'}</a>` : ''
     ].filter(Boolean).join(' | ');
     return `<tr><td>${esc(e.name)}${viewing}</td><td>${esc(e.start_date)} → ${esc(e.end_date)}</td><td>${status}</td><td>${actions}</td></tr>`;
   });
   el.innerHTML = `<table><thead><tr><th>Event</th><th>Window</th><th></th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const evFor = (a) => allEvents.find((x) => x.team === a.getAttribute('data-team'));
   el.querySelectorAll('.ev-view').forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
-    const ev = allEvents.find((x) => x.team === a.getAttribute('data-team'));
+    const ev = evFor(a);
     if (ev) { switchViewedEvent(ev); toast(`Viewing ${ev.name}`, 'success'); }
   }));
   el.querySelectorAll('.ev-activate').forEach((a) => a.addEventListener('click', async (e) => {
     e.preventDefault();
-    const ev = allEvents.find((x) => x.team === a.getAttribute('data-team'));
+    const ev = evFor(a);
     if (!ev) return;
     if (!confirm(`Make "${ev.name}" the active event? Users will only be able to log ${ev.start_date} → ${ev.end_date}.`)) return;
     try {
@@ -744,6 +756,66 @@ function renderAdminEvents(){
       toast('Activate failed: ' + err.message, 'error');
     }
   }));
+  el.querySelectorAll('.ev-edit').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const ev = evFor(a);
+    if (!ev) return;
+    startEventEdit(ev);
+  }));
+  el.querySelectorAll('.ev-freeze').forEach((a) => a.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const ev = evFor(a);
+    if (!ev) return;
+    const freezing = !ev.logging_frozen;
+    if (!confirm(freezing
+      ? `Freeze logging for "${ev.name}"? It stays the active event (board, pledges, viewing all keep working), but nobody can add, edit, or delete sessions until you unfreeze.`
+      : `Unfreeze logging for "${ev.name}"? Members can log again.`)) return;
+    try {
+      const { data, error } = await sb.from('events')
+        .update({ logging_frozen: freezing })
+        .eq('team', ev.team)
+        .select('team');
+      if (error) throw error;
+      if (!data || !data.length) throw new Error('not permitted (admin only)');
+      await loadEvents();
+      toast(freezing ? 'Logging frozen — the board is final until you unfreeze.' : 'Logging reopened.', 'success');
+    } catch (err) {
+      toast('Freeze failed: ' + err.message, 'error');
+    }
+  }));
+}
+
+// ===== Editing an event's name / window (team slug stays put — sessions
+// reference it, so renaming only changes the display name) =====
+let editingEventTeam = null;
+
+function startEventEdit(ev){
+  editingEventTeam = ev.team;
+  document.getElementById('ev-name').value = ev.name;
+  document.getElementById('ev-start').value = ev.start_date;
+  document.getElementById('ev-end').value = ev.end_date;
+  const activateCb = document.getElementById('ev-activate-now');
+  if (activateCb) activateCb.checked = !!ev.is_active; // don't surprise-activate a staged event on save
+  reflectEventFormMode();
+  const nameEl = document.getElementById('ev-name');
+  if (nameEl && nameEl.scrollIntoView) nameEl.scrollIntoView({ block: 'center' });
+}
+
+function cancelEventEdit(){
+  editingEventTeam = null;
+  const nameEl = document.getElementById('ev-name');
+  if (nameEl) nameEl.value = '';
+  const activateCb = document.getElementById('ev-activate-now');
+  if (activateCb) activateCb.checked = true;
+  reflectEventFormMode();
+}
+
+function reflectEventFormMode(){
+  const btn = document.getElementById('btn-launch-event');
+  const cancel = document.getElementById('ev-edit-cancel');
+  const editing = !!editingEventTeam;
+  if (btn) btn.textContent = editing ? 'Save Changes' : 'Launch Event';
+  if (cancel) cancel.style.display = editing ? '' : 'none';
 }
 
 async function setActiveEvent(team){
@@ -763,9 +835,30 @@ async function launchEvent(){
   const end = document.getElementById('ev-end').value;
   if (!name || !start || !end) { toast('Name, start date and end date are required', 'warn'); return; }
   if (end < start) { toast('End date must be on or after the start date', 'warn'); return; }
+  const activateNow = !!document.getElementById('ev-activate-now')?.checked;
+  // Edit mode: update the picked event in place — team slug pinned, name free
+  if (editingEventTeam) {
+    const ev = allEvents.find((e) => e.team === editingEventTeam);
+    const wasActive = !!(ev && ev.is_active);
+    if (!confirm(`Save changes to "${name}" (${start} → ${end})${activateNow && !wasActive ? ' and make it the active event' : ''}?`)) return;
+    try {
+      const { data, error } = await sb.from('events')
+        .update({ name, start_date: start, end_date: end })
+        .eq('team', editingEventTeam)
+        .select('team');
+      if (error) throw error;
+      if (!data || !data.length) throw new Error('not permitted (admin only)');
+      if (activateNow && !wasActive) await setActiveEvent(editingEventTeam);
+      else await loadEvents();
+      toast(`${name} updated`, 'success');
+      cancelEventEdit();
+    } catch (e) {
+      toast('Update failed: ' + e.message, 'error');
+    }
+    return;
+  }
   let team = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   if (!/\d{4}/.test(team)) team += '-' + start.slice(0, 4);
-  const activateNow = !!document.getElementById('ev-activate-now')?.checked;
   const existing = allEvents.find((e) => e.team === team);
   const msg = existing
     ? `"${name}" already exists (${existing.start_date} → ${existing.end_date}). Update its window to ${start} → ${end}${activateNow ? ' and make it the active event' : ''}?`
@@ -815,6 +908,8 @@ function attachAdminEventHandlers(){
   monthEl.addEventListener('change', prefill);
   prefill();
   btn.addEventListener('click', launchEvent);
+  const cancel = document.getElementById('ev-edit-cancel');
+  if (cancel) cancel.addEventListener('click', (e) => { e.preventDefault(); cancelEventEdit(); prefill(); });
 }
 
 async function fetchCloudSessions(){
@@ -1669,6 +1764,10 @@ function initForm() {
       toast('No active event — logging is closed.', 'warn');
       return;
     }
+    if (activeEvent.logging_frozen) {
+      toast(`Logging for ${activeEvent.name} is frozen — the board is final.`, 'warn');
+      return;
+    }
     if (needsReRegistration()) {
       toast(`Re-register for ${activeEvent.name} first — your profile carries over (see the banner up top).`, 'warn');
       return;
@@ -1766,6 +1865,10 @@ function initForm() {
   const btnDelete = document.getElementById('btn-delete-session');
   if (btnDelete) btnDelete.addEventListener('click', async () => {
     if (!editingId || !sb || !currentUser) return;
+    if (activeEvent && activeEvent.logging_frozen) {
+      toast(`Logging for ${activeEvent.name} is frozen — sessions can't be deleted.`, 'warn');
+      return;
+    }
     if (!confirm('Delete this session? (The admin can restore it if needed.)')) return;
     try {
       await deleteCloudSession(editingId);
@@ -2130,7 +2233,8 @@ function renderMyStats() {
     ]
       .filter(Boolean)
       .join(' ');
-    const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent();
+    const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent() &&
+      !(activeEvent && activeEvent.logging_frozen);
     const editLink = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a>` : '';
     const when = `${fmtDay(s.date)}${s.start_time ? ` · ${fmtTime(s.start_time)}` : ''}`;
     if (isTiles) {
