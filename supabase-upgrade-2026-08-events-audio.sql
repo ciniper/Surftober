@@ -550,3 +550,19 @@ create or replace view public.public_profiles as
   from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
+
+-- =========================================================
+-- v1.19.1 : fix activate_event tripping events_one_active_idx
+-- =========================================================
+-- The old body flipped every row in ONE update; the unique partial index is
+-- checked per row in arbitrary order, so activating could momentarily see
+-- two actives and fail with "duplicate key value violates unique constraint
+-- events_one_active_idx". Deactivate first, then activate — the function
+-- body is a single transaction, so zero-active can still never be stranded.
+create or replace function public.activate_event(p_team text)
+returns void
+language sql
+as $$
+  update public.events set is_active = false where is_active and team <> p_team;
+  update public.events set is_active = true  where team = p_team and not is_active;
+$$;

@@ -765,21 +765,30 @@ async function launchEvent(){
   if (end < start) { toast('End date must be on or after the start date', 'warn'); return; }
   let team = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   if (!/\d{4}/.test(team)) team += '-' + start.slice(0, 4);
+  const activateNow = !!document.getElementById('ev-activate-now')?.checked;
   const existing = allEvents.find((e) => e.team === team);
   const msg = existing
-    ? `"${name}" already exists (${existing.start_date} → ${existing.end_date}). Update its window to ${start} → ${end} and make it the active event?`
-    : `Launch "${name}" (${start} → ${end})? This deactivates any current event and freezes its data.`;
+    ? `"${name}" already exists (${existing.start_date} → ${existing.end_date}). Update its window to ${start} → ${end}${activateNow ? ' and make it the active event' : ''}?`
+    : activateNow
+      ? `Launch "${name}" (${start} → ${end})? This deactivates any current event and freezes its data.`
+      : `Stage "${name}" (${start} → ${end})? It stays inactive — activate it from the list when ready.`;
   if (!confirm(msg)) return;
   try {
-    // Upsert the row first (inactive on insert), then flip activation in one
-    // atomic RPC — see setActiveEvent.
+    // Upsert the row first (inactive on insert), then optionally flip
+    // activation in one atomic RPC — see setActiveEvent. Any number of
+    // events can sit staged; the DB allows only one active.
     const { error } = await sb.from('events').upsert(
       { name, team, start_date: start, end_date: end },
       { onConflict: 'team' }
     );
     if (error) throw error;
-    await setActiveEvent(team);
-    toast(`${name} launched — logging window ${start} → ${end}`, 'success');
+    if (activateNow) {
+      await setActiveEvent(team);
+      toast(`${name} launched — logging window ${start} → ${end}`, 'success');
+    } else {
+      await loadEvents();
+      toast(`${name} staged — use Activate in the events list to open it`, 'success');
+    }
   } catch (e) {
     toast('Launch failed: ' + e.message, 'error');
   }
