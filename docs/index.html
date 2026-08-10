@@ -359,8 +359,11 @@
           </div>
           <div class="actions">
             <button id="btn-launch-event">Launch Event</button>
+            <label class="checkbox"><input type="checkbox" id="ev-activate-now" checked /> <span>Make it the active event now</span></label>
           </div>
-          <p class="hint">Picking a Year + Month fills the dates with the full month; adjust them for a custom range.</p>
+          <p class="hint">Picking a Year + Month fills the dates with the full month; adjust them for a custom range.
+            Uncheck "active now" to stage an event and activate it later from the list below — any number can
+            sit inactive; only one can be active.</p>
         </div>
         <div class="card">
           <h3>Events</h3>
@@ -484,6 +487,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=9"></script>
-  <script type="module" src="./app.js?v=51"></script>
+  <script type="module" src="./app.js?v=52"></script>
 </body>
 </html>
