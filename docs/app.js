@@ -2362,21 +2362,25 @@ function surfMainCard(z, tides, water, fetchedAt){
   const meta = `Surfline · ${esc(agoText(fetchedAt))}` +
     (waterHtml ? ` · water <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC</a> · checked ${esc(agoText(water.at))}` : '');
   return `<div class="surf-main">
-    <div class="surf-main-top">
-      <div class="surf-main-left">
-        <span class="surf-label">${esc(z.label)}</span>
-        ${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}
-      </div>
-      <div class="surf-main-right">
-        <div class="surf-main-height">
-          <div class="surf-ft">${esc(ft)}</div>
-          <div class="surf-rel">${esc(z.rel)}</div>
+    <div class="surf-cols">
+      <div class="surf-col-main">
+        <div class="surf-main-top">
+          <div class="surf-main-left">
+            <span class="surf-label">${esc(z.label)}</span>
+            ${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}
+          </div>
+          <div class="surf-main-right">
+            <div class="surf-main-height">
+              <div class="surf-ft">${esc(ft)}</div>
+              <div class="surf-rel">${esc(z.rel)}</div>
+            </div>
+            ${hoffMeter(z.rel, z.max, color)}
+          </div>
         </div>
-        ${hoffMeter(z.rel, z.max, color)}
+        ${tides ? surfTideSection(tides.list, color) : ''}
       </div>
+      ${waterHtml ? `<div class="surf-col-water">${waterHtml}</div>` : ''}
     </div>
-    ${tides ? surfTideSection(tides.list, color) : ''}
-    ${waterHtml}
     <div class="surf-card-meta">${meta}</div>
   </div>`;
 }
