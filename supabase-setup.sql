@@ -553,3 +553,343 @@ create policy "Users delete own messages" on public.messages for delete using (a
 do $$ begin
   alter publication supabase_realtime add table public.messages;
 exception when duplicate_object then null; end $$;
+
+-- =========================================================
+-- v1.23 : Session Strip — hourly conditions archive + analytics view
+-- =========================================================
+-- Surfline's public endpoints only serve TODAY-forward, so the strip needs
+-- our own archive: three extra KBYG calls per hourly tick (Central OB only,
+-- same politeness rules) land 24 hourly rows/day of wave/wind/rating, and
+-- the tides harvest adds hourly tide_ft. History exists from the day this
+-- ships — earlier sessions render tide-only (NOAA predictions cover any
+-- date). session_conditions joins sessions to the archive for end-of-event
+-- analysis (Storm Rider, Big Wednesday, Dawn Patrol Champion…).
+
+create table if not exists public.surf_history (
+  spot_id text not null,
+  ts timestamptz not null,
+  wave_min numeric,
+  wave_max numeric,
+  wave_rel text,          -- "Waist to chest", "2x overhead", …
+  rating text,            -- Surfline LOLA key: FAIR, GOOD, …
+  wind_kts numeric,
+  wind_dir numeric,       -- degrees the wind comes FROM
+  tide_ft numeric,
+  primary key (spot_id, ts)
+);
+
+alter table public.surf_history enable row level security;
+drop policy if exists "surf history is public" on public.surf_history;
+create policy "surf history is public" on public.surf_history for select using (true);
+grant select on public.surf_history to anon, authenticated;
+
+-- request ids for the three new hourly-forecast calls
+alter table public.surf_report add column if not exists hist_wave_request_id bigint;
+alter table public.surf_report add column if not exists hist_wind_request_id bigint;
+alter table public.surf_report add column if not exists hist_rating_request_id bigint;
+
+create or replace function public.refresh_surf_report()
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  prev record;
+  new_zones jsonb;
+  new_tides jsonb;
+  new_water jsonb;
+  req_id bigint;
+  central constant text := '638e32a4f052ba4ed06d0e3e';  -- Central OB
+  ua constant text := 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36';
+begin
+  -- 1. Harvest the responses from the requests fired on the previous tick.
+  --    Each block is guarded so a bad/expired response never blocks the rest.
+
+  -- 1a. Conditions (wave height + rating per OB zone)
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.last_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        'id',     sp->>'_id',
+        'min',    sp->'waveHeight'->'min',
+        'max',    sp->'waveHeight'->'max',
+        'rel',    sp->'waveHeight'->>'humanRelation',
+        'rating', sp->'conditions'->>'value'))
+      into new_zones
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'spots') sp
+      where sp->>'_id' in (
+        '5d9b68deab58860001c7359e',  -- North Ocean Beach
+        '638e32a4f052ba4ed06d0e3e',  -- Central Ocean Beach
+        '5842041f4e65fad6a77087f9'   -- South Ocean Beach
+      );
+
+      if new_zones is not null then
+        update public.surf_report
+        set zones = new_zones, fetched_at = now()
+        where id = 1;
+      end if;
+    end if;
+  exception when others then
+    null;  -- unparseable/expired response: skip it, still fire the next request
+  end;
+
+  -- 1b. Tides (two days of predictions from the Ocean Beach tide station).
+  --     The hourly NORMAL entries also land in surf_history.tide_ft.
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.tide_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        't',    (e->>'timestamp')::bigint,
+        'type', e->>'type',
+        'h',    e->'height'))
+      into new_tides
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'tides') e;
+
+      if new_tides is not null then
+        update public.surf_report
+        set tides = new_tides, tides_at = now()
+        where id = 1;
+
+        insert into public.surf_history (spot_id, ts, tide_ft)
+        select central, to_timestamp((e->>'t')::bigint), (e->>'h')::numeric
+        from jsonb_array_elements(new_tides) e
+        where e->>'type' = 'NORMAL'
+        on conflict (spot_id, ts) do update set tide_ft = excluded.tide_ft;
+      end if;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 1c. Water quality (SFPUC real-time beach status — the feed behind the
+  --     official posted/safe map). The response is JSON wrapped in an XML
+  --     envelope, so pull the JSON array out with a regex.
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.water_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      select jsonb_agg(jsonb_build_object(
+        'id',     st->>'stationid',
+        'name',   st->>'stationname',
+        's',      st->>'s_color',
+        'p',      st->>'p_color',
+        'posted', st->>'posted',
+        'cso',    st->>'cso',
+        'date',   st->>'sample_date'))
+      into new_water
+      from jsonb_array_elements(((regexp_match(prev.content, '\[.*\]'))[1])::jsonb) st
+      where st->>'stationid' in (
+        '4601',  -- Fort Funston
+        '4602',  -- Ocean Beach at Sloat Boulevard
+        '4603',  -- Ocean Beach at Vicente Street
+        '4604',  -- Ocean Beach at Balboa Street
+        '4605',  -- Ocean Beach at Lincoln Way
+        '4606'   -- Ocean Beach at Pacheco Street
+      );
+
+      if new_water is not null then
+        update public.surf_report
+        set water = new_water, water_at = now()
+        where id = 1;
+      end if;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 1d. Hourly wave forecast (Central OB) → surf_history
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.hist_wave_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      insert into public.surf_history (spot_id, ts, wave_min, wave_max, wave_rel)
+      select central,
+             to_timestamp((e->>'timestamp')::bigint),
+             (e->'surf'->>'min')::numeric,
+             (e->'surf'->>'max')::numeric,
+             e->'surf'->>'humanRelation'
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'wave') e
+      on conflict (spot_id, ts) do update
+        set wave_min = excluded.wave_min,
+            wave_max = excluded.wave_max,
+            wave_rel = excluded.wave_rel;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 1e. Hourly wind forecast (Central OB) → surf_history
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.hist_wind_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      insert into public.surf_history (spot_id, ts, wind_kts, wind_dir)
+      select central,
+             to_timestamp((e->>'timestamp')::bigint),
+             (e->>'speed')::numeric,
+             (e->>'direction')::numeric
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'wind') e
+      on conflict (spot_id, ts) do update
+        set wind_kts = excluded.wind_kts,
+            wind_dir = excluded.wind_dir;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- 1f. Hourly rating forecast (Central OB) → surf_history
+  begin
+    select r.status_code, r.content into prev
+    from net._http_response r
+    join public.surf_report s on r.id = s.hist_rating_request_id
+    where s.id = 1;
+
+    if prev.status_code = 200 then
+      insert into public.surf_history (spot_id, ts, rating)
+      select central,
+             to_timestamp((e->>'timestamp')::bigint),
+             e->'rating'->>'key'
+      from jsonb_array_elements((prev.content)::jsonb->'data'->'rating') e
+      on conflict (spot_id, ts) do update
+        set rating = excluded.rating;
+    end if;
+  exception when others then
+    null;
+  end;
+
+  -- keep the archive lean: one event season plus plenty of slack
+  delete from public.surf_history where ts < now() - interval '400 days';
+
+  -- 2. Fire the next requests. The browser User-Agent matters — Surfline's
+  --    bot layer 403s bare server UAs. Surfline gets polite treatment (its
+  --    edge 403-blocked the shared egress IP on 2026-08-05): only the :07
+  --    tick fires (hourly), after 0-45 s of random jitter so requests don't
+  --    land dead on the same second every time. Harvests above still run on
+  --    every tick, so recovery after a block is automatic.
+  if extract(minute from now()) < 30 then
+    perform pg_sleep(floor(random() * 45));
+
+    select net.http_get(
+      'https://services.surfline.com/kbyg/mapview?south=37.70&west=-122.53&north=37.82&east=-122.47',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set last_request_id = req_id where id = 1;
+
+    select net.http_get(
+      'https://services.surfline.com/kbyg/spots/forecasts/tides?spotId=5842041f4e65fad6a77087f9&days=2',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set tide_request_id = req_id where id = 1;
+
+    -- Session Strip history: hourly wave / wind / rating for Central OB
+    select net.http_get(
+      'https://services.surfline.com/kbyg/spots/forecasts/wave?spotId=' || central || '&days=1&intervalHours=1',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set hist_wave_request_id = req_id where id = 1;
+
+    select net.http_get(
+      'https://services.surfline.com/kbyg/spots/forecasts/wind?spotId=' || central || '&days=1&intervalHours=1',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set hist_wind_request_id = req_id where id = 1;
+
+    select net.http_get(
+      'https://services.surfline.com/kbyg/spots/forecasts/rating?spotId=' || central || '&days=1&intervalHours=1',
+      headers := jsonb_build_object(
+        'User-Agent', ua,
+        'Accept', 'application/json',
+        'Accept-Language', 'en-US,en;q=0.9',
+        'Referer', 'https://www.surfline.com/'
+      ),
+      timeout_milliseconds := 15000
+    ) into req_id;
+    update public.surf_report set hist_rating_request_id = req_id where id = 1;
+  end if;
+
+  -- No custom headers here: pg_net always adds its own User-Agent, so a
+  -- custom one creates a DUPLICATE User-Agent header and SFPUC's IIS rejects
+  -- the request with 400. SFPUC doesn't bot-filter, so the default UA is fine.
+  select net.http_get(
+    'https://infrastructure.sfwater.org/lims.asmx/getBeaches',
+    timeout_milliseconds := 15000
+  ) into req_id;
+  update public.surf_report set water_request_id = req_id where id = 1;
+end;
+$$;
+
+-- Per-session conditions for end-of-event analysis (Storm Rider, Big
+-- Wednesday, Dawn Patrol Champion, Low-Tide Lord…). ±30 min padding pulls
+-- in the nearest hourly samples for short sessions. Sessions need a
+-- start_time to appear here.
+create or replace view public.session_conditions as
+select
+  s.id,
+  s.team,
+  s.user_name,
+  s.date,
+  s.start_time,
+  s.duration_minutes,
+  s.type,
+  s.location,
+  round(avg(h.wind_kts)::numeric, 1)                       as wind_kts_avg,
+  round(max(h.wind_kts)::numeric, 1)                       as wind_kts_max,
+  round(avg(h.wind_dir)::numeric)                          as wind_dir_avg,
+  min(h.wave_min)                                          as wave_min_ft,
+  max(h.wave_max)                                          as wave_max_ft,
+  mode() within group (order by h.rating)                  as rating,
+  (array_agg(h.tide_ft order by h.ts)  filter (where h.tide_ft is not null))[1] as tide_start_ft,
+  (array_agg(h.tide_ft order by h.ts desc) filter (where h.tide_ft is not null))[1] as tide_end_ft,
+  count(*)                                                 as hours_sampled
+from public.sessions s
+join public.surf_history h
+  on h.spot_id = '638e32a4f052ba4ed06d0e3e'
+ and h.ts >= ((s.date + s.start_time) at time zone 'America/Los_Angeles') - interval '30 minutes'
+ and h.ts <  ((s.date + s.start_time) at time zone 'America/Los_Angeles')
+              + make_interval(mins => coalesce(s.duration_minutes, 0)) + interval '30 minutes'
+where s.start_time is not null
+  and s.deleted_at is null
+group by s.id;
+
+grant select on public.session_conditions to anon, authenticated;

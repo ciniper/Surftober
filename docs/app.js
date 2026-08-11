@@ -2246,16 +2246,21 @@ function renderMyStats() {
     const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent() &&
       !(activeEvent && activeEvent.logging_frozen);
     const editLink = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a>` : '';
+    // Session Strip: any session with a start time gets a conditions card
+    const stripLink = s.start_time
+      ? `<a href="#" class="strip-link" data-i="${i}" title="Conditions during this session">🌊${isTiles ? ' Conditions' : ''}</a>`
+      : '';
     const when = `${fmtDay(s.date)}${s.start_time ? ` · ${fmtTime(s.start_time)}` : ''}`;
     if (isTiles) {
       const where = [s.location, s.board].filter(Boolean).map(esc).join(' · ');
+      const links = [stripLink, editLink].filter(Boolean).join(' · ');
       out.push(`<div class="card"><div><b>${when}</b> · ${esc(typeLabel(s.type))}</div>
       ${where ? `<div>${where}</div>` : ''}
       <div>Scored ${SurftoberAwards.minutesToHHMM(scoredMins)} ${bonusBadges}</div>
-      ${photoThumbHtml(s.photo_url, 'session-photo-card')}${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${editLink ? `<div>${editLink}</div>` : ''}</div>`);
+      ${photoThumbHtml(s.photo_url, 'session-photo-card')}${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${links ? `<div>${links}</div>` : ''}</div>`);
     } else {
       out.push(
-        `<tr><td>${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
+        `<tr><td class="nowrap">${[editLink, stripLink].filter(Boolean).join(' ')}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
           scoredMins
         )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
       );
@@ -2277,7 +2282,280 @@ function renderMyStats() {
       }
     });
   });
+  // Session Strip toggles (sessions array is this render's, index-addressed)
+  document.querySelectorAll('#me-sessions .strip-link').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const s = sessions[Number(a.getAttribute('data-i'))];
+      if (s) toggleSessionStrip(a, s);
+    });
+  });
   attachJournalToggles();
+}
+
+// ===== Session Strip: per-session conditions card ==========================
+// Rendered on demand (🌊 link on any session with a start time) from two
+// sources: our surf_history archive (hourly wave/wind/rating for Central OB,
+// written by the same pg_cron fetcher — Surfline can't be called from the
+// browser and only serves today-forward anyway) and NOAA CO-OPS 6-minute
+// tide predictions (station 9414290 San Francisco: free, keyless, CORS-open,
+// and deterministic, so any past date works). Sessions logged before the
+// archive existed render tide-only. Design: v5 mockup (2026-08-10).
+const STRIP_SPOT = '638e32a4f052ba4ed06d0e3e'; // Central OB speaks for the beach
+const NOAA_STATION = '9414290';
+const stripCache = new Map(); // session key -> svg markup
+let stripUid = 0;
+
+function stripWindow(s){
+  const [y, m, d] = String(s.date).split('-').map(Number);
+  const [hh, mm] = String(s.start_time).slice(0, 5).split(':').map(Number);
+  const start = new Date(y, m - 1, d, hh || 0, mm || 0);
+  const [dh, dm] = String(s.duration || '0:0').split(':').map(Number);
+  const end = new Date(start.getTime() + ((dh || 0) * 60 + (dm || 0)) * 60000);
+  return { start, end };
+}
+
+async function fetchNoaaTides(dateObj){
+  const iso = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+  const key = 'surftober.noaa.' + iso;
+  try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.length) return c; } catch {}
+  const d = iso.replace(/-/g, '');
+  const url = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter' +
+    `?product=predictions&application=surftober&begin_date=${d}&end_date=${d}` +
+    `&datum=MLLW&station=${NOAA_STATION}&time_zone=lst_ldt&units=english&interval=6&format=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('NOAA ' + res.status);
+  const json = await res.json();
+  const pts = (json.predictions || []).map((p) => ({ t: p.t, v: Number(p.v) }));
+  if (!pts.length) throw new Error('no predictions');
+  // keep at most one cached day — predictions are cheap to refetch
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('surftober.noaa.') && k !== key) localStorage.removeItem(k);
+    }
+    localStorage.setItem(key, JSON.stringify(pts));
+  } catch {}
+  return pts;
+}
+
+function noaaPointMs(t){ // 'YYYY-MM-DD HH:MM' (already local) → epoch ms
+  const [dPart, tPart] = String(t).split(' ');
+  const [y, m, d] = dPart.split('-').map(Number);
+  const [hh, mm] = tPart.split(':').map(Number);
+  return new Date(y, m - 1, d, hh, mm).getTime();
+}
+
+async function fetchStripHistory(start, end){
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('surf_history').select('*')
+      .eq('spot_id', STRIP_SPOT)
+      .gte('ts', new Date(start.getTime() - 45 * 60000).toISOString())
+      .lte('ts', new Date(end.getTime() + 45 * 60000).toISOString())
+      .order('ts');
+    if (error) return []; // table not deployed yet → conditions rows just absent
+    return data || [];
+  } catch { return []; }
+}
+
+function windCompass(deg){
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}
+
+// OB faces west: wind FROM the east half is offshore, west half onshore
+function windShore(deg){
+  const d = ((deg % 360) + 360) % 360;
+  if (d >= 22.5 && d <= 157.5) return { label: 'offshore', color: '#3f9d63' };
+  if (d >= 202.5 && d <= 337.5) return { label: 'onshore', color: '#c25b5b' };
+  return { label: 'cross-shore', color: '#9a9a8f' };
+}
+
+// Fixed-height size zone: 1 person fills it; overhead stacks shrink (cap 3)
+function stripHoff(rel, maxFt, cx, yTop, zone, uid){
+  const frac = Math.max(0.15, hoffFraction(rel, maxFt));
+  const n = Math.min(3, Math.max(1, Math.ceil(frac)));
+  const personH = zone / n;
+  const shownH = Math.min(zone, frac * personH);
+  const w = personH * 0.4; // the artwork is 40x100
+  const yBottom = yTop + zone;
+  let figs = '';
+  for (let i = 0; i < n; i++) {
+    figs += HOFF_SVG.replace('<svg ', `<svg x="${cx - w / 2}" y="${yBottom - personH * (i + 1)}" width="${w}" height="${personH}" `);
+  }
+  return `<clipPath id="hclip${uid}"><rect x="${cx - w}" y="${yBottom - shownH}" width="${w * 2}" height="${shownH}"/></clipPath>` +
+    `<g clip-path="url(#hclip${uid})">${figs}</g>`;
+}
+
+function buildSessionStripSvg(s, hist, noaa){
+  const { start, end } = stripWindow(s);
+  const sMs = start.getTime(), eMs = end.getTime(), mid = (sMs + eMs) / 2;
+  const uid = ++stripUid;
+  const W = 260, CX = W / 2;
+  const nearest = (pred) => {
+    let best = null, bd = Infinity;
+    for (const r of hist) {
+      if (!pred(r)) continue;
+      const d = Math.abs(new Date(r.ts).getTime() - mid);
+      if (d < bd) { bd = d; best = r; }
+    }
+    return best;
+  };
+  const ratingRow = nearest((r) => r.rating);
+  const waveRows = hist.filter((r) => r.wave_min != null);
+  const windRow = nearest((r) => r.wind_kts != null);
+
+  // Tide series: NOAA 6-minute points first, hourly archive as fallback
+  let tide = (noaa || [])
+    .map((p) => ({ ms: noaaPointMs(p.t), v: p.v }))
+    .filter((p) => p.ms >= sMs - 5 * 60000 && p.ms <= eMs + 5 * 60000);
+  if (tide.length < 2) {
+    tide = hist.filter((r) => r.tide_ft != null)
+      .map((r) => ({ ms: new Date(r.ts).getTime(), v: Number(r.tide_ft) }));
+  }
+  tide.sort((a, b) => a.ms - b.ms);
+
+  const hasRating = !!ratingRow;
+  const hasWave = waveRows.length > 0;
+  const hasWind = !!windRow;
+  const hasTide = tide.length >= 2;
+  if (!hasRating && !hasWave && !hasWind && !hasTide) return null;
+
+  const r = hasRating ? SURF_RATING[ratingRow.rating] : null;
+  const ratingColor = r ? r.color : '#c9c94b';
+  const parts = [];
+  let y = 0;
+
+  // header
+  y = 36;
+  parts.push(`<text x="${CX}" y="${y}" font-size="14.5" font-weight="800" fill="var(--text)" text-anchor="middle">${esc(fmtDay(s.date))} · ${esc(fmtTime(s.start_time))} – ${esc(`${String(end.getHours() % 12 || 12)}:${String(end.getMinutes()).padStart(2, '0')} ${end.getHours() < 12 ? 'AM' : 'PM'}`)}</text>`);
+  y += 18;
+  parts.push(`<text x="${CX}" y="${y}" font-size="11" fill="var(--text)" opacity="0.55" text-anchor="middle">Ocean Beach</text>`);
+
+  if (hasRating && r) {
+    y += 16;
+    const label = r.label.toUpperCase();
+    const cw = Math.max(64, label.length * 7.5 + 26);
+    parts.push(`<rect x="${CX - cw / 2}" y="${y}" width="${cw}" height="26" rx="13" fill="${ratingColor}"/>`);
+    parts.push(`<text x="${CX}" y="${y + 18}" font-size="12" font-weight="800" fill="#10202e" text-anchor="middle">${esc(label)}</text>`);
+    y += 26;
+  }
+
+  if (hasWave) {
+    y += 22;
+    const zone = 80;
+    const wMin = Math.min(...waveRows.map((x) => Number(x.wave_min)));
+    const wMax = Math.max(...waveRows.map((x) => Number(x.wave_max)));
+    const waveNear = nearest((x) => x.wave_rel != null) || waveRows[0];
+    const rel = waveNear && waveNear.wave_rel ? waveNear.wave_rel : '';
+    const ft = wMin === wMax ? `${wMax} ft` : `${wMin}–${wMax} ft`;
+    parts.push(stripHoff(rel, wMax, 87, y, zone, uid));
+    parts.push(`<text x="122" y="${y + 42}" font-size="24" font-weight="800" fill="var(--text)">${esc(ft)}</text>`);
+    if (rel) parts.push(`<text x="122" y="${y + 60}" font-size="11" fill="var(--text)" opacity="0.55">${esc(rel)}</text>`);
+    y += zone;
+  }
+
+  if (hasWind) {
+    y += 38;
+    const mph = Math.round(Number(windRow.wind_kts) * 1.15078);
+    const deg = Number(windRow.wind_dir) || 0;
+    const shore = windShore(deg);
+    parts.push(`<g transform="translate(78,${y - 4}) rotate(${Math.round((deg + 180) % 360)})" color="${shore.color}">` +
+      `<line x1="0" y1="10" x2="0" y2="-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>` +
+      `<path d="M-5.5 -2 L0 -9.5 L5.5 -2" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`);
+    parts.push(`<text x="100" y="${y}" font-size="17" font-weight="800" fill="var(--text)">${mph} mph ${esc(windCompass(deg))}</text>`);
+    parts.push(`<text x="100" y="${y + 17}" font-size="11" font-weight="600" fill="${shore.color}">${esc(shore.label)}</text>`);
+    y += 20;
+  }
+
+  if (hasTide) {
+    y += 34;
+    parts.push(`<text x="${CX}" y="${y}" font-size="10" font-weight="700" fill="var(--text)" opacity="0.55" text-anchor="middle" letter-spacing="1">TIDE</text>`);
+    const rowTop = y + 10, rowH = 40;
+    const x0 = 86, x1 = 174;
+    const vs = tide.map((p) => p.v);
+    const vMin = Math.min(...vs), vMax = Math.max(...vs);
+    const span = Math.max(0.5, vMax - vMin); // flat sessions still get a visible line
+    const yFor = (v) => rowTop + rowH - ((v - vMin) / span) * rowH;
+    const xFor = (ms) => x0 + ((ms - tide[0].ms) / Math.max(1, tide[tide.length - 1].ms - tide[0].ms)) * (x1 - x0);
+    const path = tide.map((p, i) => `${i ? 'L' : 'M'}${xFor(p.ms).toFixed(1)} ${yFor(p.v).toFixed(1)}`).join(' ');
+    const first = tide[0], last = tide[tide.length - 1];
+    const numY = rowTop + rowH / 2 + 6;
+    parts.push(`<path d="${path}" fill="none" stroke="${ratingColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`);
+    parts.push(`<circle cx="${x0}" cy="${yFor(first.v).toFixed(1)}" r="4" fill="var(--accent, #d1470f)"/>`);
+    parts.push(`<circle cx="${x1}" cy="${yFor(last.v).toFixed(1)}" r="4" fill="var(--accent, #d1470f)"/>`);
+    parts.push(`<text x="52" y="${numY}" font-size="18" font-weight="800" fill="var(--text)" text-anchor="middle">${first.v.toFixed(1)} ft</text>`);
+    parts.push(`<text x="52" y="${numY + 16}" font-size="10" fill="var(--text)" opacity="0.55" text-anchor="middle">start</text>`);
+    parts.push(`<text x="208" y="${numY}" font-size="18" font-weight="800" fill="var(--text)" text-anchor="middle">${last.v.toFixed(1)} ft</text>`);
+    parts.push(`<text x="208" y="${numY + 16}" font-size="10" fill="var(--text)" opacity="0.55" text-anchor="middle">end</text>`);
+    y = rowTop + rowH;
+    // call out a high/low the session spanned that the endpoints hide
+    const loEnd = Math.min(first.v, last.v), hiEnd = Math.max(first.v, last.v);
+    if (vMin < loEnd - 0.25) {
+      y += 14;
+      parts.push(`<text x="${CX}" y="${y}" font-size="9.5" fill="var(--text)" opacity="0.55" text-anchor="middle">low ${vMin.toFixed(1)} ft</text>`);
+    } else if (vMax > hiEnd + 0.25) {
+      y += 14;
+      parts.push(`<text x="${CX}" y="${y}" font-size="9.5" fill="var(--text)" opacity="0.55" text-anchor="middle">high ${vMax.toFixed(1)} ft</text>`);
+    }
+  }
+
+  const H = y + 20;
+  return `<svg class="session-strip" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="14" fill="var(--panel)" stroke="var(--card-border)" stroke-width="1.5"/>` +
+    parts.join('') + `</svg>`;
+}
+
+async function toggleSessionStrip(link, s){
+  const tr = link.closest('tr');
+  let wrap;
+  if (tr) {
+    if (tr.nextElementSibling && tr.nextElementSibling.classList.contains('strip-row')) {
+      tr.nextElementSibling.remove();
+      return;
+    }
+    const row = document.createElement('tr');
+    row.className = 'strip-row';
+    row.innerHTML = `<td colspan="${tr.children.length}"><div class="session-strip-wrap hint">Loading conditions…</div></td>`;
+    tr.insertAdjacentElement('afterend', row);
+    wrap = row.querySelector('.session-strip-wrap');
+  } else {
+    const card = link.closest('.card');
+    if (!card) return;
+    const old = card.querySelector('.session-strip-wrap');
+    if (old) { old.remove(); return; }
+    wrap = document.createElement('div');
+    wrap.className = 'session-strip-wrap hint';
+    wrap.textContent = 'Loading conditions…';
+    card.appendChild(wrap);
+  }
+  const key = s._id || `${s.date}|${s.start_time}|${s.user}`;
+  try {
+    let svg = stripCache.get(key);
+    if (svg === undefined) {
+      const { start, end } = stripWindow(s);
+      const [hist, noaa1] = await Promise.all([
+        fetchStripHistory(start, end),
+        fetchNoaaTides(start).catch(() => null)
+      ]);
+      let noaa = noaa1;
+      if (noaa1 && (end.getDate() !== start.getDate() || end.getMonth() !== start.getMonth())) {
+        const noaa2 = await fetchNoaaTides(end).catch(() => null);
+        if (noaa2) noaa = noaa1.concat(noaa2);
+      }
+      svg = buildSessionStripSvg(s, hist, noaa);
+      stripCache.set(key, svg);
+    }
+    if (svg) {
+      wrap.classList.remove('hint');
+      wrap.innerHTML = svg;
+    } else {
+      wrap.textContent = 'No conditions data for this date yet.';
+    }
+  } catch {
+    wrap.textContent = 'No conditions data available.';
+  }
 }
 
 // Current streak per user: consecutive days surfed ending today — or ending

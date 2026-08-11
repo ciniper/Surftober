@@ -216,6 +216,12 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
   .lb-row > .msg-board { order: 2; }   /* …chat right */
 }
 
+/* Session Strip: per-session conditions card (expands under the session) */
+.strip-link { text-decoration: none; color: var(--accent-text); white-space: nowrap; }
+.session-strip-wrap { margin-top: 8px; }
+.session-strip-wrap svg.session-strip { display: block; width: 100%; max-width: 280px; height: auto; }
+tr.strip-row > td { padding: 6px 10px 14px; }
+
 /* Crew message board tile (Leaderboard) */
 .msg-board { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
 .msg-title { font-weight: 700; margin-bottom: 8px; }
