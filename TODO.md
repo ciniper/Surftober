@@ -5,39 +5,9 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
-- [ ] **Session Strip — per-session conditions graphic** (concept + mockup
-      2026-08-10; Chase's go decides). A small auto-rendered card on each
-      logged session: wind arrows across the top (direction + kt, colored
-      offshore-green → onshore-red), tide curve with the session window
-      shaded and In/Out markers, wave height + rating chip in the header,
-      per-source credits in the footer. Build plan:
-      (1) `surf_history` table + extend `refresh_surf_report()` to upsert
-      the day's HOURLY wave/wind/rating per spot each tick (history only
-      exists from ship date — deploy by mid-September for October);
-      (2) tide curve from NOAA CO-OPS 6-minute predictions, station 9414290
-      San Francisco (free, keyless, CORS-open — client can fetch directly
-      and cache; Surfline hourly tides as fallback);
-      (3) render client-side as SVG from history rows covering start_time →
-      start_time + duration; no images stored, no client Surfline calls.
-      Sessions need a start_time to qualify (already optional on the form).
-      Surfline creds NOT needed for v1 — public KBYG hourly endpoints
-      suffice; creds would only buy premium/finer-grain data and would live
-      server-side in the cron fetcher if ever added. Future synergy: render
-      the strip to canvas → PNG for the WhatsApp share.
-      Design rules from the v5 mockup (2026-08-10): header = date · time as
-      the MAIN line with "Ocean Beach" as subtext; use the app's real
-      HOFF_SVG artwork with NO wave-crop line; the size zone is a FIXED
-      height — stacked Hoffs shrink (1 person = full zone, 2x overhead =
-      two half-size, cap 3) so every card is the same size; tide row =
-      numbers labeled "start"/"end" (NOT in/out — that collides with tide
-      terminology) with only the curve SHAPE between them (no axes), plus a
-      tiny "low X ft" caption when the session spans a dip.
-      Analysis bonus: `surf_history` doubles as the analytics substrate — a
-      `session_conditions` SQL view joining sessions × surf_history over
-      [start_time, start_time + duration] (wind avg/dir, wave range, rating,
-      tide start/end interpolated) gives per-session conditions for
-      end-of-event stats; add it as a sheets-mirror tab for spreadsheet play.
-      End-of-Surftober award ideas from it (capture 2026-08-10):
+- [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
+      view that shipped with the Session Strip, v1.23.0) — compute at
+      season's end:
       · Storm Rider — windiest session paddled
       · Big Wednesday — biggest waves paddled out in
       · Dawn Patrol Champion — earliest average start time
@@ -45,7 +15,9 @@
       · Glasshunter — most sessions in offshore/glassy wind
       · Golden Hour — most Fair-or-better sessions
       · crew stat: "we surfed N% of all Fair+ windows this October"
-      · per-person hours-vs-conditions scatter for the awards slides (~1 day build + 30 min setup) — needs a Supabase Edge
+      · per-person hours-vs-conditions scatter for the awards slides
+      Also: add the session_conditions view as a tab in the sheets mirror.
+- [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
       start_time, elapsed→duration, name/description→journal, strava_activity_id
@@ -150,6 +122,18 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Session Strip — per-session conditions graphic~~ (shipped v1.23.0 —
+      🌊 link on any session with a start time expands the v5-design card:
+      date/time header with "Ocean Beach" subtext, rating chip, Hoff-cropped
+      wave height in a fixed-height zone (overhead stacks shrink, cap 3),
+      one wind reading (mph, offshore/onshore color), and tide start/end
+      with the real curve shape between them. Data: `surf_history` archives
+      hourly Central-OB wave/wind/rating (three extra KBYG calls on the
+      hourly Surfline tick) + hourly tide_ft, 400-day retention; the tide
+      curve uses NOAA CO-OPS 6-minute predictions (station 9414290 —
+      keyless, CORS-open, works for any past date). NOTE: history exists
+      from the day the v1.23 SQL runs — earlier sessions render tide-only.
+      Surfline creds not used; upgrade path stays server-side if ever.)
 - [x] ~~New bonus-hour categories~~ (shipped v1.14.0 — "Teach a Kook" and
       "Water Quality Reading", both one-time +1h like costume: `taught_kook` /
       `water_reading` boolean columns on sessions, Bonuses-dropdown checkboxes
