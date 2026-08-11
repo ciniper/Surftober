@@ -72,14 +72,15 @@
       "Add to Home screen"/"Install app"; desktop: the install icon at the
       right end of Chrome's address bar. The PWA manifest already makes these
       installs open app-style without browser chrome.
-- [ ] **BWTF branding on the water-quality line** (Chase, 2026-08-05) — add Blue
-      Water Task Force branding to the leaderboard water reading. Nuance: the
-      live safe/posted status comes from SFPUC's feed, not Surfrider's BWTF
-      volunteer lab. Options: credit both ("SFPUC · Surfrider BWTF" with links),
-      or actually blend in BWTF's latest enterococcus readings — the GraphQL
-      API is already scoped (lab 76; OB sites 9172 Lincoln Way + 9005 Vicente;
-      public map `bwtf.surfrider.org/explore/76`; public x-api-key in the BWTF
-      repo's bwtf_api.py). Chase's call on direction.
+- [ ] **Official BWTF logo (optional)** — v1.22.0 shipped the credit-both
+      option: the water line carries a droplet emblem and the source line
+      links "Blue Water Task Force" (bwtf.surfrider.org/explore/76) with a
+      hand-drawn wave-in-circle mark. To use Surfrider's official logo
+      instead, drop the asset at docs/bwtf-logo.png and swap BWTF_MARK_SVG
+      in app.js for an <img>. Blending BWTF's actual enterococcus readings
+      stays possible later — the GraphQL API is scoped (lab 76; OB sites
+      9172 Lincoln Way + 9005 Vicente; public x-api-key in the BWTF repo's
+      bwtf_api.py).
 - [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
       not null`) in the Admin tab with a Restore button per row (sets `deleted_at`
       back to null). Today restoring requires the Supabase dashboard (Table Editor →
