@@ -211,9 +211,14 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .lb-row { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: flex-start; }
 .lb-row > * { flex: 1 1 100%; min-width: 0; }
 @media (min-width: 900px) {
+  /* Equal heights: stretch subtracts an item's own margins, so the tiles'
+     top/bottom margins move onto the row itself here */
+  .lb-row { align-items: stretch; margin: 10px 0 16px; }
   .lb-row > * { flex: 1 1 0; }
-  .lb-row > .surf-report { order: 1; } /* OB info left… */
-  .lb-row > .msg-board { order: 2; }   /* …chat right */
+  .lb-row > .surf-report { order: 1; display: flex; margin-bottom: 0; } /* OB info left… */
+  .lb-row > .msg-board { order: 2; margin-top: 0; }                     /* …chat right */
+  .lb-row > .surf-report .surf-strips { display: flex; flex: 1; }
+  .lb-row > .surf-report .surf-strips .surf-main { flex: 1; margin-top: 0; }
 }
 
 /* Session Strip: per-session conditions card (expands under the session) */
@@ -229,6 +234,7 @@ tr.strip-row > td { padding: 6px 10px 14px; }
 .msg-row input { flex: 1; min-width: 0; }
 .msg-wa { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin-top: 8px; opacity: 0.9; }
 .msg-wa input { width: auto; }
+.msg-wa .wa-logo { width: 16px; height: 16px; vertical-align: -3px; margin-right: 2px; }
 .msg-list { margin-top: 10px; max-height: 180px; overflow-y: auto; display: grid; gap: 10px; }
 .msg:not(:last-child) { border-bottom: 1px solid var(--card-border); padding-bottom: 10px; }
 .msg-meta { font-size: 12px; opacity: 0.75; margin-bottom: 2px; }
@@ -250,6 +256,8 @@ tr.strip-row > td { padding: 6px 10px 14px; }
 .surf-main { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .surf-main-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
 .surf-main-left { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; align-self: flex-start; }
+.surf-wind { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+.surf-wind svg { width: 15px; height: 17px; flex: 0 0 auto; }
 .surf-main-right { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
 .surf-main-height { text-align: right; }
 .surf-label { font-size: 13px; font-weight: 600; opacity: 0.85; }
