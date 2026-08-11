@@ -5,7 +5,25 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
-- [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
+- [ ] **Session Strip — per-session conditions graphic** (concept + mockup
+      2026-08-10; Chase's go decides). A small auto-rendered card on each
+      logged session: wind arrows across the top (direction + kt, colored
+      offshore-green → onshore-red), tide curve with the session window
+      shaded and In/Out markers, wave height + rating chip in the header,
+      per-source credits in the footer. Build plan:
+      (1) `surf_history` table + extend `refresh_surf_report()` to upsert
+      the day's HOURLY wave/wind/rating per spot each tick (history only
+      exists from ship date — deploy by mid-September for October);
+      (2) tide curve from NOAA CO-OPS 6-minute predictions, station 9414290
+      San Francisco (free, keyless, CORS-open — client can fetch directly
+      and cache; Surfline hourly tides as fallback);
+      (3) render client-side as SVG from history rows covering start_time →
+      start_time + duration; no images stored, no client Surfline calls.
+      Sessions need a start_time to qualify (already optional on the form).
+      Surfline creds NOT needed for v1 — public KBYG hourly endpoints
+      suffice; creds would only buy premium/finer-grain data and would live
+      server-side in the cron fetcher if ever added. Future synergy: render
+      the strip to canvas → PNG for the WhatsApp share. (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
       start_time, elapsed→duration, name/description→journal, strava_activity_id
