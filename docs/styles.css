@@ -265,11 +265,13 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
 .surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
 /* Water-quality line sits along the bottom of the conditions card, divided
-   from the tide; each source stamp gets its own line under it */
-.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; font-size: 13px; }
+   from the tide (the Surfline credit stays above the divider) */
+.surf-water { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 10px; font-size: 13px; }
+.water-drop { width: 15px; height: 15px; flex: 0 0 auto; color: #3d9bd6; }
 .surf-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
-.surf-card-meta + .surf-card-meta { margin-top: 2px; }
 .surf-card-meta a { color: var(--accent-text); }
+.bwtf-link { white-space: nowrap; }
+.bwtf-mark { width: 14px; height: 14px; vertical-align: -3px; }
 
 /* v1.9.2: medal thresholds as real chips instead of a text line */
 .medal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 14px; }

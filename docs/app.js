@@ -2638,8 +2638,16 @@ function agoText(ts){
 // Water quality from SFPUC's real-time beach status (the same feed behind
 // the official posted/safe map). One line: SAFE when every sampled Ocean
 // Beach station is clear, an advisory naming the posted stations otherwise.
-// Stations marked W/Y (not sampled) don't count either way.
+// Stations marked W/Y (not sampled) don't count either way. Credit goes to
+// both SFPUC (the live feed) and Surfrider's Blue Water Task Force (the
+// volunteer sampling program whose map covers the same beach).
 const SFPUC_MAP_URL = 'https://webapps.sfpuc.org/sapps/beachesandbay.html';
+const BWTF_MAP_URL = 'https://bwtf.surfrider.org/explore/76';
+
+// Small inline emblems: a droplet marking the water-quality line, and a
+// wave-in-circle mark for the Blue Water Task Force credit.
+const WATER_DROP_SVG = `<svg class="water-drop" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5c3.6 4.4 7 8.4 7 12.4a7 7 0 1 1-14 0c0-4 3.4-8 7-12.4z"/></svg>`;
+const BWTF_MARK_SVG = `<svg class="bwtf-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#0f4c81"/><path d="M5.2 14.2c1.8-4.6 5-6.7 9.2-6.7-2.3 1.1-3.5 2.4-3.9 4 2.4-.7 4.7-.2 6.9 1.5-3.1.5-5.5 1.3-7.4 2.6-1.5-.1-3.3-.5-4.8-1.4z" fill="#fff"/></svg>`;
 
 function surfWaterLine(water){
   const stations = (water.stations || []).filter(Boolean);
@@ -2662,6 +2670,7 @@ function surfWaterLine(water){
     text = `Water quality clear at all ${sampled.length} sampled Ocean Beach stations`;
   }
   return `<div class="surf-water">
+    ${WATER_DROP_SVG}
     <span class="surf-chip" style="background:${color}">${esc(chip)}</span>
     <span class="surf-water-text">${esc(text)}</span>
   </div>`;
@@ -2676,9 +2685,17 @@ function surfMainCard(z, tides, water, fetchedAt){
   const color = r ? r.color : '#8aa0b8';
   const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
   const waterHtml = water ? surfWaterLine(water) : '';
-  // Sources get their own lines — Surfline for conditions/tide, SFPUC for water
-  const meta = `<div class="surf-card-meta">Surfline · ${esc(agoText(fetchedAt))}</div>` +
-    (waterHtml ? `<div class="surf-card-meta">Water: <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC map</a> · checked ${esc(agoText(water.at))}</div>` : '');
+  // Surfline credit (linked to the spot page) belongs to the conditions/tide
+  // section, ABOVE the water divider; the water sources get their own line
+  // below, crediting SFPUC (the live feed) and Surfrider's BWTF.
+  const spot = SURF_SPOTS.find((s) => s.label === z.label);
+  const surflineUrl = spot
+    ? `https://www.surfline.com/surf-report/ocean-beach/${spot.id}`
+    : 'https://www.surfline.com';
+  const surflineMeta = `<div class="surf-card-meta"><a href="${surflineUrl}" target="_blank" rel="noopener">Surfline</a> · ${esc(agoText(fetchedAt))}</div>`;
+  const waterMeta = waterHtml
+    ? `<div class="surf-card-meta">Water: <a href="${SFPUC_MAP_URL}" target="_blank" rel="noopener">SFPUC map</a> · checked ${esc(agoText(water.at))} · <a class="bwtf-link" href="${BWTF_MAP_URL}" target="_blank" rel="noopener">${BWTF_MARK_SVG} Blue Water Task Force</a></div>`
+    : '';
   return `<div class="surf-main">
     <div class="surf-main-top">
       <div class="surf-main-left">
@@ -2694,8 +2711,9 @@ function surfMainCard(z, tides, water, fetchedAt){
       </div>
     </div>
     ${tides ? surfTideSection(tides.list, color) : ''}
+    ${surflineMeta}
     ${waterHtml}
-    ${meta}
+    ${waterMeta}
   </div>`;
 }
 
