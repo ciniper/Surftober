@@ -222,7 +222,9 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 }
 
 /* Session Strip: per-session conditions card (expands under the session) */
-.strip-link { text-decoration: none; color: var(--accent-text); white-space: nowrap; }
+.strip-link { color: var(--accent-text); white-space: nowrap; }
+/* Multiple bonuses stack vertically in the table cell */
+.badge-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .session-strip-wrap { margin-top: 8px; }
 .session-strip-wrap svg.session-strip { display: block; width: 100%; max-width: 280px; height: auto; }
 tr.strip-row > td { padding: 6px 10px 14px; }
