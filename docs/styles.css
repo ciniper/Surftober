@@ -213,7 +213,7 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .msg-row input { flex: 1; min-width: 0; }
 .msg-wa { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin-top: 8px; opacity: 0.9; }
 .msg-wa input { width: auto; }
-.msg-list { margin-top: 10px; max-height: 280px; overflow-y: auto; display: grid; gap: 10px; }
+.msg-list { margin-top: 10px; max-height: 66vh; overflow-y: auto; display: grid; gap: 10px; }
 .msg:not(:last-child) { border-bottom: 1px solid var(--card-border); padding-bottom: 10px; }
 .msg-meta { font-size: 12px; opacity: 0.75; margin-bottom: 2px; }
 .msg-meta a { color: var(--accent-text); }
@@ -321,6 +321,12 @@ input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: n
 a.mode-toggle { display: inline-flex; align-items: center; border-radius: 8px; text-decoration: none; }
 .session-photo-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; display: block; border: 1px solid var(--card-border); }
 .session-photo-card { width: 100%; max-height: 340px; object-fit: cover; border-radius: 10px; display: block; margin: 6px 0; border: 1px solid var(--card-border); }
+/* Desktop: don't stretch photos across the whole tile (a wide tile + the
+   340px cap crops them badly) — show a smaller natural-ratio image instead;
+   tap still opens the original. Phones keep the full-width look. */
+@media (min-width: 641px) {
+  .session-photo-card { width: auto; max-width: min(420px, 100%); }
+}
 #photo-preview { max-width: 220px; max-height: 220px; border-radius: 10px; display: block; margin: 8px 0 4px; border: 1px solid var(--card-border); }
 #photo-preview-wrap a { font-size: 13px; }
 /* Photo field mirrors the audio field's layout so the two stack evenly */
