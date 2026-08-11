@@ -48,7 +48,8 @@ create unique index if not exists profiles_display_name_unique_idx
 -- page, leaderboard $ tracker) without exposing the rest of the profile.
 -- Owner-rights view bypasses profiles RLS for just these competition-facing
 -- columns.
-create or replace view public.public_profiles as
+drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
+create view public.public_profiles as
   select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment, registered_event_id
   from public.profiles;
 
@@ -863,7 +864,8 @@ $$;
 -- Wednesday, Dawn Patrol Champion, Low-Tide Lord…). ±30 min padding pulls
 -- in the nearest hourly samples for short sessions. Sessions need a
 -- start_time to appear here.
-create or replace view public.session_conditions as
+drop view if exists public.session_conditions; -- future column changes shouldn't 42P16
+create view public.session_conditions as
 select
   s.id,
   s.team,

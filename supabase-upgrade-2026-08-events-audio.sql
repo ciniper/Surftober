@@ -218,7 +218,12 @@ alter table public.sessions add column if not exists start_time time;
 -- the leaderboard $ tracker. This view runs with the owner's rights
 -- (security_invoker defaults to off), deliberately bypassing profiles RLS for
 -- JUST these competition-facing columns.
-create or replace view public.public_profiles as
+-- Drop first: on a RE-RUN of this file the live view already has the extra
+-- columns later sections add, and create-or-replace can't shrink a view
+-- (42P16 "cannot drop columns from view"). The v1.19 section below rebuilds
+-- it with the full column list.
+drop view if exists public.public_profiles;
+create view public.public_profiles as
   select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment
   from public.profiles;
 
@@ -545,7 +550,8 @@ update public.profiles
    set registered_event_id = (select id from public.events where is_active limit 1)
  where registered_event_id is null;
 
-create or replace view public.public_profiles as
+drop view if exists public.public_profiles; -- rebuild, don't widen-in-place (see v1.7 note)
+create view public.public_profiles as
   select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment, registered_event_id
   from public.profiles;
 
@@ -918,7 +924,8 @@ $$;
 -- Wednesday, Dawn Patrol Champion, Low-Tide Lord…). ±30 min padding pulls
 -- in the nearest hourly samples for short sessions. Sessions need a
 -- start_time to appear here.
-create or replace view public.session_conditions as
+drop view if exists public.session_conditions; -- future column changes shouldn't 42P16
+create view public.session_conditions as
 select
   s.id,
   s.team,
