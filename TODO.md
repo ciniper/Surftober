@@ -23,7 +23,19 @@
       Surfline creds NOT needed for v1 — public KBYG hourly endpoints
       suffice; creds would only buy premium/finer-grain data and would live
       server-side in the cron fetcher if ever added. Future synergy: render
-      the strip to canvas → PNG for the WhatsApp share. (~1 day build + 30 min setup) — needs a Supabase Edge
+      the strip to canvas → PNG for the WhatsApp share.
+      Design rules from the v4 mockup (2026-08-10): header = date · time as
+      the MAIN line with "Ocean Beach" as subtext; use the app's real
+      HOFF_SVG artwork; the size zone is a FIXED height — stacked Hoffs
+      shrink (1 person = full zone, 2x overhead = two half-size, cap 3) so
+      every card is the same size; tide row = in/out numbers with only the
+      curve SHAPE between them (no axes).
+      Analysis bonus: `surf_history` doubles as the analytics substrate — a
+      `session_conditions` SQL view joining sessions × surf_history over
+      [start_time, start_time + duration] (wind avg/dir, wave range, rating,
+      tide in/out interpolated) gives per-session conditions for end-of-event
+      stats and awards (windiest session, biggest day paddled, dawn-patrol
+      champion…); add it as a tab in the sheets mirror for spreadsheet play. (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
       start_time, elapsed→duration, name/description→journal, strava_activity_id
