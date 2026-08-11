@@ -264,16 +264,11 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .surf-tide-curve { position: relative; }
 .surf-tide-curve svg { width: 100%; height: 34px; display: block; color: var(--text); }
 .surf-tide-now { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
-/* Inside the conditions card: conditions + tide on the left, water quality
-   as a divided column on the right; both wrap to stacked on narrow screens */
-.surf-cols { display: flex; flex-wrap: wrap; gap: 10px 0; }
-.surf-col-main { flex: 3 1 320px; min-width: 0; }
-.surf-col-water { flex: 1 1 190px; min-width: 0; border-left: 1px solid var(--card-border); padding-left: 16px; margin-left: 16px; }
-.surf-water { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 13px; }
-@media (max-width: 640px) {
-  .surf-col-water { border-left: none; padding-left: 0; margin-left: 0; border-top: 1px solid var(--card-border); padding-top: 10px; }
-}
+/* Water-quality line sits along the bottom of the conditions card, divided
+   from the tide; each source stamp gets its own line under it */
+.surf-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; font-size: 13px; }
 .surf-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+.surf-card-meta + .surf-card-meta { margin-top: 2px; }
 .surf-card-meta a { color: var(--accent-text); }
 
 /* v1.9.2: medal thresholds as real chips instead of a text line */
