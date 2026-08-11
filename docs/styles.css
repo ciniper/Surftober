@@ -206,6 +206,9 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* v1.8.3: pledged total lives in the leaderboard page header */
+/* The Main page's mid-page "Leaderboard" heading, right above the table */
+.lb-heading { margin: 18px 0 4px; }
+
 /* Conditions + Crew Board share a row on wide screens (stacked below 900px,
    chat first — the mobile order). Hidden members leave the other full-width. */
 .lb-row { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: flex-start; }
