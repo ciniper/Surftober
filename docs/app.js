@@ -2242,7 +2242,7 @@ function renderMyStats() {
   const isTiles = sessionsLayout === 'tiles';
   const out = [];
   if (!isTiles) {
-    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Overview Graphic</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
+    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Overview Graphic (OB)</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
     const u = (s.user || '').trim();
