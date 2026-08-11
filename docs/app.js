@@ -2878,6 +2878,21 @@ function renderSurfReport(){
       if (Array.isArray(data.water) && data.water.length && data.water_at) {
         report.water = { at: new Date(data.water_at).getTime(), stations: data.water };
       }
+      // Current wind from the surf_history archive (Session Strip data):
+      // the row for the hour we're in. Table missing → line simply absent.
+      try {
+        const { data: w } = await sb.from('surf_history')
+          .select('ts, wind_kts, wind_dir')
+          .eq('spot_id', STRIP_SPOT)
+          .not('wind_kts', 'is', null)
+          .lte('ts', new Date(Date.now() + 30 * 60000).toISOString())
+          .order('ts', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (w && w.wind_kts != null && Date.now() - new Date(w.ts).getTime() < 3 * 3600 * 1000) {
+          report.wind = { kts: Number(w.wind_kts), dir: Number(w.wind_dir) || 0, at: new Date(w.ts).getTime() };
+        }
+      } catch {}
       try { localStorage.setItem(SURF_CACHE_KEY, JSON.stringify(report)); } catch {}
       paintSurfReport(report);
     } catch {
@@ -2903,7 +2918,7 @@ function paintSurfReport(report){
   const zone = (central.length ? central : report.zones)[0];
   const tides = (report.tides && Array.isArray(report.tides.list) &&
     report.tides.at && Date.now() - report.tides.at < SURF_MAX_AGE_MS) ? report.tides : null;
-  box.innerHTML = `<div class="surf-strips">${surfMainCard(zone, tides, water, report.fetchedAt)}</div>`;
+  box.innerHTML = `<div class="surf-strips">${surfMainCard(zone, tides, water, report.fetchedAt, report.wind)}</div>`;
   box.hidden = false;
 }
 
@@ -2958,11 +2973,23 @@ function surfWaterLine(water){
 // & the Hoff-o-meter on the right, tide curve spanning the middle, water
 // quality along the bottom, one shared meta line for freshness + sources.
 // The tide line takes the rating's color.
-function surfMainCard(z, tides, water, fetchedAt){
+function surfMainCard(z, tides, water, fetchedAt, wind){
   const r = SURF_RATING[z.rating] || null;
   const color = r ? r.color : '#8aa0b8';
   const ft = z.min === z.max ? `${z.max} ft` : `${z.min}–${z.max} ft`;
   const waterHtml = water ? surfWaterLine(water) : '';
+  // Current wind (from the surf_history archive), Session Strip style:
+  // arrow rotated to where it blows, mph, offshore/onshore/cross coloring
+  let windHtml = '';
+  if (wind) {
+    const mph = Math.round(wind.kts * 1.15078);
+    const shore = windShore(wind.dir);
+    windHtml = `<span class="surf-wind">` +
+      `<svg viewBox="-10 -11 20 22" aria-hidden="true"><g transform="rotate(${Math.round((wind.dir + 180) % 360)})" color="${shore.color}">` +
+      `<line x1="0" y1="7" x2="0" y2="-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>` +
+      `<path d="M-4 -1.5 L0 -6.8 L4 -1.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg>` +
+      `${mph} mph ${esc(windCompass(wind.dir))} <span style="color:${shore.color}">${esc(shore.label)}</span></span>`;
+  }
   // Surfline credit (linked to the spot page) belongs to the conditions/tide
   // section, ABOVE the water divider; the water sources get their own line
   // below, crediting SFPUC (the live feed) and Surfrider's BWTF.
@@ -2979,6 +3006,7 @@ function surfMainCard(z, tides, water, fetchedAt){
       <div class="surf-main-left">
         <span class="surf-label">${esc(z.label)}</span>
         ${r ? `<span class="surf-chip" style="background:${color}">${esc(r.label)}</span>` : ''}
+        ${windHtml}
       </div>
       <div class="surf-main-right">
         <div class="surf-main-height">
