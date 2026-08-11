@@ -193,6 +193,16 @@ async function initSupabase(){
       })
       .subscribe();
   } catch {}
+
+  // realtime for the crew board — new posts appear without a reload
+  try {
+    sb
+      .channel('public:messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+        loadMessages(true);
+      })
+      .subscribe();
+  } catch {}
 }
 
 function reflectAuthUI(){
@@ -2300,6 +2310,8 @@ const STREAK_FLAME = `<svg class="streak-icon" viewBox="0 0 24 24" aria-hidden="
 function renderLeaderboard() {
   renderSurfReport(); // cache-guarded: hits Surfline at most once an hour
   renderTodayTile();
+  renderMessageBoard();
+  loadMessages(); // throttled: refetches at most once a minute
   const ev = viewedEvent || DEFAULT_EVENT;
   const normalized = loadSessions().map(SurftoberAwards.normalizeSession);
   const totals = SurftoberAwards.rollupByUser(normalized, { start: ev.start_date, end: ev.end_date });
@@ -2392,6 +2404,129 @@ function renderLeaderboard() {
       location.hash = '#me';
       renderMyStats();
     });
+  });
+}
+
+// ===== Crew message board (Leaderboard tile) ===============================
+// Short posts scoped to the viewed event. Everyone (including view-mode
+// guests) reads; signed-in registered members post and can delete their own.
+// "Share to WhatsApp" is a client-side wa.me deep link — the poster picks
+// the group chat in WhatsApp and hits send themselves (no bridge, no bot).
+let messagesAvailable = true; // flips false when the table isn't deployed
+let allMessages = [];
+let msgFetchInFlight = false;
+let msgLastFetch = 0;
+let msgLastTeam = null;
+
+async function loadMessages(force = false){
+  if (!sb || !messagesAvailable) return;
+  const team = (viewedEvent || DEFAULT_EVENT).team;
+  if (team !== msgLastTeam) force = true; // switched events — list is stale
+  if (!force && Date.now() - msgLastFetch < 60 * 1000) return;
+  if (msgFetchInFlight) return;
+  msgFetchInFlight = true;
+  try {
+    const { data, error } = await sb.from('messages')
+      .select('*')
+      .eq('team', team)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) {
+      // Table not deployed yet (SQL not run) — hide the tile and stop asking.
+      // Any other error keeps the previous list; the next render retries.
+      if (error.code === '42P01' || error.code === 'PGRST205' ||
+          /schema cache|does not exist/i.test(error.message || '')) {
+        messagesAvailable = false;
+      }
+      return;
+    }
+    allMessages = data || [];
+    msgLastTeam = team;
+    msgLastFetch = Date.now();
+  } catch {
+    // network blip — keep whatever list we had
+  } finally {
+    msgFetchInFlight = false;
+    renderMessageBoard();
+  }
+}
+
+function msgWhen(ts){
+  const t = new Date(ts).getTime();
+  if (!t) return '';
+  if (Date.now() - t < 24 * 3600 * 1000) return agoText(t);
+  return new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function renderMessageBoard(){
+  const box = document.getElementById('message-board');
+  if (!box) return;
+  if (!messagesAvailable) { box.hidden = true; return; }
+  const canPost = !!currentUser && !!profileName && isViewingActiveEvent() && !needsReRegistration();
+  const form = document.getElementById('msg-form');
+  if (form) form.style.display = canPost ? '' : 'none';
+  const list = document.getElementById('msg-list');
+  if (!list) return;
+  if (!allMessages.length) {
+    list.innerHTML = `<div class="hint">${canPost ? 'No messages yet — say hi to the crew!' : 'No messages yet.'}</div>`;
+  } else {
+    list.innerHTML = allMessages.map((m) => {
+      const mine = currentUser && m.user_id === currentUser.id;
+      const del = mine ? ` · <a href="#" class="msg-del" data-id="${esc(m.id)}">delete</a>` : '';
+      return `<div class="msg"><div class="msg-meta"><b>${esc(m.user_name || 'Someone')}</b> · ${esc(msgWhen(m.created_at))}${del}</div><div class="msg-body">${esc(m.body || '')}</div></div>`;
+    }).join('');
+  }
+  // Guests looking at an empty board: nothing to show, keep the tile hidden
+  box.hidden = !allMessages.length && !canPost;
+}
+
+function attachMessageBoardHandlers(){
+  const form = document.getElementById('msg-form');
+  const list = document.getElementById('msg-list');
+  if (!form || !list) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('msg-input');
+    const body = (input.value || '').trim();
+    if (!body || !sb || !currentUser || !profileName || !activeEvent) return;
+    const btn = document.getElementById('msg-send');
+    btn.disabled = true;
+    try {
+      const { error } = await sb.from('messages').insert({
+        team: activeEvent.team,
+        user_id: currentUser.id,
+        user_name: profileName,
+        body
+      });
+      if (error) throw error;
+      input.value = '';
+      const wa = document.getElementById('msg-whatsapp');
+      if (wa && wa.checked) {
+        // Hand the text to WhatsApp — the poster picks the group and sends
+        window.open('https://wa.me/?text=' + encodeURIComponent(`${body}\n\n🏄 surftober.com`), '_blank', 'noopener');
+        wa.checked = false;
+      }
+      await loadMessages(true);
+    } catch (err) {
+      toast('Post failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  // Deletes via delegation — the list re-renders constantly
+  list.addEventListener('click', async (e) => {
+    const a = e.target.closest('.msg-del');
+    if (!a) return;
+    e.preventDefault();
+    if (!confirm('Delete this message?')) return;
+    try {
+      const { data, error } = await sb.from('messages').delete().eq('id', a.getAttribute('data-id')).select('id');
+      if (error) throw error;
+      if (!data || !data.length) throw new Error('not permitted');
+      await loadMessages(true);
+    } catch (err) {
+      toast('Delete failed: ' + err.message, 'error');
+    }
   });
 }
 
@@ -2903,6 +3038,7 @@ window.addEventListener('load', () => {
   attachAdminEventHandlers();
   attachAudioHandlers();
   attachPhotoHandlers();
+  attachMessageBoardHandlers();
   reflectEventUI();
   renderMyStats();
   renderLeaderboard();

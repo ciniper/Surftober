@@ -524,3 +524,32 @@ as $$
   where lower(auth.jwt() ->> 'email') in ('ciniper@gmail.com')
   order by u.created_at
 $$;
+
+-- =========================================================
+-- messages : crew message board (one row per post, scoped to an event)
+-- =========================================================
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  team text not null,
+  user_id uuid not null references auth.users on delete cascade,
+  user_name text,
+  body text not null check (char_length(body) between 1 and 500),
+  created_at timestamptz default now()
+);
+
+create index if not exists messages_team_created_idx
+  on public.messages (team, created_at desc);
+
+alter table public.messages enable row level security;
+
+drop policy if exists "Anyone can read messages"    on public.messages;
+drop policy if exists "Users insert own messages"   on public.messages;
+drop policy if exists "Users delete own messages"   on public.messages;
+
+create policy "Anyone can read messages"  on public.messages for select using (true);
+create policy "Users insert own messages" on public.messages for insert with check (auth.uid() = user_id);
+create policy "Users delete own messages" on public.messages for delete using (auth.uid() = user_id);
+
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null; end $$;

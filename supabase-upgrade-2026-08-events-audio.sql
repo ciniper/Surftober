@@ -574,3 +574,37 @@ $$;
 -- all keep working) but nobody can add, edit, or delete sessions until it's
 -- unfrozen. Toggled from the Admin events list.
 alter table public.events add column if not exists logging_frozen boolean not null default false;
+
+-- =========================================================
+-- v1.21 : crew message board (Leaderboard tile)
+-- =========================================================
+-- Short messages scoped to an event (team), readable by everyone including
+-- view-mode guests; signed-in members post as themselves and can delete
+-- their own. The optional WhatsApp share happens client-side (wa.me deep
+-- link) — nothing extra server-side.
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  team text not null,
+  user_id uuid not null references auth.users on delete cascade,
+  user_name text,
+  body text not null check (char_length(body) between 1 and 500),
+  created_at timestamptz default now()
+);
+
+create index if not exists messages_team_created_idx
+  on public.messages (team, created_at desc);
+
+alter table public.messages enable row level security;
+
+drop policy if exists "Anyone can read messages"    on public.messages;
+drop policy if exists "Users insert own messages"   on public.messages;
+drop policy if exists "Users delete own messages"   on public.messages;
+
+create policy "Anyone can read messages"  on public.messages for select using (true);
+create policy "Users insert own messages" on public.messages for insert with check (auth.uid() = user_id);
+create policy "Users delete own messages" on public.messages for delete using (auth.uid() = user_id);
+
+-- Live updates for open clients (same mechanism as sessions/events)
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null; end $$;

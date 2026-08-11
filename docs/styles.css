@@ -206,6 +206,19 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* v1.8.3: pledged total lives in the leaderboard page header */
+/* Crew message board tile (Leaderboard) */
+.msg-board { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.msg-title { font-weight: 700; margin-bottom: 8px; }
+.msg-row { display: flex; gap: 8px; }
+.msg-row input { flex: 1; min-width: 0; }
+.msg-wa { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin-top: 8px; opacity: 0.9; }
+.msg-wa input { width: auto; }
+.msg-list { margin-top: 10px; max-height: 280px; overflow-y: auto; display: grid; gap: 10px; }
+.msg:not(:last-child) { border-bottom: 1px solid var(--card-border); padding-bottom: 10px; }
+.msg-meta { font-size: 12px; opacity: 0.75; margin-bottom: 2px; }
+.msg-meta a { color: var(--accent-text); }
+.msg-body { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* Totals tile: one card, dollars raised + hours surfed side by side */
 .totals-tile { display: flex; flex-wrap: wrap; gap: 10px 0; margin-top: 10px; background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
 .total-stat { flex: 1 1 140px; min-width: 0; }
