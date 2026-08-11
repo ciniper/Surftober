@@ -122,6 +122,16 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Google-sign-in registration bounce (beta report: Pranav + Jason)~~
+      (fixed v1.26.1 — three self-healing guards: index.html forwards any
+      auth-callback hash (`#access_token=`/`#error=`) to register.html
+      instead of eating it at the landing bounce; app.js forwards a
+      signed-in user with **no profiles row** to register.html to finish
+      registration (register only bounces back once display_name exists,
+      so no loop); register.html now toasts `#error=` callback failures
+      instead of staying silent. Server side verified healthy: the OAuth
+      callback provably 302s to register.html and the redirect allowlist
+      honors it — the guards make every landing variant recover anyway.)
 - [x] ~~Session Strip — per-session conditions graphic~~ (shipped v1.23.0 —
       🌊 link on any session with a start time expands the v5-design card:
       date/time header with "Ocean Beach" subtext, rating chip, Hoff-cropped
