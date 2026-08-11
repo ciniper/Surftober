@@ -1633,9 +1633,15 @@ function initForm() {
       .filter((id) => id !== FIXED_TYPE_BOX[type])
       .map((id) => document.getElementById(id));
     if (isFixed) {
+      // remember what was typed so unchecking the bonus restores it
+      if (logDurationBeforeLock === null) logDurationBeforeLock = { h: h.value, m: m.value };
       h.value = 1;
       m.value = 0;
       otherBonuses.forEach((el) => { el.checked = false; });
+    } else if (logDurationBeforeLock !== null) {
+      h.value = logDurationBeforeLock.h;
+      m.value = logDurationBeforeLock.m;
+      logDurationBeforeLock = null;
     }
     h.disabled = isFixed;
     m.disabled = isFixed;
@@ -1843,6 +1849,7 @@ function initForm() {
       renderMyStats();
       renderLeaderboard();
       f.reset();
+      logDurationBeforeLock = null;
       resetAudioField();
       resetPhotoField();
       document.getElementById('log-date').value = defaultLogDate();
@@ -1864,6 +1871,7 @@ function initForm() {
   if (btnCancel) btnCancel.addEventListener('click', () => {
     resetEditState();
     f.reset();
+      logDurationBeforeLock = null;
     resetAudioField();
     resetPhotoField();
     document.getElementById('log-date').value = defaultLogDate();
@@ -1885,6 +1893,7 @@ function initForm() {
       toast('Session deleted', 'success');
       resetEditState();
       f.reset();
+      logDurationBeforeLock = null;
       resetAudioField();
       resetPhotoField();
       document.getElementById('log-date').value = defaultLogDate();
@@ -1900,6 +1909,9 @@ function initForm() {
 
 // Editing state and helpers (top-level)
 let editingId = null; // UUID of session being edited (cloud), null when not editing
+// Duration typed before a fixed 1h type (cleanup/water) locked the inputs —
+// unchecking the bonus puts it back. Null = nothing to restore.
+let logDurationBeforeLock = null;
 let editingAudioUrl = null; // existing audio note of the session being edited
 let editingPhotoUrl = null; // existing photo of the session being edited
 
@@ -1950,6 +1962,7 @@ function resetPhotoField(){
 
 function startEditSession(session){
   // Prefill form with session values, lock user field (already enforced), toggle submit button label
+  logDurationBeforeLock = null; // stale pre-lock duration must not clobber this session's values
   document.getElementById('log-date').value = session.date;
   document.getElementById('log-start-time').value = session.start_time ? String(session.start_time).slice(0, 5) : '';
   document.getElementById('log-type').value = session.type;
@@ -2229,7 +2242,7 @@ function renderMyStats() {
   const isTiles = sessionsLayout === 'tiles';
   const out = [];
   if (!isTiles) {
-    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
+    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Overview Graphic</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
     const u = (s.user || '').trim();
@@ -2246,9 +2259,10 @@ function renderMyStats() {
     const canEdit = !!currentUser && s._id && s.user_id === currentUser.id && isViewingActiveEvent() &&
       !(activeEvent && activeEvent.logging_frozen);
     const editLink = canEdit ? `<a href="#" class="edit-link" data-id="${esc(s._id)}">Edit</a>` : '';
-    // Session Strip: any session with a start time gets a conditions card
+    // Session Strip: sessions with a start time get a conditions card;
+    // without one there's no window to look up
     const stripLink = s.start_time
-      ? `<a href="#" class="strip-link" data-i="${i}" title="Conditions during this session">🌊${isTiles ? ' Conditions' : ''}</a>`
+      ? `<a href="#" class="strip-link" data-i="${i}" title="Conditions during this session">${isTiles ? 'Show/hide conditions' : 'show/hide'}</a>`
       : '';
     const when = `${fmtDay(s.date)}${s.start_time ? ` · ${fmtTime(s.start_time)}` : ''}`;
     if (isTiles) {
@@ -2260,9 +2274,9 @@ function renderMyStats() {
       ${photoThumbHtml(s.photo_url, 'session-photo-card')}${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${links ? `<div>${links}</div>` : ''}</div>`);
     } else {
       out.push(
-        `<tr><td class="nowrap">${[editLink, stripLink].filter(Boolean).join(' ')}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
+        `<tr><td class="nowrap">${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
           scoredMins
-        )}</td><td>${bonusBadges}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
+        )}</td><td><div class="badge-stack">${bonusBadges}</div></td><td class="nowrap">${stripLink || '<span class="hint">need start time</span>'}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
       );
     }
   });
