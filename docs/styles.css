@@ -206,6 +206,16 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 #log-form.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* v1.8.3: pledged total lives in the leaderboard page header */
+/* Conditions + Crew Board share a row on wide screens (stacked below 900px,
+   chat first — the mobile order). Hidden members leave the other full-width. */
+.lb-row { display: flex; flex-wrap: wrap; gap: 0 10px; align-items: flex-start; }
+.lb-row > * { flex: 1 1 100%; min-width: 0; }
+@media (min-width: 900px) {
+  .lb-row > * { flex: 1 1 0; }
+  .lb-row > .surf-report { order: 1; } /* OB info left… */
+  .lb-row > .msg-board { order: 2; }   /* …chat right */
+}
+
 /* Crew message board tile (Leaderboard) */
 .msg-board { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
 .msg-title { font-weight: 700; margin-bottom: 8px; }
