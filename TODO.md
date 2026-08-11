@@ -24,18 +24,28 @@
       suffice; creds would only buy premium/finer-grain data and would live
       server-side in the cron fetcher if ever added. Future synergy: render
       the strip to canvas → PNG for the WhatsApp share.
-      Design rules from the v4 mockup (2026-08-10): header = date · time as
+      Design rules from the v5 mockup (2026-08-10): header = date · time as
       the MAIN line with "Ocean Beach" as subtext; use the app's real
-      HOFF_SVG artwork; the size zone is a FIXED height — stacked Hoffs
-      shrink (1 person = full zone, 2x overhead = two half-size, cap 3) so
-      every card is the same size; tide row = in/out numbers with only the
-      curve SHAPE between them (no axes).
+      HOFF_SVG artwork with NO wave-crop line; the size zone is a FIXED
+      height — stacked Hoffs shrink (1 person = full zone, 2x overhead =
+      two half-size, cap 3) so every card is the same size; tide row =
+      numbers labeled "start"/"end" (NOT in/out — that collides with tide
+      terminology) with only the curve SHAPE between them (no axes), plus a
+      tiny "low X ft" caption when the session spans a dip.
       Analysis bonus: `surf_history` doubles as the analytics substrate — a
       `session_conditions` SQL view joining sessions × surf_history over
       [start_time, start_time + duration] (wind avg/dir, wave range, rating,
-      tide in/out interpolated) gives per-session conditions for end-of-event
-      stats and awards (windiest session, biggest day paddled, dawn-patrol
-      champion…); add it as a tab in the sheets mirror for spreadsheet play. (~1 day build + 30 min setup) — needs a Supabase Edge
+      tide start/end interpolated) gives per-session conditions for
+      end-of-event stats; add it as a sheets-mirror tab for spreadsheet play.
+      End-of-Surftober award ideas from it (capture 2026-08-10):
+      · Storm Rider — windiest session paddled
+      · Big Wednesday — biggest waves paddled out in
+      · Dawn Patrol Champion — earliest average start time
+      · Low-Tide Lord — lowest tide surfed
+      · Glasshunter — most sessions in offshore/glassy wind
+      · Golden Hour — most Fair-or-better sessions
+      · crew stat: "we surfed N% of all Fair+ windows this October"
+      · per-person hours-vs-conditions scatter for the awards slides (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
       start_time, elapsed→duration, name/description→journal, strava_activity_id
