@@ -315,6 +315,13 @@ async function fetchProfile(){
   }
   const { data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) { console.warn('profile fetch error', error); return; }
+  if (!data) {
+    // Signed in but never registered — e.g. an OAuth return that ended up
+    // here instead of on the register page. Send them to finish signing up.
+    // register.html only bounces back once display_name exists, so no loop.
+    window.location.replace('./register.html');
+    return;
+  }
   profileData = data;
   profileName = (data && data.display_name) ? data.display_name : null;
   

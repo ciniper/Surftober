@@ -12,6 +12,17 @@
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
   (function() {
+    // Auth callbacks belong to the register page. If a sign-in redirect lands
+    // here instead (e.g. a redirect URL falling back to the Site URL), forward
+    // the whole token/error fragment there rather than eating it — supabase-js
+    // on that page turns it into a session and shows the registration form.
+    // Tab hashes (#log, #account, …) never contain "=" so they don't match.
+    const hash = window.location.hash || '';
+    if (/(^|[#&])(access_token|refresh_token|error_code|error_description)=/.test(hash)) {
+      window.location.replace('./register.html' + hash);
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const fromAuth = sessionStorage.getItem('surftober_authenticated');
 
@@ -504,6 +515,6 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=9"></script>
-  <script type="module" src="./app.js?v=60"></script>
+  <script type="module" src="./app.js?v=61"></script>
 </body>
 </html>

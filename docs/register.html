@@ -376,6 +376,21 @@
       setTimeout(()=> el.remove(), 4000);
     }
 
+    // A failed auth callback comes back as "#error=...&error_description=..."
+    // and supabase-js just leaves it in the URL — surface it, otherwise a
+    // broken Google/magic-link return looks like the page did nothing.
+    (function surfaceAuthError(){
+      try {
+        const frag = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+        const query = new URLSearchParams(window.location.search);
+        const desc = frag.get('error_description') || query.get('error_description');
+        const code = frag.get('error') || query.get('error');
+        if (desc || code) {
+          toast('Sign-in problem: ' + (desc || code) + ' — try again or use a magic link.', 'error');
+        }
+      } catch (e) {}
+    })();
+
     (function ensureSupabase(){
       if (!window.supabase) {
         const s = document.createElement('script');
