@@ -64,6 +64,19 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Bug: audio upload failure logging a session with photo + audio**
+      (Chase, Crew Board 2026-08-14, unactioned) — logging a session with a
+      picture and a 26-second voice memo initially reported "audio upload
+      failed", and the audio that did land sounded bad; recorded over
+      Bluetooth. Worth checking when picked up: was the failure toast real
+      or spurious (retry succeeded?); combined photo+audio row size vs any
+      payload limit; Bluetooth mics drop to the low-quality SCO/handsfree
+      profile while recording, which would explain the sound.
+- [ ] **Bug: installed PWA super slow on iPhone** (Chase, Crew Board
+      2026-08-14, unactioned) — after Add to Home Screen, opening the web
+      app standalone is much slower than in-browser Safari. Reproduce
+      first; candidates: SW cache-first paths, standalone-mode cold start,
+      or the big base64 photos in profile payloads.
 - [ ] **Swap the crew album link for the real October album** (Chase,
       2026-08-08) — `window.CREW_ALBUM_URL` in docs/version.js currently
       points at the August TEST album (photos.app.goo.gl/DJin8nEzrymarTFv9).
