@@ -955,3 +955,50 @@ where s.start_time is not null
 group by s.id;
 
 grant select on public.session_conditions to anon, authenticated;
+
+-- ============================================================
+-- 2026-08-16 · reliability: surf_report staleness heartbeat
+-- (dead-man's switch — reliability priority #2)
+-- ============================================================
+-- Pings healthchecks.io every 30 minutes WHILE the surf report is fresh.
+-- When the fetcher goes silent for any reason — pg_cron dead, a Surfline
+-- 403 streak, project paused — the pings stop, and healthchecks.io emails
+-- after its grace period. Alerting on silence (not on error) catches every
+-- failure mode, including ones we haven't imagined.
+--
+-- SETUP (one-time, before running this section):
+--   1. healthchecks.io → New Check → name "surftober-surf-report",
+--      Period = 30 minutes, Grace = 1 hour.
+--   2. Copy the ping URL (https://hc-ping.com/<uuid>) and replace the
+--      placeholder below BEFORE pasting into the SQL editor.
+-- Freshness threshold is 2 hours: fetched_at updates hourly when healthy
+-- (Surfline fires on the minute<30 tick), so 2h tolerates one missed
+-- cycle. Worst-case alert latency ≈ 3.5h after the last good fetch.
+
+create or replace function public.surf_report_heartbeat()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ping_url text := 'https://hc-ping.com/REPLACE-WITH-CHECK-UUID';
+  fresh boolean;
+begin
+  if ping_url like '%REPLACE%' then
+    raise notice 'surf_report_heartbeat: ping URL not configured; skipping';
+    return;
+  end if;
+  select r.fetched_at is not null
+     and r.fetched_at > now() - interval '2 hours'
+    into fresh
+  from public.surf_report r
+  where r.id = 1;
+  if coalesce(fresh, false) then
+    perform net.http_get(ping_url, timeout_milliseconds := 10000);
+  end if;
+end;
+$$;
+
+select cron.schedule('surf-report-heartbeat', '*/30 * * * *',
+                     'select public.surf_report_heartbeat()');
