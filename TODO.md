@@ -1,6 +1,21 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **Pages→Vercel migration — IN FLIGHT (GO 2026-08-16)** — full runbook in
+      `VERCEL-MIGRATION.md`. `docs/vercel.json` committed (uniform no-cache +
+      www→apex redirect). Chase's side, from the personal machine: create the
+      Vercel account (ciniper GitHub, Hobby, repo-scoped app install), import
+      the repo (root dir `docs`, no build), run the parity checklist on
+      *.vercel.app, then the DNS cutover (lower GoDaddy TTL a day ahead).
+      Auth verifies post-cutover by design. Freeze: not cut by mid-Sept →
+      park until November. `/docs` Pages stays intact as rollback.
+- [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
+      (reliability priority #2): (1) healthchecks.io → new check
+      "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
+      heartbeat section from the bottom of the upgrade SQL file with the
+      ping-URL placeholder replaced. Alerts ~3.5h after the fetcher goes
+      silent for any reason — this also closes out the "Watch: Surfline 403"
+      item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 

@@ -497,6 +497,46 @@ select cron.schedule('surf-report-refresh', '7,37 * * * *', 'select public.refre
 -- refresh once more ~30 seconds later to harvest this first response.
 select public.refresh_surf_report();
 
+-- Staleness heartbeat (dead-man's switch): pings healthchecks.io every
+-- 30 min while surf_report.fetched_at is < 2h old. When the fetcher goes
+-- silent (cron dead, Surfline 403 streak, project paused), pings stop and
+-- healthchecks.io alerts after its grace period. Create a check there
+-- (Period 30 min, Grace 1h) and replace the placeholder URL; the function
+-- no-ops until configured.
+create or replace function public.surf_report_heartbeat()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ping_url text := 'https://hc-ping.com/REPLACE-WITH-CHECK-UUID';
+  fresh boolean;
+begin
+  if ping_url like '%REPLACE%' then
+    raise notice 'surf_report_heartbeat: ping URL not configured; skipping';
+    return;
+  end if;
+  select r.fetched_at is not null
+     and r.fetched_at > now() - interval '2 hours'
+    into fresh
+  from public.surf_report r
+  where r.id = 1;
+  if coalesce(fresh, false) then
+    perform net.http_get(ping_url, timeout_milliseconds := 10000);
+  end if;
+end;
+$$;
+
+do $$
+begin
+  perform cron.unschedule('surf-report-heartbeat');
+exception when others then
+  null;  -- first install: nothing to unschedule yet
+end $$;
+select cron.schedule('surf-report-heartbeat', '*/30 * * * *',
+                     'select public.surf_report_heartbeat()');
+
 -- =========================================================
 -- admin_list_users : the Admin tab's "List Users" button
 -- =========================================================
