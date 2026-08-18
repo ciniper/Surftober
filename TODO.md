@@ -152,6 +152,17 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
+- **Club password: same UX, not in public source** (Chase, 2026-08-18) —
+  keep the type-it-in-a-box flow but verify via a Postgres RPC
+  (`check_club_pass(guess)` compares against a hashed value in a table;
+  pgcrypto) instead of a string literal in register.html/landing.html.
+  Bonus: password becomes rotatable via one DB update — no deploy, no
+  cache bump. Honest scope note: the localStorage 'surftober.clubpass'
+  flag would still be settable by a source-reader, so this raises the
+  speed bump without making it a wall — a wall means putting view-mode
+  data reads behind real auth (product change, decide separately). Cheap
+  lesser alternative if backend feels heavy: compare a SHA-256 hash
+  client-side (hides the literal, still offline-guessable).
 - Photo wall page (Chase, 2026-08-08): a gallery tab/page. Two sources:
   (a) in-app session photos — fully supported, we own the bucket; (b) the
   shared Google Photos album — Google killed third-party API reads of user
