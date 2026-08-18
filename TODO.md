@@ -1,14 +1,15 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Pages→Vercel migration — IN FLIGHT (GO 2026-08-16)** — full runbook in
-      `VERCEL-MIGRATION.md`. `docs/vercel.json` committed (uniform no-cache +
-      www→apex redirect). Chase's side, from the personal machine: create the
-      Vercel account (ciniper GitHub, Hobby, repo-scoped app install), import
-      the repo (root dir `docs`, no build), run the parity checklist on
-      *.vercel.app, then the DNS cutover (lower GoDaddy TTL a day ahead).
-      Auth verifies post-cutover by design. Freeze: not cut by mid-Sept →
-      park until November. `/docs` Pages stays intact as rollback.
+- [ ] **Pages→Vercel migration — CUT OVER 2026-08-17, soak week running** —
+      surftober.com serves from Vercel (verified: server header, v1.26.1,
+      no-cache headers, www→apex 308 w/ path, cert, parity checklist).
+      Remaining: (1) Chase spot-checks auth (magic link + Google) and
+      realtime chat on prod; (2) after ~a week of clean soak, raise GoDaddy
+      TTLs 600→3600 and kick off the hashed-assets build step on preview
+      deploys. Rollback stays trivial: restore GitHub Pages A records
+      (185.199.108-111.153) + www CNAME ciniper.github.io — `/docs` Pages
+      config untouched. Full runbook/history: `VERCEL-MIGRATION.md`.
 - [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
       (reliability priority #2): (1) healthchecks.io → new check
       "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
