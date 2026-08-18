@@ -65,6 +65,18 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Decide after October: make the repo private?** (Chase, 2026-08-18)
+      Original reason for public (free GitHub Pages) is moot post-Vercel.
+      DO NOT flip before the event: private on a free GitHub account
+      UNPUBLISHES the Pages site, which is the 10-minute DNS rollback
+      fallback — keep it through the soak week and October. Also weigh:
+      privacy gain is small (club pass, anon key, and all client code ship
+      to browsers regardless; RLS is the real boundary — repo-private
+      mainly hides TODO/runbooks), and private activates Vercel Hobby's
+      commit-author check (deploy pipeline gets stricter; repo-local
+      ciniper identity already set 2026-08-18, so new pushes comply).
+      If flipped: rollback story must change (re-publicize, or GitHub Pro
+      $4/mo for private Pages, or accept Vercel-only).
 - [ ] **Bug: audio upload failure logging a session with photo + audio**
       (Chase, Crew Board 2026-08-14, unactioned) — logging a session with a
       picture and a 26-second voice memo initially reported "audio upload
