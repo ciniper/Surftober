@@ -1401,13 +1401,60 @@ async function deleteSessionPhoto(url){
   try { await sb.storage.from('session-photos').remove([path]); } catch {}
 }
 
-// Thumbnail that opens the full-size image in a new tab. lazy-loading keeps
+// Thumbnail that opens the full-size image in an overlay (see openPhotoLightbox).
+// It stays a real <a href> so cmd/middle-click and "open in new tab" still work,
+// and so a JS failure degrades to the old new-tab behavior. lazy-loading keeps
 // a long session list from pulling every photo on page load (public bucket
 // egress is metered).
 function photoThumbHtml(url, cls = 'session-photo-thumb'){
   if (!url) return '';
-  return `<a href="${esc(url)}" target="_blank" rel="noopener"><img class="${cls}" loading="lazy" src="${esc(url)}" alt="Session photo" /></a>`;
+  return `<a class="photo-zoom" href="${esc(url)}" target="_blank" rel="noopener"><img class="${cls}" loading="lazy" src="${esc(url)}" alt="Session photo" /></a>`;
 }
+
+// Full-size photo overlay. One lazily-built node reused by every thumbnail —
+// closes on backdrop click, the ✕, or Escape.
+let photoLightboxEl = null;
+
+function openPhotoLightbox(url){
+  if (!photoLightboxEl) {
+    photoLightboxEl = document.createElement('div');
+    photoLightboxEl.className = 'photo-lightbox';
+    photoLightboxEl.innerHTML =
+      '<button type="button" class="photo-lightbox-close" aria-label="Close">✕</button>' +
+      '<img alt="Session photo" />';
+    photoLightboxEl.addEventListener('click', (e) => {
+      // Clicking the image itself shouldn't dismiss; the backdrop and ✕ should.
+      if (e.target === photoLightboxEl || e.target.classList.contains('photo-lightbox-close')) {
+        closePhotoLightbox();
+      }
+    });
+    document.body.appendChild(photoLightboxEl);
+  }
+  photoLightboxEl.querySelector('img').src = url;
+  photoLightboxEl.classList.add('open');
+  document.body.classList.add('lightbox-open');
+}
+
+function closePhotoLightbox(){
+  if (!photoLightboxEl) return;
+  photoLightboxEl.classList.remove('open');
+  document.body.classList.remove('lightbox-open');
+  // Drop the src so a big image isn't held decoded while the overlay is hidden.
+  photoLightboxEl.querySelector('img').removeAttribute('src');
+}
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest && e.target.closest('a.photo-zoom');
+  if (!link) return;
+  // Let modified clicks (new tab/window, download) behave normally.
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  e.preventDefault();
+  openPhotoLightbox(link.getAttribute('href'));
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePhotoLightbox();
+});
 
 function discardPickedPhoto(){
   pickedPhotoBlob = null;

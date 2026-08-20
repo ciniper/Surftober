@@ -21,6 +21,24 @@
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
 ## Scoped, awaiting a go
+- [ ] **Reconsider: drop the per-event re-registration requirement?**
+      (Chase, 2026-08-19 — "it just could make things complicated")
+      Today (v1.19.0) a new event stamps `profiles.registered_event_id` and
+      returning members must confirm the prefilled form before logging;
+      admin is exempt. What it buys: an accurate active roster (0-hour
+      no-shows are filtered from the leaderboard), a yearly prompt to
+      refresh the per-hour pledge (the thing that silently goes stale), and
+      an implicit re-opt-in. What it costs: a gate between a returning
+      friend and logging a session — worst case someone bounces on day 1 of
+      October, and the failure mode is confusing rather than loud.
+      Options if dropped: (a) no gate, treat any profile as registered —
+      simplest, but roster and pledges drift; (b) soft prompt: a dismissible
+      banner asking to confirm details, logging never blocked (keeps most of
+      the benefit, removes the wall) — RECOMMENDED if it changes; (c) keep
+      as-is. Decide BEFORE October (changing it mid-event splits users
+      across two rule sets). Note the plumbing stays either way — the column
+      is how per-event rosters/awards scope, so this is only about whether
+      it *blocks* logging.
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
       view that shipped with the Session Strip, v1.23.0) — compute at
       season's end:
@@ -45,12 +63,6 @@
       on top of ours. Decision locked 2026-08-03 (stay on Supabase; Firebase/Drive
       alternatives evaluated and rejected — Google One 2 TB doesn't apply to any
       Google backend).
-- [ ] **Drive archive of Storage files** (remainder of the 2026-08-03 plan):
-      extend the Apps Script mirror to copy new Storage files (photos +
-      audio) into a Drive folder nightly using the service key — Chase's
-      2 TB Google One becomes the durable archive tier and plugs the
-      "Storage files aren't in pg_dump" gap. More useful now that photos
-      ship; egress fine once on Pro.
 - [ ] **Watch Supabase egress during October** — free tier is 5 GB/month and
       sessions are public, so big assets get re-downloaded per viewer. Check
       dashboard → Settings → Usage weekly during the event. (As of Aug 3:
@@ -65,6 +77,29 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Session media (photos/audio) is not in ANY backup** — Chase accepted
+      this risk 2026-08-19; logged so the gap is known, not forgotten.
+      Facts: session media lives in Supabase **Storage** buckets
+      (`session-photos`, `session-audio`); the DB only holds URLs. Supabase
+      docs are explicit that automated daily backups AND PITR cover Postgres
+      only — "Database backups do not include objects you store via the
+      Storage API". So neither Pro backups nor `pg_dump` protect this;
+      profile photos ARE safe (base64 in the DB). Durability itself is fine
+      (S3-class object storage) — the real risks are accidental deletion, a
+      bad RLS/bucket change, and project-level mistakes.
+      Cheap fix if it ever matters (~40 lines, no new infra): extend the
+      existing nightly `backup/sheets-mirror.gs` — it already runs on
+      Google's servers with the service_role key. Per run: list each bucket
+      (`POST /storage/v1/object/list/{bucket}`), skip files already present
+      in a Drive folder (incremental, so runs stay small), fetch the rest and
+      `DriveApp.createFile(blob)`. Current volume is trivial (9 photos +
+      10 audio ≈ a few MB); watch Apps Script's 6-min/run limit at October
+      scale — incremental copying keeps it well under.
+      Chase's 2 TB Google One is the natural durable archive tier (this
+      supersedes the old "Drive archive of Storage files" item from the
+      2026-08-03 backup plan). Also worth noting: media from soft-deleted
+      sessions stays in the public buckets and is still fetchable by URL
+      (no cleanup on delete).
 - [ ] **Decide after October: make the repo private?** (Chase, 2026-08-18)
       Original reason for public (free GitHub Pages) is moot post-Vercel.
       DO NOT flip before the event: private on a free GitHub account
@@ -77,14 +112,15 @@
       ciniper identity already set 2026-08-18, so new pushes comply).
       If flipped: rollback story must change (re-publicize, or GitHub Pro
       $4/mo for private Pages, or accept Vercel-only).
-- [ ] **Bug: audio upload failure logging a session with photo + audio**
-      (Chase, Crew Board 2026-08-14, unactioned) — logging a session with a
-      picture and a 26-second voice memo initially reported "audio upload
-      failed", and the audio that did land sounded bad; recorded over
-      Bluetooth. Worth checking when picked up: was the failure toast real
-      or spurious (retry succeeded?); combined photo+audio row size vs any
-      payload limit; Bluetooth mics drop to the low-quality SCO/handsfree
-      profile while recording, which would explain the sound.
+- [ ] **Bug (downgraded): spurious "audio upload failed" toast**
+      (Chase, Crew Board 2026-08-14) — 2026-08-19 scan found the Aug-14
+      session's audio IS in storage, healthy: 466 KB `audio/mp4`, serves
+      HTTP 200. So no data was lost — the toast was wrong (or a silent retry
+      succeeded), making this a UX/error-reporting bug, not an upload bug.
+      Look at the upload error path for a false-negative (e.g. reporting
+      failure on a resolved retry or a non-fatal response). The "sounded
+      bad" half is almost certainly Bluetooth: mics drop to the low-quality
+      SCO/handsfree profile while recording — likely not fixable in-app.
 - [ ] **Bug: installed PWA super slow on iPhone** (Chase, Crew Board
       2026-08-14, unactioned) — after Add to Home Screen, opening the web
       app standalone is much slower than in-browser Safari. Reproduce
