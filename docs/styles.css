@@ -353,6 +353,28 @@ a.mode-toggle { display: inline-flex; align-items: center; border-radius: 8px; t
 @media (min-width: 641px) {
   .session-photo-card { width: auto; max-width: min(420px, 100%); }
 }
+/* v1.27: full-size photo overlay (replaces opening a new tab) */
+.photo-lightbox {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center; padding: 24px;
+  background: rgba(0, 0, 0, 0.82); cursor: zoom-out;
+}
+.photo-lightbox.open { display: flex; }
+.photo-lightbox img {
+  max-width: 100%; max-height: 100%; width: auto; height: auto;
+  border-radius: 10px; cursor: default;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.photo-lightbox-close {
+  position: absolute; top: 12px; right: 14px; z-index: 1;
+  width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(0, 0, 0, 0.45);
+  color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
+}
+.photo-lightbox-close:hover { background: rgba(0, 0, 0, 0.7); }
+/* Don't let the page scroll behind the overlay (mobile especially) */
+body.lightbox-open { overflow: hidden; }
+a.photo-zoom { cursor: zoom-in; display: inline-block; }
 #photo-preview { max-width: 220px; max-height: 220px; border-radius: 10px; display: block; margin: 8px 0 4px; border: 1px solid var(--card-border); }
 #photo-preview-wrap a { font-size: 13px; }
 /* Photo field mirrors the audio field's layout so the two stack evenly */
