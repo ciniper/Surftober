@@ -89,15 +89,36 @@
       shared across all projects on the account; over the limit = 3-day
       grace then collection pauses — never affects the site itself. Custom
       events are Pro-only, so "sessions logged" can't be tracked this way.)
-- [ ] **If Supabase is ever downgraded to free, re-enable the keep-alive**
-      (disabled 2026-08-19) — `.github/workflows/keepalive.yml` pinged the
-      REST API every 3 days so a free project wouldn't auto-pause after ~7
-      days idle. Redundant on Pro (Pro doesn't pause), and since the Vercel
-      cutover its orphan `keepalive` branch (no docs/ dir = the project's
-      Root Directory) failed a preview build every 3 days. Cron is commented
-      out; workflow_dispatch still works for manual runs. If re-enabling for
-      an off-season downgrade, also fix the branch-stamp step or the failed
-      builds come back. Stale `keepalive` branch on GitHub can be deleted.
+- [ ] **Rebuild the Supabase keep-alive Vercel-natively (do this IF/WHEN the
+      project is downgraded to the free tier — e.g. after October)**
+      Background: free Supabase projects auto-pause after ~7 days with no API
+      activity, which breaks sign-in and cloud sync during the off-season.
+      `.github/workflows/keepalive.yml` handled that by pinging the REST API
+      every 3 days; its cron was disabled 2026-08-19 because Pro doesn't pause
+      AND because its orphan `keepalive` branch — which has no `docs/`
+      directory, the project's Root Directory — failed a Vercel preview build
+      every 3 days. `workflow_dispatch` still runs it by hand. The stale
+      `keepalive` branch on GitHub can be deleted whenever.
+      **Option A — 2-line patch, keeps GitHub Actions:** have the workflow
+      also write `docs/vercel.json` containing
+      `{"git":{"deploymentEnabled":false}}` into the orphan branch. Vercel
+      then reads that branch's own config and skips deploying it; and even
+      if it isn't honored pre-build, `docs/` now exists so the build
+      succeeds trivially instead of erroring. Smallest change, keeps
+      Surftober free of serverless functions.
+      **Option B — move the ping to a Vercel Cron (RECOMMENDED):** a tiny
+      function at `docs/api/keepalive.js` that fetches the Supabase REST
+      endpoint with the anon key, plus a `crons` entry in `docs/vercel.json`
+      (`{"path":"/api/keepalive","schedule":"0 8 * * *"}`). Hobby cron is
+      1×/day, which is ample against a 7-day pause window. The real win:
+      the orphan branch exists ONLY to defeat GitHub's 60-day
+      scheduled-workflow auto-disable, and Vercel Cron has no such rule —
+      so the branch, the force-push, and the failed builds all disappear.
+      Then delete the GitHub workflow entirely. Tradeoff: it would be the
+      first serverless function in a so-far purely-static project (not in
+      the request path, so the availability story is unchanged). Optionally
+      guard the endpoint with a `CRON_SECRET` env var — cron routes are
+      publicly reachable, though a bare Supabase ping is harmless.
 - [ ] **Session media (photos/audio) is not in ANY backup** — Chase accepted
       this risk 2026-08-19; logged so the gap is known, not forgotten.
       Facts: session media lives in Supabase **Storage** buckets
