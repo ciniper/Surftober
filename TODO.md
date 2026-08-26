@@ -81,6 +81,14 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **Capture October's analytics before they roll off** — Vercel Web
+      Analytics (added v1.27.1) has a **1-month reporting window on Hobby**,
+      so October's numbers disappear from the dashboard during November.
+      Screenshot / export the October view in early November if the numbers
+      are worth keeping year over year. (Hobby: 50k events/mo included,
+      shared across all projects on the account; over the limit = 3-day
+      grace then collection pauses — never affects the site itself. Custom
+      events are Pro-only, so "sessions logged" can't be tracked this way.)
 - [ ] **If Supabase is ever downgraded to free, re-enable the keep-alive**
       (disabled 2026-08-19) — `.github/workflows/keepalive.yml` pinged the
       REST API every 3 days so a free project wouldn't auto-pause after ~7

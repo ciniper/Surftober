@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v73';
+const CACHE = 'surftober-demo-v74';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -44,6 +44,13 @@ self.addEventListener('fetch', (e) => {
 
   // Only handle same-origin requests
   if (url.origin !== location.origin) return;
+
+  // Vercel-injected routes (Web Analytics script + view beacons). These are
+  // same-origin, so without this they'd hit the cache-first branch below —
+  // pinning the script in cache forever and, worse, potentially serving a
+  // cached response instead of actually sending a beacon. Always let them
+  // go straight to the network.
+  if (url.pathname.startsWith('/_vercel/')) return;
 
   // Deploy marker: always fetch fresh (bypass HTTP + SW cache) so the
   // visible version reliably reflects what is actually live.

@@ -516,5 +516,14 @@
   <script src="./version.js"></script>
   <script src="./awards.js?v=9"></script>
   <script type="module" src="./app.js?v=62"></script>
+
+  <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
+       until the deferred script loads. Served by Vercel at /_vercel/insights/*
+       (404s harmlessly on localhost and on the GitHub Pages fallback). The
+       service worker skips /_vercel/ entirely so beacons are never cached. -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
