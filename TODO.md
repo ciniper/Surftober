@@ -19,6 +19,10 @@
       item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
+- [ ] **Sessions page: move the List/Tiles toggle below the person card**
+      (Chase, 2026-08-19) — the view switcher currently sits in the page head
+      next to My Sessions / Other Surfers; it reads as a page-level control
+      when it really only affects the session list underneath.
 
 ## Scoped, awaiting a go
 - [ ] **Reconsider: drop the per-event re-registration requirement?**
@@ -77,6 +81,15 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **If Supabase is ever downgraded to free, re-enable the keep-alive**
+      (disabled 2026-08-19) — `.github/workflows/keepalive.yml` pinged the
+      REST API every 3 days so a free project wouldn't auto-pause after ~7
+      days idle. Redundant on Pro (Pro doesn't pause), and since the Vercel
+      cutover its orphan `keepalive` branch (no docs/ dir = the project's
+      Root Directory) failed a preview build every 3 days. Cron is commented
+      out; workflow_dispatch still works for manual runs. If re-enabling for
+      an off-season downgrade, also fix the branch-stamp step or the failed
+      builds come back. Stale `keepalive` branch on GitHub can be deleted.
 - [ ] **Session media (photos/audio) is not in ANY backup** — Chase accepted
       this risk 2026-08-19; logged so the gap is known, not forgotten.
       Facts: session media lives in Supabase **Storage** buckets

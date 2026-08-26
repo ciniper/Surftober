@@ -1,15 +1,29 @@
-# Keeps the free-tier Supabase project alive during the Surftober off-season.
-# Free Supabase projects auto-pause after ~7 days with no API activity, which
-# breaks sign-in and cloud sync. This pings the REST API every 3 days. It also
-# writes a timestamp to a throwaway `keepalive` branch each run so GitHub does
-# not auto-disable this scheduled workflow after 60 days of no repo activity.
+# Keeps the FREE-tier Supabase project alive during the Surftober off-season.
+# Free projects auto-pause after ~7 days with no API activity, which breaks
+# sign-in and cloud sync. This pings the REST API. It also writes a timestamp
+# to a throwaway `keepalive` branch so GitHub does not auto-disable this
+# scheduled workflow after 60 days of no repo activity.
 # Runs entirely on GitHub Actions — no servers. (Public repo = free minutes.)
+#
+# SCHEDULE DISABLED 2026-08-19. Two reasons:
+#   1. The project is on Supabase PRO now, and Pro projects don't auto-pause —
+#      so the ping is currently doing nothing.
+#   2. Since the Vercel migration, every push to any branch builds. The orphan
+#      `keepalive` branch has no docs/ directory (the project's Root Directory),
+#      so each run produced a "Root Directory docs does not exist" build
+#      failure every 3 days.
+# RE-ENABLE (uncomment the cron) IF the project is ever downgraded back to the
+# free tier — e.g. after October. Before doing so, deal with the branch stamp:
+# either drop that step and accept re-enabling the workflow by hand if GitHub
+# ever disables it (it emails a warning first), or keep it and stop the failed
+# builds another way. Leaving workflow_dispatch on means it can still be run
+# by hand from the Actions tab at any time.
 name: Supabase keep-alive
 
 on:
-  schedule:
-    - cron: '23 8 */3 * *'   # every ~3 days at 08:23 UTC — well under the 7-day pause window
-  workflow_dispatch: {}        # also runnable on demand from the Actions tab
+  # schedule:
+  #   - cron: '23 8 */3 * *'   # every ~3 days at 08:23 UTC — well under the 7-day pause window
+  workflow_dispatch: {}        # runnable on demand from the Actions tab
 
 permissions:
   contents: write
