@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v74';
+const CACHE = 'surftober-demo-v75';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -50,7 +50,9 @@ self.addEventListener('fetch', (e) => {
   // pinning the script in cache forever and, worse, potentially serving a
   // cached response instead of actually sending a beacon. Always let them
   // go straight to the network.
-  if (url.pathname.startsWith('/_vercel/')) return;
+  // Same reasoning for /api/* (the keep-alive cron endpoint): never serve an
+  // API response from cache.
+  if (url.pathname.startsWith('/_vercel/') || url.pathname.startsWith('/api/')) return;
 
   // Deploy marker: always fetch fresh (bypass HTTP + SW cache) so the
   // visible version reliably reflects what is actually live.
