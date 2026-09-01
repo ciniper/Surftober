@@ -25,24 +25,23 @@
       when it really only affects the session list underneath.
 
 ## Scoped, awaiting a go
-- [ ] **Reconsider: drop the per-event re-registration requirement?**
-      (Chase, 2026-08-19 — "it just could make things complicated")
-      Today (v1.19.0) a new event stamps `profiles.registered_event_id` and
-      returning members must confirm the prefilled form before logging;
-      admin is exempt. What it buys: an accurate active roster (0-hour
-      no-shows are filtered from the leaderboard), a yearly prompt to
-      refresh the per-hour pledge (the thing that silently goes stale), and
-      an implicit re-opt-in. What it costs: a gate between a returning
-      friend and logging a session — worst case someone bounces on day 1 of
-      October, and the failure mode is confusing rather than loud.
-      Options if dropped: (a) no gate, treat any profile as registered —
-      simplest, but roster and pledges drift; (b) soft prompt: a dismissible
-      banner asking to confirm details, logging never blocked (keeps most of
-      the benefit, removes the wall) — RECOMMENDED if it changes; (c) keep
-      as-is. Decide BEFORE October (changing it mid-event splits users
-      across two rule sets). Note the plumbing stays either way — the column
-      is how per-event rosters/awards scope, so this is only about whether
-      it *blocks* logging.
+- [ ] **Decide re-registration for October — September is the trial**
+      (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
+      runs on the CURRENT behavior on purpose: it's a test event, so the
+      beta testers' reaction is the data. Watch for whether anyone hits the
+      logging block and is confused rather than mildly inconvenienced.
+      The gate does three separable things — (1) the re-register banner,
+      (2) **blocks logging** until you re-register, (3) gates your 0-hour
+      leaderboard row (you appear once you re-register OR log a session).
+      Only (2) is the friction Chase is second-guessing.
+      RECOMMENDED if it changes: drop (2), keep (3) — no wall in front of a
+      returning friend on day 1, while stale/test profiles still stay off the
+      board until they opt in, and the pledge-refresh nudge survives as a
+      dismissible prompt. ~30 min of work. Full carry-over (drop 2 AND 3) is
+      the other option but puts every old profile on the board at 0 hours.
+      DECIDE BEFORE OCTOBER — switching mid-event splits users across two
+      rule sets.
+
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
       view that shipped with the Session Strip, v1.23.0) — compute at
       season's end:
@@ -81,6 +80,18 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
+- [ ] **BEFORE OCTOBER: `DEFAULT_EVENT.team` in app.js is stale** (found
+      2026-08-31) — it still reads `'surftober-2026'`, which is now the
+      **September Test** event's slug, while its window says Oct 1–31 and the
+      real October event's slug is `'5th-surftober-2026'`. `loadEvents()`
+      falls back to DEFAULT_EVENT whenever the events fetch throws — and the
+      catch is broad, so a transient Supabase blip at page load counts, not
+      just a missing table. In that state an October session would be written
+      under the September test team and never show on the real board.
+      One-line fix: set `team: '5th-surftober-2026'` (or rename the September
+      event's slug). Related: in fallback `activeEvent.id` is null, so
+      `needsReRegistration()` returns true for everyone stamped to a real
+      event — logging gets blocked until the events table responds again.
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
       Analytics (added v1.27.1) has a **1-month reporting window on Hobby**,
       so October's numbers disappear from the dashboard during November.
