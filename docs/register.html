@@ -290,8 +290,8 @@
           <p>Click to upload or drag and drop</p>
           <input type="file" id="photo-upload" accept="image/*" style="display:none" />
         </div>
-        <div class="photo-preview" id="photo-preview">
-          <img id="photo-preview-img" src="" alt="Preview" />
+        <div class="photo-preview" id="reg-photo-preview">
+          <img id="reg-photo-preview-img" alt="Preview" />
         </div>
       </label>
 
@@ -477,8 +477,8 @@
         if (data.photo_base64) {
           photoBase64 = data.photo_base64;
           const src = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
-          document.getElementById('photo-preview-img').src = src;
-          document.getElementById('photo-preview').style.display = 'block';
+          document.getElementById('reg-photo-preview-img').src = src;
+          document.getElementById('reg-photo-preview').style.display = 'block';
         }
         document.getElementById('registration-title').textContent =
           `Welcome back${activeEvent ? ' — ' + activeEvent.name : ''}!`;
@@ -597,8 +597,8 @@
         const rendered = await renderProfileImage(file);
         const dataUrl = rendered.display;
         photoArchiveBlob = rendered.archiveBlob;
-        document.getElementById('photo-preview-img').src = dataUrl;
-        document.getElementById('photo-preview').style.display = 'block';
+        document.getElementById('reg-photo-preview-img').src = dataUrl;
+        document.getElementById('reg-photo-preview').style.display = 'block';
         photoBase64 = dataUrl; // full data URL, same format the Account tab saves
       } catch (err) {
         toast('Could not read that image: ' + err.message, 'error');
