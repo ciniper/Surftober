@@ -19,10 +19,24 @@
       item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
-- [ ] **Sessions page: move the List/Tiles toggle below the person card**
-      (Chase, 2026-08-19) — the view switcher currently sits in the page head
-      next to My Sessions / Other Surfers; it reads as a page-level control
-      when it really only affects the session list underneath.
+- [ ] **Bug-scan findings, 2026-09-01 (not yet fixed)** — from a full read of
+      app.js / register.html / photo-kit.js / sw.js / awards.js:
+      · **Admin CSV import is silently ephemeral** — importCSV writes only to
+        the localStorage mirror, and the next syncFromCloud() (any realtime
+        tick or reload) overwrites it with the cloud copy, so imported rows
+        evaporate. Can't be fixed by inserting to cloud as-is: sessions RLS
+        requires user_id = auth.uid(), and CSV rows belong to other people.
+        Either label it "preview only", remove the card, or build an
+        admin-gated import RPC.
+      · **Delete My Cloud Data leaves Storage orphans** — it tombstones
+        sessions + deletes the profile row but never touches the user's
+        files in profile-photos / session-photos / session-audio (public
+        bucket, still fetchable by URL). Same class as the known
+        soft-delete-media note; fine for friends, log it.
+      · **Open Print Slides dies under a popup blocker** — window.open can
+        return null; one guard + toast would fix it (admin-only path).
+      · registered_at is overwritten on every re-registration (it reads as
+        "last re-registered", which the admin list may as well label).
 
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
@@ -238,6 +252,10 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Sessions page: move the List/Tiles toggle below the person card~~
+      (shipped v1.33.0 — the toggle now shares a row with the "Session Log"
+      heading, right above the list it controls; the subtab row keeps only
+      My Sessions / Other Surfers + the event scope.)
 - [x] ~~Google-sign-in registration bounce (beta report: Pranav + Jason)~~
       (fixed v1.26.1 — three self-healing guards: index.html forwards any
       auth-callback hash (`#access_token=`/`#error=`) to register.html

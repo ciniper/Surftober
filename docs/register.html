@@ -6,7 +6,7 @@
   <title>Register - Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=51" />
+  <link rel="stylesheet" href="./styles.css?v=52" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -317,7 +317,7 @@
   <footer style="text-align:center;margin:2rem 0 1rem;"><span class="app-version"></span></footer>
   <script src="./version.js"></script>
 
-  <script src="./photo-kit.js?v=2"></script>
+  <script src="./photo-kit.js?v=3"></script>
   <script>
     // Load Supabase
     const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
@@ -437,7 +437,15 @@
       } catch { return null; }
     }
 
+    let regFormShown = false; // run-once: see the guard below
+
     async function showRegistrationForm() {
+      // Run once per page load. Both the boot getUser() and onAuthStateChange
+      // (INITIAL_SESSION, then hourly TOKEN_REFRESHED) land here — without
+      // this guard the form double-initializes with doubled toasts, and a
+      // token refresh mid-fill re-prefills the fields over what's being typed.
+      if (regFormShown) return;
+      regFormShown = true;
       // Reaching here means they authenticated — that counts as being in the
       // club (covers magic links opened on a device that never saw the gate).
       localStorage.setItem('surftober.clubpass', '1');
@@ -486,9 +494,11 @@
           document.getElementById('btn-reg-crop').style.display = '';
         }
         if (data.photo_base64) {
-          photoBase64 = data.photo_base64;
-          const src = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
-          document.getElementById('reg-photo-preview-img').src = src;
+          // Normalize register-era bare base64 to a data URL — photoBase64 is
+          // also the crop editor's last-resort src, and a bare string fails
+          // to load as an image there.
+          photoBase64 = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
+          document.getElementById('reg-photo-preview-img').src = photoBase64;
           document.getElementById('reg-photo-preview').style.display = 'block';
         }
         document.getElementById('registration-title').textContent =
@@ -590,28 +600,6 @@
       document.getElementById('photo-upload').click();
     });
 
-    // Shrink camera-roll originals to a small JPEG before storing — same
-    // routine as the Account tab, so no more multi-MB photos in profiles.
-    async function compressImageToDataURL(file, maxDim = 512, quality = 0.82){
-      const url = URL.createObjectURL(file);
-      try {
-        const img = await new Promise((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = () => reject(new Error('could not read that image'));
-          i.src = url;
-        });
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/jpeg', quality);
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-    }
-
     document.getElementById('photo-upload').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -630,6 +618,12 @@
         toast('Please sign in first', 'error');
         return;
       }
+
+      // In-flight guard: the archive upload can take seconds on cell data,
+      // and a second tap would double-submit (and orphan an extra archive).
+      const submitBtn = document.getElementById('btn-submit-registration');
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
 
       // Archival full-size copy. A storage failure must never block signing
       // up — the avatar (base64, saved in the row below) is the copy that
@@ -683,8 +677,16 @@
           sessionStorage.setItem('surftober_authenticated', '1');
           window.location.href = './index.html';
         }, 2000);
+        // stays disabled — the redirect is coming
       } catch (e) {
-        toast('Registration failed: ' + e.message, 'error');
+        // Display names are unique (case-insensitive): the raw 23505 message
+        // ("duplicate key value violates unique constraint…") reads like a
+        // crash, and it also means NOTHING saved — say what to actually do.
+        const msg = e && e.code === '23505' && String(e.message || '').includes('display_name')
+          ? 'that display name is already taken by another surfer — pick a different one and resubmit.'
+          : e.message;
+        toast('Registration failed: ' + msg, 'error');
+        submitBtn.disabled = false;
       }
     });
   </script>

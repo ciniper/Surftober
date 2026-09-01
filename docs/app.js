@@ -169,7 +169,16 @@ async function initSupabase(){
 
   // auth state changes
   sb.auth.onAuthStateChange(async (_event, session) => {
-    currentUser = session?.user || null;
+    const next = session?.user || null;
+    // Same identity re-announced (INITIAL_SESSION echoing the boot session,
+    // hourly TOKEN_REFRESHED): keep the fresh user object but skip the
+    // re-fetch — fetchProfile() rewrites every Account form field and would
+    // clobber edits someone is typing when the token happens to refresh.
+    if ((next && next.id) === (currentUser && currentUser.id)) {
+      currentUser = next;
+      return;
+    }
+    currentUser = next;
     reflectAuthUI();
     reflectViewerNav();
     reflectAdminVisibility(adminEmails);
@@ -448,7 +457,14 @@ async function saveProfile(){
       ({ error } = await sb.from('profiles').upsert(profileUpdate));
     }
   }
-  if (error) throw error;
+  if (error) {
+    // Display names are unique (case-insensitive) — say so instead of
+    // surfacing the raw 23505 constraint message.
+    if (error.code === '23505' && String(error.message || '').includes('display_name')) {
+      throw new Error('That display name is already taken by another surfer — pick a different one.');
+    }
+    throw error;
+  }
   // Only after the row commits: if it failed, the old file is still the one
   // the row points at.
   if (pendingPhotoArchive && previousArchive &&
@@ -2956,11 +2972,12 @@ function renderLeaderboard() {
     const waveIcon = '<svg class="money-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M14 13c0-4.5-2.5-7.5-7-8 2 1.5 2.6 3.4 2.8 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     const showMoney = live && totalPledged > 0;
     tile.hidden = !(showMoney || totalHours > 0);
+    // Hours lead (left), pledged dollars second — hours are the event.
     tile.innerHTML =
+      `<div class="total-stat"><span class="total-label">Total hours</span><span class="total-value">${waveIcon}${totalHours.toFixed(1)} h</span></div>` +
       (showMoney
         ? `<div class="total-stat"><span class="total-label">Total pledged</span><span class="total-value money">${moneyIcon}$${totalPledged}</span></div>`
-        : '') +
-      `<div class="total-stat"><span class="total-label">Total hours</span><span class="total-value">${waveIcon}${totalHours.toFixed(1)} h</span></div>`;
+        : '');
   }
   const th = (key, label) =>
     `<th class="sortable" data-key="${key}">${label}${leaderboardSort === key ? ' <span class="sort-arrow">▾</span>' : ''}</th>`;

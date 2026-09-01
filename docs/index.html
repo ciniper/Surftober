@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=51" />
+  <link rel="stylesheet" href="./styles.css?v=52" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -292,10 +292,6 @@
       <div class="subtabs">
         <button type="button" id="subtab-mine" class="subtab">My Sessions</button>
         <button type="button" id="subtab-others" class="subtab">Other Surfers</button>
-        <span class="view-toggle">
-          <button type="button" id="view-list" class="subtab small" title="List view">☰ List</button>
-          <button type="button" id="view-tiles" class="subtab small" title="Tile view">▦ Tiles</button>
-        </span>
         <span class="event-scope hint" id="me-scope"></span>
       </div>
       <div class="filters" id="other-user-wrap" style="display:none">
@@ -304,7 +300,15 @@
         </label>
       </div>
       <div id="me-summary" class="cards"></div>
-      <h3>Session Log</h3>
+      <!-- List/Tiles sits with the heading it actually controls, not up in the
+           page-level subtab row (it only changes how the log below renders) -->
+      <div class="log-list-head">
+        <h3>Session Log</h3>
+        <span class="view-toggle">
+          <button type="button" id="view-list" class="subtab small" title="List view">☰ List</button>
+          <button type="button" id="view-tiles" class="subtab small" title="Tile view">▦ Tiles</button>
+        </span>
+      </div>
       <div id="me-sessions" class="table"></div>
     </section>
 
@@ -515,9 +519,9 @@
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./version.js"></script>
-  <script src="./photo-kit.js?v=2"></script>
+  <script src="./photo-kit.js?v=3"></script>
   <script src="./awards.js?v=10"></script>
-  <script type="module" src="./app.js?v=71"></script>
+  <script type="module" src="./app.js?v=72"></script>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
        until the deferred script loads. Served by Vercel at /_vercel/insights/*
