@@ -2399,7 +2399,10 @@ function renderMyStats() {
     : ((mine[0] && mine[0].user_id) || (rosterEntry && rosterEntry.id));
   let pageProfile = null;
   if (sessionsView === 'mine') {
-    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, target_hours: profileData.target_hours, fun_comment: profileData.fun_comment };
+    // photo_position must be carried too — the 'others' branch below gets it
+    // free via select('*'), so omitting it here made your OWN avatar the only
+    // one that ignored its saved crop.
+    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, photo_position: profileData.photo_position, target_hours: profileData.target_hours, fun_comment: profileData.fun_comment };
   } else if (pageUserId) {
     if (publicProfileCache.has(pageUserId)) {
       pageProfile = publicProfileCache.get(pageUserId);
