@@ -1032,7 +1032,7 @@ alter table public.profiles drop column if exists sponsor_match;
 --
 -- The view MUST expose it too: other surfers' avatars are read through
 -- public_profiles, so without this only your own photo would reposition.
-alter table public.profiles add column if exists photo_position text;
+alter table public.profiles add column if not exists photo_position text;
 
 drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
 create view public.public_profiles as
