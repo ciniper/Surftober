@@ -1,16 +1,6 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Verify the hashed build on prod** (first push after v1.41.0):
-      (1) footer shows v1.41.0; (2) view-source: refs look like
-      `app.944b8238.js`; (3) `curl -sI https://surftober.com/app.<hash>.js`
-      → `cache-control: … immutable`, while `/sw.js` stays `max-age=0`;
-      (4) DevTools → Application → Cache Storage shows one
-      `surftober-<hash>` cache with 12 entries; (5) Vercel build log shows
-      "build.mjs: surftober-<hash> · 13 files". If the build FAILS, prod
-      keeps the previous deployment — fix and re-push, nothing breaks.
-      Careful path if preferred: push a branch first and check the
-      *.vercel.app preview before merging to main.
 - [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
       (reliability priority #2): (1) healthchecks.io → new check
       "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
@@ -215,6 +205,14 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Verify the hashed build on prod~~ (2026-09-01, right after the
+      v1.41.0 push: version.js v1.41.0 live; all three pages reference
+      hashed assets with ZERO stale plain refs; app/styles hashes byte-match
+      the locally-verified build (cache surftober-74190a5d); hashed assets
+      serve `max-age=31536000, immutable` while sw.js stays `max-age=0` —
+      the two-rule header precedence worked; every one of the SW's 12
+      precache URLs returns 200; register/landing hashed CSS 200; keepalive
+      ok:true; www 308 intact.)
 - [x] ~~Hashed-assets build step (reliability #3)~~ (shipped v1.41.0 —
       docs/build.mjs content-hashes assets into dist/ at Vercel deploy,
       rewrites HTML + sw.js refs, injects a surftober-<hash> SW cache name;
