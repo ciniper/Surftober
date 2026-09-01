@@ -10,6 +10,7 @@
       item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
+
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
       (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
@@ -50,13 +51,6 @@
       as of 2026-09-01 (Chase). 250 GB egress makes the old October
       egress-watch moot; glance at Settings → Usage once before downgrading
       just to know the season's numbers.
-- [ ] **WhatsApp "Share to group" button** — after logging a session, offer a one-tap
-      share via a `wa.me` deep link with a pre-filled message ("🏄 2h at Ocean Beach,
-      day 12 of Surftober!"). Zero infrastructure, works on everyone's phone.
-      *Decided Aug 2026: a true two-way WhatsApp bridge is out — Meta's official
-      Groups API caps groups at 8 participants and only supports business-created
-      groups, and unofficial bridges (whatsapp-web.js/Baileys) violate ToS, risk the
-      phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
@@ -140,7 +134,8 @@
       of days, stage 2 is a Supabase Edge Function proxy for just the two
       Surfline calls (clean single UA, different TLS fingerprint + egress
       IPs), invoked by the same cron, writing to the same table.
-- [ ] **Info overlay** (Chase, 2026-08-08) — an ⓘ button opening a modal/sheet
+- [ ] **Info overlay** (Chase, 2026-08-08; DEFERRED 2026-09-01: build once
+      the UI is more finalized — don't propose as next-up until then) — an ⓘ button opening a modal/sheet
       explaining the event, scoring, and UI at a glance. (The other two parts
       of this item shipped in v1.13.0: session types simplified to
       Surf/Windsport/Swim/Other/Beach Cleanup with per-type eligibility hints,
@@ -160,11 +155,7 @@
       stays possible later — the GraphQL API is scoped (lab 76; OB sites
       9172 Lincoln Way + 9005 Vicente; public x-api-key in the BWTF repo's
       bwtf_api.py).
-- [ ] **Admin "Deleted sessions" panel** — list tombstoned sessions (`deleted_at is
-      not null`) in the Admin tab with a Restore button per row (sets `deleted_at`
-      back to null). Today restoring requires the Supabase dashboard (Table Editor →
-      sessions → clear `deleted_at`). Needs an admin-gated RPC, since the anon API
-      can only see rows, not un-tombstone others' sessions.
+
 - [ ] Rotate the Google OAuth client secret (the old one passed through chat during
       the June 2026 recovery). Google Cloud Console → create new secret → paste into
       Supabase Auth provider → delete old secret.
@@ -205,6 +196,8 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~WhatsApp share button + admin deleted-sessions panel~~ (DROPPED by
+      Chase 2026-09-01 — no longer wanted; not built.)
 - [x] ~~Verify the hashed build on prod~~ (2026-09-01, right after the
       v1.41.0 push: version.js v1.41.0 live; all three pages reference
       hashed assets with ZERO stale plain refs; app/styles hashes byte-match
