@@ -1,15 +1,12 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Pages→Vercel migration — CUT OVER 2026-08-17, soak week running** —
-      surftober.com serves from Vercel (verified: server header, v1.26.1,
-      no-cache headers, www→apex 308 w/ path, cert, parity checklist).
-      Remaining: (1) Chase spot-checks auth (magic link + Google) and
-      realtime chat on prod; (2) after ~a week of clean soak, raise GoDaddy
-      TTLs 600→3600 and kick off the hashed-assets build step on preview
-      deploys. Rollback stays trivial: restore GitHub Pages A records
-      (185.199.108-111.153) + www CNAME ciniper.github.io — `/docs` Pages
-      config untouched. Full runbook/history: `VERCEL-MIGRATION.md`.
+- [ ] **Hashed-assets build step** (reliability #3, unblocked by the clean
+      Vercel soak) — replaces the manual `?v=` cache ritual (bump index.html
+      + sw.js ASSETS + CACHE name on every app.js/styles.css change) with
+      content-hashed filenames from a small build step, proven on Vercel
+      preview deploys first. The ritual is the project's most error-prone
+      manual step; see VERCEL-MIGRATION.md for the migration context.
 - [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
       (reliability priority #2): (1) healthchecks.io → new check
       "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
@@ -19,23 +16,6 @@
       item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
-- [ ] **Crew Board sweep — August test event** (imported to todos 2026-09-01,
-      per Chase's board ask "Import previous crew messages to todos"):
-      · **Bug: board scroll traps page scroll on mobile** (Chase, 2026-08-19)
-        — the message list is its own scroll region (`.msg-list`, max-height
-        180px, overflow-y auto), so a thumb landing on it scrolls the list
-        instead of the page. Candidates: `overscroll-behavior: contain`, or
-        fold into collapse-by-default below (a collapsed board can't trap).
-      · **Chat board starts collapsed on mobile** (Chase, 2026-08-25) —
-        collapse to a "💬 Crew Board (N)" header by default on phones,
-        tap to expand; also shrinks the scroll-trap surface above.
-      · **Tiles need more contrast, maybe thicker borders** (Chase,
-        2026-08-24) — Sessions tile view; try 2px borders / stronger
-        shadow, verify on both light and dark themes.
-      Already covered, not re-added: PWA-slow + audio-toast bugs (tracked in
-      Open items since 2026-08-19), photo lightbox (shipped v1.27.0),
-      profile-photo crop (shipped v1.31–1.32).
-
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
       (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
@@ -72,17 +52,10 @@
       start_time, elapsed→duration, name/description→journal, strava_activity_id
       for dedup. Gauge interest in the WhatsApp group before building — only pays
       off for watch-trackers.
-- [ ] **Supabase Pro for the event** — upgrade ~mid/late September, keep for 1–2
-      months, downgrade after October. $25/mo buys 250 GB egress, 100 GB storage,
-      8 GB DB, no auto-pause during the event, and Supabase daily backups layered
-      on top of ours. Decision locked 2026-08-03 (stay on Supabase; Firebase/Drive
-      alternatives evaluated and rejected — Google One 2 TB doesn't apply to any
-      Google backend).
-- [ ] **Watch Supabase egress during October** — free tier is 5 GB/month and
-      sessions are public, so big assets get re-downloaded per viewer. Check
-      dashboard → Settings → Usage weekly during the event. (As of Aug 3:
-      ~1.2 MB audio, ~36 KB photos — the 3.4 MB register-era photo was replaced.
-      Mostly moot if the Pro upgrade above happens: Pro has 250 GB egress.)
+- [ ] **Downgrade Supabase Pro after October** (~early November) — Pro is ON
+      as of 2026-09-01 (Chase). 250 GB egress makes the old October
+      egress-watch moot; glance at Settings → Usage once before downgrading
+      just to know the season's numbers.
 - [ ] **WhatsApp "Share to group" button** — after logging a session, offer a one-tap
       share via a `wa.me` deep link with a pre-filled message ("🏄 2h at Ocean Beach,
       day 12 of Surftober!"). Zero infrastructure, works on everyone's phone.
@@ -100,23 +73,6 @@
       shared across all projects on the account; over the limit = 3-day
       grace then collection pauses — never affects the site itself. Custom
       events are Pro-only, so "sessions logged" can't be tracked this way.)
-- [ ] **Verify the keep-alive cron after the next deploy** (built 2026-08-20,
-      v1.27.2 — replaced the GitHub Actions version) — `docs/api/keepalive.js`
-      + a `crons` entry in `docs/vercel.json` ping Supabase daily at 08:00 UTC,
-      so a free-tier project can't auto-pause after ~7 days idle. No-op while
-      on Pro; wired up now so the mechanism is proven before it's needed.
-      The old workflow and its orphan `keepalive` branch are gone — that
-      branch only existed to dodge GitHub's 60-day scheduled-workflow
-      auto-disable, which Vercel Cron doesn't have.
-      After the next push, confirm: (1) Vercel → Settings → Cron Jobs lists
-      the job (it registers from the production deploy); (2) `curl
-      https://surftober.com/api/keepalive` returns
-      `{"ok":true,"supabaseStatus":200}`; (3) delete the stale `keepalive`
-      branch on GitHub. Note this is the project's FIRST serverless function
-      — it's cron-only and outside the request path, so pages stay pure
-      static. Optional hardening: set a `CRON_SECRET` env var in Vercel and
-      the endpoint starts requiring it (handler already supports this).
-
 - [ ] **Session media (photos/audio) is not in ANY backup** — Chase accepted
       this risk 2026-08-19; logged so the gap is known, not forgotten.
       Facts: session media lives in Supabase **Storage** buckets
@@ -257,6 +213,25 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Crew Board sweep — August test event~~ (all three shipped v1.38.0:
+      the board title is a collapse toggle showing "💬 Comment Board (N)";
+      phones START collapsed, desktop starts open. Expanded on phones the
+      list is natural-height — the nested 180px scrollbox that ate
+      page-scroll gestures is desktop-only now — capped at the newest 12
+      with a "Show N older messages…" reveal so an October-sized board
+      can't paste 500 messages into the page. Session tiles got 2px borders
+      leaning toward the text ink + a slightly stronger shadow, verified on
+      light and dark.)
+- [x] ~~Pages→Vercel migration~~ (CUT OVER 2026-08-17; soak clean. Chase
+      closed the leftovers 2026-09-01: GoDaddy TTLs raised 600→3600, stale
+      `keepalive` branch deleted, Vercel cron verified — endpoint returns
+      `{"ok":true,"supabaseStatus":200}`. Rollback stays documented in
+      VERCEL-MIGRATION.md: GitHub Pages A records 185.199.108-111.153 +
+      www CNAME ciniper.github.io; `/docs` Pages config untouched.
+      Hashed-assets build step promoted to its own Next-up item.)
+- [x] ~~Supabase Pro for the event~~ (upgraded 2026-09-01 — 250 GB egress,
+      100 GB storage, 8 GB DB, no auto-pause, daily backups layered on ours.
+      Downgrade-after-October reminder lives under Scoped.)
 - [x] ~~Bug-scan findings, 2026-09-01~~ (all four closed in v1.34.0 — the
       admin Import CSV card is REMOVED (imports only ever landed in
       localStorage and evaporated on the next cloud sync; a real import

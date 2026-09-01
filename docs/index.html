@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=53" />
+  <link rel="stylesheet" href="./styles.css?v=54" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -319,7 +319,10 @@
       <div id="today-tile" hidden></div>
       <div class="lb-row">
         <div id="message-board" class="msg-board" hidden>
-          <div class="msg-title">💬 Comment Board</div>
+          <!-- The title doubles as a collapse toggle; phones start collapsed
+               (see renderMessageBoard) so the board doesn't dominate Main
+               or trap page scrolling. -->
+          <button type="button" id="msg-board-toggle" class="msg-title" aria-expanded="true">💬 Comment Board <span id="msg-board-meta" class="hint"></span><span class="msg-chevron" aria-hidden="true">▾</span></button>
           <form id="msg-form" style="display:none">
             <div class="msg-row">
               <input id="msg-input" type="text" maxlength="500" placeholder="Say something to the crew…"
@@ -528,7 +531,7 @@
   <script src="./version.js"></script>
   <script src="./photo-kit.js?v=3"></script>
   <script src="./awards.js?v=10"></script>
-  <script type="module" src="./app.js?v=75"></script>
+  <script type="module" src="./app.js?v=76"></script>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
        until the deferred script loads. Served by Vercel at /_vercel/insights/*

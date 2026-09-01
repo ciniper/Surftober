@@ -3022,6 +3022,15 @@ let allMessages = [];
 let msgFetchInFlight = false;
 let msgLastFetch = 0;
 let msgLastTeam = null;
+// Phones start collapsed (Chase, board 2026-08-25): the board was dominating
+// Main on small screens. Desktop starts open; the title toggles either way.
+let msgBoardCollapsed = matchMedia('(max-width: 640px)').matches;
+// On phones the expanded list is NOT its own scroll region (that inner
+// scrollbox ate page-scroll gestures — Chase, board 2026-08-19). Natural
+// height instead, capped to the newest few with a "show older" reveal so an
+// October-sized board doesn't paste 500 messages into the page.
+const MSG_MOBILE_CAP = 12;
+let msgShowAll = false;
 
 async function loadMessages(force = false){
   if (!sb || !messagesAvailable) return;
@@ -3070,16 +3079,29 @@ function renderMessageBoard(){
   const canPost = !!currentUser && !!profileName && isViewingActiveEvent() && !needsReRegistration();
   const form = document.getElementById('msg-form');
   if (form) form.style.display = canPost ? '' : 'none';
+  // Collapse state: header always shows (with a count); .collapsed hides the
+  // form + list via CSS. aria-expanded keeps the toggle honest for readers.
+  box.classList.toggle('collapsed', msgBoardCollapsed);
+  const toggleBtn = document.getElementById('msg-board-toggle');
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(!msgBoardCollapsed));
+  const meta = document.getElementById('msg-board-meta');
+  if (meta) meta.textContent = allMessages.length ? `(${allMessages.length})` : '';
   const list = document.getElementById('msg-list');
   if (!list) return;
   if (!allMessages.length) {
     list.innerHTML = `<div class="hint">${canPost ? 'No messages yet — say hi to the crew!' : 'No messages yet.'}</div>`;
   } else {
-    list.innerHTML = allMessages.map((m) => {
+    // Phones: natural-height list (no nested scrollbox — see MSG_MOBILE_CAP
+    // note above), newest MSG_MOBILE_CAP with a reveal link for the rest.
+    // Desktop: the 180px scrollbox renders everything, as before.
+    const isPhone = matchMedia('(max-width: 640px)').matches;
+    const visible = isPhone && !msgShowAll ? allMessages.slice(0, MSG_MOBILE_CAP) : allMessages;
+    const hidden = allMessages.length - visible.length;
+    list.innerHTML = visible.map((m) => {
       const mine = currentUser && m.user_id === currentUser.id;
       const del = mine ? ` · <a href="#" class="msg-del" data-id="${esc(m.id)}">delete</a>` : '';
       return `<div class="msg"><div class="msg-meta"><b>${esc(m.user_name || 'Someone')}</b> · ${esc(msgWhen(m.created_at))}${del}</div><div class="msg-body">${esc(m.body || '')}</div></div>`;
-    }).join('');
+    }).join('') + (hidden > 0 ? `<a href="#" class="msg-show-all">Show ${hidden} older message${hidden === 1 ? '' : 's'}…</a>` : '');
   }
   // Guests looking at an empty board: nothing to show, keep the tile hidden
   box.hidden = !allMessages.length && !canPost;
@@ -3089,6 +3111,11 @@ function attachMessageBoardHandlers(){
   const form = document.getElementById('msg-form');
   const list = document.getElementById('msg-list');
   if (!form || !list) return;
+  const toggleBtn = document.getElementById('msg-board-toggle');
+  if (toggleBtn) toggleBtn.addEventListener('click', () => {
+    msgBoardCollapsed = !msgBoardCollapsed;
+    renderMessageBoard();
+  });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('msg-input');
@@ -3118,8 +3145,16 @@ function attachMessageBoardHandlers(){
       btn.disabled = false;
     }
   });
-  // Deletes via delegation — the list re-renders constantly
+  // Deletes + the phone "show older" reveal via delegation — the list
+  // re-renders constantly, so per-node listeners wouldn't survive.
   list.addEventListener('click', async (e) => {
+    const showAll = e.target.closest('.msg-show-all');
+    if (showAll) {
+      e.preventDefault();
+      msgShowAll = true;
+      renderMessageBoard();
+      return;
+    }
     const a = e.target.closest('.msg-del');
     if (!a) return;
     e.preventDefault();
