@@ -2161,15 +2161,19 @@ function renderMyStats() {
   // Resolve whose page we're showing
   let user;
   if (sessionsView === 'others') {
-    // Sessions in this event ∪ the registration roster — registrants show
-    // up in the picker before their first log. The roster is season-agnostic
-    // (one profile per person), so it only augments the ACTIVE event; an
-    // archived event's picker stays limited to people who actually surfed it.
+    // Sessions in this event ∪ the roster registered FOR this event —
+    // registrants show up in the picker before their first log. The roster is
+    // season-agnostic (one profile per person), so it only augments the ACTIVE
+    // event, and it's filtered the same way the leaderboard filters its
+    // zero-hour rows: people from earlier events stay out of the picker until
+    // they re-register. Anyone who actually logged a session this event is
+    // already covered by sessionNames, registered or not. An archived event's
+    // picker stays limited to people who surfed it.
     const sessionNames = normalized
       .filter((s) => SurftoberAwards.inRange(s.date, range))
       .map((s) => (s.user || '').trim());
     const rosterNames = isViewingActiveEvent()
-      ? roster.map((p) => String(p.display_name || '').trim())
+      ? roster.filter(isProfileRegistered).map((p) => String(p.display_name || '').trim())
       : [];
     const names = Array.from(new Set([...sessionNames, ...rosterNames]))
       .filter((n) => n && n !== profileName)
