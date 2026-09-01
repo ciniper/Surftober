@@ -181,6 +181,19 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 #profile-photo-preview.dragging { cursor: grabbing; }
 .photo-nudge-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .photo-nudge-row button { padding: 6px 10px; font-size: 13px; }
+/* v1.31: pinch/scroll crop editor — bakes a square 512px avatar from the
+   2048px archive, so zooming gains real detail instead of upscaling. */
+.crop-modal { position: fixed; inset: 0; z-index: 120; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.72); padding: 16px; }
+.crop-modal.open { display: flex; }
+.crop-box { background: var(--panel); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px; max-width: 340px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+.crop-viewport { width: 280px; height: 280px; max-width: 100%; margin: 0 auto; overflow: hidden; border-radius: 16px; background: var(--muted); position: relative; touch-action: none; cursor: grab; }
+.crop-viewport.dragging { cursor: grabbing; }
+.crop-viewport img { position: absolute; top: 0; left: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; max-width: none; }
+.crop-zoom-label { display: block; font-size: 13px; margin: 12px 0 4px; }
+.crop-zoom-label input { width: 100%; }
+.crop-hint { font-size: 12px; margin: 4px 0 12px; text-align: center; }
+.crop-actions { display: flex; gap: 8px; }
+.crop-actions button { flex: 1; }
 .profile-head { display: flex; align-items: center; gap: 12px; }
 .profile-head h3 { margin: 0; }
 .fun-comment { font-style: italic; color: color-mix(in srgb, var(--text) 75%, transparent); margin: 8px 0 10px; }

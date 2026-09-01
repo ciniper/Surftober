@@ -1082,3 +1082,23 @@ create policy "Users upload own profile photos" on storage.objects for insert to
   with check (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Users delete own profile photos" on storage.objects for delete to authenticated
   using (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+-- 2026-09-01 · expose the archival photo to the app
+-- ============================================================
+-- Reverses the "owner-only" call made when photo_original_url was added.
+-- Tapping an avatar now opens the full-size photo, and that has to work for
+-- OTHER surfers too, not just yourself — which means the URL has to be
+-- readable through public_profiles.
+--
+-- The privacy delta is ~zero: the bucket is already public-read, the 512px
+-- display copy is already public through this same view, and the archive is
+-- EXIF-stripped at upload so it carries no GPS. This only makes the URL
+-- discoverable rather than guessable.
+drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
+create view public.public_profiles as
+  select id, display_name, photo_base64, photo_position, photo_original_url,
+         target_hours, fun_comment, charity_commitment, registered_event_id
+  from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;
