@@ -6,7 +6,7 @@
   <title>Register - Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=52" />
+  <link rel="stylesheet" href="./styles.css?v=53" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -328,6 +328,7 @@
     let photoBase64 = null;
     let photoArchiveBlob = null;   // full-size copy, uploaded on save
     let photoOriginalUrl = null;   // existing archive URL, carried over on re-register
+    let registeredAtOriginal = null; // FIRST registration stamp — a re-register must not overwrite it
     let photoArchiveObjectUrl = null; // local URL for the just-picked archive (crop source)
     let activeEvent = null; // set once signed in; stamped onto the profile on save
 
@@ -490,6 +491,7 @@
           if (el) el.value = value;
         }
         photoOriginalUrl = data.photo_original_url || null;
+        registeredAtOriginal = data.registered_at || null;
         if (data.photo_base64 || data.photo_original_url) {
           document.getElementById('btn-reg-crop').style.display = '';
         }
@@ -651,7 +653,10 @@
         photo_base64: photoBase64,
         photo_original_url: photoOriginalUrl,
         additional_comments: document.getElementById('additional-comments').value.trim(),
-        registered_at: new Date().toISOString()
+        // Keep the original sign-up date across re-registers; only a first
+        // registration stamps a new one. (Which event they registered for
+        // lives in registered_event_id below.)
+        registered_at: registeredAtOriginal || new Date().toISOString()
       };
       // Stamp which event this registration is for (per-event re-registration)
       if (activeEvent) profileData.registered_event_id = activeEvent.id;
