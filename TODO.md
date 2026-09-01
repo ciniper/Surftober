@@ -80,18 +80,6 @@
       phone number being banned mid-event, and need a 24/7 server.*
 
 ## Open items
-- [ ] **BEFORE OCTOBER: `DEFAULT_EVENT.team` in app.js is stale** (found
-      2026-08-31) — it still reads `'surftober-2026'`, which is now the
-      **September Test** event's slug, while its window says Oct 1–31 and the
-      real October event's slug is `'5th-surftober-2026'`. `loadEvents()`
-      falls back to DEFAULT_EVENT whenever the events fetch throws — and the
-      catch is broad, so a transient Supabase blip at page load counts, not
-      just a missing table. In that state an October session would be written
-      under the September test team and never show on the real board.
-      One-line fix: set `team: '5th-surftober-2026'` (or rename the September
-      event's slug). Related: in fallback `activeEvent.id` is null, so
-      `needsReRegistration()` returns true for everyone stamped to a real
-      event — logging gets blocked until the events table responds again.
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
       Analytics (added v1.27.1) has a **1-month reporting window on Hobby**,
       so October's numbers disappear from the dashboard during November.

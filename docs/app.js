@@ -4,7 +4,11 @@ const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0';
 // Fallback season, used until the events table is reachable (and if the
 // upgrade SQL hasn't been run yet — the app keeps working exactly as before).
-const DEFAULT_EVENT = { id: null, name: 'Surftober 2026', team: 'surftober-2026', start_date: '2026-10-01', end_date: '2026-10-31', is_active: true };
+// KEEP `team` MATCHING THE REAL OCTOBER EVENT'S SLUG. loadEvents() falls back
+// here on any thrown fetch, including a transient blip, so a mismatched slug
+// silently files sessions into a different event. It read 'surftober-2026'
+// until 2026-08-31, which had since become the September TEST event's slug.
+const DEFAULT_EVENT = { id: null, name: '5th Surftober 2026', team: '5th-surftober-2026', start_date: '2026-10-01', end_date: '2026-10-31', is_active: true };
 let activeEvent = DEFAULT_EVENT;  // event currently accepting logs (null = logging closed)
 let viewedEvent = DEFAULT_EVENT;  // event whose data is on screen
 let viewedEventPinned = false;    // true once someone explicitly picks an event to view
@@ -78,6 +82,12 @@ function isAdminUser(){
 // before logging into the active one.
 function needsReRegistration(){
   if (!currentUser || !activeEvent || isAdminUser()) return false;
+  // No id means we're on DEFAULT_EVENT: either the events table hasn't
+  // answered yet (every page load passes through this state) or it's
+  // unreachable. We can't tell who's registered, so fail open — otherwise a
+  // registered user gets nagged to re-register on every load, and is blocked
+  // from logging during a blip.
+  if (!activeEvent.id) return false;
   if (!profileData || !('registered_event_id' in profileData)) return false;
   return profileData.registered_event_id !== activeEvent.id;
 }
