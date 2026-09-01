@@ -1381,6 +1381,20 @@ function attachAccountHandlers(){
       if (err1) throw err1;
       let { error: err2 } = await sb.from('profiles').delete().eq('id', currentUser.id);
       if (err2) throw err2;
+      // Storage too — the buckets are public-read, so leaving the files
+      // would quietly break the "Delete ALL your cloud data" promise.
+      // Best-effort AFTER the data delete commits: a storage hiccup must
+      // not fail a delete that already happened. (Tombstoned sessions keep
+      // their URLs pointing at now-gone files — consistent with "cannot
+      // be undone".) All three buckets key files by <user-id>/ folders.
+      try {
+        for (const bucket of ['profile-photos', 'session-photos', 'session-audio']) {
+          const { data: files } = await sb.storage.from(bucket).list(currentUser.id, { limit: 1000 });
+          if (files && files.length) {
+            await sb.storage.from(bucket).remove(files.map((f) => `${currentUser.id}/${f.name}`));
+          }
+        }
+      } catch {}
       toast('Deleted your cloud data', 'success');
       await signOut();
       // Clear local mirror and UI
@@ -1830,34 +1844,10 @@ function toCSV(rows) {
   return lines.join('\n');
 }
 
-// Proper CSV parser: honors quoted fields, "" escapes, and embedded newlines.
-// The old split-on-newline + regex tokenizer could not re-import its own
-// export once a note contained a quote or a line break.
-function parseCSV(text) {
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ',') {
-      row.push(field); field = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(field); field = '';
-      if (row.length > 1 || row[0] !== '') rows.push(row);
-      row = [];
-    } else field += c;
-  }
-  row.push(field);
-  if (row.length > 1 || row[0] !== '') rows.push(row);
-  return rows;
-}
+// (CSV import removed in v1.34.0 — imported rows only ever reached the
+// localStorage mirror, which the next syncFromCloud() overwrites, so they
+// evaporated within seconds. A real import needs an admin RPC: sessions RLS
+// pins user_id = auth.uid() + a matching display name. Export remains below.)
 
 function renderTabs() {
   const hash = location.hash.replace('#', '') || 'log';
@@ -3594,38 +3584,6 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-function importCSV(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const text = reader.result;
-        const parsed = parseCSV(String(text));
-        if (!parsed.length) throw new Error('Empty CSV');
-        const [headers, ...lines] = parsed;
-        const rows = [];
-        for (const cols of lines) {
-          const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || '']));
-          row.no_wetsuit = Number(row.no_wetsuit || 0);
-          row.costume = Number(row.costume || 0);
-          row.taught_kook = Number(row.taught_kook || 0);
-          row.water_reading = Number(row.water_reading || 0);
-          row.cleanup_items = Number(row.cleanup_items || 0);
-          rows.push(row);
-        }
-        const all = loadSessions();
-        for (const r of rows) all.push(SurftoberAwards.normalizeSession(r));
-        saveSessions(all);
-        resolve(rows.length);
-      } catch (e) {
-        reject(e);
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
 function populateDataLists() {
   const all = loadSessions();
   const users = Array.from(new Set(all.map((r) => r.user))).sort();
@@ -3638,6 +3596,8 @@ function populateDataLists() {
 
 function openPrintSlides() {
   const w = window.open('', 'slides');
+  // Popup blockers return null — without this guard the next line throws.
+  if (!w) { toast('Popup blocked — allow popups for this site and try again.', 'warn'); return; }
   const ev = viewedEvent || DEFAULT_EVENT;
   const { awards, totals } = SurftoberAwards.computeAwards(loadSessions().map(SurftoberAwards.normalizeSession), { start: ev.start_date, end: ev.end_date });
   // @media print matters: browsers strip dark backgrounds when printing but
@@ -3700,21 +3660,5 @@ window.addEventListener('load', () => {
   document.getElementById('btn-export-awards').addEventListener('click', exportAwards);
   document.getElementById('btn-awards-slides').addEventListener('click', openPrintSlides);
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-  document.getElementById('csv-file').addEventListener('change', async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const st = document.getElementById('status');
-    if (st) st.textContent = 'Importing…';
-    try {
-      const n = await importCSV(f);
-      if (st) st.textContent = `Imported ${n} rows`;
-      populateDataLists();
-      renderMyStats();
-      renderLeaderboard();
-      renderAwards();
-    } catch (e) {
-      if (st) st.textContent = 'Import failed: ' + e.message;
-    }
-  });
   populateDataLists();
 });

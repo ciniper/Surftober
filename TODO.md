@@ -19,24 +19,22 @@
       item below (the watch becomes automated).
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
-- [ ] **Bug-scan findings, 2026-09-01 (not yet fixed)** — from a full read of
-      app.js / register.html / photo-kit.js / sw.js / awards.js:
-      · **Admin CSV import is silently ephemeral** — importCSV writes only to
-        the localStorage mirror, and the next syncFromCloud() (any realtime
-        tick or reload) overwrites it with the cloud copy, so imported rows
-        evaporate. Can't be fixed by inserting to cloud as-is: sessions RLS
-        requires user_id = auth.uid(), and CSV rows belong to other people.
-        Either label it "preview only", remove the card, or build an
-        admin-gated import RPC.
-      · **Delete My Cloud Data leaves Storage orphans** — it tombstones
-        sessions + deletes the profile row but never touches the user's
-        files in profile-photos / session-photos / session-audio (public
-        bucket, still fetchable by URL). Same class as the known
-        soft-delete-media note; fine for friends, log it.
-      · **Open Print Slides dies under a popup blocker** — window.open can
-        return null; one guard + toast would fix it (admin-only path).
-      · registered_at is overwritten on every re-registration (it reads as
-        "last re-registered", which the admin list may as well label).
+- [ ] **Crew Board sweep — August test event** (imported to todos 2026-09-01,
+      per Chase's board ask "Import previous crew messages to todos"):
+      · **Bug: board scroll traps page scroll on mobile** (Chase, 2026-08-19)
+        — the message list is its own scroll region (`.msg-list`, max-height
+        180px, overflow-y auto), so a thumb landing on it scrolls the list
+        instead of the page. Candidates: `overscroll-behavior: contain`, or
+        fold into collapse-by-default below (a collapsed board can't trap).
+      · **Chat board starts collapsed on mobile** (Chase, 2026-08-25) —
+        collapse to a "💬 Crew Board (N)" header by default on phones,
+        tap to expand; also shrinks the scroll-trap surface above.
+      · **Tiles need more contrast, maybe thicker borders** (Chase,
+        2026-08-24) — Sessions tile view; try 2px borders / stronger
+        shadow, verify on both light and dark themes.
+      Already covered, not re-added: PWA-slow + audio-toast bugs (tracked in
+      Open items since 2026-08-19), photo lightbox (shipped v1.27.0),
+      profile-photo crop (shipped v1.31–1.32).
 
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
@@ -230,6 +228,13 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
+- **Bottom menu bar on mobile?** (Chase, Crew Board 2026-08-17) — dock the
+  tab strip to the bottom on phones for thumb reach; needs safe-area-inset
+  padding and the same active-state styling. Decide before October so the
+  crew doesn't relearn navigation mid-event.
+- **Photo session bonus??** (Chase, Crew Board 2026-09-01) — bonus hours for
+  attaching a session photo. Scoring TBD — keep it one-time (like costume)
+  or tiny, so it isn't farmable; pairs with the photo-wall idea below.
 - **Club password: same UX, not in public source** (Chase, 2026-08-18) —
   keep the type-it-in-a-box flow but verify via a Postgres RPC
   (`check_club_pass(guess)` compares against a hashed value in a table;
@@ -252,6 +257,15 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Bug-scan findings, 2026-09-01~~ (all four closed in v1.34.0 — the
+      admin Import CSV card is REMOVED (imports only ever landed in
+      localStorage and evaporated on the next cloud sync; a real import
+      needs an admin RPC since sessions RLS pins user_id = auth.uid() —
+      Export CSV stays); Delete My Cloud Data now also clears the user's
+      folders in all three Storage buckets (best-effort, after the data
+      delete commits); Open Print Slides guards a popup-blocker null;
+      registered_at now keeps the FIRST registration stamp across
+      re-registers instead of being overwritten.)
 - [x] ~~Sessions page: move the List/Tiles toggle below the person card~~
       (shipped v1.33.0 — the toggle now shares a row with the "Session Log"
       heading, right above the list it controls; the subtab row keeps only
