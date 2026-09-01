@@ -2615,10 +2615,12 @@ function renderMyStats() {
     : ((mine[0] && mine[0].user_id) || (rosterEntry && rosterEntry.id));
   let pageProfile = null;
   if (sessionsView === 'mine') {
-    // photo_position must be carried too — the 'others' branch below gets it
-    // free via select('*'), so omitting it here made your OWN avatar the only
-    // one that ignored its saved crop.
-    if (profileData) pageProfile = { photo_base64: profileData.photo_base64, photo_position: profileData.photo_position, target_hours: profileData.target_hours, fun_comment: profileData.fun_comment };
+    // Pass the whole row, don't hand-pick fields. The 'others' branch below
+    // gets everything via select('*'), and cherry-picking here has now
+    // silently dropped a column TWICE — photo_position (crop ignored) and
+    // photo_original_url (tapping the avatar showed the cropped copy instead
+    // of the uncropped original). This is your own profile, already in memory.
+    if (profileData) pageProfile = profileData;
   } else if (pageUserId) {
     if (publicProfileCache.has(pageUserId)) {
       pageProfile = publicProfileCache.get(pageUserId);

@@ -1,4 +1,4 @@
-const CACHE = 'surftober-demo-v83';
+const CACHE = 'surftober-demo-v84';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -11,7 +11,7 @@ const ASSETS = [
   './landing.html',
   './register.html',
   './styles.css?v=50',
-  './app.js?v=69',
+  './app.js?v=70',
   './awards.js?v=10',
   './manifest.webmanifest?v=11',
   './logo.svg?v=10',
