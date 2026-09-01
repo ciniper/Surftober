@@ -213,7 +213,7 @@ async function initSupabase(){
       .subscribe();
   } catch {}
 
-  // realtime for the crew board — new posts appear without a reload
+  // realtime for the comment board — new posts appear without a reload
   try {
     sb
       .channel('public:messages')
@@ -3012,7 +3012,7 @@ function renderLeaderboard() {
   });
 }
 
-// ===== Crew message board (Leaderboard tile) ===============================
+// ===== Comment Board (Leaderboard tile) ====================================
 // Short posts scoped to the viewed event. Everyone (including view-mode
 // guests) reads; signed-in registered members post and can delete their own.
 // "Share to WhatsApp" is a client-side wa.me deep link — the poster picks
