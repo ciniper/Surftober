@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=50" />
+  <link rel="stylesheet" href="./styles.css?v=51" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -515,24 +515,9 @@
   <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="./version.js"></script>
+  <script src="./photo-kit.js?v=2"></script>
   <script src="./awards.js?v=10"></script>
-  <script type="module" src="./app.js?v=70"></script>
-
-  <div id="crop-modal" class="crop-modal" aria-hidden="true">
-    <div class="crop-box" role="dialog" aria-label="Adjust photo crop">
-      <div class="crop-viewport" id="crop-viewport">
-        <img id="crop-img" alt="" draggable="false" />
-      </div>
-      <label class="crop-zoom-label">Zoom
-        <input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1" />
-      </label>
-      <p class="hint crop-hint">Drag to move · pinch or scroll to zoom</p>
-      <div class="crop-actions">
-        <button type="button" id="crop-cancel" class="btn-secondary">Cancel</button>
-        <button type="button" id="crop-apply">Use this crop</button>
-      </div>
-    </div>
-  </div>
+  <script type="module" src="./app.js?v=71"></script>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
        until the deferred script loads. Served by Vercel at /_vercel/insights/*

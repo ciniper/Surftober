@@ -328,39 +328,6 @@ function parsePledgeRate(text){
 
 // Shrink whatever the camera roll hands us to a small square-ish JPEG so the
 // profiles table doesn't fill up with 8 MB originals.
-// Decode ONCE, emit both copies. Doing it in one pass means the archive and
-// the avatar are always the same picture, and it handles HEIC for free: the
-// browser decodes whatever it can display, and we re-encode as JPEG.
-// Re-encoding also strips EXIF — phone photos routinely carry GPS
-// coordinates, which must not reach a public bucket.
-async function renderProfileImage(file){
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('could not read that image'));
-      i.src = url;
-    });
-    const draw = (maxDim, quality) => {
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.width * scale));
-      canvas.height = Math.max(1, Math.round(img.height * scale));
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      return canvas;
-    };
-    const display = draw(512).toDataURL('image/jpeg', 0.82);
-    // 2048px archival copy: ample for awards slides, a photo wall, or
-    // re-deriving a zoomed crop, while staying a few hundred KB.
-    const archiveBlob = await new Promise((resolve) =>
-      draw(2048).toBlob(resolve, 'image/jpeg', 0.85));
-    return { display, archiveBlob };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 // 512px: the largest avatar rendering is the 120px registration preview,
 // which needs 360 real pixels on a 3x screen. Bigger buys nothing visible
 // and these live base64 INSIDE the profiles row, so bytes matter.
@@ -1200,208 +1167,38 @@ function attachAccountHandlers(){
     }, 100);
   });
   
-  // Crop editor: pan + pinch/scroll zoom over the SOURCE image, then bake a
-  // square 512px avatar from it. Cropping from the 2048px archive means
-  // zooming in actually gains detail — panning a 512px copy could only ever
-  // shift the same pixels around. A baked square also makes object-position
-  // moot, so applying a crop clears it.
-  const CROP_OUT = 512;
-  const cropState = { img: null, scale: 1, min: 1, tx: 0, ty: 0, vw: 280 };
-
-  function cropEls(){
-    return {
-      modal: document.getElementById('crop-modal'),
-      viewport: document.getElementById('crop-viewport'),
-      img: document.getElementById('crop-img'),
-      zoom: document.getElementById('crop-zoom')
-    };
-  }
-
-  // Keep the image covering the viewport at all times — no empty corners.
-  function cropClamp(){
-    const { img, scale, vw } = cropState;
-    if (!img) return;
-    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
-    cropState.tx = Math.min(0, Math.max(vw - w, cropState.tx));
-    cropState.ty = Math.min(0, Math.max(vw - h, cropState.ty));
-  }
-
-  function cropPaint(){
-    const { img } = cropEls();
-    if (!img) return;
-    img.style.transform =
-      `translate(${cropState.tx}px, ${cropState.ty}px) scale(${cropState.scale})`;
-  }
-
-  // Zoom around a point so the pixel under the fingers/cursor stays put.
-  function cropZoomTo(next, originX, originY){
-    const s = cropState;
-    const clamped = Math.max(s.min, Math.min(s.min * 4, next));
-    const ratio = clamped / s.scale;
-    s.tx = originX - (originX - s.tx) * ratio;
-    s.ty = originY - (originY - s.ty) * ratio;
-    s.scale = clamped;
-    cropClamp();
-    cropPaint();
-    const { zoom } = cropEls();
-    if (zoom) zoom.value = String(s.scale / s.min);
-  }
-
-  async function openCropEditor(){
-    const { modal, viewport, img, zoom } = cropEls();
-    if (!modal) return;
-    // Prefer the archive: it's the only source with detail to zoom into.
-    const src = (pendingPhotoArchiveUrl)
+  // Crop + camera live in photo-kit.js so register.html gets the identical
+  // behavior (it has no bundler, hence a plain global like SurftoberAwards).
+  function currentCropSource(){
+    return pendingPhotoArchiveUrl
       || (profileData && profileData.photo_original_url)
       || (pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : avatarSrc(profileData && profileData.photo_base64));
-    if (!src) { toast('Add a photo first', 'warn'); return; }
-    try {
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => reject(new Error('could not load that photo'));
-        // Storage URLs are cross-origin; without this the canvas is tainted
-        // and toDataURL throws a SecurityError when we bake the crop.
-        img.crossOrigin = 'anonymous';
-        img.src = src;
-      });
-    } catch (e) {
-      toast('Could not open the photo for cropping: ' + e.message, 'error');
-      return;
-    }
-    cropState.img = img;
-    cropState.vw = viewport.clientWidth || 280;
-    // Smallest scale that still covers the square viewport.
-    cropState.min = cropState.vw / Math.min(img.naturalWidth, img.naturalHeight);
-    cropState.scale = cropState.min;
-    // Start centered.
-    cropState.tx = (cropState.vw - img.naturalWidth * cropState.scale) / 2;
-    cropState.ty = (cropState.vw - img.naturalHeight * cropState.scale) / 2;
-    cropClamp();
-    cropPaint();
-    if (zoom) { zoom.min = '1'; zoom.max = '4'; zoom.value = '1'; }
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
   }
 
-  function closeCropEditor(){
-    const { modal, img } = cropEls();
-    if (!modal) return;
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-    if (img) img.removeAttribute('src');
-    cropState.img = null;
-  }
-
-  // Render the visible square to a 512px JPEG — this becomes the new avatar.
-  function applyCrop(){
-    const { img } = cropEls();
-    if (!img || !cropState.img) return;
-    const s = cropState;
-    const sx = -s.tx / s.scale;
-    const sy = -s.ty / s.scale;
-    const side = s.vw / s.scale;
-    const canvas = document.createElement('canvas');
-    canvas.width = CROP_OUT; canvas.height = CROP_OUT;
-    canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, CROP_OUT, CROP_OUT);
-    let baked;
-    try {
-      baked = canvas.toDataURL('image/jpeg', 0.85);
-    } catch (e) {
-      // Tainted canvas: the archive URL didn't serve CORS headers.
-      toast('Could not save that crop (image blocked by the browser)', 'error');
-      return;
-    }
-    pendingPhotoBase64 = baked;
-    // A baked square needs no display offset; stale values would re-crop it.
+  function acceptCroppedPhoto(dataUrl){
+    pendingPhotoBase64 = dataUrl;
+    // A baked square needs no display offset; a stale one would re-crop it.
     pendingPhotoPosition = AVATAR_POS_DEFAULT;
     const preview = document.getElementById('profile-photo-preview');
     if (preview) {
-      preview.src = baked;
+      preview.src = dataUrl;
       preview.style.display = '';
       setAvatarPosition(preview, AVATAR_POS_DEFAULT);
     }
     reflectPhotoNudge();
-    closeCropEditor();
     toast('Crop applied — hit Save Profile to keep it', 'success');
   }
 
-  (function wireCropEditor(){
-    const { modal, viewport, zoom } = cropEls();
-    if (!modal || !viewport) return;
-    let dragging = false, lastX = 0, lastY = 0, pinchDist = 0;
-
-    const pointFrom = (e) => {
-      const r = viewport.getBoundingClientRect();
-      const t = e.touches ? e.touches[0] : e;
-      return { x: t.clientX - r.left, y: t.clientY - r.top };
-    };
-    const touchDist = (e) => {
-      const [a, b] = [e.touches[0], e.touches[1]];
-      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    };
-
-    function down(e){
-      if (!cropState.img) return;
-      if (e.touches && e.touches.length === 2) { pinchDist = touchDist(e); return; }
-      dragging = true;
-      const p = pointFrom(e);
-      lastX = p.x; lastY = p.y;
-      viewport.classList.add('dragging');
-      e.preventDefault();
-    }
-    function move(e){
-      if (!cropState.img) return;
-      if (e.touches && e.touches.length === 2) {
-        const d = touchDist(e);
-        if (pinchDist) {
-          const r = viewport.getBoundingClientRect();
-          const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
-          const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
-          cropZoomTo(cropState.scale * (d / pinchDist), mx, my);
-        }
-        pinchDist = d;
-        e.preventDefault();
-        return;
-      }
-      if (!dragging) return;
-      const p = pointFrom(e);
-      cropState.tx += p.x - lastX;
-      cropState.ty += p.y - lastY;
-      lastX = p.x; lastY = p.y;
-      cropClamp();
-      cropPaint();
-      e.preventDefault();
-    }
-    function up(){ dragging = false; pinchDist = 0; viewport.classList.remove('dragging'); }
-
-    viewport.addEventListener('mousedown', down);
-    viewport.addEventListener('touchstart', down, { passive: false });
-    window.addEventListener('mousemove', move);
-    viewport.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('mouseup', up);
-    window.addEventListener('touchend', up);
-    viewport.addEventListener('wheel', (e) => {
-      if (!cropState.img) return;
-      const p = pointFrom(e);
-      cropZoomTo(cropState.scale * (e.deltaY < 0 ? 1.12 : 1 / 1.12), p.x, p.y);
-      e.preventDefault();
-    }, { passive: false });
-
-    if (zoom) zoom.addEventListener('input', () => {
-      const c = cropState.vw / 2;
-      cropZoomTo(cropState.min * parseFloat(zoom.value || '1'), c, c);
+  const btnCrop = document.getElementById('btn-photo-crop');
+  if (btnCrop) btnCrop.addEventListener('click', () => {
+    const src = currentCropSource();
+    if (!src) { toast('Add a photo first', 'warn'); return; }
+    SurftoberPhoto.openCrop({
+      src,
+      onApply: acceptCroppedPhoto,
+      onError: (e) => toast('Could not open the photo for cropping: ' + e.message, 'error')
     });
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeCropEditor(); });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('open')) closeCropEditor();
-    });
-    const crop = document.getElementById('btn-photo-crop');
-    if (crop) crop.addEventListener('click', openCropEditor);
-    const cancel = document.getElementById('crop-cancel');
-    if (cancel) cancel.addEventListener('click', closeCropEditor);
-    const apply = document.getElementById('crop-apply');
-    if (apply) apply.addEventListener('click', applyCrop);
-  })();
+  });
 
   // Crop nudger: drag the Account preview to choose which part of the photo
   // the avatar shows. The stored value is a CSS object-position, so nothing is
@@ -1464,7 +1261,7 @@ function attachAccountHandlers(){
   async function handlePhotoFile(file){
     if (!file) return;
     try {
-      const rendered = await renderProfileImage(file);
+      const rendered = await SurftoberPhoto.render(file);
       pendingPhotoBase64 = rendered.display;
       pendingPhotoArchive = rendered.archiveBlob;
       // Local URL for the crop editor: the just-picked archive isn't uploaded
@@ -1489,8 +1286,23 @@ function attachAccountHandlers(){
   if (photoInput) photoInput.addEventListener('change', () => handlePhotoFile(photoInput.files && photoInput.files[0]));
   const cameraInput = document.getElementById('profile-photo-camera');
   if (cameraInput) cameraInput.addEventListener('change', () => handlePhotoFile(cameraInput.files && cameraInput.files[0]));
+  // Real webcam capture where it exists — this is what makes "take a photo"
+  // work on a Mac, where capture="user" only opens a file picker. Devices
+  // without getUserMedia still fall back to the native camera input.
   const btnTakePhoto = document.getElementById('btn-take-photo');
-  if (btnTakePhoto) btnTakePhoto.addEventListener('click', () => { if (cameraInput) cameraInput.click(); });
+  if (btnTakePhoto) btnTakePhoto.addEventListener('click', () => {
+    if (SurftoberPhoto.supportsCamera()) {
+      SurftoberPhoto.openCamera({
+        onCapture: (file) => handlePhotoFile(file),
+        onError: (e) => {
+          toast('Camera unavailable (' + e.message + ') — pick a file instead', 'warn');
+          if (cameraInput) cameraInput.click();
+        }
+      });
+    } else if (cameraInput) {
+      cameraInput.click();
+    }
+  });
 
   // New: Save full profile button
   const btnSaveProfile = document.getElementById('btn-save-profile');
