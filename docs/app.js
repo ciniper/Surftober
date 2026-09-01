@@ -2549,7 +2549,10 @@ function renderMyStats() {
   const isTiles = sessionsLayout === 'tiles';
   const out = [];
   if (!isTiles) {
-    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Scored</th><th>Bonuses</th><th>Overview Graphic (OB)</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
+    // Hours = raw logged time; Scored = after the ×2 multiplier and one-time
+    // bonuses. Ordered Hours → Bonuses → Scored so the math reads left to
+    // right (1:00 → No Wetsuit ×2 → 2:00).
+    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Hours</th><th>Bonuses</th><th>Scored</th><th>Overview Graphic (OB)</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
     const u = (s.user || '').trim();
@@ -2582,8 +2585,10 @@ function renderMyStats() {
     } else {
       out.push(
         `<tr><td class="nowrap">${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
+          s.duration_minutes
+        )}</td><td><div class="badge-stack">${bonusBadges}</div></td><td><b>${SurftoberAwards.minutesToHHMM(
           scoredMins
-        )}</td><td><div class="badge-stack">${bonusBadges}</div></td><td class="nowrap">${stripLink || '<span class="hint">need start time</span>'}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
+        )}</b></td><td class="nowrap">${stripLink || '<span class="hint">need start time</span>'}</td><td>${esc(s.location || '')}</td><td>${esc(s.board || '')}</td><td class="journal-cell">${journalHtml(s.notes)}</td><td>${photoThumbHtml(s.photo_url)}${audioPlayerHtml(s.audio_url)}</td></tr>`
       );
     }
   });
