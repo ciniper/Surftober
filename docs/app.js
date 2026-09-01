@@ -395,6 +395,17 @@ async function fetchProfile(){
     if (el) el.value = value;
   }
 
+  // The pledge is a $1–$10 select now. A legacy free-text value ("$1.50",
+  // "2 per hour") matches no option, so the select would read back '' and
+  // the next Save Profile would silently wipe the pledge — keep the old
+  // value selectable instead (same guard as register.html's prefill).
+  const charityEl = document.getElementById('profile-charity');
+  const charityVal = (data && data.charity_commitment) || '';
+  if (charityEl && charityVal && ![...charityEl.options].some((o) => o.value === charityVal)) {
+    charityEl.appendChild(new Option(charityVal + ' (current)', charityVal));
+    charityEl.value = charityVal;
+  }
+
   const photoPreview = document.getElementById('profile-photo-preview');
   if (photoPreview) {
     const src = avatarSrc(data && data.photo_base64);
