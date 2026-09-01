@@ -1,4 +1,9 @@
-const CACHE = 'surftober-demo-v95';
+// 'surftober-src' is a SENTINEL: build.mjs replaces it with
+// 'surftober-<content hash>' at deploy, so every deploy gets a fresh cache
+// automatically — no more manual vNN bumps. The sentinel value is what runs
+// when this file is served RAW (localhost dev, the GitHub Pages fallback):
+// functional, but without automatic cache busting.
+const CACHE = 'surftober-src';
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -10,13 +15,13 @@ const ASSETS = [
   './index.html', 
   './landing.html',
   './register.html',
-  './styles.css?v=58',
-  './app.js?v=76',
-  './awards.js?v=10',
-  './photo-kit.js?v=3',
-  './manifest.webmanifest?v=11',
-  './logo.svg?v=10',
-  './icon-maskable.svg?v=10',
+  './styles.css',
+  './app.js',
+  './awards.js',
+  './photo-kit.js',
+  './manifest.webmanifest',
+  './logo.svg',
+  './icon-maskable.svg',
   './version.js'
 ];
 
