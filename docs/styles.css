@@ -174,8 +174,8 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .subtab.small { padding: 8px 10px; font-size: 13px; }
 
 /* v1.7: avatars + tile view */
-.avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--card-border); }
-.avatar-lg { width: 96px; height: 96px; margin-top: 6px; }
+.avatar { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--card-border); }
+.avatar-lg { width: 96px; height: 96px; margin-top: 6px; border-radius: 16px; }
 .profile-head { display: flex; align-items: center; gap: 12px; }
 .profile-head h3 { margin: 0; }
 .fun-comment { font-style: italic; color: color-mix(in srgb, var(--text) 75%, transparent); margin: 8px 0 10px; }

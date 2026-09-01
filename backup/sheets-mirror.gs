@@ -29,10 +29,12 @@
 
 const PAGE_SIZE = 1000; // PostgREST caps responses at 1000 rows; page past it.
 
+// sponsor_match was dropped from the schema on 2026-08-31 (feature removed);
+// historical answers remain in this sheet's existing rows.
 // photo_base64 is deliberately excluded: a Sheets cell caps at 50,000
 // characters and the photos are far larger (they live in the pg_dump backup).
 const PROFILE_COLS = [
-  'id', 'display_name', 'target_hours', 'charity_commitment', 'sponsor_match',
+  'id', 'display_name', 'target_hours', 'charity_commitment',
   'location_based', 'whatsapp_phone', 'fun_comment', 'additional_comments',
   'registered_at', 'created_at', 'updated_at'
 ];

@@ -13,7 +13,6 @@ create table if not exists public.profiles (
   display_name text,
   target_hours text,
   charity_commitment text,
-  sponsor_match text,
   location_based text,
   whatsapp_phone text,
   fun_comment text,

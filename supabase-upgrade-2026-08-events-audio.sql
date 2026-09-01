@@ -1002,3 +1002,21 @@ $$;
 
 select cron.schedule('surf-report-heartbeat', '*/30 * * * *',
                      'select public.surf_report_heartbeat()');
+
+-- ============================================================
+-- 2026-08-31 · remove the sponsor-match feature
+-- ============================================================
+-- The "do you have a sponsor matching your contribution?" question is gone
+-- from both the registration form and the Account page (v1.28.0), so the
+-- column has no writer and no reader left.
+--
+-- DESTRUCTIVE + IRREVERSIBLE: this deletes every stored answer. Existing
+-- answers are already archived in the nightly Google Sheet mirror's
+-- `profiles` tab, which is the copy to consult if one is ever needed.
+--
+-- ORDER MATTERS: re-paste backup/sheets-mirror.gs into Apps Script BEFORE
+-- running this. The old script asks PostgREST for sponsor_match by name, so
+-- it starts failing with HTTP 400 the moment the column disappears.
+--
+-- public_profiles never exposed sponsor_match, so no view needs rebuilding.
+alter table public.profiles drop column if exists sponsor_match;
