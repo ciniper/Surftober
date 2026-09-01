@@ -6,7 +6,7 @@
   <title>Register - Surftober 2026</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=50" />
+  <link rel="stylesheet" href="./styles.css?v=51" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
     body {
@@ -178,6 +178,8 @@
       border-radius: 18px;
       border: 2px solid #2d4a62;
     }
+    .reg-photo-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .reg-photo-actions button { padding: 8px 12px; font-size: 14px; }
     .hidden {
       display: none;
     }
@@ -290,6 +292,10 @@
           <p>Click to upload or drag and drop</p>
           <input type="file" id="photo-upload" accept="image/*" style="display:none" />
         </div>
+        <div class="reg-photo-actions">
+          <button type="button" id="btn-reg-camera" class="btn-secondary">📷 Take photo</button>
+          <button type="button" id="btn-reg-crop" class="btn-secondary" style="display:none">Adjust crop</button>
+        </div>
         <div class="photo-preview" id="reg-photo-preview">
           <img id="reg-photo-preview-img" alt="Preview" />
         </div>
@@ -311,6 +317,7 @@
   <footer style="text-align:center;margin:2rem 0 1rem;"><span class="app-version"></span></footer>
   <script src="./version.js"></script>
 
+  <script src="./photo-kit.js?v=2"></script>
   <script>
     // Load Supabase
     const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
@@ -321,6 +328,7 @@
     let photoBase64 = null;
     let photoArchiveBlob = null;   // full-size copy, uploaded on save
     let photoOriginalUrl = null;   // existing archive URL, carried over on re-register
+    let photoArchiveObjectUrl = null; // local URL for the just-picked archive (crop source)
     let activeEvent = null; // set once signed in; stamped onto the profile on save
 
     // Club password gate — a friends-only speed bump, not real security.
@@ -474,6 +482,9 @@
           if (el) el.value = value;
         }
         photoOriginalUrl = data.photo_original_url || null;
+        if (data.photo_base64 || data.photo_original_url) {
+          document.getElementById('btn-reg-crop').style.display = '';
+        }
         if (data.photo_base64) {
           photoBase64 = data.photo_base64;
           const src = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
@@ -534,42 +545,53 @@
     });
 
     // Photo upload
+    // One place that accepts a picked/captured photo, so the file input, the
+    // camera, and the crop editor all land in the same state.
+    function applyPickedPhoto(rendered){
+      photoBase64 = rendered.display;  // data URL, same format the Account tab saves
+      photoArchiveBlob = rendered.archiveBlob;
+      if (photoArchiveObjectUrl) URL.revokeObjectURL(photoArchiveObjectUrl);
+      photoArchiveObjectUrl = URL.createObjectURL(rendered.archiveBlob);
+      document.getElementById('reg-photo-preview-img').src = rendered.display;
+      document.getElementById('reg-photo-preview').style.display = 'block';
+      document.getElementById('btn-reg-crop').style.display = '';
+    }
+
+    document.getElementById('btn-reg-camera').addEventListener('click', () => {
+      if (!SurftoberPhoto.supportsCamera()) {
+        toast('No camera available on this device — use the upload box', 'warn');
+        return;
+      }
+      SurftoberPhoto.openCamera({
+        onCapture: async (file) => {
+          try { applyPickedPhoto(await SurftoberPhoto.render(file)); }
+          catch (e) { toast('Could not process that photo: ' + e.message, 'error'); }
+        },
+        onError: (e) => toast('Camera unavailable: ' + e.message, 'error')
+      });
+    });
+
+    document.getElementById('btn-reg-crop').addEventListener('click', () => {
+      // Prefer the full-size copy so zooming gains detail rather than pixels.
+      const src = photoArchiveObjectUrl || photoOriginalUrl || photoBase64;
+      if (!src) { toast('Add a photo first', 'warn'); return; }
+      SurftoberPhoto.openCrop({
+        src,
+        onApply: (dataUrl) => {
+          photoBase64 = dataUrl;
+          document.getElementById('reg-photo-preview-img').src = dataUrl;
+          toast('Crop applied', 'success');
+        },
+        onError: (e) => toast('Could not open the photo for cropping: ' + e.message, 'error')
+      });
+    });
+
     document.getElementById('photo-upload-area').addEventListener('click', () => {
       document.getElementById('photo-upload').click();
     });
 
     // Shrink camera-roll originals to a small JPEG before storing — same
     // routine as the Account tab, so no more multi-MB photos in profiles.
-    // Decode once, emit both copies — mirrors renderProfileImage() in app.js.
-    // Registration is where most photos are set, so the archival copy has to
-    // happen here too or new signups would have no full-size original.
-    // Re-encoding to JPEG also strips EXIF (phone photos carry GPS).
-    async function renderProfileImage(file){
-      const url = URL.createObjectURL(file);
-      try {
-        const img = await new Promise((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = () => reject(new Error('could not read that image'));
-          i.src = url;
-        });
-        const draw = (maxDim) => {
-          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          return canvas;
-        };
-        const display = draw(512).toDataURL('image/jpeg', 0.82);
-        const archiveBlob = await new Promise((resolve) =>
-          draw(2048).toBlob(resolve, 'image/jpeg', 0.85));
-        return { display, archiveBlob };
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-    }
-
     async function compressImageToDataURL(file, maxDim = 512, quality = 0.82){
       const url = URL.createObjectURL(file);
       try {
@@ -594,12 +616,7 @@
       const file = e.target.files[0];
       if (!file) return;
       try {
-        const rendered = await renderProfileImage(file);
-        const dataUrl = rendered.display;
-        photoArchiveBlob = rendered.archiveBlob;
-        document.getElementById('reg-photo-preview-img').src = dataUrl;
-        document.getElementById('reg-photo-preview').style.display = 'block';
-        photoBase64 = dataUrl; // full data URL, same format the Account tab saves
+        applyPickedPhoto(await SurftoberPhoto.render(file));
       } catch (err) {
         toast('Could not read that image: ' + err.message, 'error');
       }
