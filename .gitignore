@@ -3,3 +3,6 @@
 # Large background files
 background/*.xlsx
 background/*.pdf
+
+# Build output (Vercel builds it from docs/build.mjs; never committed)
+docs/dist/

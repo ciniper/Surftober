@@ -1,12 +1,16 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Hashed-assets build step** (reliability #3, unblocked by the clean
-      Vercel soak) — replaces the manual `?v=` cache ritual (bump index.html
-      + sw.js ASSETS + CACHE name on every app.js/styles.css change) with
-      content-hashed filenames from a small build step, proven on Vercel
-      preview deploys first. The ritual is the project's most error-prone
-      manual step; see VERCEL-MIGRATION.md for the migration context.
+- [ ] **Verify the hashed build on prod** (first push after v1.41.0):
+      (1) footer shows v1.41.0; (2) view-source: refs look like
+      `app.944b8238.js`; (3) `curl -sI https://surftober.com/app.<hash>.js`
+      → `cache-control: … immutable`, while `/sw.js` stays `max-age=0`;
+      (4) DevTools → Application → Cache Storage shows one
+      `surftober-<hash>` cache with 12 entries; (5) Vercel build log shows
+      "build.mjs: surftober-<hash> · 13 files". If the build FAILS, prod
+      keeps the previous deployment — fix and re-push, nothing breaks.
+      Careful path if preferred: push a branch first and check the
+      *.vercel.app preview before merging to main.
 - [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
       (reliability priority #2): (1) healthchecks.io → new check
       "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
@@ -178,8 +182,6 @@
       Supabase project, including one fresh sign-up (see `backup/README.md`).
       Note: storage buckets aren't in pg_dump — re-run supabase-setup.sql's
       storage section as part of the drill.
-- [ ] Repo cleanup: stale `surftober-web/` folder, `docs/styles-option*.css`,
-      `docs/style-preview.html`, old `gh-pages` branch.
 - [ ] Optional: encrypt pg_dump backups with `age` (see backup/README.md
       "Optional hardening").
 
@@ -213,6 +215,20 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Hashed-assets build step (reliability #3)~~ (shipped v1.41.0 —
+      docs/build.mjs content-hashes assets into dist/ at Vercel deploy,
+      rewrites HTML + sw.js refs, injects a surftober-<hash> SW cache name;
+      immutable caching for hashed URLs; ?v= ritual retired. Source keeps
+      plain names so raw docs/ (dev + Pages fallback) still works. Build
+      self-checks fail the deploy rather than ship broken refs. Full facts
+      + rollback in VERCEL-MIGRATION.md §2026-09-01. Verified locally:
+      deterministic builds, selective hashes, both serving modes in-browser.)
+- [x] ~~Repo cleanup~~ (v1.41.0 — deleted surftober-web/ (pre-docs app
+      copy), docs/styles-option1/2/3.css + style-preview.html (theme-era
+      leftovers, unreferenced), and stale local branches custom-premium-
+      logos / db-backup / events-audio (merged) + gh-pages (its one commit
+      was the Nov-2025 root-level demo, superseded). feature/voice-notes-wip
+      kept — referenced WIP.)
 - [x] ~~Crew Board sweep — August test event~~ (all three shipped v1.38.0:
       the board title is a collapse toggle showing "💬 Comment Board (N)";
       phones START collapsed, desktop starts open. Expanded on phones the

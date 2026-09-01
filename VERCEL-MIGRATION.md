@@ -139,3 +139,35 @@ Pages config was never touched, so it just resumes.
 
 **After a week of clean soak:** proceed to priority #3 (build step + hashed
 assets) as a separate change, developed on Vercel preview deployments.
+
+---
+
+## 2026-09-01 · Priority #3 shipped: hashed-assets build step (v1.41.0)
+
+The manual `?v=` cache ritual is gone. `docs/build.mjs` (zero-dependency
+Node, run by Vercel via `buildCommand`) content-hashes styles/app/awards/
+photo-kit/logo/icon/manifest into `dist/` (`app.js` → `app.944b8238.js`),
+rewrites the references in the three HTML files + `sw.js`, and injects a
+`surftober-<hash>` SW cache name derived from all precached content. Vercel
+deploys `outputDirectory: dist`; `api/` still compiles from the source root
+(cron untouched).
+
+**Facts that matter later:**
+- SOURCE keeps plain names + a `'surftober-src'` cache sentinel, so raw
+  `docs/` still works (localhost dev, GitHub Pages fallback) — the fallback
+  just loses automatic cache busting (acceptable for emergencies).
+- `version.js` and `sw.js` stay unhashed on purpose (deploy marker is
+  network-first; SW registration URL must be stable).
+- vercel.json headers: catch-all `max-age=0` FIRST, then an immutable rule
+  matching only `*.<8-hex>.<ext>` — the pattern cannot match sw.js/HTML, and
+  if it fails to match at all, hashed files just fall back to max-age=0
+  (correct, merely unoptimized). Verify after deploy:
+  `curl -sI https://surftober.com/app.<hash>.js | grep -i cache-control`
+  → expect `immutable`; sw.js must stay `max-age=0`.
+- Build self-checks fail the deploy on any missed reference — a failed
+  Vercel build leaves the previous deployment live.
+- Rollback: set `"buildCommand": null` and delete `"outputDirectory"` in
+  vercel.json (the raw-docs deploy mode returns).
+- Caught during verification: the sw.js sentinel comment contains the
+  sentinel string, so the builder must replace the full
+  `const CACHE = '…';` declaration, not the bare string.
