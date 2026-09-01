@@ -176,6 +176,11 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 /* v1.7: avatars + tile view */
 .avatar { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--card-border); }
 .avatar-lg { width: 96px; height: 96px; margin-top: 6px; border-radius: 16px; }
+/* v1.29: drag the Account preview to pick the avatar crop */
+#profile-photo-preview { cursor: grab; touch-action: none; user-select: none; -webkit-user-drag: none; }
+#profile-photo-preview.dragging { cursor: grabbing; }
+.photo-nudge-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.photo-nudge-row button { padding: 6px 10px; font-size: 13px; }
 .profile-head { display: flex; align-items: center; gap: 12px; }
 .profile-head h3 { margin: 0; }
 .fun-comment { font-style: italic; color: color-mix(in srgb, var(--text) 75%, transparent); margin: 8px 0 10px; }

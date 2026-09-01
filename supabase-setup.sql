@@ -17,6 +17,7 @@ create table if not exists public.profiles (
   whatsapp_phone text,
   fun_comment text,
   photo_base64 text,
+  photo_position text,               -- CSS object-position for the avatar crop, e.g. '50% 20%'
   additional_comments text,
   registered_at timestamptz default now(),
   registered_event_id uuid,           -- which event this person (re-)registered for
@@ -49,7 +50,8 @@ create unique index if not exists profiles_display_name_unique_idx
 -- columns.
 drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
 create view public.public_profiles as
-  select id, display_name, photo_base64, target_hours, fun_comment, charity_commitment, registered_event_id
+  select id, display_name, photo_base64, photo_position, target_hours,
+         fun_comment, charity_commitment, registered_event_id
   from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
