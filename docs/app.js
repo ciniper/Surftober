@@ -230,6 +230,29 @@ function reflectAuthUI(){
 
 const publicProfileCache = new Map(); // user_id -> {photo_base64, target_hours} | null
 let pendingPhotoBase64;               // set when a new photo is picked, undefined otherwise
+let pendingPhotoPosition;             // set while dragging the crop, undefined otherwise
+
+// Photos are stored uncropped; object-fit: cover does the cropping at display
+// time, so which part shows is just an object-position. Null = centered, which
+// is exactly the pre-v1.29 behavior.
+const AVATAR_POS_DEFAULT = '50% 50%';
+function avatarPos(p){
+  const v = p && typeof p.photo_position === 'string' ? p.photo_position.trim() : '';
+  return /^[\d.]+% [\d.]+%$/.test(v) ? v : AVATAR_POS_DEFAULT;
+}
+
+function setAvatarPosition(img, pos){
+  if (img) img.style.objectPosition = pos;
+}
+
+// Show the drag hint + Reset only when there's actually a photo to nudge.
+function reflectPhotoNudge(){
+  const img = document.getElementById('profile-photo-preview');
+  const row = document.getElementById('photo-nudge-row');
+  if (!row) return;
+  const hasPhoto = !!(img && img.src && img.style.display !== 'none');
+  row.style.display = hasPhoto ? '' : 'none';
+}
 
 function avatarSrc(b64){
   if (!b64) return null;
@@ -296,7 +319,10 @@ function parsePledgeRate(text){
 
 // Shrink whatever the camera roll hands us to a small square-ish JPEG so the
 // profiles table doesn't fill up with 8 MB originals.
-async function compressImageToBase64(file, maxDim = 256, quality = 0.82){
+// 512px: the largest avatar rendering is the 120px registration preview,
+// which needs 360 real pixels on a 3x screen. Bigger buys nothing visible
+// and these live base64 INSIDE the profiles row, so bytes matter.
+async function compressImageToBase64(file, maxDim = 512, quality = 0.82){
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -356,7 +382,10 @@ async function fetchProfile(){
     const src = avatarSrc(data && data.photo_base64);
     if (src) { photoPreview.src = src; photoPreview.style.display = ''; }
     else photoPreview.style.display = 'none';
+    pendingPhotoPosition = undefined;
+    setAvatarPosition(photoPreview, avatarPos(data));
   }
+  reflectPhotoNudge();
 
   enforceProfileNameOnUI();
   renderAccountPledge();
@@ -377,11 +406,21 @@ async function saveProfile(){
     fun_comment: document.getElementById('profile-fun-comment').value.trim(),
     additional_comments: document.getElementById('profile-comments').value.trim(),
     // keep the existing photo unless a new one was picked this session
-    photo_base64: pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : ((profileData && profileData.photo_base64) || null)
+    photo_base64: pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : ((profileData && profileData.photo_base64) || null),
+    photo_position: pendingPhotoPosition !== undefined
+      ? pendingPhotoPosition
+      : ((profileData && profileData.photo_position) || null)
   };
-  const { error } = await sb.from('profiles').upsert(profileUpdate);
+  let { error } = await sb.from('profiles').upsert(profileUpdate);
+  // Column not deployed yet — save everything else rather than failing the
+  // whole profile (same pattern as the session-column fallbacks).
+  if (error && error.code === 'PGRST204' && 'photo_position' in profileUpdate) {
+    delete profileUpdate.photo_position;
+    ({ error } = await sb.from('profiles').upsert(profileUpdate));
+  }
   if (error) throw error;
   pendingPhotoBase64 = undefined;
+  pendingPhotoPosition = undefined;
   publicProfileCache.delete(currentUser.id); // Sessions page re-fetches the new photo/goal
   await fetchProfile();
   enforceProfileNameOnUI();
@@ -1090,6 +1129,61 @@ function attachAccountHandlers(){
     }, 100);
   });
   
+  // Crop nudger: drag the Account preview to choose which part of the photo
+  // the avatar shows. The stored value is a CSS object-position, so nothing is
+  // re-encoded and it can be changed (or reset) forever without quality loss.
+  (function initPhotoNudge(){
+    const img = document.getElementById('profile-photo-preview');
+    const reset = document.getElementById('btn-photo-reset');
+    if (!img) return;
+    let dragging = false, startY = 0, startX = 0, startPos = null;
+
+    const clamp = (n) => Math.max(0, Math.min(100, n));
+    function currentPos(){
+      const m = /^([\d.]+)% ([\d.]+)%$/.exec(img.style.objectPosition || AVATAR_POS_DEFAULT);
+      return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 50, y: 50 };
+    }
+    function begin(e){
+      if (!img.src || img.style.display === 'none') return;
+      dragging = true;
+      startPos = currentPos();
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      img.classList.add('dragging');
+      e.preventDefault();
+    }
+    function move(e){
+      if (!dragging) return;
+      const pt = e.touches ? e.touches[0] : e;
+      // Drag distance is scaled by the element size so a full swipe across the
+      // preview pans the whole image, on any screen size.
+      const dx = ((pt.clientX - startX) / img.clientWidth) * 100;
+      const dy = ((pt.clientY - startY) / img.clientHeight) * 100;
+      // Dragging DOWN should reveal what's above, so the offset subtracts.
+      const pos = clamp(startPos.x - dx) + '% ' + clamp(startPos.y - dy) + '%';
+      setAvatarPosition(img, pos);
+      pendingPhotoPosition = pos;
+      reflectPhotoNudge();
+      e.preventDefault();
+    }
+    function end(){
+      if (!dragging) return;
+      dragging = false;
+      img.classList.remove('dragging');
+    }
+    img.addEventListener('mousedown', begin);
+    img.addEventListener('touchstart', begin, { passive: false });
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchend', end);
+    if (reset) reset.addEventListener('click', () => {
+      setAvatarPosition(img, AVATAR_POS_DEFAULT);
+      pendingPhotoPosition = AVATAR_POS_DEFAULT;
+      reflectPhotoNudge();
+    });
+  })();
+
   // Profile photo: pick from library OR take one with the camera (the hidden
   // capture input opens the front camera directly on phones). Both funnel
   // into the same compress-and-preview path; saved with Save Profile.
@@ -1098,7 +1192,14 @@ function attachAccountHandlers(){
     try {
       pendingPhotoBase64 = await compressImageToBase64(file);
       const preview = document.getElementById('profile-photo-preview');
-      if (preview) { preview.src = pendingPhotoBase64; preview.style.display = ''; }
+      if (preview) {
+        preview.src = pendingPhotoBase64;
+        preview.style.display = '';
+        // A fresh photo starts centered; the old crop belonged to the old image.
+        pendingPhotoPosition = AVATAR_POS_DEFAULT;
+        setAvatarPosition(preview, AVATAR_POS_DEFAULT);
+      }
+      reflectPhotoNudge();
       toast('Photo ready — hit Save Profile to keep it', 'success');
     } catch (e) {
       toast('Could not process that image: ' + e.message, 'error');
@@ -2256,7 +2357,8 @@ function renderMyStats() {
           const funComment = pageProfile && pageProfile.fun_comment ? String(pageProfile.fun_comment).trim() : '';
           // No badge under 10h (OBSERVER stays internal-only)
           const medalBadge = t.medal === 'OBSERVER' ? '' : `<span class="badge ${t.medal.toLowerCase()}">${t.medal}</span>`;
-          let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
+          const avPos = avatarPos(pageProfile);
+          let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" style="object-position:${esc(avPos)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
           if (funComment) content += `<div class="fun-comment">“${esc(funComment)}”</div>`;
 
           if (goalHours) {

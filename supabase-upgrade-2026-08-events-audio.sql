@@ -1020,3 +1020,24 @@ select cron.schedule('surf-report-heartbeat', '*/30 * * * *',
 --
 -- public_profiles never exposed sponsor_match, so no view needs rebuilding.
 alter table public.profiles drop column if exists sponsor_match;
+
+-- ============================================================
+-- 2026-08-31 · profile photo crop position
+-- ============================================================
+-- Photos are stored UNCROPPED (compressImageToBase64 scales, never crops) and
+-- the circle/rounded-square is produced at display time by object-fit: cover.
+-- So repositioning is purely a CSS object-position value — no re-encode, no
+-- quality loss, reversible at any time. Stored as the raw CSS value, e.g.
+-- '50% 20%'. Null/absent = '50% 50%' (centered), which is the old behavior.
+--
+-- The view MUST expose it too: other surfers' avatars are read through
+-- public_profiles, so without this only your own photo would reposition.
+alter table public.profiles add column if exists photo_position text;
+
+drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
+create view public.public_profiles as
+  select id, display_name, photo_base64, photo_position, target_hours,
+         fun_comment, charity_commitment, registered_event_id
+  from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;
