@@ -83,11 +83,9 @@ textarea { resize: vertical; }
 .duration-inputs { display: flex; align-items: center; gap: 6px; }
 .duration-inputs input { width: 70px; }
 .card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
-/* v1.38: session tiles read as distinct cards (Chase, board 2026-08-24) —
-   the 1px hairline washed out on both themes. Border leans toward the text
-   ink for contrast; only the tile view, not every .card in the app. */
-.card-list > .card { border-width: 2px; border-color: color-mix(in srgb, var(--text) 22%, var(--card-border)); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.24); }
-.card, .cards .card { background: var(--panel); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+/* v1.39: 2px on every card (Chase) — the 1px hairline washed out; border
+   color stays the theme's own --card-border ink. */
+.card, .cards .card { background: var(--panel); border: 2px solid var(--card-border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
 .table { width: 100%; overflow-x: auto; }
 .table table { width: 100%; border-collapse: collapse; }
