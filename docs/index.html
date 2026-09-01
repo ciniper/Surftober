@@ -471,7 +471,19 @@
             </label>
             <label>Charitable Contribution Commitment
               <small>Dollars per hour surfed — feeds the leaderboard's "Total pledged" tracker (only the group total is public).</small>
-              <input type="text" id="profile-charity" placeholder="e.g., $2 per hour" />
+              <select id="profile-charity">
+                <option value="">No pledge</option>
+                <option value="$1 per hour">$1 per hour</option>
+                <option value="$2 per hour">$2 per hour</option>
+                <option value="$3 per hour">$3 per hour</option>
+                <option value="$4 per hour">$4 per hour</option>
+                <option value="$5 per hour">$5 per hour</option>
+                <option value="$6 per hour">$6 per hour</option>
+                <option value="$7 per hour">$7 per hour</option>
+                <option value="$8 per hour">$8 per hour</option>
+                <option value="$9 per hour">$9 per hour</option>
+                <option value="$10 per hour">$10 per hour</option>
+              </select>
               <small id="account-pledge" class="hint"></small>
             </label>
             <label>Location Based
@@ -516,7 +528,7 @@
   <script src="./version.js"></script>
   <script src="./photo-kit.js?v=3"></script>
   <script src="./awards.js?v=10"></script>
-  <script type="module" src="./app.js?v=73"></script>
+  <script type="module" src="./app.js?v=74"></script>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
        until the deferred script loads. Served by Vercel at /_vercel/insights/*

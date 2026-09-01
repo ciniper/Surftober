@@ -9,6 +9,11 @@
   <link rel="stylesheet" href="./styles.css?v=53" />
   <meta name="theme-color" content="#0b3d91" />
   <style>
+    /* html must be dark too: styles.css paints html with the light-theme
+       --bg and caps body at height:100% (one viewport), so past the first
+       screenful the light canvas showed through — the "page changes color
+       midway down" bug. With html dark, the whole scroll extent is dark. */
+    html { background: #0a1628; }
     body {
       background: #0a1628;
       color: #e8f4f8;
@@ -244,7 +249,7 @@
 
       <label>
         First and Last Name (Display Name) *
-        <input type="text" id="display-name" placeholder="e.g. Chase Cooper" required />
+        <input type="text" id="display-name" required />
       </label>
 
       <label>
@@ -265,13 +270,24 @@
         <small>Donations will go toward the San Francisco Surfrider Chapter and used for
         bringup of a new water testing program. For more information go
         <a href="https://sf.surfrider.org/programs/blue-water-task-force" target="_blank" rel="noopener">here</a>.</small>
-        <input type="text" id="charity-commitment" placeholder="e.g. $2 per hour" />
+        <select id="charity-commitment">
+          <option value="">No pledge</option>
+          <option value="$1 per hour">$1 per hour</option>
+          <option value="$2 per hour">$2 per hour</option>
+          <option value="$3 per hour">$3 per hour</option>
+          <option value="$4 per hour">$4 per hour</option>
+          <option value="$5 per hour">$5 per hour</option>
+          <option value="$6 per hour">$6 per hour</option>
+          <option value="$7 per hour">$7 per hour</option>
+          <option value="$8 per hour">$8 per hour</option>
+          <option value="$9 per hour">$9 per hour</option>
+          <option value="$10 per hour">$10 per hour</option>
+        </select>
       </label>
 
       <label>
         What Location are you based? *
-        <small>(outer sunset, pacifica, etc..)</small>
-        <input type="text" id="location-based" placeholder="e.g. Outer Sunset" required />
+        <input type="text" id="location-based" required />
       </label>
 
       <label>
@@ -281,8 +297,8 @@
       </label>
 
       <label>
-        Write an opening fun comment if you'd like
-        <textarea id="fun-comment" rows="3" placeholder="Say hi to the crew…"></textarea>
+        Write an opening fun comment
+        <textarea id="fun-comment" rows="3"></textarea>
       </label>
 
       <label>
@@ -489,6 +505,16 @@
         for (const [id, value] of Object.entries(fields)) {
           const el = document.getElementById(id);
           if (el) el.value = value;
+        }
+        // The pledge is a $1–$10 select now. A legacy free-text value
+        // ("$1.50", "2 per hour") matches no option, so the select would
+        // read back '' and this re-registration would silently wipe the
+        // pledge — keep the old value selectable instead.
+        const charityEl = document.getElementById('charity-commitment');
+        const charityVal = data.charity_commitment || '';
+        if (charityVal && ![...charityEl.options].some((o) => o.value === charityVal)) {
+          charityEl.appendChild(new Option(charityVal + ' (current)', charityVal));
+          charityEl.value = charityVal;
         }
         photoOriginalUrl = data.photo_original_url || null;
         registeredAtOriginal = data.registered_at || null;
