@@ -18,6 +18,7 @@ create table if not exists public.profiles (
   fun_comment text,
   photo_base64 text,
   photo_position text,               -- CSS object-position for the avatar crop, e.g. '50% 20%'
+  photo_original_url text,           -- archival full-size copy in the profile-photos bucket
   additional_comments text,
   registered_at timestamptz default now(),
   registered_event_id uuid,           -- which event this person (re-)registered for

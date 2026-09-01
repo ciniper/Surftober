@@ -231,6 +231,7 @@ function reflectAuthUI(){
 const publicProfileCache = new Map(); // user_id -> {photo_base64, target_hours} | null
 let pendingPhotoBase64;               // set when a new photo is picked, undefined otherwise
 let pendingPhotoPosition;             // set while dragging the crop, undefined otherwise
+let pendingPhotoArchive;              // full-size blob awaiting upload, undefined otherwise
 
 // Photos are stored uncropped; object-fit: cover does the cropping at display
 // time, so which part shows is just an object-position. Null = centered, which
@@ -319,6 +320,39 @@ function parsePledgeRate(text){
 
 // Shrink whatever the camera roll hands us to a small square-ish JPEG so the
 // profiles table doesn't fill up with 8 MB originals.
+// Decode ONCE, emit both copies. Doing it in one pass means the archive and
+// the avatar are always the same picture, and it handles HEIC for free: the
+// browser decodes whatever it can display, and we re-encode as JPEG.
+// Re-encoding also strips EXIF — phone photos routinely carry GPS
+// coordinates, which must not reach a public bucket.
+async function renderProfileImage(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('could not read that image'));
+      i.src = url;
+    });
+    const draw = (maxDim, quality) => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    };
+    const display = draw(512).toDataURL('image/jpeg', 0.82);
+    // 2048px archival copy: ample for awards slides, a photo wall, or
+    // re-deriving a zoomed crop, while staying a few hundred KB.
+    const archiveBlob = await new Promise((resolve) =>
+      draw(2048).toBlob(resolve, 'image/jpeg', 0.85));
+    return { display, archiveBlob };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // 512px: the largest avatar rendering is the 120px registration preview,
 // which needs 360 real pixels on a 3x screen. Bigger buys nothing visible
 // and these live base64 INSIDE the profiles row, so bytes matter.
@@ -411,16 +445,44 @@ async function saveProfile(){
       ? pendingPhotoPosition
       : ((profileData && profileData.photo_position) || null)
   };
+  // Upload the archival copy before the row write so the URL we store is
+  // already valid. A failure here must NOT lose the profile edit: the avatar
+  // (base64, in the row) is the copy that matters, so warn and carry on.
+  const previousArchive = profileData && profileData.photo_original_url;
+  if (pendingPhotoArchive) {
+    try {
+      profileUpdate.photo_original_url = await uploadProfilePhoto(pendingPhotoArchive);
+    } catch (e) {
+      toast('Saved, but the full-size copy could not be stored: ' + e.message, 'warn');
+      profileUpdate.photo_original_url = previousArchive || null;
+    }
+  } else {
+    profileUpdate.photo_original_url = previousArchive || null;
+  }
+
+  // Deploy-order safety: if a photo column isn't in the schema yet, drop it
+  // and retry rather than failing the whole save (same idea as the
+  // session-column fallbacks). Match on the column PostgREST actually names —
+  // dropping blindly would let a missing photo_position silently discard the
+  // archive URL, and vice versa.
   let { error } = await sb.from('profiles').upsert(profileUpdate);
-  // Column not deployed yet — save everything else rather than failing the
-  // whole profile (same pattern as the session-column fallbacks).
-  if (error && error.code === 'PGRST204' && 'photo_position' in profileUpdate) {
-    delete profileUpdate.photo_position;
-    ({ error } = await sb.from('profiles').upsert(profileUpdate));
+  for (const col of ['photo_original_url', 'photo_position']) {
+    if (error && error.code === 'PGRST204' && col in profileUpdate &&
+        String(error.message || '').includes(col)) {
+      delete profileUpdate[col];
+      ({ error } = await sb.from('profiles').upsert(profileUpdate));
+    }
   }
   if (error) throw error;
+  // Only after the row commits: if it failed, the old file is still the one
+  // the row points at.
+  if (pendingPhotoArchive && previousArchive &&
+      profileUpdate.photo_original_url !== previousArchive) {
+    await deleteProfilePhoto(previousArchive);
+  }
   pendingPhotoBase64 = undefined;
   pendingPhotoPosition = undefined;
+  pendingPhotoArchive = undefined;
   publicProfileCache.delete(currentUser.id); // Sessions page re-fetches the new photo/goal
   await fetchProfile();
   enforceProfileNameOnUI();
@@ -1190,7 +1252,9 @@ function attachAccountHandlers(){
   async function handlePhotoFile(file){
     if (!file) return;
     try {
-      pendingPhotoBase64 = await compressImageToBase64(file);
+      const rendered = await renderProfileImage(file);
+      pendingPhotoBase64 = rendered.display;
+      pendingPhotoArchive = rendered.archiveBlob;
       const preview = document.getElementById('profile-photo-preview');
       if (preview) {
         preview.src = pendingPhotoBase64;
@@ -1484,6 +1548,25 @@ async function compressSessionPhoto(file){
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+async function uploadProfilePhoto(blob){
+  if (!sb || !currentUser) throw new Error('Sign in to upload photos');
+  const path = `${currentUser.id}/${crypto.randomUUID()}.jpg`;
+  const { error } = await sb.storage.from('profile-photos').upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: false
+  });
+  if (error) throw new Error('Photo upload failed: ' + error.message);
+  const { data } = sb.storage.from('profile-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Best-effort cleanup so replacing your photo doesn't orphan the old archive.
+async function deleteProfilePhoto(url){
+  const m = String(url || '').match(/\/profile-photos\/(.+)$/);
+  if (!m || !sb || !currentUser) return;
+  try { await sb.storage.from('profile-photos').remove([decodeURIComponent(m[1])]); } catch {}
 }
 
 async function uploadSessionPhoto(blob){
