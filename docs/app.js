@@ -340,7 +340,6 @@ async function fetchProfile(){
     'display-name': data?.display_name || '',
     'profile-target-hours': data?.target_hours || '',
     'profile-charity': data?.charity_commitment || '',
-    'profile-sponsor': data?.sponsor_match || '',
     'profile-location': data?.location_based || '',
     'profile-whatsapp': data?.whatsapp_phone || '',
     'profile-fun-comment': data?.fun_comment || '',
@@ -373,7 +372,6 @@ async function saveProfile(){
     display_name: displayName,
     target_hours: document.getElementById('profile-target-hours').value.trim(),
     charity_commitment: document.getElementById('profile-charity').value.trim(),
-    sponsor_match: document.getElementById('profile-sponsor').value.trim(),
     location_based: document.getElementById('profile-location').value.trim(),
     whatsapp_phone: document.getElementById('profile-whatsapp').value.trim(),
     fun_comment: document.getElementById('profile-fun-comment').value.trim(),
@@ -2250,7 +2248,7 @@ function renderMyStats() {
             if (goalHours >= 50) goalMedal = 'PLATINUM';
             else if (goalHours >= 40) goalMedal = 'GOLD';
             else if (goalHours >= 30) goalMedal = 'SILVER';
-            else if (goalHours >= 25) goalMedal = 'BRONZE';
+            else if (goalHours >= 20) goalMedal = 'BRONZE';
             goalMedalBadge = `<span class="badge ${goalMedal.toLowerCase()}">${goalMedal}</span>`;
           }
 

@@ -183,6 +183,7 @@
     }
     /* This page is always dark — pin colors that styles.css derives from the
        (light-by-default) theme vars so they stay readable here. */
+    .form-section small a { color: #ff6b35; }
     .app-version { color: #7a9bb5; }
     .hint { color: #7a9bb5; }
   </style>
@@ -250,7 +251,7 @@
         <select id="target-hours" required>
           <option value="">Select your goal...</option>
           <option value="10">10 hours (Participant)</option>
-          <option value="25">25 hours (Bronze)</option>
+          <option value="20">20 hours (Bronze)</option>
           <option value="30">30 hours (Silver)</option>
           <option value="40">40 hours (Gold)</option>
           <option value="50">50 hours (Platinum)</option>
@@ -258,16 +259,11 @@
       </label>
 
       <label>
-        What is your charitable contribution commitment? *
-        <small>Dollars per hour surfed — it feeds the live "Total pledged" tracker
-        on the leaderboard (e.g. $2/hour × 30 hours = $60 at season's end).</small>
-        <input type="text" id="charity-commitment" placeholder="e.g. $2 per hour" required />
-      </label>
-
-      <label>
-        Do you have a sponsor to commit to matching your contribution? *
-        <small>(Being sponsored is cool). Can always update later in the google sheet.</small>
-        <input type="text" id="sponsor-match" placeholder="e.g. Company XYZ — or &quot;no&quot;" required />
+        (Optional) What is your charitable contribution commitment ($ per hour surfed)?
+        <small>Donations will go toward the San Francisco Surfrider Chapter and used for
+        bringup of a new water testing program. For more information go
+        <a href="https://sf.surfrider.org/programs/blue-water-task-force" target="_blank" rel="noopener">here</a>.</small>
+        <input type="text" id="charity-commitment" placeholder="e.g. $2 per hour" />
       </label>
 
       <label>
@@ -466,7 +462,6 @@
           'display-name': data.display_name || '',
           'target-hours': data.target_hours || '',
           'charity-commitment': data.charity_commitment || '',
-          'sponsor-match': data.sponsor_match || '',
           'location-based': data.location_based || '',
           'whatsapp-phone': data.whatsapp_phone || '',
           'fun-comment': data.fun_comment || '',
@@ -589,7 +584,6 @@
         display_name: document.getElementById('display-name').value.trim(),
         target_hours: document.getElementById('target-hours').value.trim(),
         charity_commitment: document.getElementById('charity-commitment').value.trim(),
-        sponsor_match: document.getElementById('sponsor-match').value.trim(),
         location_based: document.getElementById('location-based').value.trim(),
         whatsapp_phone: document.getElementById('whatsapp-phone').value.trim(),
         fun_comment: document.getElementById('fun-comment').value.trim(),
