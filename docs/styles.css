@@ -83,11 +83,16 @@ textarea { resize: vertical; }
 .duration-inputs { display: flex; align-items: center; gap: 6px; }
 .duration-inputs input { width: 70px; }
 .card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
-/* v1.39/v1.40.1: heavier borders on every card — the 1px hairline washed
-   out. 1.5px = exactly 3 device pixels on 2x screens (phones/Retina; a 1x
-   monitor antialiases it to a soft 2px). Color stays the theme's own
-   --card-border ink. */
-.card, .cards .card { background: var(--panel); border: 1.5px solid var(--card-border); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+/* v1.39–v1.40.2: heavier borders on every card/panel — the 1px hairline
+   washed out. Landed on 1.5px in a border ink nudged toward the text color
+   (the % below is THE tuning knob; derives from the active theme's vars, so
+   it tracks light/dark automatically). Known trade-off, chosen knowingly:
+   Chrome FLOORS fractional border widths to whole device pixels, so a 1x
+   monitor paints this as 1 physical pixel — the darker ink is what keeps it
+   readable there; 2x/3x screens (every phone, Retina Macs) paint a true
+   3-device-pixel line. */
+:root { --card-border-mixed: color-mix(in srgb, var(--text) 18%, var(--card-border)); }
+.card, .cards .card { background: var(--panel); border: 1.5px solid var(--card-border-mixed); border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
 .table { width: 100%; overflow-x: auto; }
 .table table { width: 100%; border-collapse: collapse; }
@@ -265,7 +270,7 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 tr.strip-row > td { padding: 6px 10px 14px; }
 
 /* Crew message board tile (Leaderboard) */
-.msg-board { background: var(--panel); border: 1.5px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.msg-board { background: var(--panel); border: 1.5px solid var(--card-border-mixed); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
 /* v1.38: the title is a collapse toggle (a real <button>, restyled flat).
    Phones start collapsed — renderMessageBoard owns the state. */
 .msg-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: transparent; border: none; box-shadow: none; padding: 0; color: var(--text); font-size: 15px; cursor: pointer; }
@@ -293,7 +298,7 @@ tr.strip-row > td { padding: 6px 10px 14px; }
 .msg-body { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Totals tile: one card, dollars raised + hours surfed side by side */
-.totals-tile { display: flex; flex-wrap: wrap; gap: 10px 0; margin-top: 10px; background: var(--panel); border: 1.5px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
+.totals-tile { display: flex; flex-wrap: wrap; gap: 10px 0; margin-top: 10px; background: var(--panel); border: 1.5px solid var(--card-border-mixed); border-radius: 12px; padding: 10px 14px; }
 .total-stat { flex: 1 1 140px; min-width: 0; }
 .total-stat + .total-stat { border-left: 1px solid var(--card-border); padding-left: 18px; margin-left: 18px; }
 .total-label { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.65; }
@@ -306,7 +311,7 @@ tr.strip-row > td { padding: 6px 10px 14px; }
 /* v1.10: combined conditions + tide card with the Hoff-o-meter */
 /* v1.40: Main-page panels match the app-wide card border weight (totals
    tile, Comment Board, conditions/today cards — .surf-main is the last two) */
-.surf-main { background: var(--panel); border: 1.5px solid var(--card-border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.surf-main { background: var(--panel); border: 1.5px solid var(--card-border-mixed); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .surf-main-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
 .surf-main-left { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; align-self: flex-start; }
 .surf-wind { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
