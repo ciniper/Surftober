@@ -7,7 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest?v=11">
   <link rel="icon" type="image/svg+xml" href="./logo.svg?v=10" />
   <link rel="apple-touch-icon" href="./logo.svg?v=10" />
-  <link rel="stylesheet" href="./styles.css?v=49" />
+  <link rel="stylesheet" href="./styles.css?v=50" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // Redirect to landing page if not coming from auth flow or already in app
@@ -456,7 +456,7 @@
               <input type="file" id="profile-photo-camera" accept="image/*" capture="user" class="hidden" />
               <img id="profile-photo-preview" class="avatar avatar-lg" style="display:none" alt="Profile photo preview" />
               <div id="photo-nudge-row" class="photo-nudge-row" style="display:none">
-                <span class="hint">Drag the photo to choose what shows</span>
+                <button type="button" id="btn-photo-crop" class="btn-secondary">Adjust crop</button>
                 <button type="button" id="btn-photo-reset" class="btn-secondary">Recenter</button>
               </div>
             </div>
@@ -516,7 +516,23 @@
 
   <script src="./version.js"></script>
   <script src="./awards.js?v=10"></script>
-  <script type="module" src="./app.js?v=68"></script>
+  <script type="module" src="./app.js?v=69"></script>
+
+  <div id="crop-modal" class="crop-modal" aria-hidden="true">
+    <div class="crop-box" role="dialog" aria-label="Adjust photo crop">
+      <div class="crop-viewport" id="crop-viewport">
+        <img id="crop-img" alt="" draggable="false" />
+      </div>
+      <label class="crop-zoom-label">Zoom
+        <input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1" />
+      </label>
+      <p class="hint crop-hint">Drag to move · pinch or scroll to zoom</p>
+      <div class="crop-actions">
+        <button type="button" id="crop-cancel" class="btn-secondary">Cancel</button>
+        <button type="button" id="crop-apply">Use this crop</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
        until the deferred script loads. Served by Vercel at /_vercel/insights/*

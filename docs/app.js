@@ -232,6 +232,7 @@ const publicProfileCache = new Map(); // user_id -> {photo_base64, target_hours}
 let pendingPhotoBase64;               // set when a new photo is picked, undefined otherwise
 let pendingPhotoPosition;             // set while dragging the crop, undefined otherwise
 let pendingPhotoArchive;              // full-size blob awaiting upload, undefined otherwise
+let pendingPhotoArchiveUrl = null;    // object URL for that blob, so the crop editor can zoom it
 
 // Photos are stored uncropped; object-fit: cover does the cropping at display
 // time, so which part shows is just an object-position. Null = centered, which
@@ -240,6 +241,13 @@ const AVATAR_POS_DEFAULT = '50% 50%';
 function avatarPos(p){
   const v = p && typeof p.photo_position === 'string' ? p.photo_position.trim() : '';
   return /^[\d.]+% [\d.]+%$/.test(v) ? v : AVATAR_POS_DEFAULT;
+}
+
+// Tapping an avatar shows the best copy we have: the 2048px archive when the
+// profile carries one, otherwise the 512px display copy.
+function avatarFullSrc(p){
+  const url = p && typeof p.photo_original_url === 'string' ? p.photo_original_url.trim() : '';
+  return url || avatarSrc(p && p.photo_base64);
 }
 
 function setAvatarPosition(img, pos){
@@ -483,6 +491,7 @@ async function saveProfile(){
   pendingPhotoBase64 = undefined;
   pendingPhotoPosition = undefined;
   pendingPhotoArchive = undefined;
+  if (pendingPhotoArchiveUrl) { URL.revokeObjectURL(pendingPhotoArchiveUrl); pendingPhotoArchiveUrl = null; }
   publicProfileCache.delete(currentUser.id); // Sessions page re-fetches the new photo/goal
   await fetchProfile();
   enforceProfileNameOnUI();
@@ -1191,6 +1200,209 @@ function attachAccountHandlers(){
     }, 100);
   });
   
+  // Crop editor: pan + pinch/scroll zoom over the SOURCE image, then bake a
+  // square 512px avatar from it. Cropping from the 2048px archive means
+  // zooming in actually gains detail — panning a 512px copy could only ever
+  // shift the same pixels around. A baked square also makes object-position
+  // moot, so applying a crop clears it.
+  const CROP_OUT = 512;
+  const cropState = { img: null, scale: 1, min: 1, tx: 0, ty: 0, vw: 280 };
+
+  function cropEls(){
+    return {
+      modal: document.getElementById('crop-modal'),
+      viewport: document.getElementById('crop-viewport'),
+      img: document.getElementById('crop-img'),
+      zoom: document.getElementById('crop-zoom')
+    };
+  }
+
+  // Keep the image covering the viewport at all times — no empty corners.
+  function cropClamp(){
+    const { img, scale, vw } = cropState;
+    if (!img) return;
+    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+    cropState.tx = Math.min(0, Math.max(vw - w, cropState.tx));
+    cropState.ty = Math.min(0, Math.max(vw - h, cropState.ty));
+  }
+
+  function cropPaint(){
+    const { img } = cropEls();
+    if (!img) return;
+    img.style.transform =
+      `translate(${cropState.tx}px, ${cropState.ty}px) scale(${cropState.scale})`;
+  }
+
+  // Zoom around a point so the pixel under the fingers/cursor stays put.
+  function cropZoomTo(next, originX, originY){
+    const s = cropState;
+    const clamped = Math.max(s.min, Math.min(s.min * 4, next));
+    const ratio = clamped / s.scale;
+    s.tx = originX - (originX - s.tx) * ratio;
+    s.ty = originY - (originY - s.ty) * ratio;
+    s.scale = clamped;
+    cropClamp();
+    cropPaint();
+    const { zoom } = cropEls();
+    if (zoom) zoom.value = String(s.scale / s.min);
+  }
+
+  async function openCropEditor(){
+    const { modal, viewport, img, zoom } = cropEls();
+    if (!modal) return;
+    // Prefer the archive: it's the only source with detail to zoom into.
+    const src = (pendingPhotoArchiveUrl)
+      || (profileData && profileData.photo_original_url)
+      || (pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : avatarSrc(profileData && profileData.photo_base64));
+    if (!src) { toast('Add a photo first', 'warn'); return; }
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('could not load that photo'));
+        // Storage URLs are cross-origin; without this the canvas is tainted
+        // and toDataURL throws a SecurityError when we bake the crop.
+        img.crossOrigin = 'anonymous';
+        img.src = src;
+      });
+    } catch (e) {
+      toast('Could not open the photo for cropping: ' + e.message, 'error');
+      return;
+    }
+    cropState.img = img;
+    cropState.vw = viewport.clientWidth || 280;
+    // Smallest scale that still covers the square viewport.
+    cropState.min = cropState.vw / Math.min(img.naturalWidth, img.naturalHeight);
+    cropState.scale = cropState.min;
+    // Start centered.
+    cropState.tx = (cropState.vw - img.naturalWidth * cropState.scale) / 2;
+    cropState.ty = (cropState.vw - img.naturalHeight * cropState.scale) / 2;
+    cropClamp();
+    cropPaint();
+    if (zoom) { zoom.min = '1'; zoom.max = '4'; zoom.value = '1'; }
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeCropEditor(){
+    const { modal, img } = cropEls();
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (img) img.removeAttribute('src');
+    cropState.img = null;
+  }
+
+  // Render the visible square to a 512px JPEG — this becomes the new avatar.
+  function applyCrop(){
+    const { img } = cropEls();
+    if (!img || !cropState.img) return;
+    const s = cropState;
+    const sx = -s.tx / s.scale;
+    const sy = -s.ty / s.scale;
+    const side = s.vw / s.scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = CROP_OUT; canvas.height = CROP_OUT;
+    canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, CROP_OUT, CROP_OUT);
+    let baked;
+    try {
+      baked = canvas.toDataURL('image/jpeg', 0.85);
+    } catch (e) {
+      // Tainted canvas: the archive URL didn't serve CORS headers.
+      toast('Could not save that crop (image blocked by the browser)', 'error');
+      return;
+    }
+    pendingPhotoBase64 = baked;
+    // A baked square needs no display offset; stale values would re-crop it.
+    pendingPhotoPosition = AVATAR_POS_DEFAULT;
+    const preview = document.getElementById('profile-photo-preview');
+    if (preview) {
+      preview.src = baked;
+      preview.style.display = '';
+      setAvatarPosition(preview, AVATAR_POS_DEFAULT);
+    }
+    reflectPhotoNudge();
+    closeCropEditor();
+    toast('Crop applied — hit Save Profile to keep it', 'success');
+  }
+
+  (function wireCropEditor(){
+    const { modal, viewport, zoom } = cropEls();
+    if (!modal || !viewport) return;
+    let dragging = false, lastX = 0, lastY = 0, pinchDist = 0;
+
+    const pointFrom = (e) => {
+      const r = viewport.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const touchDist = (e) => {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    };
+
+    function down(e){
+      if (!cropState.img) return;
+      if (e.touches && e.touches.length === 2) { pinchDist = touchDist(e); return; }
+      dragging = true;
+      const p = pointFrom(e);
+      lastX = p.x; lastY = p.y;
+      viewport.classList.add('dragging');
+      e.preventDefault();
+    }
+    function move(e){
+      if (!cropState.img) return;
+      if (e.touches && e.touches.length === 2) {
+        const d = touchDist(e);
+        if (pinchDist) {
+          const r = viewport.getBoundingClientRect();
+          const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+          const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+          cropZoomTo(cropState.scale * (d / pinchDist), mx, my);
+        }
+        pinchDist = d;
+        e.preventDefault();
+        return;
+      }
+      if (!dragging) return;
+      const p = pointFrom(e);
+      cropState.tx += p.x - lastX;
+      cropState.ty += p.y - lastY;
+      lastX = p.x; lastY = p.y;
+      cropClamp();
+      cropPaint();
+      e.preventDefault();
+    }
+    function up(){ dragging = false; pinchDist = 0; viewport.classList.remove('dragging'); }
+
+    viewport.addEventListener('mousedown', down);
+    viewport.addEventListener('touchstart', down, { passive: false });
+    window.addEventListener('mousemove', move);
+    viewport.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('mouseup', up);
+    window.addEventListener('touchend', up);
+    viewport.addEventListener('wheel', (e) => {
+      if (!cropState.img) return;
+      const p = pointFrom(e);
+      cropZoomTo(cropState.scale * (e.deltaY < 0 ? 1.12 : 1 / 1.12), p.x, p.y);
+      e.preventDefault();
+    }, { passive: false });
+
+    if (zoom) zoom.addEventListener('input', () => {
+      const c = cropState.vw / 2;
+      cropZoomTo(cropState.min * parseFloat(zoom.value || '1'), c, c);
+    });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeCropEditor(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeCropEditor();
+    });
+    const crop = document.getElementById('btn-photo-crop');
+    if (crop) crop.addEventListener('click', openCropEditor);
+    const cancel = document.getElementById('crop-cancel');
+    if (cancel) cancel.addEventListener('click', closeCropEditor);
+    const apply = document.getElementById('crop-apply');
+    if (apply) apply.addEventListener('click', applyCrop);
+  })();
+
   // Crop nudger: drag the Account preview to choose which part of the photo
   // the avatar shows. The stored value is a CSS object-position, so nothing is
   // re-encoded and it can be changed (or reset) forever without quality loss.
@@ -1255,6 +1467,10 @@ function attachAccountHandlers(){
       const rendered = await renderProfileImage(file);
       pendingPhotoBase64 = rendered.display;
       pendingPhotoArchive = rendered.archiveBlob;
+      // Local URL for the crop editor: the just-picked archive isn't uploaded
+      // yet, and it's the highest-detail source we'll ever have here.
+      if (pendingPhotoArchiveUrl) URL.revokeObjectURL(pendingPhotoArchiveUrl);
+      pendingPhotoArchiveUrl = URL.createObjectURL(rendered.archiveBlob);
       const preview = document.getElementById('profile-photo-preview');
       if (preview) {
         preview.src = pendingPhotoBase64;
@@ -2444,7 +2660,13 @@ function renderMyStats() {
           // No badge under 10h (OBSERVER stays internal-only)
           const medalBadge = t.medal === 'OBSERVER' ? '' : `<span class="badge ${t.medal.toLowerCase()}">${t.medal}</span>`;
           const avPos = avatarPos(pageProfile);
-          let content = `<div class="card"><div class="profile-head">${av ? `<img class="avatar" src="${esc(av)}" style="object-position:${esc(avPos)}" alt="" />` : ''}<h3>${esc(t.user)}</h3></div>`;
+          const avFull = avatarFullSrc(pageProfile);
+          // Reuses the session-photo lightbox (a.photo-zoom is delegated on
+          // document), so the anchor keeps cmd-click/new-tab working too.
+          const avImg = av
+            ? `<a class="photo-zoom" href="${esc(avFull || av)}" target="_blank" rel="noopener" title="View full photo"><img class="avatar" src="${esc(av)}" style="object-position:${esc(avPos)}" alt="" /></a>`
+            : '';
+          let content = `<div class="card"><div class="profile-head">${avImg}<h3>${esc(t.user)}</h3></div>`;
           if (funComment) content += `<div class="fun-comment">“${esc(funComment)}”</div>`;
 
           if (goalHours) {

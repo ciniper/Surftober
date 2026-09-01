@@ -51,8 +51,8 @@ create unique index if not exists profiles_display_name_unique_idx
 -- columns.
 drop view if exists public.public_profiles; -- create-or-replace can't change a view's column list (42P16)
 create view public.public_profiles as
-  select id, display_name, photo_base64, photo_position, target_hours,
-         fun_comment, charity_commitment, registered_event_id
+  select id, display_name, photo_base64, photo_position, photo_original_url,
+         target_hours, fun_comment, charity_commitment, registered_event_id
   from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
