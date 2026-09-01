@@ -337,8 +337,9 @@
     root.classList.add('open');
     root.setAttribute('aria-hidden', 'false');
     status.textContent = 'Starting camera…';
+    var stream;
     try {
-      camStream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 1280 } },
         audio: false
       });
@@ -352,6 +353,14 @@
       }
       return;
     }
+    // Cancel/Escape can close the modal while the permission prompt is still
+    // up — closeCamera() already ran with no stream to stop, so if we kept
+    // this one the camera light would stay on behind a closed modal.
+    if (!root.classList.contains('open')) {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      return;
+    }
+    camStream = stream;
     var video = root.querySelector('video');
     video.srcObject = camStream;
     status.textContent = '';

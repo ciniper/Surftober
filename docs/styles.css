@@ -172,6 +172,10 @@ a.subtab { text-decoration: none; display: inline-block; padding: 10px 12px; bor
 .subtabs .event-scope { margin-left: auto; }
 .view-toggle { display: inline-flex; gap: 4px; margin-left: 6px; }
 .subtab.small { padding: 8px 10px; font-size: 13px; }
+/* v1.33: "Session Log" heading + the List/Tiles toggle share one row — the
+   toggle lives next to the list it controls instead of the page subtabs */
+.log-list-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 24px 0 10px; }
+.log-list-head h3 { margin: 0; }
 
 /* v1.7: avatars + tile view */
 .avatar { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--card-border); }
