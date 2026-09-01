@@ -319,6 +319,8 @@
     let sb = null;
     let currentUser = null;
     let photoBase64 = null;
+    let photoArchiveBlob = null;   // full-size copy, uploaded on save
+    let photoOriginalUrl = null;   // existing archive URL, carried over on re-register
     let activeEvent = null; // set once signed in; stamped onto the profile on save
 
     // Club password gate — a friends-only speed bump, not real security.
@@ -471,6 +473,7 @@
           const el = document.getElementById(id);
           if (el) el.value = value;
         }
+        photoOriginalUrl = data.photo_original_url || null;
         if (data.photo_base64) {
           photoBase64 = data.photo_base64;
           const src = data.photo_base64.startsWith('data:') ? data.photo_base64 : 'data:image/jpeg;base64,' + data.photo_base64;
@@ -537,7 +540,37 @@
 
     // Shrink camera-roll originals to a small JPEG before storing — same
     // routine as the Account tab, so no more multi-MB photos in profiles.
-    async function compressImageToDataURL(file, maxDim = 256, quality = 0.82){
+    // Decode once, emit both copies — mirrors renderProfileImage() in app.js.
+    // Registration is where most photos are set, so the archival copy has to
+    // happen here too or new signups would have no full-size original.
+    // Re-encoding to JPEG also strips EXIF (phone photos carry GPS).
+    async function renderProfileImage(file){
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('could not read that image'));
+          i.src = url;
+        });
+        const draw = (maxDim) => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          return canvas;
+        };
+        const display = draw(512).toDataURL('image/jpeg', 0.82);
+        const archiveBlob = await new Promise((resolve) =>
+          draw(2048).toBlob(resolve, 'image/jpeg', 0.85));
+        return { display, archiveBlob };
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    async function compressImageToDataURL(file, maxDim = 512, quality = 0.82){
       const url = URL.createObjectURL(file);
       try {
         const img = await new Promise((resolve, reject) => {
@@ -561,7 +594,9 @@
       const file = e.target.files[0];
       if (!file) return;
       try {
-        const dataUrl = await compressImageToDataURL(file);
+        const rendered = await renderProfileImage(file);
+        const dataUrl = rendered.display;
+        photoArchiveBlob = rendered.archiveBlob;
         document.getElementById('photo-preview-img').src = dataUrl;
         document.getElementById('photo-preview').style.display = 'block';
         photoBase64 = dataUrl; // full data URL, same format the Account tab saves
@@ -579,6 +614,21 @@
         return;
       }
 
+      // Archival full-size copy. A storage failure must never block signing
+      // up — the avatar (base64, saved in the row below) is the copy that
+      // actually matters, so fall back to whatever was already stored.
+      if (photoArchiveBlob) {
+        try {
+          const path = `${currentUser.id}/${crypto.randomUUID()}.jpg`;
+          const up = await sb.storage.from('profile-photos')
+            .upload(path, photoArchiveBlob, { contentType: 'image/jpeg', upsert: false });
+          if (up.error) throw up.error;
+          photoOriginalUrl = sb.storage.from('profile-photos').getPublicUrl(path).data.publicUrl;
+        } catch (e) {
+          console.warn('full-size photo upload failed', e);
+        }
+      }
+
       const profileData = {
         id: currentUser.id,
         display_name: document.getElementById('display-name').value.trim(),
@@ -588,6 +638,7 @@
         whatsapp_phone: document.getElementById('whatsapp-phone').value.trim(),
         fun_comment: document.getElementById('fun-comment').value.trim(),
         photo_base64: photoBase64,
+        photo_original_url: photoOriginalUrl,
         additional_comments: document.getElementById('additional-comments').value.trim(),
         registered_at: new Date().toISOString()
       };
@@ -596,10 +647,17 @@
 
       try {
         let { error } = await sb.from('profiles').upsert(profileData);
-        if (error && error.code === 'PGRST204' && 'registered_event_id' in profileData) {
-          // registered_event_id column not deployed yet — save without it
-          delete profileData.registered_event_id;
-          ({ error } = await sb.from('profiles').upsert(profileData));
+        // Deploy-order safety: any of these columns may not exist yet if the
+        // client shipped before the SQL was run. Drop whichever one PostgREST
+        // names and retry — registration must never hard-fail over an
+        // optional column. Matching the message (not just presence) keeps a
+        // missing column from discarding an unrelated valid value.
+        for (const col of ['registered_event_id', 'photo_original_url']) {
+          if (error && error.code === 'PGRST204' && col in profileData &&
+              String(error.message || '').includes(col)) {
+            delete profileData[col];
+            ({ error } = await sb.from('profiles').upsert(profileData));
+          }
         }
         if (error) throw error;
         

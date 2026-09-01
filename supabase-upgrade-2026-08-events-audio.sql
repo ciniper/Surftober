@@ -1041,3 +1041,44 @@ create view public.public_profiles as
   from public.profiles;
 
 grant select on public.public_profiles to anon, authenticated;
+
+-- ============================================================
+-- 2026-08-31 · keep a full-size profile photo alongside the avatar
+-- ============================================================
+-- profiles.photo_base64 stays the DISPLAY copy: it lives in the row, so the
+-- avatar renders with no extra request and is covered by database backups.
+-- This adds an ARCHIVAL copy in Storage for things the 512px avatar can't
+-- serve — awards slides, a photo wall, or re-deriving a zoomed crop later
+-- without asking everyone to re-upload.
+--
+-- What gets stored is a re-encoded JPEG (max 2048px), not the literal file:
+--   * strips EXIF, which on phone photos routinely includes the GPS
+--     coordinates of where it was taken — those must not land in a
+--     public bucket;
+--   * converts HEIC/HEIF, which most browsers cannot display;
+--   * keeps it to a few hundred KB instead of 5-10 MB.
+--
+-- Deliberately NOT added to public_profiles: the archive is for the owner
+-- and for admin-side exports, so it stays behind profiles' own RLS. Add it
+-- to the view later if a photo wall needs everyone's full-size copy.
+--
+-- NOTE: Storage objects are NOT covered by Supabase backups or pg_dump (the
+-- database only holds the URL) — same known gap as session media. The
+-- display copy IS in the row and IS backed up, so a lost archive costs
+-- fidelity, never the avatar itself.
+alter table public.profiles add column if not exists photo_original_url text;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('profile-photos', 'profile-photos', true, 8388608, array['image/*'])
+on conflict (id) do nothing;
+
+drop policy if exists "Anyone can read profile photos"  on storage.objects;
+drop policy if exists "Users upload own profile photos" on storage.objects;
+drop policy if exists "Users delete own profile photos" on storage.objects;
+
+create policy "Anyone can read profile photos" on storage.objects for select
+  using (bucket_id = 'profile-photos');
+create policy "Users upload own profile photos" on storage.objects for insert to authenticated
+  with check (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users delete own profile photos" on storage.objects for delete to authenticated
+  using (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = auth.uid()::text);
