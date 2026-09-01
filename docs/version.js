@@ -1,7 +1,7 @@
 // Surftober deploy marker — bump APP_VERSION on every deploy.
 // Served network-first (see sw.js), so the live value updates the moment a
 // deploy lands. Use it to confirm a push made it through the CDN + caches.
-window.APP_VERSION = 'v1.40.1 · 2026-09-01';
+window.APP_VERSION = 'v1.40.2 · 2026-09-01';
 
 // Crew photo album (Google Photos shared link). Lives HERE, not app.js,
 // because this file is network-first: edit the link, push, done — no
