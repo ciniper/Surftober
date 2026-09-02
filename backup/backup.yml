@@ -93,3 +93,16 @@ jobs:
           git add backups STATUS.md
           git commit -m "backup: $(date -u +%F) [$(cat counts.txt)]"
           git push
+
+      # Dead-man's switch (healthchecks.io): runs ONLY if every step above
+      # succeeded, so silence = the backup is broken — including modes GitHub
+      # never emails about (schedule silently stopped, notifications filtered).
+      # Set repo secret BACKUP_PING_URL to the check's https://hc-ping.com/<uuid>;
+      # unset = step no-ops. Suggested check: "surftober-pg-dump",
+      # Period 3 days, Grace 1 day (the */3 day-of-month cron has uneven
+      # month-boundary gaps — the long grace stops false alarms).
+      - name: Heartbeat ping (success only)
+        env:
+          PING_URL: ${{ secrets.BACKUP_PING_URL }}
+        run: |
+          [ -z "$PING_URL" ] || curl -fsS --retry 3 --max-time 10 "$PING_URL"
