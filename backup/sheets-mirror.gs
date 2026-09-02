@@ -29,6 +29,12 @@
 
 const PAGE_SIZE = 1000; // PostgREST caps responses at 1000 rows; page past it.
 
+// Dead-man's switch (healthchecks.io): pinged ONLY after a fully successful
+// mirror, so silence = the backup is broken (trigger disabled, schema drift,
+// key rotated — anything). Paste the check's ping URL here; '' disables.
+// Suggested check: "surftober-sheets-mirror", Period 1 day, Grace 6 hours.
+const PING_URL = '';
+
 // sponsor_match was dropped from the schema on 2026-08-31 (feature removed);
 // historical answers remain in this sheet's existing rows.
 // photo_base64 is deliberately excluded: a Sheets cell caps at 50,000
@@ -95,6 +101,9 @@ function mirror() {
     events.map(function (r) { return EVENT_COLS.map(function (c) { return cell_(r[c]); }); }));
   writeTab_(ss, 'meta', ['last_sync_utc', 'profiles', 'sessions', 'auth_users', 'events'],
     [[new Date().toISOString(), profiles.length, sessions.length, users.length, events.length]]);
+
+  // Reached only if every fetch + write above succeeded (any throw skips it).
+  if (PING_URL) UrlFetchApp.fetch(PING_URL, { muteHttpExceptions: true });
 }
 
 /** Script Properties -> config, with a clear error if unset. */

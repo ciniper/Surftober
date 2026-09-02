@@ -1,6 +1,16 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **Backup heartbeats — templates ready, 2 Chase actions** (2026-09-01):
+      both backups can fail silently; success-pings are now wired into the
+      templates, disabled until a URL is set.
+      (1) Sheets mirror: healthchecks check "surftober-sheets-mirror"
+      (Period 1 day, Grace 6h) → paste its URL into PING_URL at the top of
+      backup/sheets-mirror.gs → re-paste the whole file into Apps Script.
+      (2) pg_dump: check "surftober-pg-dump" (Period 3 days, Grace 1 day) →
+      in the PRIVATE ciniper/surftober-backup repo add secret
+      BACKUP_PING_URL + copy the new final step from backup/backup.yml
+      into its .github/workflows/backup.yml (or re-copy the whole file).
 - [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
       (reliability priority #2): (1) healthchecks.io → new check
       "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
@@ -50,7 +60,11 @@
 - [ ] **Downgrade Supabase Pro after October** (~early November) — Pro is ON
       as of 2026-09-01 (Chase). 250 GB egress makes the old October
       egress-watch moot; glance at Settings → Usage once before downgrading
-      just to know the season's numbers.
+      just to know the season's numbers. WHEN DOWNGRADING: the keepalive
+      cron becomes load-bearing again (free tier auto-pauses) — add a
+      success-ping to docs/api/keepalive.js + a healthchecks check
+      ("surftober-keepalive", Period 1 day, Grace 12h) at that point, not
+      before (on Pro a keepalive failure has zero user impact).
 
 ## Open items
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
