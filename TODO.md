@@ -1,21 +1,7 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Sheets-mirror heartbeat — confirm first ping** (Chase wired the
-      check + URL into Apps Script 2026-09-01). The ping fires at the END of
-      a successful mirror() run: either run mirror() once by hand in the
-      Apps Script editor to confirm now, or wait for tonight's 3am trigger.
-      (The pg_dump-repo heartbeat was dropped with the repo itself — see the
-      backup posture note in backup/README.md.)
 
-- [ ] **Surf-report staleness heartbeat — installed 2026-09-01, confirm
-      first ping** (reliability priority #2): Chase created the check +
-      ran the SQL; the cron pings every 30 min while surf_report is fresh.
-      Green with "Last ping: N min ago" closes this AND the "Watch:
-      Surfline 403" item below (the watch is now automated). If still "New"
-      after ~40 min: placeholder UUID left in the function, or check
-      `select jobname, active from cron.job where jobname =
-      'surf-report-heartbeat';`.
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
@@ -139,17 +125,7 @@
       their Account field (or Chase edits profiles.charity_commitment in the
       Table Editor). Largely self-solving since v1.19.0: everyone re-registers
       per event through the prefilled form, which surfaces the pledge field.
-- [ ] **Watch: Surfline 403-blocked Supabase's egress IP** (2026-08-05, ~00:07
-      PDT — 403 status with a "502 Bad Gateway" body; SFPUC unaffected; same
-      requests fine from residential IPs). Free-tier egress IPs are SHARED
-      across tenants, so it may not be our 48 req/day and may decay on its
-      own. Mitigation shipped same day: Surfline fetches hourly (the :07 tick
-      only) with 0–45 s jitter, current Chrome UA, Referer + Accept-Language;
-      harvests still run every tick so recovery is automatic. Check
-      `select fetched_at from surf_report;` — if still stale after a couple
-      of days, stage 2 is a Supabase Edge Function proxy for just the two
-      Surfline calls (clean single UA, different TLS fingerprint + egress
-      IPs), invoked by the same cron, writing to the same table.
+
 - [ ] **Info overlay** (Chase, 2026-08-08; DEFERRED 2026-09-01: build once
       the UI is more finalized — don't propose as next-up until then) — an ⓘ button opening a modal/sheet
       explaining the event, scoring, and UI at a glance. (The other two parts
@@ -215,6 +191,16 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Reliability monitoring — ALL GREEN 2026-09-01~~ (three healthchecks
+      dead-man's switches confirmed pinging: surftober-surf-report (*/30
+      pg_cron, closes reliability priority #2 AND retires the manual
+      "Watch: Surfline 403" item — staleness now alerts by email),
+      surftober-sheets-mirror (nightly Apps Script), surftober-keepalive
+      (Vercel cron via KEEPALIVE_PING_URL env var, Sensitive/Production;
+      `curl /api/keepalive` shows pinged:true). Ping URLs never live in
+      this public repo. cleanup_items sheet column: Chase OK ignoring
+      (legacy count field, now a 0/1 marker; type='cleanup' is the signal).
+      Every reliability priority from the 2026-08 plan is now closed.)
 - [x] ~~WhatsApp share button + admin deleted-sessions panel~~ (DROPPED by
       Chase 2026-09-01 — no longer wanted; not built.)
 - [x] ~~Verify the hashed build on prod~~ (2026-09-01, right after the
