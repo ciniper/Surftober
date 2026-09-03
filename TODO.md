@@ -50,7 +50,11 @@
       surftober-2026.sql` plus `--data-only --schema auth -f auth.sql`,
       stored somewhere PRIVATE — never this public repo);
       (2) nothing needed for keepalive — its healthcheck ping shipped
-      2026-09-01 (KEEPALIVE_PING_URL env var in Vercel).
+      2026-09-01 (KEEPALIVE_PING_URL env var in Vercel);
+      (3) compute is MICRO since 2026-09-03 (Chase resized from Nano — $0
+      net on Pro, since paid orgs bill Nano at Micro's price anyway). The
+      Free plan only offers Nano, so the downgrade includes resizing back
+      Micro → Nano (another ~2-min restart; do it in the off-season quiet).
 
 ## Open items
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
