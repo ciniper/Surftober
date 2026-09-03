@@ -1,9 +1,7 @@
 # Surftober TODO
 
 ## Next up
-
-- [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
-      tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
+(nothing queued — pre-October decisions live under Scoped; see Open items)
 
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
@@ -148,9 +146,6 @@
       9172 Lincoln Way + 9005 Vicente; public x-api-key in the BWTF repo's
       bwtf_api.py).
 
-- [ ] Rotate the Google OAuth client secret (the old one passed through chat during
-      the June 2026 recovery). Google Cloud Console → create new secret → paste into
-      Supabase Auth provider → delete old secret.
 - [ ] Restore drill before October (RESCOPED 2026-09-01: no pg_dump repo —
       Chase skipped that leg): take a one-off manual pg_dump (commands in the
       downgrade item above), restore it into a scratch Supabase project, and
@@ -191,6 +186,13 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Leaderboard revamp~~ (Chase declared complete 2026-09-01 — it shipped
+      incrementally: the Main tab is now the totals tile (hours-first),
+      the browsable Today tile, the OB conditions + tide + water-quality
+      card with the Hoff-o-meter, the collapsible Comment Board, and the
+      sortable leaderboard with streak flames and the medal legend.)
+- [x] ~~Rotate the Google OAuth client secret~~ (DECLINED by Chase
+      2026-09-01 — "wouldn't worry about this one"; not doing it.)
 - [x] ~~Reliability monitoring — ALL GREEN 2026-09-01~~ (three healthchecks
       dead-man's switches confirmed pinging: surftober-surf-report (*/30
       pg_cron, closes reliability priority #2 AND retires the manual
