@@ -42,8 +42,26 @@ module.exports = async (req, res) => {
     // is the early warning that the project is paused or the key rotated.
     // Returning 502 makes it visible in the Vercel cron run log.
     const ok = r.status === 200;
+
+    // Dead-man's switch (healthchecks.io): ping ONLY when Supabase answered,
+    // so silence = the cron died OR Supabase is unreachable — both alertable.
+    // KEEPALIVE_PING_URL is a Vercel env var (Settings → Environment
+    // Variables), deliberately NOT hardcoded: this repo is public, and anyone
+    // holding the URL could send fake pings that mask real failures. Unset =
+    // no ping (the check just stays quiet until configured).
+    let pinged = false;
+    if (ok && process.env.KEEPALIVE_PING_URL) {
+      try {
+        const p = await fetch(process.env.KEEPALIVE_PING_URL, {
+          signal: AbortSignal.timeout(10000)
+        });
+        pinged = p.ok;
+      } catch {}
+    }
+
     return res.status(ok ? 200 : 502).json({
       ok,
+      pinged,
       supabaseStatus: r.status,
       ms: Date.now() - startedAt,
       scheduledBy: req.headers['x-vercel-cron-schedule'] || null
