@@ -31,8 +31,11 @@ const PAGE_SIZE = 1000; // PostgREST caps responses at 1000 rows; page past it.
 
 // Dead-man's switch (healthchecks.io): pinged ONLY after a fully successful
 // mirror, so silence = the backup is broken (trigger disabled, schema drift,
-// key rotated — anything). Paste the check's ping URL here; '' disables.
-// Suggested check: "surftober-sheets-mirror", Period 1 day, Grace 6 hours.
+// key rotated — anything). Suggested check: "surftober-sheets-mirror",
+// Period 1 day, Grace 6 hours.
+// Paste the real ping URL in the APPS SCRIPT COPY ONLY — this template
+// lives in a PUBLIC repo, and anyone holding the URL can send fake
+// "healthy" pings that mask a real failure. Keep '' here.
 const PING_URL = '';
 
 // sponsor_match was dropped from the schema on 2026-08-31 (feature removed);

@@ -1,5 +1,12 @@
 # Surftober data backup
 
+> **STATUS 2026-09-01 (Chase):** the private-repo pg_dump leg (#1 below) is
+> **not set up** — treat this file's #1 section as instructions-if-ever-wanted,
+> not as something running. Live posture: Supabase **Pro daily backups**
+> (on since 2026-09-01, through October) + the nightly Sheets mirror (#2,
+> running, heartbeat-monitored). Before the November Pro downgrade, take ONE
+> manual pg_dump (see TODO) so the off-season has a full restorable copy.
+
 Two independent copies of the user data, both $0, both fully automated. They
 protect against the failure that already happened once: the free-tier Supabase
 project pauses after ~7 idle days, and after 90 days paused it is deleted for

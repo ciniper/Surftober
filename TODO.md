@@ -1,23 +1,21 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Backup heartbeats — templates ready, 2 Chase actions** (2026-09-01):
-      both backups can fail silently; success-pings are now wired into the
-      templates, disabled until a URL is set.
-      (1) Sheets mirror: healthchecks check "surftober-sheets-mirror"
-      (Period 1 day, Grace 6h) → paste its URL into PING_URL at the top of
-      backup/sheets-mirror.gs → re-paste the whole file into Apps Script.
-      (2) pg_dump: check "surftober-pg-dump" (Period 3 days, Grace 1 day) →
-      in the PRIVATE ciniper/surftober-backup repo add secret
-      BACKUP_PING_URL + copy the new final step from backup/backup.yml
-      into its .github/workflows/backup.yml (or re-copy the whole file).
-- [ ] **Surf-report staleness heartbeat — SQL ready, needs 2 Chase actions**
-      (reliability priority #2): (1) healthchecks.io → new check
-      "surftober-surf-report", Period 30 min, Grace 1h; (2) paste the
-      heartbeat section from the bottom of the upgrade SQL file with the
-      ping-URL placeholder replaced. Alerts ~3.5h after the fetcher goes
-      silent for any reason — this also closes out the "Watch: Surfline 403"
-      item below (the watch becomes automated).
+- [ ] **Sheets-mirror heartbeat — confirm first ping** (Chase wired the
+      check + URL into Apps Script 2026-09-01). The ping fires at the END of
+      a successful mirror() run: either run mirror() once by hand in the
+      Apps Script editor to confirm now, or wait for tonight's 3am trigger.
+      (The pg_dump-repo heartbeat was dropped with the repo itself — see the
+      backup posture note in backup/README.md.)
+
+- [ ] **Surf-report staleness heartbeat — installed 2026-09-01, confirm
+      first ping** (reliability priority #2): Chase created the check +
+      ran the SQL; the cron pings every 30 min while surf_report is fresh.
+      Green with "Last ping: N min ago" closes this AND the "Watch:
+      Surfline 403" item below (the watch is now automated). If still "New"
+      after ~40 min: placeholder UUID left in the function, or check
+      `select jobname, active from cron.job where jobname =
+      'surf-report-heartbeat';`.
 - [ ] **Leaderboard revamp** — spruce it up, possibly make it the app's main/landing
       tab, add "a lot of cool stuff" (Chase's call on direction; scoped later).
 
@@ -60,11 +58,15 @@
 - [ ] **Downgrade Supabase Pro after October** (~early November) — Pro is ON
       as of 2026-09-01 (Chase). 250 GB egress makes the old October
       egress-watch moot; glance at Settings → Usage once before downgrading
-      just to know the season's numbers. WHEN DOWNGRADING: the keepalive
-      cron becomes load-bearing again (free tier auto-pauses) — add a
-      success-ping to docs/api/keepalive.js + a healthchecks check
-      ("surftober-keepalive", Period 1 day, Grace 12h) at that point, not
-      before (on Pro a keepalive failure has zero user impact).
+      just to know the season's numbers. WHEN DOWNGRADING, two extra steps:
+      (1) take ONE manual pg_dump first (the private-repo pg_dump leg was
+      never set up — Chase, 2026-09-01 — so Pro's daily backups are the only
+      full-restore copy and they end at downgrade; a single dump freezes the
+      season: `supabase db dump --db-url "<session-pooler-url>" -f
+      surftober-2026.sql` plus `--data-only --schema auth -f auth.sql`,
+      stored somewhere PRIVATE — never this public repo);
+      (2) nothing needed for keepalive — its healthcheck ping shipped
+      2026-09-01 (KEEPALIVE_PING_URL env var in Vercel).
 
 ## Open items
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
@@ -173,10 +175,13 @@
 - [ ] Rotate the Google OAuth client secret (the old one passed through chat during
       the June 2026 recovery). Google Cloud Console → create new secret → paste into
       Supabase Auth provider → delete old secret.
-- [ ] Restore drill before October: restore the pg_dump backup into a scratch
-      Supabase project, including one fresh sign-up (see `backup/README.md`).
-      Note: storage buckets aren't in pg_dump — re-run supabase-setup.sql's
-      storage section as part of the drill.
+- [ ] Restore drill before October (RESCOPED 2026-09-01: no pg_dump repo —
+      Chase skipped that leg): take a one-off manual pg_dump (commands in the
+      downgrade item above), restore it into a scratch Supabase project, and
+      do one fresh sign-up there (see `backup/README.md`). Note: storage
+      buckets aren't in pg_dump — re-run supabase-setup.sql's storage section
+      as part of the drill. Alternative that also counts: test Supabase Pro's
+      own point-in-time restore into a new project.
 - [ ] Optional: encrypt pg_dump backups with `age` (see backup/README.md
       "Optional hardening").
 
