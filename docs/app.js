@@ -1861,14 +1861,13 @@ function toCSV(rows) {
 // pins user_id = auth.uid() + a matching display name. Export remains below.)
 
 function renderTabs() {
-  const hash = location.hash.replace('#', '') || 'log';
+  const hash = location.hash.replace('#', '') || 'leaderboard'; // Main is the landing tab (Chase, 2026-09-04)
   const el = document.getElementById('page-' + hash);
   // Hidden pages (admin-only, or Log/Account in viewer mode) use inline
-  // display:none, which overrides the .active class — bounce to Log, or to
-  // the Leaderboard when Log itself is hidden (viewer), not a blank page.
+  // display:none, which overrides the .active class — bounce to Main, which
+  // is never hidden, rather than showing a blank page.
   if (el && el.style.display === 'none') {
-    const log = document.getElementById('page-log');
-    location.hash = log && log.style.display === 'none' ? '#leaderboard' : '#log';
+    location.hash = '#leaderboard';
     return;
   }
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
@@ -2941,7 +2940,7 @@ function renderLeaderboard() {
   if (!totals.length) {
     const tile = document.getElementById('totals-tile');
     if (tile) tile.hidden = true;
-    document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet. First wave wins.</div>';
+    document.getElementById('leaderboard').innerHTML = '<div class="hint">Nobody on the board yet.</div>';
     return;
   }
   totals.sort((a, b) => {
@@ -3493,12 +3492,25 @@ function hoffMeter(rel, maxFt, color){
 
 // ===== "Today at Surftober" tile ===========================================
 // Day stats plus a featured session. Arrows page backward through previous
-// days (event start → today) and through that day's sessions; the default
-// pick per day is deterministic (day number modulo count) so everyone sees
-// the same feature until they start browsing. Browse state lives in module
-// vars so realtime re-renders don't yank the reader elsewhere.
-let todayTileDate = null; // 'YYYY-MM-DD' being viewed; null = today
-let todayTileIdx = null;  // session index within the day; null = daily default
+// days (event start → today) and through that day's sessions.
+// AUTO mode (no arrows touched) shows today — or, when nothing has been
+// logged yet today, the most recent day that HAS sessions, so the tile is
+// never a blank "nothing yet" box (Chase, 2026-09-04).
+// The featured session is random ONCE PER VISIT: seeded at page load and
+// weighted toward sessions with a journal or photo. It must stay put across
+// the constant realtime re-renders — a per-render random would swap the
+// feature mid-read. Browse state lives in module vars for the same reason.
+let todayTileDate = null; // 'YYYY-MM-DD' being viewed; null = auto (today, else last active day)
+let todayTileIdx = null;  // session index within the day; null = per-visit weighted random
+const todayTileSeed = Math.floor(Math.random() * 0x7fffffff);
+
+// Stable pseudo-random in [0,1) for this visit + a key (the day), so
+// browsing to another day gets a different — but equally stable — feature.
+function seededFraction(key){
+  let h = todayTileSeed ^ 0x9e3779b9;
+  for (const ch of String(key)) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return ((h >>> 0) % 1000003) / 1000003;
+}
 
 function renderTodayTile(){
   const box = document.getElementById('today-tile');
@@ -3507,27 +3519,42 @@ function renderTodayTile(){
   if (!isViewingActiveEvent()) { box.hidden = true; return; }
   const ev = viewedEvent || DEFAULT_EVENT;
   const today = todayStr();
-  let day = todayTileDate || today;
-  if (day > today) day = today;
-  if (day < ev.start_date) day = ev.start_date;
 
   const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const shiftDay = (from, off) => { const d = SurftoberAwards.localDate(from); d.setDate(d.getDate() + off); return iso(d); };
+  const all = loadSessions().map(SurftoberAwards.normalizeSession);
+  const onDay = (d) => all.filter((s) => String(s.date).slice(0, 10) === d);
 
-  const sessions = loadSessions().map(SurftoberAwards.normalizeSession)
-    .filter((s) => String(s.date).slice(0, 10) === day)
+  let day = todayTileDate || today;
+  if (day > today) day = today;
+  if (day < ev.start_date) day = ev.start_date;
+  // Auto mode with an empty today → the latest day that has sessions
+  let fellBack = false;
+  if (!todayTileDate && !onDay(day).length) {
+    const activeDays = Array.from(new Set(all.map((s) => String(s.date).slice(0, 10))))
+      .filter((d) => d >= ev.start_date && d <= today)
+      .sort();
+    if (activeDays.length) { day = activeDays[activeDays.length - 1]; fellBack = true; }
+  }
+
+  const sessions = onDay(day)
     .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
   const totalMins = sessions.reduce((a, s) => a + s.base_minutes, 0);
   const surfers = new Set(sessions.map((s) => (s.user || '').trim()).filter(Boolean));
   const isToday = day === today;
+  const isYesterday = day === shiftDay(today, -1);
   const stat = sessions.length
     ? `<strong>${sessions.length}</strong> session${sessions.length === 1 ? '' : 's'} · <strong>${(totalMins / 60).toFixed(1)} h</strong> · ${surfers.size} surfer${surfers.size === 1 ? '' : 's'}`
-    : (isToday ? 'No sessions yet — first wave wins' : 'No sessions this day');
+    : (isToday ? 'Nothing logged yet today' : 'No sessions this day');
 
   let idx = todayTileIdx;
   if (idx == null) {
-    const dayN = Math.floor(SurftoberAwards.localDate(day).getTime() / 86400000);
-    idx = sessions.length ? dayN % sessions.length : 0;
+    // Weighted per-visit random: a session with a journal or photo makes a
+    // far better feature than a bare duration line, so those weigh 3x.
+    const weights = sessions.map((s) => (String(s.notes || '').trim() || s.photo_url) ? 3 : 1);
+    let r = seededFraction(day) * weights.reduce((a, b) => a + b, 0);
+    idx = 0;
+    for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r < 0) { idx = i; break; } }
   }
   idx = Math.min(Math.max(0, idx), Math.max(0, sessions.length - 1));
 
@@ -3552,7 +3579,12 @@ function renderTodayTile(){
     </div>`;
   }
 
-  const label = isToday ? 'Today at Surftober' : `${esc(fmtDay(day))} at Surftober`;
+  const label = isToday ? 'Today at Surftober'
+    : isYesterday ? 'Yesterday at Surftober'
+    : `${esc(fmtDay(day))} at Surftober`;
+  const fallbackNote = fellBack
+    ? '<div class="hint today-fallback">Nothing logged yet today — showing the latest session day.</div>'
+    : '';
   const dayNav =
     `<button type="button" class="today-nav" data-nav="day-prev" aria-label="Previous day"${day > ev.start_date ? '' : ' disabled'}>‹</button>` +
     ` <span class="surf-label">📅 ${label}</span> ` +
@@ -3560,10 +3592,13 @@ function renderTodayTile(){
 
   box.innerHTML = `<div class="surf-main today-card">
     <div class="today-head"><span class="today-day-nav">${dayNav}</span><span class="today-stat">${stat}</span></div>
+    ${fallbackNote}
     ${feature}
   </div>`;
   box.hidden = false;
 
+  // Arrow taps switch to MANUAL mode (an explicit date), so the fallback
+  // stops steering and the reader can walk to today's empty state if they want.
   box.querySelectorAll('.today-nav').forEach((b) => b.addEventListener('click', () => {
     const nav = b.getAttribute('data-nav');
     if (nav === 'day-prev') { todayTileDate = shiftDay(day, -1); todayTileIdx = null; }

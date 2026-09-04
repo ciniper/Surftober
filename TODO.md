@@ -1,7 +1,14 @@
 # Surftober TODO
 
 ## Next up
-(nothing queued — pre-October decisions live under Scoped; see Open items)
+- [ ] **Mobile bottom tab bar — ON BRANCH `mobile-nav`, awaiting Chase's
+      verdict from the Vercel preview** (2026-09-04). Branch = main + the
+      phone-only CSS (fixed bottom .tabs, one-row header, footer/toast
+      clearance). Push the branch → Vercel preview URL → check on the
+      phone (installed-PWA safe area especially). Approve: merge into main.
+      Reject: delete the branch; main is untouched. Sign-in on a preview URL
+      needs a Supabase redirect-allowlist wildcard for *.vercel.app previews
+      (Authentication → URL Configuration), otherwise view mode only.
 
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
@@ -57,6 +64,13 @@
       Micro → Nano (another ~2-min restart; do it in the off-season quiet).
 
 ## Open items
+- [ ] **Improve the log-addition animations** (Chase, 2026-09-04) — the
+      post-submit `celebrate` splash (1.1 s fade/pop with a random
+      STOKE_LINES quip) is functional but plain. Ideas: show the SCORED
+      hours + any bonus that applied ("+2:00 · No Wetsuit ×2"), a wave or
+      confetti motion instead of the pop, per-type lines (cleanup, water
+      reading), and a smoother hand-off into the Sessions list (highlight
+      the new row). Respect prefers-reduced-motion as today.
 - [ ] **Capture October's analytics before they roll off** — Vercel Web
       Analytics (added v1.27.1) has a **1-month reporting window on Hobby**,
       so October's numbers disappear from the dashboard during November.
