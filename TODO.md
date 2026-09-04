@@ -1,14 +1,7 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Mobile bottom tab bar — ON BRANCH `mobile-nav`, awaiting Chase's
-      verdict from the Vercel preview** (2026-09-04). Branch = main + the
-      phone-only CSS (fixed bottom .tabs, one-row header, footer/toast
-      clearance). Push the branch → Vercel preview URL → check on the
-      phone (installed-PWA safe area especially). Approve: merge into main.
-      Reject: delete the branch; main is untouched. Sign-in on a preview URL
-      needs a Supabase redirect-allowlist wildcard for *.vercel.app previews
-      (Authentication → URL Configuration), otherwise view mode only.
+- _(nothing queued — pick from Open items)_
 
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
@@ -175,10 +168,6 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
-- **Bottom menu bar on mobile?** (Chase, Crew Board 2026-08-17) — dock the
-  tab strip to the bottom on phones for thumb reach; needs safe-area-inset
-  padding and the same active-state styling. Decide before October so the
-  crew doesn't relearn navigation mid-event.
 - **Photo session bonus??** (Chase, Crew Board 2026-09-01) — bonus hours for
   attaching a session photo. Scoring TBD — keep it one-time (like costume)
   or tiny, so it isn't farmable; pairs with the photo-wall idea below.
@@ -204,6 +193,19 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Mobile bottom tab bar~~ (v1.43.0, 2026-09-04 — merged from the
+      `mobile-nav` branch after Chase approved the Vercel preview; closes the
+      2026-08-17 Crew Board idea. Phones ≤640px get a fixed bottom `.tabs`
+      bar with safe-area padding; the header is one row: wordmark → Main,
+      dark-mode toggle, Google Photos button. **Switch styles with one
+      flag:** `window.MOBILE_BOTTOM_NAV` at the top of the `<head>` in
+      docs/index.html — `true` = bottom bar, `false` = the original header
+      tabs. Flip, push, Vercel rebuilds; nothing else to bump. The bar CSS
+      is scoped under `html.bottom-nav`, so `false` restores v1.42 exactly.
+      Per-device override without a deploy: `?nav=top` / `?nav=bottom`
+      sticks on that device, `?nav=auto` clears it. The flag lives in
+      `<head>`, not version.js, so it applies before first paint — no
+      header-tabs flash on load.)
 - [x] ~~Leaderboard revamp~~ (Chase declared complete 2026-09-01 — it shipped
       incrementally: the Main tab is now the totals tile (hours-first),
       the browsable Today tile, the OB conditions + tide + water-quality

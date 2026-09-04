@@ -3,6 +3,10 @@
 // deploy lands. Use it to confirm a push made it through the CDN + caches.
 window.APP_VERSION = 'v1.43.0 · 2026-09-04';
 
+// Nav style flag (bottom tab bar vs header tabs on phones) is NOT here: it is
+// window.MOBILE_BOTTOM_NAV in the <head> of index.html, so it applies before
+// first paint. Flip it there and push.
+
 // Crew photo album (Google Photos shared link). Lives HERE, not app.js,
 // because this file is network-first: edit the link, push, done — no
 // ?v= bump or SW cache dance needed. Empty string hides the 📷 button
