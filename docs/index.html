@@ -10,6 +10,28 @@
   <link rel="stylesheet" href="./styles.css" />
   <meta name="theme-color" content="#fff8f0" />
   <script>
+  // ── Nav style flag (phones, ≤640px) ─────────────────────────────────────
+  //   true  = bottom tab bar (default since v1.43.0)
+  //   false = the original header tabs
+  // Flip the value, push, done — Vercel rebuilds, no cache ritual.
+  // Per-device override for testing WITHOUT a deploy: open the app with
+  // ?nav=top or ?nav=bottom (remembered on that device); ?nav=auto forgets it.
+  // This lives in <head> rather than version.js so the class is on <html>
+  // before first paint — otherwise the header tabs would flash, then jump.
+  window.MOBILE_BOTTOM_NAV = true;
+  (function () {
+    var pref = null;
+    try {
+      var q = new URLSearchParams(location.search).get('nav');
+      if (q === 'top' || q === 'bottom') { localStorage.setItem('surftober.nav', q); pref = q; }
+      else if (q === 'auto') { localStorage.removeItem('surftober.nav'); }
+      else { pref = localStorage.getItem('surftober.nav'); }
+    } catch (e) {}
+    var bottom = pref ? pref === 'bottom' : !!window.MOBILE_BOTTOM_NAV;
+    document.documentElement.classList.toggle('bottom-nav', bottom);
+  })();
+  </script>
+  <script>
   // Redirect to landing page if not coming from auth flow or already in app
   (function() {
     // Auth callbacks belong to the register page. If a sign-in redirect lands
