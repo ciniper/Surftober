@@ -441,3 +441,16 @@ a.photo-zoom { cursor: zoom-in; display: inline-block; }
 .brand-link { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; }
 .today-fallback { font-size: 12px; margin-top: 4px; }
 }
+
+/* mobile-nav branch: bottom tab bar on phones (Chase's board idea, 2026-08-17).
+   The two-row sticky header ate ~100px of every phone screen — nav moves to
+   thumb reach and the header becomes one slim row. Desktop keeps tabs inline.
+   The single <nav class="tabs"> serves both layouts (CSS only), so the
+   viewer/admin tab-visibility logic in app.js is untouched. */
+@media (max-width: 640px) {
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 2px solid var(--accent); justify-content: space-around; gap: 4px; overflow: visible; }
+  .tabs a { flex: 1 1 0; text-align: center; padding: 11px 4px; font-size: 14px; line-height: 1.2; border-radius: 10px; }
+  .app-header { flex-wrap: nowrap; }
+  /* keep the footer text and toasts clear of the bar */
+  .app-footer { padding-bottom: calc(10px + 72px + env(safe-area-inset-bottom)); }
+  .toast-container { bottom: calc(16px + 72px + env(safe-area-inset-bottom)); }
