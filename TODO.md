@@ -205,7 +205,11 @@
       Per-device override without a deploy: `?nav=top` / `?nav=bottom`
       sticks on that device, `?nav=auto` clears it. The flag lives in
       `<head>`, not version.js, so it applies before first paint — no
-      header-tabs flash on load.)
+      header-tabs flash on load. **v1.44.0:** Account → Navigation card
+      (phones only, hidden ≥641px) switches Bottom bar / Header tabs live
+      and writes the same key — needed because the installed iOS app has
+      no address bar and its storage is separate from Safari's, so the
+      `?nav=` URL can't reach it.)
 - [x] ~~Leaderboard revamp~~ (Chase declared complete 2026-09-01 — it shipped
       incrementally: the Main tab is now the totals tile (hours-first),
       the browsable Today tile, the OB conditions + tide + water-quality

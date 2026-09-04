@@ -1,7 +1,7 @@
 // Surftober deploy marker — bump APP_VERSION on every deploy.
 // Served network-first (see sw.js), so the live value updates the moment a
 // deploy lands. Use it to confirm a push made it through the CDN + caches.
-window.APP_VERSION = 'v1.43.0 · 2026-09-04';
+window.APP_VERSION = 'v1.44.0 · 2026-09-04';
 
 // Nav style flag (bottom tab bar vs header tabs on phones) is NOT here: it is
 // window.MOBILE_BOTTOM_NAV in the <head> of index.html, so it applies before

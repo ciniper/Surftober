@@ -3106,6 +3106,34 @@ function renderMessageBoard(){
   box.hidden = !allMessages.length && !canPost;
 }
 
+// Account → Navigation: bottom bar vs header tabs on phones. Uses the SAME
+// storage key ('surftober.nav') and <html class="bottom-nav"> as the ?nav=
+// override in index.html's <head>, so the flag, the URL, and this control can
+// never disagree. Exists because the installed iOS app has no address bar and
+// separate storage from Safari. Phones only: the card is display:none above
+// 640px, and the CSS it toggles is scoped to ≤640px anyway.
+function reflectNavStyleToggle(){
+  const bottom = document.documentElement.classList.contains('bottom-nav');
+  document.querySelectorAll('#nav-style-card [data-nav]').forEach((b) => {
+    const on = (b.dataset.nav === 'bottom') === bottom;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function attachNavStyleHandlers(){
+  const card = document.getElementById('nav-style-card');
+  if (!card) return;
+  card.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-nav]');
+    if (!btn) return;
+    const v = btn.dataset.nav === 'top' ? 'top' : 'bottom';
+    try { localStorage.setItem('surftober.nav', v); } catch {}
+    document.documentElement.classList.toggle('bottom-nav', v === 'bottom');
+    reflectNavStyleToggle();
+  });
+  reflectNavStyleToggle();
+}
+
 function attachMessageBoardHandlers(){
   const form = document.getElementById('msg-form');
   const list = document.getElementById('msg-list');
@@ -3727,6 +3755,7 @@ window.addEventListener('load', () => {
   attachAudioHandlers();
   attachPhotoHandlers();
   attachMessageBoardHandlers();
+  attachNavStyleHandlers();
   reflectEventUI();
   renderMyStats();
   renderLeaderboard();
