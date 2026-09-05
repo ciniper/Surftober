@@ -29,8 +29,10 @@
         only "is a Google account", behind the club password). Supabase
         returns one generic error for wrong-password vs no-account by
         design — the copy must say both.
-      · NO "set a password" for Google accounts (Chase #3). No second-
-        account handling beyond that message (Chase #2) — Supabase already
+      · NO "set a password" for Google accounts (Chase #3), and no fallback
+        door for a Google user who loses their Google account — "not our
+        issue" (Chase, 09-04); don't re-propose. No second-account
+        handling beyond that message (Chase #2) — Supabase already
         refuses a duplicate sign-up (obfuscated success, empty
         `identities`); the same RPC decides the copy.
       · Password account made with a Gmail + later Google tap → auto-links
