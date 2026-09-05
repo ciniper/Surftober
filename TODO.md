@@ -4,6 +4,55 @@
 - _(nothing queued — pick from Open items)_
 
 ## Scoped, awaiting a go
+- [ ] **Email + password sign-in (verify once, then password)** — SCOPED
+      2026-09-04 from Chase's decisions, awaiting his go. ~3 h build + a
+      10-min Supabase check. Why over magic link: a link tapped in Mail
+      opens Safari, so the session lands there and not in the installed
+      app (repeats on every re-auth for every non-Google friend); one email
+      per person EVER instead of one per device; links expire in an hour
+      and mail-app prefetch can burn them. Google stays the headline
+      button; magic link stays too unless Chase says otherwise.
+      · "Confirm email" stays ON: one confirmation at sign-up, done as a
+        6-digit code typed IN the app (`{{ .Token }}` in the Confirm-signup
+        template + `verifyOtp({type:'signup'})`), never again — sessions
+        persist per device exactly like Google today. Password reset uses
+        the same code style (`type:'recovery'`). Keeping confirmation ON is
+        what makes Supabase's same-email auto-linking SAFE: with it OFF,
+        anyone behind the club gate could pre-register a friend's Gmail
+        and inherit their account when the friend next taps Google.
+      · Flow on register.html after the club gate: email → Continue → RPC
+        `sign_in_method_for_email(email)` (security definer, anon-callable,
+        reads auth.identities, returns 'google' | 'other' ONLY) → if
+        'google': hide the password field, show "This email signed up with
+        Google" + the Google button (Chase #1). Else: password field +
+        Create account / Sign in. Enumeration tradeoff accepted (reveals
+        only "is a Google account", behind the club password). Supabase
+        returns one generic error for wrong-password vs no-account by
+        design — the copy must say both.
+      · NO "set a password" for Google accounts (Chase #3). No second-
+        account handling beyond that message (Chase #2) — Supabase already
+        refuses a duplicate sign-up (obfuscated success, empty
+        `identities`); the same RPC decides the copy.
+      · Password account made with a Gmail + later Google tap → auto-links
+        into the SAME account (both emails verified) — desired (Chase #4).
+        Page copy: "use the same email you'd use with Google", because a
+        different email = a second account with its own hours (the
+        display-name uniqueness guard catches the obvious case only).
+      · Auth settings: leaked-password protection ON (Pro), min length 8.
+      · PREREQ: which mailer sends auth emails? Supabase's built-in SMTP is
+        dev-grade and limited to a few emails/hour — an Oct 1 sign-up burst
+        would stall. Check Dashboard → Authentication → Emails → SMTP
+        Settings; if built-in, set up custom SMTP (Resend/Brevo free tier)
+        BEFORE this ships (it also helps today's magic links).
+      · Verify before ship with throwaway accounts, inside the installed
+        PWA: (a) Google-account email → Google-button message, (b)
+        password-then-Google auto-link keeps profile + sessions, (c) code
+        confirm + code recovery never leave the app.
+      · Touchpoints: register.html sign-in block (`btn-google-auth`,
+        `btn-magic-auth`, `magic-email-section`), app.js `signInWithOtp`
+        path (~line 524) gets a password sibling; the four email-display
+        spots need nothing (a password account has an email).
+
 - [ ] **Decide re-registration for October — September is the trial**
       (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
       runs on the CURRENT behavior on purpose: it's a test event, so the
