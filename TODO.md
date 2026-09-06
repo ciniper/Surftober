@@ -249,10 +249,11 @@
         `identities`); the same RPC decides the copy.
       · Password account made with a Gmail + later Google tap → auto-links
         into the SAME account (both emails verified) — desired (Chase #4).
-        Page copy under the email field points Googlers BACK to the Google
-        button ("Signed up with Google before? Use the Google button above
-        instead") — Chase: don't encourage Google users to use the password
-        door. Same release: landing "Sign In" now lands on
+        No helper text under the email field at all (Chase: nothing that
+        nudges Google users toward the password door); the register screen
+        says "Register an account" / "Register with Google Account" with
+        "(preferred option)" above the button, sign-in mode says "Sign In" /
+        "Sign in with Google" with no subtext. Same release: landing "Sign In" now lands on
         `register.html?mode=signin`, which hides the registration pitch and
         titles the box "Sign In" (register mode says "Sign in to register").
       · Auth settings: leaked-password protection ON (Pro), min length 8.
