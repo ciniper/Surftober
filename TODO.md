@@ -252,8 +252,9 @@
         Page copy under the email field points Googlers BACK to the Google
         button ("Signed up with Google before? Use the Google button above
         instead") — Chase: don't encourage Google users to use the password
-        door. (A different email = a second account with its own hours; the
-        display-name uniqueness guard catches the obvious case only.)
+        door. Same release: landing "Sign In" now lands on
+        `register.html?mode=signin`, which hides the registration pitch and
+        titles the box "Sign In" (register mode says "Sign in to register").
       · Auth settings: leaked-password protection ON (Pro), min length 8.
       · PREREQ: which mailer sends auth emails? Supabase's built-in SMTP is
         dev-grade and limited to a few emails/hour — an Oct 1 sign-up burst

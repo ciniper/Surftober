@@ -4,6 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Register - Surftober 2026</title>
+  <script>
+    // Same page serves registration and sign-in; flag sign-in before first
+    // paint so the welcome pitch never flashes for returning members.
+    if (new URLSearchParams(location.search).get('mode') === 'signin') {
+      document.documentElement.classList.add('signin-mode');
+      document.title = 'Sign In - Surftober 2026';
+    }
+  </script>
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
   <link rel="apple-touch-icon" href="./logo.svg" />
   <link rel="stylesheet" href="./styles.css" />
@@ -199,6 +207,9 @@
     .hidden {
       display: none;
     }
+    /* ?mode=signin (landing "Sign In" → index.html?mode=signin → here): a
+       returning member wants the sign-in box, not the registration pitch. */
+    .signin-mode .welcome-message { display: none; }
     /* This page is always dark — pin colors that styles.css derives from the
        (light-by-default) theme vars so they stay readable here. */
     .form-section small a { color: #ff6b35; }
@@ -238,7 +249,7 @@
     </div>
 
     <div class="form-section hidden" id="auth-section">
-      <h2>Sign In</h2>
+      <h2 id="auth-title">Sign in to register</h2>
       <div class="auth-method">
         <button id="btn-google-auth" type="button" class="btn-register">Sign in with Google</button>
       </div>
@@ -602,6 +613,7 @@
     // password) set one via a recovery code. The RPC sign_in_method_for_email
     // (supabase-upgrade-2026-09-password-signin.sql) decides which step shows.
     const byId = (id) => document.getElementById(id);
+    if (document.documentElement.classList.contains('signin-mode')) byId('auth-title').textContent = 'Sign In';
     const pw = { email: '', mode: null }; // mode: 'signup' | 'recovery' | 'setpass'
     const PW_STEPS = ['pw-step-email', 'pw-step-google', 'pw-step-password', 'pw-step-code'];
     function showStep(id){

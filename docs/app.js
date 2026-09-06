@@ -152,8 +152,9 @@ async function initSupabase(){
   // Check if user clicked "Sign In" from landing page
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('mode') === 'signin' && !currentUser) {
-    // Redirect to register page which has sign-in options
-    window.location.href = './register.html';
+    // Redirect to the register page's sign-in box (mode=signin hides the
+    // registration pitch there)
+    window.location.href = './register.html?mode=signin';
     return;
   }
   
