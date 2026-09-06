@@ -210,8 +210,11 @@
     /* ?mode=signin (landing "Sign In" → index.html?mode=signin → here): a
        returning member wants the sign-in box, not the registration pitch. */
     .signin-mode .welcome-message { display: none; }
-    .auth-preferred { margin: 0.4rem 0 0; text-align: center; color: #7a9bb5; font-size: 14px; }
+    .auth-preferred { margin: 0.75rem 0 0; color: #7a9bb5; font-size: 14px; }
+    .auth-preferred + .auth-method { margin-top: 0.35rem; }
     .signin-mode .auth-preferred { display: none; }  /* registration only */
+    .auth-label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    .auth-email-row { max-width: 480px; }
     /* This page is always dark — pin colors that styles.css derives from the
        (light-by-default) theme vars so they stay readable here. */
     .form-section small a { color: #ff6b35; }
@@ -251,20 +254,19 @@
     </div>
 
     <div class="form-section hidden" id="auth-section">
-      <h2 id="auth-title">Sign in to register</h2>
-      <div class="auth-method">
-        <button id="btn-google-auth" type="button" class="btn-register">Sign in with Google</button>
-      </div>
+      <h2 id="auth-title">Register an account</h2>
       <p class="auth-preferred">(preferred option)</p>
+      <div class="auth-method">
+        <button id="btn-google-auth" type="button" class="btn-register">Register with Google Account</button>
+      </div>
       <p class="auth-divider"><span>or use email + password</span></p>
 
       <div id="pw-step-email" class="auth-step">
-        <label>
-          Email
+        <label class="auth-label" for="auth-email">Email</label>
+        <div class="gate-row auth-email-row">
           <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="username" required />
-          <small>Signed up with Google before? Use the Google button above instead.</small>
-        </label>
-        <button id="btn-pw-continue" type="button" class="btn-register">Continue</button>
+          <button id="btn-pw-continue" type="button" class="btn-register">Continue</button>
+        </div>
       </div>
 
       <div id="pw-step-google" class="auth-step hidden">
@@ -616,7 +618,10 @@
     // password) set one via a recovery code. The RPC sign_in_method_for_email
     // (supabase-upgrade-2026-09-password-signin.sql) decides which step shows.
     const byId = (id) => document.getElementById(id);
-    if (document.documentElement.classList.contains('signin-mode')) byId('auth-title').textContent = 'Sign In';
+    if (document.documentElement.classList.contains('signin-mode')) {
+      byId('auth-title').textContent = 'Sign In';
+      byId('btn-google-auth').textContent = 'Sign in with Google';
+    }
     const pw = { email: '', mode: null }; // mode: 'signup' | 'recovery' | 'setpass'
     const PW_STEPS = ['pw-step-email', 'pw-step-google', 'pw-step-password', 'pw-step-code'];
     function showStep(id){
