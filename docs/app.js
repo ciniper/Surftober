@@ -520,11 +520,6 @@ function enforceProfileNameOnUI(){
   }
 }
 
-async function signInMagicLink(email){
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-  if (error) throw error;
-}
-
 async function signOut(){
   try {
     await sb.auth.signOut();
@@ -1152,21 +1147,10 @@ async function insertCloud(row){
 }
 
 function attachAccountHandlers(){
-  const emailEl = document.getElementById('auth-email');
-  const btnMagic = document.getElementById('btn-magic-link');
   const btnOut = document.getElementById('btn-signout');
   const btnSaveName = document.getElementById('btn-save-name');
   const btnGoogle = document.getElementById('btn-google');
   const btnDeleteCloud = document.getElementById('btn-delete-cloud');
-  if (btnMagic) btnMagic.addEventListener('click', async () => {
-    try {
-      if (!emailEl.value) return alert('Enter an email');
-      await signInMagicLink(emailEl.value);
-      document.getElementById('account-status').textContent = 'Magic link sent. Check your email.';
-    } catch (e) {
-      document.getElementById('account-status').textContent = 'Error: ' + e.message;
-    }
-  });
   if (btnGoogle) btnGoogle.addEventListener('click', async () => {
     try {
       await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
