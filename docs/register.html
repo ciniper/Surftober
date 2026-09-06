@@ -106,12 +106,23 @@
       padding: 10px 12px;
       margin-top: 8px;
     }
-    #magic-email-section {
-      margin-top: 1rem;
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0 1rem;
+      color: #7a9bb5;
+      font-size: 14px;
     }
-    #btn-send-magic {
-      margin-top: 0.25rem;
-    }
+    .auth-divider::before,
+    .auth-divider::after { content: ''; flex: 1; border-top: 1px solid #2d4a62; }
+    .auth-step label { margin-bottom: 1rem; }
+    .auth-note { color: #e8f4f8; margin: 0 0 0.75rem; line-height: 1.45; }
+    .auth-method.compact { margin-top: 0.25rem; }
+    .auth-links { margin: 0.75rem 0 0; font-size: 14px; }
+    .auth-links a { color: #ff6b35; }
+    /* .hidden alone loses to ".form-section label { display:block }" */
+    .auth-step.hidden, .auth-step .hidden, .auth-links .hidden { display: none !important; }
     .actions {
       margin-top: 0.5rem;
     }
@@ -227,20 +238,59 @@
     </div>
 
     <div class="form-section hidden" id="auth-section">
-      <h2>Choose Sign In Method</h2>
+      <h2>Sign In</h2>
       <div class="auth-method">
-        <button id="btn-google-auth" class="btn-register">Sign in with Google</button>
-        <button id="btn-magic-auth" class="btn-signin">Magic Link (Email)</button>
+        <button id="btn-google-auth" type="button" class="btn-register">Sign in with Google</button>
       </div>
-      
-      <div id="magic-email-section" class="hidden">
+      <p class="auth-divider"><span>or use email + password</span></p>
+
+      <div id="pw-step-email" class="auth-step">
         <label>
-          Email Address
-          <input type="email" id="auth-email" placeholder="you@example.com" required />
+          Email
+          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="username" required />
+          <small>Signed up with Google before? Use the Google button above instead.</small>
         </label>
-        <button id="btn-send-magic">Send Magic Link</button>
-        <p class="hint" id="magic-status"></p>
+        <button id="btn-pw-continue" type="button" class="btn-register">Continue</button>
       </div>
+
+      <div id="pw-step-google" class="auth-step hidden">
+        <p class="auth-note">This email signed up with Google — use the Google button.</p>
+        <div class="auth-method compact">
+          <button id="btn-google-auth-2" type="button" class="btn-register">Sign in with Google</button>
+        </div>
+      </div>
+
+      <div id="pw-step-password" class="auth-step hidden">
+        <label>
+          Password
+          <input type="password" id="auth-password" autocomplete="current-password" minlength="8" />
+          <small>At least 8 characters. New here? Pick a password and hit Create account.</small>
+        </label>
+        <div class="auth-method compact">
+          <button id="btn-pw-signin" type="button" class="btn-register">Sign in</button>
+          <button id="btn-pw-create" type="button" class="btn-signin">Create account</button>
+        </div>
+        <p class="auth-links"><a href="#" id="link-pw-forgot">Forgot your password?</a></p>
+      </div>
+
+      <div id="pw-step-code" class="auth-step hidden">
+        <p class="auth-note" id="pw-code-note"></p>
+        <label>
+          6-digit code
+          <input type="text" id="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+        </label>
+        <label id="pw-newpass-label" class="hidden">
+          New password
+          <input type="password" id="auth-new-password" autocomplete="new-password" minlength="8" />
+          <small>At least 8 characters.</small>
+        </label>
+        <div class="auth-method compact">
+          <button id="btn-pw-verify" type="button" class="btn-register">Continue</button>
+          <button id="btn-pw-resend" type="button" class="btn-signin">Resend code</button>
+        </div>
+      </div>
+
+      <p class="auth-links"><a href="#" id="link-pw-back" class="hidden">← Use a different email</a></p>
     </div>
 
     <form id="registration-form" class="form-section hidden">
@@ -401,7 +451,7 @@
 
     // A failed auth callback comes back as "#error=...&error_description=..."
     // and supabase-js just leaves it in the URL — surface it, otherwise a
-    // broken Google/magic-link return looks like the page did nothing.
+    // broken Google return looks like the page did nothing.
     (function surfaceAuthError(){
       try {
         const frag = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
@@ -409,7 +459,7 @@
         const desc = frag.get('error_description') || query.get('error_description');
         const code = frag.get('error') || query.get('error');
         if (desc || code) {
-          toast('Sign-in problem: ' + (desc || code) + ' — try again or use a magic link.', 'error');
+          toast('Sign-in problem: ' + (desc || code) + ' — try again.', 'error');
         }
       } catch (e) {}
     })();
@@ -455,8 +505,10 @@
     }
 
     let regFormShown = false; // run-once: see the guard below
+    let holdRegForm = false;  // code+new-password flow: set the password before the form/redirect runs
 
     async function showRegistrationForm() {
+      if (holdRegForm) return;
       // Run once per page load. Both the boot getUser() and onAuthStateChange
       // (INITIAL_SESSION, then hourly TOKEN_REFRESHED) land here — without
       // this guard the form double-initializes with doubled toasts, and a
@@ -464,7 +516,7 @@
       if (regFormShown) return;
       regFormShown = true;
       // Reaching here means they authenticated — that counts as being in the
-      // club (covers magic links opened on a device that never saw the gate).
+      // club (covers a Google return on a device that never saw the gate).
       localStorage.setItem('surftober.clubpass', '1');
       // select('*') stays deploy-order-safe while registered_event_id rolls out
       const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
@@ -484,8 +536,8 @@
       }
 
       // New user, or a returning member facing a new event: show the form.
-      // They're already authenticated (e.g. a magic link opened on another
-      // device), so the gate and sign-in sections are no longer relevant.
+      // They're already authenticated (e.g. back from Google), so the gate and
+      // sign-in sections are no longer relevant.
       document.getElementById('club-gate').classList.add('hidden');
       document.getElementById('auth-section').classList.add('hidden');
       document.getElementById('registration-form').classList.remove('hidden');
@@ -541,46 +593,207 @@
       }
     }
 
-    // Auth method buttons
-    document.getElementById('btn-google-auth').addEventListener('click', async () => {
+    // ── Sign in: Google, or email + password (verify once) ────────────────
+    // Decisions 2026-09-04 (TODO.md): Google is the headline. The password door
+    // confirms the email ONCE with a 6-digit code typed HERE — never a link,
+    // which would open Safari instead of the installed app. Google accounts
+    // never get a password: a Google-account email typed here is pointed back
+    // at the Google button. Magic-link-era accounts (email identity, no
+    // password) set one via a recovery code. The RPC sign_in_method_for_email
+    // (supabase-upgrade-2026-09-password-signin.sql) decides which step shows.
+    const byId = (id) => document.getElementById(id);
+    const pw = { email: '', mode: null }; // mode: 'signup' | 'recovery' | 'setpass'
+    const PW_STEPS = ['pw-step-email', 'pw-step-google', 'pw-step-password', 'pw-step-code'];
+    function showStep(id){
+      for (const step of PW_STEPS) byId(step).classList.toggle('hidden', step !== id);
+      byId('link-pw-back').classList.toggle('hidden', id === 'pw-step-email');
+    }
+
+    async function googleSignIn(){
       try {
-        // Use the full production URL for redirect
-        const redirectUrl = window.location.origin + window.location.pathname;
-        
-        await sb.auth.signInWithOAuth({ 
-          provider: 'google', 
-          options: { redirectTo: redirectUrl }
-        });
+        const options = { redirectTo: window.location.origin + window.location.pathname };
+        // Preselect the account they typed, so Google's multi-account chooser
+        // can't land them in a second Surftober account.
+        if (pw.email) options.queryParams = { login_hint: pw.email };
+        await sb.auth.signInWithOAuth({ provider: 'google', options });
       } catch (e) {
         toast('Google auth error: ' + e.message, 'error');
       }
-    });
+    }
+    byId('btn-google-auth').addEventListener('click', googleSignIn);
+    byId('btn-google-auth-2').addEventListener('click', googleSignIn);
 
-    document.getElementById('btn-magic-auth').addEventListener('click', () => {
-      document.getElementById('magic-email-section').classList.remove('hidden');
-    });
-
-    document.getElementById('btn-send-magic').addEventListener('click', async () => {
-      const email = document.getElementById('auth-email').value.trim();
-      if (!email) {
-        toast('Please enter an email address', 'error');
-        return;
+    function readEmail(){
+      const email = byId('auth-email').value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast('Enter a valid email address', 'error');
+        byId('auth-email').focus();
+        return null;
       }
+      return email;
+    }
+    function readPassword(id){
+      const v = byId(id).value;
+      if (v.length < 8) { toast('Password needs at least 8 characters', 'error'); byId(id).focus(); return null; }
+      return v;
+    }
+
+    // 'google' | 'needs_password' | 'other'. If the RPC isn't deployed yet (or
+    // fails) fall back to the password step — Supabase's own responses keep
+    // everything correct, the page is just less guided.
+    async function signInMethodFor(email){
       try {
-        // Use the full production URL for redirect
-        const redirectUrl = window.location.origin + window.location.pathname;
-        
-        const { error } = await sb.auth.signInWithOtp({ 
-          email, 
-          options: { emailRedirectTo: redirectUrl }
-        });
+        const { data, error } = await sb.rpc('sign_in_method_for_email', { p_email: email });
         if (error) throw error;
-        document.getElementById('magic-status').textContent = 'Magic link sent! Check your email and click the link to continue.';
-        toast('Magic link sent to ' + email, 'success');
+        return data || 'other';
       } catch (e) {
-        toast('Error sending magic link: ' + e.message, 'error');
+        console.warn('[register] sign_in_method_for_email unavailable:', e.message);
+        return 'other';
+      }
+    }
+
+    // Email a 6-digit code and show the code step. signup → the confirm-signup
+    // template; anything else → the reset-password template (recovery code).
+    async function sendCode(mode, note){
+      const { error } = mode === 'signup'
+        ? await sb.auth.resend({ type: 'signup', email: pw.email })
+        : await sb.auth.resetPasswordForEmail(pw.email);
+      if (error) throw error;
+      pw.mode = mode;
+      byId('pw-code-note').textContent = note;
+      byId('pw-newpass-label').classList.toggle('hidden', mode === 'signup');
+      byId('auth-code').value = '';
+      byId('auth-new-password').value = '';
+      showStep('pw-step-code');
+      byId('auth-code').focus();
+    }
+
+    byId('btn-pw-continue').addEventListener('click', async () => {
+      const email = readEmail(); if (!email) return;
+      pw.email = email;
+      const btn = byId('btn-pw-continue'); btn.disabled = true;
+      try {
+        const method = await signInMethodFor(email);
+        if (method === 'google') {
+          showStep('pw-step-google');
+        } else if (method === 'needs_password') {
+          await sendCode('setpass', `You signed in with a magic link before. We emailed a 6-digit code to ${email} — enter it and choose a password.`);
+        } else {
+          byId('auth-password').value = '';
+          showStep('pw-step-password');
+          byId('auth-password').focus();
+        }
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    byId('btn-pw-signin').addEventListener('click', async () => {
+      const password = byId('auth-password').value;
+      if (!password) { toast('Enter your password', 'error'); return; }
+      const btn = byId('btn-pw-signin'); btn.disabled = true;
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email: pw.email, password });
+        if (!error) return; // onAuthStateChange → showRegistrationForm()
+        if (error.code === 'email_not_confirmed' || /not confirmed/i.test(error.message)) {
+          await sendCode('signup', `Your account isn't confirmed yet. We emailed a fresh 6-digit code to ${pw.email}.`);
+        } else if (error.code === 'invalid_credentials' || /invalid login/i.test(error.message)) {
+          // Supabase deliberately won't say which — so we say both.
+          toast('Wrong password — or no account with this email yet. Try again, hit Create account, or use "Forgot your password?"', 'error');
+        } else {
+          throw error;
+        }
+      } catch (e) {
+        toast('Sign-in error: ' + e.message, 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    byId('btn-pw-create').addEventListener('click', async () => {
+      const password = readPassword('auth-password'); if (!password) return;
+      const btn = byId('btn-pw-create'); btn.disabled = true;
+      const already = 'This email already has an account — sign in with your password, or use "Forgot your password?"';
+      try {
+        const { data, error } = await sb.auth.signUp({ email: pw.email, password });
+        if (error) {
+          if (/already registered/i.test(error.message)) { toast(already, 'error'); return; }
+          throw error;
+        }
+        // With "Confirm email" ON, Supabase answers an EXISTING email with a
+        // look-alike user that has no identities (anti-enumeration).
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          toast(already, 'error');
+          return;
+        }
+        if (data.session) return; // confirmations are OFF in the dashboard — already signed in
+        pw.mode = 'signup';
+        byId('pw-code-note').textContent = `We emailed a 6-digit code to ${pw.email}. Enter it to confirm your account.`;
+        byId('pw-newpass-label').classList.add('hidden');
+        byId('auth-code').value = '';
+        showStep('pw-step-code');
+        byId('auth-code').focus();
+      } catch (e) {
+        toast('Could not create the account: ' + e.message, 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    byId('link-pw-forgot').addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        // Supabase answers the same whether or not the email exists.
+        await sendCode('recovery', `If ${pw.email} has an account, a 6-digit code is on its way — enter it and choose a new password.`);
+      } catch (err) {
+        toast('Could not send the code: ' + err.message, 'error');
       }
     });
+
+    byId('btn-pw-resend').addEventListener('click', async () => {
+      try {
+        await sendCode(pw.mode, byId('pw-code-note').textContent);
+        toast('New code sent', 'success');
+      } catch (e) {
+        toast('Could not resend: ' + e.message, 'error');
+      }
+    });
+
+    byId('btn-pw-verify').addEventListener('click', async () => {
+      const token = byId('auth-code').value.replace(/\D/g, '');
+      if (token.length !== 6) { toast('Enter the 6-digit code from the email', 'error'); return; }
+      const needsNew = pw.mode !== 'signup';
+      const newPassword = needsNew ? readPassword('auth-new-password') : null;
+      if (needsNew && !newPassword) return;
+      const btn = byId('btn-pw-verify'); btn.disabled = true;
+      holdRegForm = needsNew; // set the password BEFORE the form/redirect logic runs
+      try {
+        const type = pw.mode === 'signup' ? 'signup' : 'recovery';
+        const { error } = await sb.auth.verifyOtp({ email: pw.email, token, type });
+        if (error) throw error;
+        if (needsNew) {
+          const { error: upErr } = await sb.auth.updateUser({ password: newPassword });
+          if (upErr) throw upErr;
+          toast('Password set', 'success');
+        }
+        holdRegForm = false;
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) { currentUser = user; showRegistrationForm(); }
+      } catch (e) {
+        holdRegForm = false;
+        toast(/expired|invalid/i.test(e.message) ? 'That code didn\'t work — check the digits or hit Resend code.' : e.message, 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    byId('link-pw-back').addEventListener('click', (e) => {
+      e.preventDefault();
+      pw.email = ''; pw.mode = null;
+      showStep('pw-step-email');
+      byId('auth-email').focus();
+    });
+
+    // Enter advances each step
+    byId('auth-email').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); byId('btn-pw-continue').click(); } });
+    byId('auth-password').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); byId('btn-pw-signin').click(); } });
+    for (const id of ['auth-code', 'auth-new-password']) {
+      byId(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); byId('btn-pw-verify').click(); } });
+    }
 
     // Photo upload
     // One place that accepts a picked/captured photo, so the file input, the
