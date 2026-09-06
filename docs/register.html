@@ -210,6 +210,8 @@
     /* ?mode=signin (landing "Sign In" → index.html?mode=signin → here): a
        returning member wants the sign-in box, not the registration pitch. */
     .signin-mode .welcome-message { display: none; }
+    .auth-preferred { margin: 0.4rem 0 0; text-align: center; color: #7a9bb5; font-size: 14px; }
+    .signin-mode .auth-preferred { display: none; }  /* registration only */
     /* This page is always dark — pin colors that styles.css derives from the
        (light-by-default) theme vars so they stay readable here. */
     .form-section small a { color: #ff6b35; }
@@ -253,6 +255,7 @@
       <div class="auth-method">
         <button id="btn-google-auth" type="button" class="btn-register">Sign in with Google</button>
       </div>
+      <p class="auth-preferred">(preferred option)</p>
       <p class="auth-divider"><span>or use email + password</span></p>
 
       <div id="pw-step-email" class="auth-step">
