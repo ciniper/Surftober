@@ -80,23 +80,37 @@ expand):
 
 Save.
 
-## 3. Sender address + SMTP (decide before October — see TODO.md)
+## 3. Sender address + SMTP (NOW — the built-in mailer blocks testing)
 
 **Authentication** → **Emails** → **SMTP Settings** tab.
 
-Today the built-in mailer sends from `noreply@mail.app.supabase.io`
-(confirm by looking at a real email). It's unbranded and limited to a few
-emails per hour — fine for testing, a problem if ten friends register in
-the same hour on Oct 1.
+The built-in mailer (`noreply@mail.app.supabase.io`) is capped at a couple
+of emails per HOUR, project-wide — Chase hit "email rate limit exceeded" on
+the first code test (2026-09-06). Custom SMTP lifts that and lets the code
+come from a surftober.com address. ~15 min with Resend (free tier: 3,000
+emails/month, plenty):
 
-To send as e.g. `hello@surftober.com`:
+1. resend.com → sign up → **Domains** → Add domain `surftober.com`.
+   Resend shows 3 DNS records: one DKIM `TXT` (`resend._domainkey`) and an
+   `MX` + `TXT` pair for a `send.` subdomain (SPF for bounces).
+2. GoDaddy → surftober.com → DNS → add those records exactly as shown
+   (keep the existing A/CNAME records for the site untouched). Back in
+   Resend click **Verify** — usually a few minutes.
+3. Resend → **API Keys** → Create (sending access only). Copy it once.
+4. Supabase → Authentication → Emails → **SMTP Settings** → **Enable
+   Custom SMTP**:
+   - Sender email: `noreply@surftober.com` · Sender name: `Surftober`
+   - Host: `smtp.resend.com` · Port: `465`
+   - Username: `resend` · Password: the API key
+   Save.
+5. **Authentication** → **Rate Limits** → "Rate limit for sending emails":
+   `60` per hour (editable only once custom SMTP is on). Save.
+6. Send yourself one code from the register page: it should arrive from
+   `noreply@surftober.com` within seconds, code in the subject line.
 
-1. Make a free account at Resend or Brevo, add the domain `surftober.com`,
-   and add the DNS records they show (SPF + DKIM) in GoDaddy.
-2. Back in SMTP Settings: **Enable Custom SMTP**, fill sender email + name
-   and the host / port / username / password from the provider. Save.
-3. **Authentication** → **Rate Limits** → "Rate limit for sending emails":
-   ~60 per hour (only editable once custom SMTP is on).
+Brevo works too (300/day free) if you'd rather, but its sender needs the
+same domain verification for good deliverability — a gmail.com sender via
+third-party SMTP tends to land in spam.
 
 ## 4. Test (2 minutes, inside the installed PWA if you can)
 
