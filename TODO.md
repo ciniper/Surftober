@@ -13,10 +13,11 @@
 - [ ] **Custom SMTP + sender address — NOW, it blocks testing** (Chase,
       2026-09-06: first code test hit "email rate limit exceeded" — the
       built-in Supabase mailer allows a couple of emails per HOUR, project-
-      wide). Steps with exact values in `supabase-auth-emails.md` §3: Resend
-      free tier, verify surftober.com via 3 DNS records at GoDaddy, SMTP
-      host smtp.resend.com:465 / user `resend` / password = API key, sender
-      `noreply@surftober.com`, then Rate Limits → emails 60/h. Also answers
+      wide). Steps with exact values in `supabase-auth-emails.md` §3 — BREVO
+      (Chase already has the account): 5-min unblock reusing an already-
+      verified sender + SMTP key (host smtp-relay.brevo.com:587), Rate
+      Limits → emails 60/h; then authenticate surftober.com (DNS at GoDaddy)
+      for the branded sender `noreply@surftober.com` before October. Also answers
       "what address sends the code?": today `noreply@mail.app.supabase.io`,
       after this `noreply@surftober.com`.
 ## Scoped, awaiting a go

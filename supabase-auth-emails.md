@@ -87,30 +87,50 @@ Save.
 The built-in mailer (`noreply@mail.app.supabase.io`) is capped at a couple
 of emails per HOUR, project-wide — Chase hit "email rate limit exceeded" on
 the first code test (2026-09-06). Custom SMTP lifts that and lets the code
-come from a surftober.com address. ~15 min with Resend (free tier: 3,000
-emails/month, plenty):
+come from a surftober.com address.
 
-1. resend.com → sign up → **Domains** → Add domain `surftober.com`.
-   Resend shows 3 DNS records: one DKIM `TXT` (`resend._domainkey`) and an
-   `MX` + `TXT` pair for a `send.` subdomain (SPF for bounces).
-2. GoDaddy → surftober.com → DNS → add those records exactly as shown
-   (keep the existing A/CNAME records for the site untouched). Back in
-   Resend click **Verify** — usually a few minutes.
-3. Resend → **API Keys** → Create (sending access only). Copy it once.
-4. Supabase → Authentication → Emails → **SMTP Settings** → **Enable
-   Custom SMTP**:
-   - Sender email: `noreply@surftober.com` · Sender name: `Surftober`
-   - Host: `smtp.resend.com` · Port: `465`
-   - Username: `resend` · Password: the API key
+### Brevo (Chase already has an account — use it)
+
+Free plan: 300 emails/day. Two speeds:
+
+**Unblock testing in 5 minutes — reuse a sender Brevo already trusts.**
+Any sender that is already verified in your Brevo account (the one your
+other project sends from) works today:
+
+1. Brevo → click your name (top right) → **SMTP & API** → **SMTP** tab →
+   **Generate a new SMTP key**. Copy it once. Note the **Login** shown on
+   that page (your Brevo account email).
+2. Supabase → Authentication → Emails → **SMTP Settings** → **Enable Custom
+   SMTP**:
+   - Sender email: the already-verified address · Sender name: `Surftober`
+   - Host: `smtp-relay.brevo.com` · Port: `587`
+   - Username: the Brevo login email · Password: the SMTP key
    Save.
-5. **Authentication** → **Rate Limits** → "Rate limit for sending emails":
+3. **Authentication** → **Rate Limits** → "Rate limit for sending emails":
    `60` per hour (editable only once custom SMTP is on). Save.
-6. Send yourself one code from the register page: it should arrive from
-   `noreply@surftober.com` within seconds, code in the subject line.
+4. Send yourself one code from the register page — it should arrive within
+   seconds, code in the subject line.
 
-Brevo works too (300/day free) if you'd rather, but its sender needs the
-same domain verification for good deliverability — a gmail.com sender via
-third-party SMTP tends to land in spam.
+**Branded sender (`noreply@surftober.com`) — 10 more minutes, do it before
+October.**
+
+5. Brevo → **Senders, Domains & Dedicated IPs** → **Domains** → **Add a
+   domain** → `surftober.com`. Brevo shows DNS records (a `brevo-code`
+   TXT, DKIM TXT record(s), and a DMARC TXT).
+6. GoDaddy → surftober.com → DNS → add them exactly as shown, leaving the
+   site's existing A/CNAME records alone. Back in Brevo → **Authenticate**
+   (a few minutes for DNS).
+7. Brevo → **Senders** → **Add a sender**: `noreply@surftober.com`, name
+   `Surftober`. On an authenticated domain no confirmation email is needed
+   (there is no mailbox at that address).
+8. Supabase SMTP Settings → change the Sender email to
+   `noreply@surftober.com`. Save. Send one more test code.
+
+### Resend (alternative, if Brevo ever misbehaves)
+
+Free tier 3,000/month. Domains → add `surftober.com` → 3 DNS records at
+GoDaddy → API key → Supabase SMTP: host `smtp.resend.com`, port `465`,
+username `resend`, password = API key, sender `noreply@surftober.com`.
 
 ## 4. Test (2 minutes, inside the installed PWA if you can)
 
