@@ -10,16 +10,15 @@
       link stays as a fallback; §2 OTP length 6 / expiry 3600; §4 test).
       Optional: `git push origin archive/password-signin` so the archived
       password work lives on GitHub, not just this laptop.
-- [ ] **What email address sends the sign-in code?** (Chase, 2026-09-06.)
-      With Supabase's built-in mailer it's `noreply@mail.app.supabase.io`
-      (check a real email to confirm) — fixed, unbranded, dev-grade, and
-      rate-limited to a few emails/hour. To send as e.g. `hello@surftober.com`:
-      custom SMTP (Resend or Brevo free tier), verify the surftober.com domain
-      with their SPF/DKIM DNS records at GoDaddy, then set the sender name +
-      address in Authentication → Emails → SMTP Settings and raise Rate
-      Limits → emails to ~60/h for the Oct 1 burst. Decide before October;
-      the built-in sender is fine for testing.
-
+- [ ] **Custom SMTP + sender address — NOW, it blocks testing** (Chase,
+      2026-09-06: first code test hit "email rate limit exceeded" — the
+      built-in Supabase mailer allows a couple of emails per HOUR, project-
+      wide). Steps with exact values in `supabase-auth-emails.md` §3: Resend
+      free tier, verify surftober.com via 3 DNS records at GoDaddy, SMTP
+      host smtp.resend.com:465 / user `resend` / password = API key, sender
+      `noreply@surftober.com`, then Rate Limits → emails 60/h. Also answers
+      "what address sends the code?": today `noreply@mail.app.supabase.io`,
+      after this `noreply@surftober.com`.
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
       (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
