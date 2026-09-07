@@ -172,7 +172,14 @@ free tier: 3,000 emails/month, 100/day, 1 domain, no card, no footer.
    created for Surftober, so BWTF's account has nothing Surftober-related
    left in it.
 
-### Branded sender on Brevo instead (only if you decide to keep one vendor)
+### Branded sender on Brevo instead (a SECOND Brevo account also satisfies the isolation rule)
+
+A separate Brevo account (distinct login, e.g. `ciniper+surftober@gmail.com`)
+gives Surftober its own quota and account health — the failure-domain goal
+is a separate account, not a different vendor. Watch two things: Brevo
+reviews new accounts before enabling SMTP sending (often a support ticket,
+up to a day — start early), and free-plan mail may carry a Brevo footer.
+The domain steps below are the same either way.
 
 Brevo → **Senders, Domains & Dedicated IPs** → **Domains** → **Add a
 domain** `surftober.com` → add the records Brevo shows at GoDaddy
