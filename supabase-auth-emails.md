@@ -22,22 +22,47 @@ for a first-time address:
 - **Magic Link**
 - **Confirm sign up**
 
-Same subject and body for both. The code in the subject line shows up in
-the phone's notification banner, so most people never open the email.
+Each template gets its own subject and body (the code in the subject
+shows up in the phone's notification banner, so most people never open
+the email). The last line warns that the link opens in the phone's DEFAULT
+browser, which may not be where they use Surftober — type the code then.
+
+### Magic Link (existing accounts)
 
 Subject:
 
 ```
-Your Surftober code: {{ .Token }}
+Your Surftober sign-in code: {{ .Token }}
 ```
 
 Body (switch the editor to source/HTML, replace everything):
 
 ```html
-<h2 style="margin:0 0 8px">Your Surftober sign-in code</h2>
-<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:0 0 12px">{{ .Token }}</p>
-<p style="margin:0 0 16px">Type it in the Surftober app. It expires in 1 hour.</p>
-<p style="color:#7a9bb5;font-size:13px;margin:0">Prefer a link? <a href="{{ .ConfirmationURL }}">Sign in with one tap</a> — opens in your browser rather than the app.</p>
+<h2 style="margin:0 0 8px">Sign in to Surftober</h2>
+<p style="margin:0 0 6px">Your one-time code:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:0 0 14px">{{ .Token }}</p>
+<p style="margin:0 0 16px">Type it into the Surftober screen you have open. It expires in 1 hour and works once.</p>
+<p style="margin:0 0 6px">Or use the link: <a href="{{ .ConfirmationURL }}">Sign in with one tap</a></p>
+<p style="color:#7a9bb5;font-size:13px;margin:0">Heads up: the link opens in your phone's default browser, which may not be where you use Surftober (the installed app, or a different browser). If that's you, type the code instead.</p>
+```
+
+### Confirm sign up (first-time address)
+
+Subject:
+
+```
+Your Surftober registration code: {{ .Token }}
+```
+
+Body:
+
+```html
+<h2 style="margin:0 0 8px">Welcome to Surftober</h2>
+<p style="margin:0 0 6px">Your one-time code to confirm this email:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:0 0 14px">{{ .Token }}</p>
+<p style="margin:0 0 16px">Type it into the Surftober registration screen you have open. It expires in 1 hour and works once.</p>
+<p style="margin:0 0 6px">Or use the link: <a href="{{ .ConfirmationURL }}">Confirm with one tap</a></p>
+<p style="color:#7a9bb5;font-size:13px;margin:0">Heads up: the link opens in your phone's default browser, which may not be where you use Surftober (the installed app, or a different browser). If that's you, type the code instead.</p>
 ```
 
 Save each template. Leave **Reset Password**, **Invite user**, **Change
