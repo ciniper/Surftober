@@ -126,11 +126,60 @@ October.**
 8. Supabase SMTP Settings → change the Sender email to
    `noreply@surftober.com`. Save. Send one more test code.
 
-### Resend (alternative, if Brevo ever misbehaves)
+### Branded sender `noreply@surftober.com` — on Resend (recommended, ~15 min)
 
-Free tier 3,000/month. Domains → add `surftober.com` → 3 DNS records at
-GoDaddy → API key → Supabase SMTP: host `smtp.resend.com`, port `465`,
-username `resend`, password = API key, sender `noreply@surftober.com`.
+Why Resend and not Brevo's domain feature: BWTF's sewage alerts already
+send through the Brevo account, and its free quota (300/day) and account
+health are shared. Putting Surftober on its own Resend account keeps the
+alert path in its own failure domain (Chase's standing BWTF rule). Resend
+free tier: 3,000 emails/month, 100/day, 1 domain, no card, no footer.
+
+1. **Resend account** — resend.com → sign up with the personal Google
+   identity (ciniper), not the work one.
+2. **Add the domain** — Resend → **Domains** → **Add Domain** →
+   `surftober.com` → region `us-east-1` (any is fine). Resend lists the DNS
+   records to create. Expect three (+1 optional):
+   - `MX`  host `send` → `feedback-smtp.us-east-1.amazonses.com`, priority `10`
+   - `TXT` host `send` → `v=spf1 include:amazonses.com ~all`
+   - `TXT` host `resend._domainkey` → `p=MIGf…` (long DKIM key — copy exactly)
+   - optional `TXT` host `_dmarc` → `v=DMARC1; p=none; rua=mailto:ciniper@gmail.com`
+     (not required by Resend; helps Gmail/Yahoo treat the domain as legit)
+3. **GoDaddy** — surftober.com → **DNS** → **Add record** for each.
+   GoDaddy gotcha: the *Name/Host* field takes only the left part
+   (`send`, `resend._domainkey`, `_dmarc`) — GoDaddy appends
+   `.surftober.com` itself; entering the full name creates
+   `send.surftober.com.surftober.com`. Leave the site's existing `A @` and
+   `CNAME www` records untouched. TTL: default (1 hour) is fine.
+   These live on the `send.` subdomain and a DKIM selector, so they cannot
+   collide with the website or with any future mailbox on the root domain.
+4. **Verify** — back in Resend → the domain → **Verify DNS Records**.
+   Usually green within minutes; GoDaddy can take up to an hour. Don't
+   move on until all records show Verified.
+5. **API key** — Resend → **API Keys** → **Create API Key**: name
+   `supabase-auth`, permission **Sending access**, domain `surftober.com`.
+   Copy it once (it is never shown again). This key is the SMTP password.
+6. **Supabase** → Authentication → Emails → **SMTP Settings** (Enable
+   Custom SMTP stays on; replace the Brevo values):
+   - Sender email: `noreply@surftober.com` · Sender name: `Surftober`
+   - Host: `smtp.resend.com` · Port: `465`
+   - Username: `resend` · Password: the API key
+   Save. Rate Limits → emails stays at `60`/hour.
+7. **Test** — register page → your Gmail → Continue. In Gmail open the
+   message → ⋮ → **Show original**: expect `SPF: PASS`, `DKIM: PASS` with
+   `d=surftober.com`, and the sender shown as `noreply@surftober.com`.
+   Resend → **Emails** shows the delivery log if something's off.
+8. **Brevo cleanup** — Brevo → SMTP & API → SMTP → delete the SMTP key you
+   created for Surftober, so BWTF's account has nothing Surftober-related
+   left in it.
+
+### Branded sender on Brevo instead (only if you decide to keep one vendor)
+
+Brevo → **Senders, Domains & Dedicated IPs** → **Domains** → **Add a
+domain** `surftober.com` → add the records Brevo shows at GoDaddy
+(`brevo-code` TXT, DKIM TXT(s), DMARC TXT — same host-field gotcha) →
+**Authenticate** → **Senders** → add `noreply@surftober.com` (no
+confirmation mailbox needed on an authenticated domain) → Supabase SMTP
+sender email → `noreply@surftober.com`. Quota stays shared with BWTF.
 
 ## 4. Test (2 minutes, inside the installed PWA if you can)
 
