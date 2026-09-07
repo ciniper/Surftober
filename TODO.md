@@ -5,15 +5,11 @@
       prod** (Chase, ~5 min). Until done the page still works — the emails
       carry the LINK (tap → signed in, in Safari) and the code box has
       nothing to type.
-      1. Authentication → Emails → Templates → **Magic Link** AND **Confirm
-         sign up**: add the code, e.g. `Your Surftober code: {{ .Token }}
-         (expires in 1 hour)`. Keep `{{ .ConfirmationURL }}` — the link stays
-         a fallback.
-      2. Sender + SMTP: see the next item.
-      3. Push the archive branch too: `git push origin archive/password-signin`.
-      4. Test with a throwaway address INSIDE the installed PWA: Register →
-         gate → email → code → form; Sign In with an unknown email → "register
-         first"; Sign In with your Gmail → code → straight into the app.
+      Step-by-step with copy-paste template bodies: `supabase-auth-emails.md`
+      (§1 templates — Magic Link AND Confirm sign up get `{{ .Token }}`, the
+      link stays as a fallback; §2 OTP length 6 / expiry 3600; §4 test).
+      Optional: `git push origin archive/password-signin` so the archived
+      password work lives on GitHub, not just this laptop.
 - [ ] **What email address sends the sign-in code?** (Chase, 2026-09-06.)
       With Supabase's built-in mailer it's `noreply@mail.app.supabase.io`
       (check a real email to confirm) — fixed, unbranded, dev-grade, and
