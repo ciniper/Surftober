@@ -172,21 +172,80 @@ free tier: 3,000 emails/month, 100/day, 1 domain, no card, no footer.
    created for Surftober, so BWTF's account has nothing Surftober-related
    left in it.
 
-### Branded sender on Brevo instead (a SECOND Brevo account also satisfies the isolation rule)
+### Branded sender on a SECOND Brevo account (Chase's pick, 2026-09-06)
 
-A separate Brevo account (distinct login, e.g. `ciniper+surftober@gmail.com`)
-gives Surftober its own quota and account health — the failure-domain goal
-is a separate account, not a different vendor. Watch two things: Brevo
-reviews new accounts before enabling SMTP sending (often a support ticket,
-up to a day — start early), and free-plan mail may carry a Brevo footer.
-The domain steps below are the same either way.
+A separate Brevo account gives Surftober its own quota and account health —
+the failure-domain goal is a separate account, not a different vendor.
+Two caveats: Brevo reviews new accounts before enabling SMTP sending (often
+a support ticket, up to a day — start early), and free-plan mail may carry
+a Brevo footer (check the first test email).
 
-Brevo → **Senders, Domains & Dedicated IPs** → **Domains** → **Add a
-domain** `surftober.com` → add the records Brevo shows at GoDaddy
-(`brevo-code` TXT, DKIM TXT(s), DMARC TXT — same host-field gotcha) →
-**Authenticate** → **Senders** → add `noreply@surftober.com` (no
-confirmation mailbox needed on an authenticated domain) → Supabase SMTP
-sender email → `noreply@surftober.com`. Quota stays shared with BWTF.
+**A. The account (5 min + possible review)**
+
+1. brevo.com → Sign up with a DISTINCT login: the Gmail plus-alias
+   `ciniper+surftober@gmail.com` (delivers to ciniper@gmail.com; Brevo treats
+   it as a separate account). If Brevo rejects the `+`, use `ciniper2@gmail.com`.
+   Company: Surftober. Onboarding answers: small volume, transactional.
+2. Confirm the email (and phone, if asked).
+3. Your name (top right) → **SMTP & API** → **SMTP** tab. If it says the
+   SMTP account is not yet activated, open Brevo support chat/ticket:
+   "transactional sign-in codes for a small friends' surf-logging PWA,
+   ~200 emails/month, no marketing". Wait for activation before step D.
+
+**B. Authenticate surftober.com (10 min + DNS)**
+
+4. Brevo → **Senders, Domains & Dedicated IPs** → **Domains** → **Add a
+   domain** → `surftober.com`. Brevo lists the DNS records to add — copy
+   them exactly as shown (names/values differ per account). Expect:
+   - `TXT` host `@` → `brevo-code:…` (domain ownership)
+   - `TXT` host `mail._domainkey` → the DKIM key (Brevo may show two DKIM
+     records — add both)
+   - `TXT` host `_dmarc` → `v=DMARC1; p=none; rua=mailto:…`
+5. GoDaddy → surftober.com → **DNS** → **Add record** for each. Host field
+   takes only the left label (`@`, `mail._domainkey`, `_dmarc`) — GoDaddy
+   appends `.surftober.com`. Leave the site's `A @` and `CNAME www` alone.
+6. Brevo → the domain → **Authenticate**. Green within minutes, up to an
+   hour on GoDaddy.
+
+**C. The sender**
+
+7. Brevo → **Senders** tab → **Add a sender**: From email
+   `noreply@surftober.com`, From name `Surftober`. On an authenticated
+   domain no confirmation email is needed (there is no mailbox there).
+
+**D. SMTP key**
+
+8. Your name → **SMTP & API** → **SMTP** → **Generate a new SMTP key**
+   (name `supabase-auth`). Copy it once. The **Login** on that page is the
+   new account's email (`ciniper+surftober@gmail.com`).
+
+**E. Supabase**
+
+9. Authentication → Emails → **SMTP Settings** → Enable Custom SMTP
+   (replace the interim values):
+   - Sender email: `noreply@surftober.com` · Sender name: `Surftober`
+   - Host: `smtp-relay.brevo.com` · Port: `587`
+   - Username: `ciniper+surftober@gmail.com` · Password: the SMTP key
+   Save.
+10. Authentication → **Rate Limits** → emails `60`/hour (unchanged if
+    already set). Save.
+
+**F. Test + cleanup**
+
+11. Register page → your Gmail → Continue. In Gmail: ⋮ → **Show original**
+    → expect SPF pass, DKIM pass with `d=surftober.com`, sender
+    `noreply@surftober.com`. Brevo → **Transactional** → **Logs** shows
+    delivery if something's off.
+12. In the BWTF Brevo account: SMTP & API → SMTP → delete the interim
+    Surftober key, so nothing Surftober-related remains there.
+
+### Resend instead (alternative — no activation review, no footer)
+
+Free 3,000/month, 100/day, 1 domain. Domains → add `surftober.com` → three
+DNS records at GoDaddy (`MX`+`TXT` on host `send`, DKIM `TXT` on
+`resend._domainkey`) → Verify → API key (sending access) → Supabase SMTP:
+host `smtp.resend.com`, port `465`, username `resend`, password = API key,
+sender `noreply@surftober.com`.
 
 ## 4. Test (2 minutes, inside the installed PWA if you can)
 
