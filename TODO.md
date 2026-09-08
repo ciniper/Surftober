@@ -10,16 +10,26 @@
       link stays as a fallback; §2 OTP length 6 / expiry 3600; §4 test).
       Optional: `git push origin archive/password-signin` so the archived
       password work lives on GitHub, not just this laptop.
-- [ ] **Custom SMTP + sender address — NOW, it blocks testing** (Chase,
-      2026-09-06: first code test hit "email rate limit exceeded" — the
-      built-in Supabase mailer allows a couple of emails per HOUR, project-
-      wide). Steps with exact values in `supabase-auth-emails.md` §3 — BREVO
-      (Chase already has the account): 5-min unblock reusing an already-
-      verified sender + SMTP key (host smtp-relay.brevo.com:587), Rate
-      Limits → emails 60/h; then authenticate surftober.com (DNS at GoDaddy)
-      for the branded sender `noreply@surftober.com` before October. Also answers
-      "what address sends the code?": today `noreply@mail.app.supabase.io`,
-      after this `noreply@surftober.com`.
+- [ ] **Sign-in email: final checks** (Chase, 2026-09-06). Custom SMTP is
+      configured on Surftober's OWN Brevo account (login alias
+      `ciniper+surftober@gmail.com`): sender `noreply@surftober.com`,
+      surftober.com authenticated (brevo1/brevo2 DKIM CNAMEs, brevo-code TXT,
+      DMARC p=none), host smtp-relay.brevo.com:587. DNS verified from outside
+      (exactly one `_dmarc` record — GoDaddy's auto-added default
+      `p=quarantine … onsecureserver.net` was deleted; two DMARC records =
+      no DMARC). Remaining:
+      1. Authentication → Rate Limits → emails `60`/hour (Supabase sets 30
+         when custom SMTP turns on).
+      2. Send yourself a code from the register page; in Gmail ⋮ → Show
+         original: SPF pass, DKIM pass `d=surftober.com`, sender
+         noreply@surftober.com, code in the subject. Inbox, not spam.
+      3. If an interim Surftober SMTP key was ever created in the BWTF Brevo
+         account, delete it there (SMTP & API → SMTP). Optional: delete the
+         auto-created Gmail sender in the new account to clear its warning.
+      4. Full flow test INSIDE the installed PWA (see supabase-auth-emails.md
+         §4): Register → gate → email → code → form; Sign In unknown email →
+         "register first"; Sign In with your Gmail → code → app.
+      Then move this to Done.
 ## Scoped, awaiting a go
 - [ ] **Decide re-registration for October — September is the trial**
       (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
