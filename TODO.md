@@ -20,9 +20,14 @@
       no DMARC). Remaining:
       1. Authentication → Rate Limits → emails `60`/hour (Supabase sets 30
          when custom SMTP turns on).
-      2. Send yourself a code from the register page; in Gmail ⋮ → Show
-         original: SPF pass, DKIM pass `d=surftober.com`, sender
-         noreply@surftober.com, code in the subject. Inbox, not spam.
+      2. ~~Send yourself a code; Show original~~ DONE 2026-09-08: SPF/DKIM/
+         DMARC all PASS, DKIM `d=surftober.com`, delivered in 2 s, code in
+         the subject. Follow-up from those headers: Brevo → Transactional →
+         Settings → turn OFF click + open tracking (the fallback link was
+         wrapped in Brevo's redirector) and, if offered, the unsubscribe
+         header (a friend tapping Gmail's Unsubscribe lands on Brevo's
+         transactional blocklist = no more codes). Details:
+         supabase-auth-emails.md §3 steps 13–14.
       3. If an interim Surftober SMTP key was ever created in the BWTF Brevo
          account, delete it there (SMTP & API → SMTP). Optional: delete the
          auto-created Gmail sender in the new account to clear its warning.
