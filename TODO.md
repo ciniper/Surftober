@@ -22,12 +22,11 @@
          when custom SMTP turns on).
       2. ~~Send yourself a code; Show original~~ DONE 2026-09-08: SPF/DKIM/
          DMARC all PASS, DKIM `d=surftober.com`, delivered in 2 s, code in
-         the subject. Follow-up from those headers: Brevo → Transactional →
-         Settings → turn OFF click + open tracking (the fallback link was
-         wrapped in Brevo's redirector) and, if offered, the unsubscribe
-         header (a friend tapping Gmail's Unsubscribe lands on Brevo's
-         transactional blocklist = no more codes). Details:
-         supabase-auth-emails.md §3 steps 13–14.
+         the subject. Brevo's click/open tracking stays ON (no dashboard
+         toggle; support-only) — accepted, not an action item. Debugging
+         notes if codes ever misbehave: supabase-auth-emails.md §3
+         ("Debugging notes"): tracked fallback link, and the Unsubscribe
+         button → Blocked or unsubscribed contacts list.
       3. If an interim Surftober SMTP key was ever created in the BWTF Brevo
          account, delete it there (SMTP & API → SMTP). Optional: delete the
          auto-created Gmail sender in the new account to clear its warning.

@@ -241,23 +241,22 @@ a Brevo footer (check the first test email).
     delivery if something's off.
 12. In the BWTF Brevo account: SMTP & API → SMTP → delete the interim
     Surftober key, so nothing Surftober-related remains there.
-13. **Turn off Brevo's tracking for these emails.** The first real code
-    email (2026-09-08) showed Brevo had rewritten the fallback "Sign in
-    with one tap" link through its click tracker
-    (`…sendibt2.com/tr/cl/…` → redirect → the Supabase verify URL) and
-    injected an open-tracking pixel. It still works, but a redirect in
-    front of a one-time sign-in token looks phishy to filters and adds a
-    hop that can break. Brevo → **Transactional** → **Settings** (gear) →
-    find the click-tracking and open-tracking toggles for transactional
-    emails → OFF. (Label/placement varies by account; if it's not there,
-    check SMTP & API → SMTP settings.)
-14. **Unsubscribe header.** The same email carried `List-Unsubscribe`
-    (one-click) headers, so Gmail shows an "Unsubscribe" button next to
-    the sender. A friend who taps it lands on Brevo's transactional
-    blocklist and silently stops receiving codes. If Brevo offers a toggle
-    to omit the unsubscribe link/header on transactional emails, turn it
-    off. Either way: if someone ever says "codes stopped arriving", check
-    Brevo → Transactional → **Blocked contacts** first.
+**Debugging notes — not action items (Chase, 2026-09-08: "we're good").**
+
+- **Brevo tracking is ON and cannot be switched off in the dashboard.**
+  Settings → Transactional emails → Tracking only offers "anonymous
+  tracking"; disabling open/click tracking for SMTP transactional mail is
+  an account flag Brevo support sets on request. Effect today: the fallback
+  "Sign in with one tap" link is wrapped in Brevo's click redirector
+  (`…sendibt2.com/tr/cl/…` → the Supabase verify URL) and an open-tracking
+  pixel is injected. Harmless — the code is the primary path. If a mail
+  filter ever flags the emails or the fallback link stops resolving,
+  this redirect is the first suspect; the support request is the fix.
+- **Unsubscribe header.** The emails carry `List-Unsubscribe` (one-click),
+  so Gmail shows an Unsubscribe button beside the sender. A friend who taps
+  it lands on Brevo → Transactional → **Blocked or unsubscribed contacts**
+  and silently stops receiving codes. If anyone reports "codes stopped
+  arriving", check that list first and remove them.
 
 What a healthy code email looks like (Gmail → Show original, verified
 2026-09-08): From `Surftober <noreply@surftober.com>`; SPF PASS (on
