@@ -18,8 +18,7 @@
       (exactly one `_dmarc` record — GoDaddy's auto-added default
       `p=quarantine … onsecureserver.net` was deleted; two DMARC records =
       no DMARC). Remaining:
-      1. Authentication → Rate Limits → emails `60`/hour (Supabase sets 30
-         when custom SMTP turns on).
+      1. ~~Authentication → Rate Limits → emails `60`/hour~~ DONE 2026-09-08.
       2. ~~Send yourself a code; Show original~~ DONE 2026-09-08: SPF/DKIM/
          DMARC all PASS, DKIM `d=surftober.com`, delivered in 2 s, code in
          the subject. Brevo's click/open tracking stays ON (no dashboard
