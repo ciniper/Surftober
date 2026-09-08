@@ -26,9 +26,11 @@
          notes if codes ever misbehave: supabase-auth-emails.md §3
          ("Debugging notes"): tracked fallback link, and the Unsubscribe
          button → Blocked or unsubscribed contacts list.
-      3. If an interim Surftober SMTP key was ever created in the BWTF Brevo
-         account, delete it there (SMTP & API → SMTP). Optional: delete the
-         auto-created Gmail sender in the new account to clear its warning.
+      3. ~~Interim key cleanup in the BWTF Brevo account~~ N/A (Chase,
+         09-08: BWTF's Brevo account is under a different email — Surftober
+         never touched it; the two accounts are fully separate). Optional:
+         delete the auto-created Gmail sender in the new account to clear
+         its warning banner.
       4. Full flow test INSIDE the installed PWA (see supabase-auth-emails.md
          §4): Register → gate → email → code → form; Sign In unknown email →
          "register first"; Sign In with your Gmail → code → app.
