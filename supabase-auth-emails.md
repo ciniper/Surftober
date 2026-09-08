@@ -216,8 +216,11 @@ a Brevo footer (check the first test email).
 **D. SMTP key**
 
 8. Your name → **SMTP & API** → **SMTP** → **Generate a new SMTP key**
-   (name `supabase-auth`). Copy it once. The **Login** on that page is the
-   new account's email (`ciniper+surftober@gmail.com`).
+   (name `supabase-auth`). Copy it once. Also copy the **Login** shown on
+   that page EXACTLY — on newer Brevo accounts it is a generated address
+   like `a1b2c3001@smtp-brevo.com`, NOT your account email. Using the
+   email instead makes Supabase fail with "Error sending magic link email"
+   (that was the 2026-09-06 hiccup).
 
 **E. Supabase**
 
@@ -225,7 +228,7 @@ a Brevo footer (check the first test email).
    (replace the interim values):
    - Sender email: `noreply@surftober.com` · Sender name: `Surftober`
    - Host: `smtp-relay.brevo.com` · Port: `587`
-   - Username: `ciniper+surftober@gmail.com` · Password: the SMTP key
+   - Username: the SMTP **Login** from step 8 (`…@smtp-brevo.com`) · Password: the SMTP key
    Save.
 10. Authentication → **Rate Limits** → emails `60`/hour (unchanged if
     already set). Save.
