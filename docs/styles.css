@@ -463,3 +463,8 @@ a.photo-zoom { cursor: zoom-in; display: inline-block; }
   html.bottom-nav .app-footer { padding-bottom: calc(10px + 72px + env(safe-area-inset-bottom)); }
   html.bottom-nav .toast-container { bottom: calc(16px + 72px + env(safe-area-inset-bottom)); }
 }
+
+/* Sessions → Other Surfers → "All surfers": the surfer's name on each tile/row */
+.tile-surfer { margin-bottom: 2px; }
+.surfer-link { color: var(--accent); font-weight: 700; text-decoration: none; }
+.surfer-link:hover { text-decoration: underline; }
