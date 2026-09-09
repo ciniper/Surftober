@@ -225,6 +225,17 @@
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
 ## Done
+- [x] ~~Sessions → Other Surfers → "All surfers" feed~~ (v1.46.0, 2026-09-08,
+      Chase's ask). First option in the surfer picker; shows EVERYONE's
+      sessions (you included) newest-first in one page, with the surfer's
+      name on each tile/row as a link to that surfer's page. Compact header
+      card (surfers · sessions · scored hours) instead of a profile card per
+      person — that's the leaderboard's job. The feed defaults to TILES and
+      keeps its OWN list/tiles preference (`surftober.allFeedLayout`): a
+      toggle inside the feed is remembered for the feed; leaving it (Mine, a
+      name, a leaderboard jump) restores the per-surfer preference. The
+      one-time-bonus logic (costume / teach-a-kook) was already per-user, so
+      scoring is correct with mixed surfers; edit links stay own-sessions-only.
 - [x] ~~Non-Google sign-in: email CODE (the magic link, typed)~~ — v1.45.0
       (2026-09-06). The email door is Supabase's magic link with the one-time
       token typed on the page as a 6-digit code instead of tapped in Mail, so

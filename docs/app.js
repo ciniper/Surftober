@@ -2340,6 +2340,24 @@ async function deleteCloudSession(id){
 let sessionsView = 'mine';   // 'mine' | 'others'
 let otherUserSelected = '';
 let sessionsLayout = localStorage.getItem('surftober.sessionsLayout') || 'list'; // 'list' | 'tiles'
+// Other Surfers → "All surfers": one feed of everyone's sessions (v1.46.0).
+// The feed keeps its OWN list/tiles preference (default: tiles), separate
+// from the per-surfer pages: entering it swaps that preference in, leaving
+// it restores whatever was in force before. A List/Tiles toggle inside the
+// feed is remembered for the feed only.
+const ALL_SURFERS = '__all__';
+const inAllFeed = () => sessionsView === 'others' && otherUserSelected === ALL_SURFERS;
+let layoutBeforeAll = null;
+function enterAllFeedLayout(){
+  if (layoutBeforeAll === null) layoutBeforeAll = sessionsLayout;
+  sessionsLayout = localStorage.getItem('surftober.allFeedLayout') || 'tiles';
+}
+function leaveAllFeedLayout(){ if (layoutBeforeAll !== null) { sessionsLayout = layoutBeforeAll; layoutBeforeAll = null; } }
+function setSessionsLayout(layout){
+  sessionsLayout = layout;
+  localStorage.setItem(inAllFeed() ? 'surftober.allFeedLayout' : 'surftober.sessionsLayout', layout);
+  renderMyStats();
+}
 
 // Display names for the session-type values stored in the DB.
 const TYPE_LABELS = {
@@ -2391,8 +2409,9 @@ function renderMyStats() {
       .sort((a, b) => a.localeCompare(b));
     const select = document.getElementById('other-user-select');
     if (select) {
-      if (!names.includes(otherUserSelected)) otherUserSelected = names[0] || '';
-      select.innerHTML = names.map((n) => `<option value="${esc(n)}"${n === otherUserSelected ? ' selected' : ''}>${esc(n)}</option>`).join('');
+      if (otherUserSelected !== ALL_SURFERS && !names.includes(otherUserSelected)) otherUserSelected = names[0] || ALL_SURFERS;
+      select.innerHTML = `<option value="${ALL_SURFERS}"${otherUserSelected === ALL_SURFERS ? ' selected' : ''}>All surfers</option>` +
+        names.map((n) => `<option value="${esc(n)}"${n === otherUserSelected ? ' selected' : ''}>${esc(n)}</option>`).join('');
     }
     user = otherUserSelected;
   } else {
@@ -2410,7 +2429,22 @@ function renderMyStats() {
     return;
   }
 
-  const mine = normalized.filter((s) => s.user === user);
+  const isAll = sessionsView === 'others' && user === ALL_SURFERS;
+  const mine = isAll
+    ? normalized.filter((s) => (s.user || '').trim())   // everyone, you included
+    : normalized.filter((s) => s.user === user);
+  const summary = document.getElementById('me-summary');
+  if (isAll) {
+    // One compact header instead of a profile card per surfer (that's the
+    // leaderboard's job) — the feed below is the point.
+    const inRange = mine.filter((s) => SurftoberAwards.inRange(s.date, range));
+    const byUser = SurftoberAwards.rollupByUser(inRange, range);
+    const hours = byUser.reduce((a, t) => a + (t.total_hours || 0), 0);
+    const plural = (n, w) => `<strong>${n}</strong> ${w}${n === 1 ? '' : 's'}`;
+    summary.innerHTML = `<div class="card"><div class="profile-head"><h3>All surfers</h3></div>
+      <div>${plural(byUser.length, 'surfer')} · ${plural(inRange.length, 'session')} · <strong>${hours.toFixed(1)} h</strong> scored</div>
+      <div class="hint">Everyone's sessions, newest first — tap a name to open that surfer's page.</div></div>`;
+  } else {
   let totals = SurftoberAwards.rollupByUser(mine, range);
   if (!totals.length) {
     // Registered but nothing logged this event — show the profile card at
@@ -2442,7 +2476,6 @@ function renderMyStats() {
     }
   }
 
-  const summary = document.getElementById('me-summary');
   summary.innerHTML =
     totals
       .map(
@@ -2501,6 +2534,7 @@ function renderMyStats() {
         }
       )
       .join('') || '<div class="hint">No data</div>';
+  } // end per-surfer summary
 
   // Table of sessions (scoped to the viewed event), newest first — the
   // session you just logged should greet you at the top.
@@ -2536,10 +2570,11 @@ function renderMyStats() {
     // Hours = raw logged time; Scored = after the ×2 multiplier and one-time
     // bonuses. Ordered Hours → Bonuses → Scored so the math reads left to
     // right (1:00 → No Wetsuit ×2 → 2:00).
-    out.push(`<table><thead><tr><th></th><th>Date</th><th>Type</th><th>Hours</th><th>Bonuses</th><th>Scored</th><th>Overview Graphic (OB)</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
+    out.push(`<table><thead><tr><th></th>${isAll ? '<th>Surfer</th>' : ''}<th>Date</th><th>Type</th><th>Hours</th><th>Bonuses</th><th>Scored</th><th>Overview Graphic (OB)</th><th>Location</th><th>Surf craft</th><th class="journal-cell">Journal</th><th>Media</th></tr></thead><tbody>`);
   }
   sessions.forEach((s, i) => {
     const u = (s.user || '').trim();
+    const surferLink = isAll ? `<a href="#" class="surfer-link" data-name="${esc(u)}">${esc(u)}</a>` : '';
     const appliedFlags = ONE_TIME_FLAGS.filter((f) => bonusIdxByUser.get(f.key).get(u) === i);
     const scoredMins = s.base_minutes + appliedFlags.length * 60;
     const bonusBadges = [
@@ -2562,13 +2597,13 @@ function renderMyStats() {
     if (isTiles) {
       const where = [s.location, s.board].filter(Boolean).map(esc).join(' · ');
       const links = [stripLink, editLink].filter(Boolean).join(' · ');
-      out.push(`<div class="card"><div><b>${when}</b> · ${esc(typeLabel(s.type))}</div>
+      out.push(`<div class="card">${isAll ? `<div class="tile-surfer">${surferLink}</div>` : ''}<div><b>${when}</b> · ${esc(typeLabel(s.type))}</div>
       ${where ? `<div>${where}</div>` : ''}
       <div>Scored ${SurftoberAwards.minutesToHHMM(scoredMins)} ${bonusBadges}</div>
       ${photoThumbHtml(s.photo_url, 'session-photo-card')}${journalHtml(s.notes)}${audioPlayerHtml(s.audio_url)}${links ? `<div>${links}</div>` : ''}</div>`);
     } else {
       out.push(
-        `<tr><td class="nowrap">${editLink}</td><td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
+        `<tr><td class="nowrap">${editLink}</td>${isAll ? `<td class="nowrap">${surferLink}</td>` : ''}<td class="nowrap">${when}</td><td>${esc(typeLabel(s.type))}</td><td>${SurftoberAwards.minutesToHHMM(
           s.duration_minutes
         )}</td><td><div class="badge-stack">${bonusBadges}</div></td><td><b>${SurftoberAwards.minutesToHHMM(
           scoredMins
@@ -2598,6 +2633,17 @@ function renderMyStats() {
       e.preventDefault();
       const s = sessions[Number(a.getAttribute('data-i'))];
       if (s) toggleSessionStrip(a, s);
+    });
+  });
+  // Feed → a surfer's own page (restores the pre-feed list/tiles choice)
+  document.querySelectorAll('#me-sessions .surfer-link').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      leaveAllFeedLayout();
+      sessionsView = 'others';
+      otherUserSelected = a.getAttribute('data-name') || '';
+      renderMyStats();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
   attachJournalToggles();
@@ -2987,6 +3033,7 @@ function renderLeaderboard() {
       if (profileName && name === profileName) {
         sessionsView = 'mine';
       } else {
+        leaveAllFeedLayout();
         sessionsView = 'others';
         otherUserSelected = name;
       }
@@ -3627,6 +3674,7 @@ function renderTodayTile(){
     if (profileName && name === profileName) {
       sessionsView = 'mine';
     } else {
+      leaveAllFeedLayout();
       sessionsView = 'others';
       otherUserSelected = name;
     }
@@ -3748,12 +3796,18 @@ window.addEventListener('load', () => {
   // attachAudioHandlers(); // temporarily disabled (see feature/voice-notes-wip)
   registerSW();
   // Handlers (period filters are gone — everything is scoped to the viewed event)
-  document.getElementById('subtab-mine').addEventListener('click', () => { sessionsView = 'mine'; renderMyStats(); });
-  document.getElementById('subtab-others').addEventListener('click', () => { sessionsView = 'others'; renderMyStats(); });
-  document.getElementById('view-list').addEventListener('click', () => { sessionsLayout = 'list'; localStorage.setItem('surftober.sessionsLayout', 'list'); renderMyStats(); });
-  document.getElementById('view-tiles').addEventListener('click', () => { sessionsLayout = 'tiles'; localStorage.setItem('surftober.sessionsLayout', 'tiles'); renderMyStats(); });
+  document.getElementById('subtab-mine').addEventListener('click', () => { leaveAllFeedLayout(); sessionsView = 'mine'; renderMyStats(); });
+  document.getElementById('subtab-others').addEventListener('click', () => {
+    sessionsView = 'others';
+    if (otherUserSelected === ALL_SURFERS) enterAllFeedLayout();
+    renderMyStats();
+  });
+  // List/Tiles: remembered per context (the All feed has its own preference)
+  document.getElementById('view-list').addEventListener('click', () => setSessionsLayout('list'));
+  document.getElementById('view-tiles').addEventListener('click', () => setSessionsLayout('tiles'));
   document.getElementById('other-user-select').addEventListener('change', (e) => {
     otherUserSelected = e.target.value;
+    if (otherUserSelected === ALL_SURFERS) enterAllFeedLayout(); else leaveAllFeedLayout();
     renderMyStats();
   });
   document.getElementById('btn-compute-awards').addEventListener('click', renderAwards);
