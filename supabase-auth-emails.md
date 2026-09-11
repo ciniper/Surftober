@@ -276,7 +276,7 @@ sender `noreply@surftober.com`.
 
 ## 4. Test (2 minutes, inside the installed PWA if you can)
 
-- **Register** → club password → email → code arrives → type it → form.
+- **Register** → email → code arrives → type it → form (no club password).
 - **Sign In** with an email that has no account → "No account with this
   email yet — register first." (nothing is created)
 - **Sign In** with your Gmail → code → straight into the app, same account
