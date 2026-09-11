@@ -89,6 +89,13 @@
       Micro → Nano (another ~2-min restart; do it in the off-season quiet).
 
 ## Open items
+- [ ] **Other Surfers: land on the All feed by default?** (Chase, 2026-09-10.)
+      Today the picker opens on the first surfer alphabetically (arbitrary);
+      landing on "All surfers" reads like a crew feed instead. Tradeoff: the
+      feed renders every session (heavier scroll, more photos to load on a
+      phone) and a specific surfer is one extra tap away; the current default
+      is light but shows a random person. Decide before October — mid-event
+      switches confuse people.
 - [ ] **Improve the log-addition animations** (Chase, 2026-09-04) — the
       post-submit `celebrate` splash (1.1 s fade/pop with a random
       STOKE_LINES quip) is functional but plain. Ideas: show the SCORED
@@ -200,6 +207,10 @@
       "Optional hardening").
 
 ## Ideas (unscheduled)
+- **Quiver builder** (Chase, 2026-09-10) — let each surfer define their
+  boards once (name, length/volume, photo?) in Account and pick from the
+  quiver when logging instead of free-typing "Surf craft"; per-board hours
+  on their page, "most-ridden board" stats, maybe a crew quiver wall.
 - **Photo session bonus??** (Chase, Crew Board 2026-09-01) — bonus hours for
   attaching a session photo. Scoring TBD — keep it one-time (like costume)
   or tiny, so it isn't farmable; pairs with the photo-wall idea below.
@@ -224,7 +235,24 @@
   as optional garnish later.
 - Engagement: daily prompt. (Streaks shipped v1.12.0; voice memos v1.5.1.)
 
+## Event prep (non-code)
+- [ ] Contact Nina about the surfboard giveaway (Chase, 2026-09-10)
+- [ ] Custom logo (Chase, 2026-09-10) — the app's hand-drawn wave-in-circle
+      mark is a placeholder; a proper logo also feeds the shirt + trophy.
+- [ ] Shirt design (Chase, 2026-09-10)
+- [ ] Trophy design (Chase, 2026-09-10)
+
 ## Done
+- [x] ~~Club password removed from registration~~ (v1.47.0, 2026-09-10, Chase:
+      "completely get rid of club password except for view mode"). The
+      register page opens straight on the sign-in/register box; anyone with
+      the link can register — real auth (Google, or an email code that proves
+      the address) is the gate now. The safety-net gate before the
+      registration form is gone too. "Already registered? Sign in instead"
+      moved into the box (register screen only). The club password survives
+      ONLY in front of View Mode (landing.html prompt → `surftober.clubpass`
+      → index.html?mode=view). Sign In still refuses unknown emails
+      ("register first") so accounts are only created via Register.
 - [x] ~~Sessions → Other Surfers → "All surfers" feed~~ (v1.46.0, 2026-09-08,
       Chase's ask). First option in the surfer picker; shows EVERYONE's
       sessions (you included) newest-first in one page, with the surfer's

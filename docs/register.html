@@ -213,7 +213,7 @@
     .auth-preferred { margin: 0.75rem 0 0; color: #7a9bb5; font-size: 14px; }
     .auth-preferred + .auth-method { margin-top: 0.35rem; }
     .signin-mode .auth-preferred { display: none; }  /* registration only */
-    .signin-mode .gate-signin-link { display: none; }
+    .signin-mode .register-only { display: none; }
     #otp-no-account a { color: #ff6b35; }
     .auth-label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
     .auth-email-row { max-width: 480px; }
@@ -244,19 +244,7 @@
       </ul>
     </div>
 
-    <div class="form-section" id="club-gate">
-      <h2>Club Password</h2>
-      <p>Surftober is friends-and-friends-of-friends — enter the password from
-         the crew (ask whoever sent you here, or the WhatsApp group).</p>
-      <div class="gate-row">
-        <input type="text" id="club-pass" placeholder="Password"
-               autocapitalize="none" autocomplete="off" autocorrect="off" />
-        <button id="btn-club-pass" type="button" class="btn-register">Enter</button>
-      </div>
-      <p class="auth-links gate-signin-link"><a href="./register.html?mode=signin">Already registered? Sign in instead</a></p>
-    </div>
-
-    <div class="form-section hidden" id="auth-section">
+    <div class="form-section" id="auth-section">
       <h2 id="auth-title">Register an account</h2>
       <p class="auth-preferred">(preferred option)</p>
       <div class="auth-method">
@@ -282,6 +270,7 @@
         </div>
         <p class="auth-links"><a href="#" id="link-otp-resend">Resend code</a> &nbsp;·&nbsp; <a href="#" id="link-otp-back">Use a different email</a></p>
       </div>
+      <p class="auth-links register-only"><a href="./register.html?mode=signin">Already registered? Sign in instead</a></p>
     </div>
 
     <form id="registration-form" class="form-section hidden">
@@ -392,54 +381,10 @@
     const byId = (id) => document.getElementById(id);
     const SIGNIN_MODE = document.documentElement.classList.contains('signin-mode');
 
-    // Club password gate — a friends-only speed bump, not real security.
-    // Shared flag with View Mode (landing.html) via localStorage. It guards
-    // REGISTRATION only (Chase, 2026-09-06): the Register screen shows it up
-    // front (skipped once this device has passed it, or already holds a
-    // session); the Sign In screen never shows it; a brand-new account that
-    // arrives via Sign In (e.g. a stranger tapping Google) meets it before
-    // the registration form — see showRegistrationForm. Entering the
-    // password is the ONLY thing that marks a device as in the club.
-    const clubPassed = () => localStorage.getItem('surftober.clubpass') === '1';
-    let onGatePass = null;
-    function showGate(onPass){
-      onGatePass = onPass;
-      byId('club-gate').classList.remove('hidden');
-      byId('auth-section').classList.add('hidden');
-      byId('club-pass').focus();
-    }
-    function tryPass(){
-      const guess = (byId('club-pass').value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      if (guess === 'snowy plover') {
-        localStorage.setItem('surftober.clubpass', '1');
-        toast('Welcome in 🐦', 'success');
-        byId('club-gate').classList.add('hidden');
-        const cb = onGatePass; onGatePass = null;
-        if (cb) cb();
-      } else {
-        toast('Not quite — ask the crew about the bird.', 'error');
-      }
-    }
-    byId('btn-club-pass').addEventListener('click', tryPass);
-    byId('club-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryPass(); } });
-    (function initialGate(){
-      // A Supabase session means they're already in the club — don't flash a
-      // password prompt at returning members while the redirect resolves.
-      let hasSession = false;
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('sb-') && key.includes('-auth-token') &&
-              (localStorage.getItem(key) || '').length > 10) { hasSession = true; break; }
-        }
-      } catch (e) {}
-      if (SIGNIN_MODE || clubPassed() || hasSession) {
-        byId('club-gate').classList.add('hidden');
-        byId('auth-section').classList.remove('hidden');
-      } else {
-        showGate(() => byId('auth-section').classList.remove('hidden'));
-      }
-    })();
+    // No club password on this page any more (Chase, 2026-09-10): registration
+    // is open to anyone with the link — real auth (Google, or an email code
+    // that proves the address) is the gate. The club password survives only
+    // in front of View Mode (landing.html → index.html?mode=view).
 
     function toast(msg, type='success'){
       const box = document.getElementById('toast-container');
@@ -533,19 +478,9 @@
         return;
       }
 
-      // A brand-new account that never passed the gate on THIS device (e.g. a
-      // Google sign-in from the Sign In screen) meets the club password now —
-      // the gate guards the registration form, not the door. Returning members
-      // re-registering for a new event already proved themselves.
-      if (!(data && data.display_name) && !clubPassed()) {
-        toast('One more step — the club password.', 'success');
-        await new Promise((resolve) => showGate(resolve));
-      }
-
       // New user, or a returning member facing a new event: show the form.
-      // They're already authenticated (e.g. back from Google), so the gate and
-      // sign-in sections are no longer relevant.
-      document.getElementById('club-gate').classList.add('hidden');
+      // They're already authenticated (e.g. back from Google), so the sign-in
+      // section is no longer relevant.
       document.getElementById('auth-section').classList.add('hidden');
       document.getElementById('registration-form').classList.remove('hidden');
 
