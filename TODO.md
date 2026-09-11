@@ -89,13 +89,6 @@
       Micro → Nano (another ~2-min restart; do it in the off-season quiet).
 
 ## Open items
-- [ ] **Other Surfers: land on the All feed by default?** (Chase, 2026-09-10.)
-      Today the picker opens on the first surfer alphabetically (arbitrary);
-      landing on "All surfers" reads like a crew feed instead. Tradeoff: the
-      feed renders every session (heavier scroll, more photos to load on a
-      phone) and a specific surfer is one extra tap away; the current default
-      is light but shows a random person. Decide before October — mid-event
-      switches confuse people.
 - [ ] **Improve the log-addition animations** (Chase, 2026-09-04) — the
       post-submit `celebrate` splash (1.1 s fade/pop with a random
       STOKE_LINES quip) is functional but plain. Ideas: show the SCORED
@@ -243,6 +236,19 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Other Surfers opens on the All feed~~ (v1.48.0, 2026-09-10, Chase's
+      call on the tradeoff): the picker starts on "All surfers" (tiles);
+      a stale/unknown selection also falls back to the feed. Tapping a name
+      anywhere still opens that surfer's page.
+- [x] ~~Log form kept yesterday's date in a tab left open overnight~~
+      (v1.48.0, 2026-09-10). Two rules now: the default "surf day" rolls
+      over at 03:00 (a 12:30am log is yesterday evening's session), and the
+      default refreshes on tab focus / tab-visible / one alarm set for the
+      next 03:00 (re-armed daily; no polling) — but
+      ONLY while the form is pristine (no input since the last prefill or
+      reset, and not editing a session), so a log in progress across
+      midnight is never touched. Rollover hour is one constant
+      (`LOG_DAY_ROLLOVER_HOUR`) if 3am ever feels wrong.
 - [x] ~~Club password removed from registration~~ (v1.47.0, 2026-09-10, Chase:
       "completely get rid of club password except for view mode"). The
       register page opens straight on the sign-in/register box; anyone with
