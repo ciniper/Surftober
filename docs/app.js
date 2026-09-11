@@ -752,10 +752,29 @@ function todayStr(){
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
-// Today, clamped into the active event's window (the log form only accepts
-// dates inside the window).
+// Log-form default date (Chase, 2026-09-10). Two rules:
+// 1. The "surf day" rolls over at 03:00, not midnight — a session logged at
+//    12:30am is yesterday evening's, and nobody is in the water at 2am.
+// 2. A tab left open overnight used to keep yesterday's date. The default now
+//    refreshes (tab focus, tab becomes visible, and once a minute) but ONLY
+//    while the form is pristine — nothing typed, not editing — so a log in
+//    progress across midnight is never touched. See initForm().
+const LOG_DAY_ROLLOVER_HOUR = 3;
+let logFormTouched = false; // any user input in #log-form since the last prefill/reset
+function logTodayStr(){
+  const t = new Date(Date.now() - LOG_DAY_ROLLOVER_HOUR * 3600000);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+function prefillLogDate(){
+  const el = document.getElementById('log-date');
+  if (el) el.value = defaultLogDate();
+  logFormTouched = false;
+}
+
+// Today (surf-day), clamped into the active event's window (the log form only
+// accepts dates inside the window).
 function defaultLogDate(){
-  const t = todayStr();
+  const t = logTodayStr();
   if (!activeEvent) return t;
   return t < activeEvent.start_date ? activeEvent.start_date : t > activeEvent.end_date ? activeEvent.end_date : t;
 }
@@ -802,7 +821,7 @@ function reflectEventUI(){
     if (activeEvent) {
       dateEl.min = activeEvent.start_date;
       dateEl.max = activeEvent.end_date;
-      if (!editingId) dateEl.value = defaultLogDate();
+      if (!editingId && !logFormTouched) dateEl.value = defaultLogDate();
     } else {
       dateEl.removeAttribute('min');
       dateEl.removeAttribute('max');
@@ -1869,7 +1888,29 @@ function renderTabs() {
 
 function initForm() {
   const f = document.getElementById('log-form');
-  document.getElementById('log-date').value = defaultLogDate();
+  prefillLogDate();
+  // Pristine tracking + stale-date refresh (see the LOG_DAY_ROLLOVER_HOUR note)
+  f.addEventListener('input', () => { logFormTouched = true; });
+  f.addEventListener('change', () => { logFormTouched = true; });
+  function refreshLogDateIfStale(){
+    const dateEl = document.getElementById('log-date');
+    if (!dateEl || editingId || logFormTouched) return;
+    const fresh = defaultLogDate();
+    if (dateEl.value !== fresh) { dateEl.value = fresh; applyCostumeGuard(); }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLogDateIfStale(); });
+  window.addEventListener('focus', refreshLogDateIfStale);
+  // One alarm for the next 03:00 rollover (re-armed after it fires) instead of
+  // polling — this is the case where the tab stays in the foreground all night
+  // and never gets a focus/visibility event. Browsers may delay timers while
+  // the machine sleeps; the focus/visibility triggers above cover that.
+  function armRolloverAlarm(){
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), LOG_DAY_ROLLOVER_HOUR, 0, 5);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    setTimeout(() => { refreshLogDateIfStale(); armRolloverAlarm(); }, next - now);
+  }
+  armRolloverAlarm();
 
   // What counts for each session type — shown as a hint under the select
   const TYPE_HINTS = {
@@ -2127,7 +2168,7 @@ function initForm() {
       logDurationBeforeLock = null;
       resetAudioField();
       resetPhotoField();
-      document.getElementById('log-date').value = defaultLogDate();
+      prefillLogDate();
       // Restore the display name after reset
       enforceProfileNameOnUI();
       // form.reset() restores values but not disabled/hidden state — without
@@ -2149,7 +2190,7 @@ function initForm() {
       logDurationBeforeLock = null;
     resetAudioField();
     resetPhotoField();
-    document.getElementById('log-date').value = defaultLogDate();
+    prefillLogDate();
     enforceProfileNameOnUI();
     applyTypeUI();
     applyCostumeGuard();
@@ -2171,7 +2212,7 @@ function initForm() {
       logDurationBeforeLock = null;
       resetAudioField();
       resetPhotoField();
-      document.getElementById('log-date').value = defaultLogDate();
+      prefillLogDate();
       enforceProfileNameOnUI();
       applyTypeUI();
       applyCostumeGuard();
@@ -2338,14 +2379,14 @@ async function deleteCloudSession(id){
 
 // Sessions page state: your own sessions, or one other surfer's page
 let sessionsView = 'mine';   // 'mine' | 'others'
-let otherUserSelected = '';
+const ALL_SURFERS = '__all__'; // Other Surfers opens on this feed (Chase, 2026-09-10)
+let otherUserSelected = ALL_SURFERS;
 let sessionsLayout = localStorage.getItem('surftober.sessionsLayout') || 'list'; // 'list' | 'tiles'
 // Other Surfers → "All surfers": one feed of everyone's sessions (v1.46.0).
 // The feed keeps its OWN list/tiles preference (default: tiles), separate
 // from the per-surfer pages: entering it swaps that preference in, leaving
 // it restores whatever was in force before. A List/Tiles toggle inside the
 // feed is remembered for the feed only.
-const ALL_SURFERS = '__all__';
 const inAllFeed = () => sessionsView === 'others' && otherUserSelected === ALL_SURFERS;
 let layoutBeforeAll = null;
 function enterAllFeedLayout(){
@@ -2409,7 +2450,7 @@ function renderMyStats() {
       .sort((a, b) => a.localeCompare(b));
     const select = document.getElementById('other-user-select');
     if (select) {
-      if (otherUserSelected !== ALL_SURFERS && !names.includes(otherUserSelected)) otherUserSelected = names[0] || ALL_SURFERS;
+      if (otherUserSelected !== ALL_SURFERS && !names.includes(otherUserSelected)) otherUserSelected = ALL_SURFERS; // nothing chosen (or a stale name) → the feed
       select.innerHTML = `<option value="${ALL_SURFERS}"${otherUserSelected === ALL_SURFERS ? ' selected' : ''}>All surfers</option>` +
         names.map((n) => `<option value="${esc(n)}"${n === otherUserSelected ? ' selected' : ''}>${esc(n)}</option>`).join('');
     }
