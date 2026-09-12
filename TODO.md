@@ -236,6 +236,18 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Deploy-time race left a desktop tab unstyled~~ (v1.49.1, 2026-09-11).
+      Chase reloaded across the v1.49.0 deploy and got the page with no CSS
+      (giant logo, default fonts). Prod was byte-correct; the cause was
+      sw.js's update policy: install → skipWaiting, activate → delete old
+      caches + claim open pages. A page built from the previous HTML could
+      be hijacked by the new worker with its old hashed CSS purged from
+      cache AND gone from the origin → 404 → unstyled. Fix: the new worker
+      waits for old pages to close before activating/purging (hashed assets
+      make instant activation pointless anyway), plus a self-heal: a 404 on
+      a hashed asset name reloads that page once (rate-limited per URL) so
+      it fetches fresh HTML. Workaround if anyone sees it before this
+      reaches their browser: reload.
 - [x] ~~Today tile: one pair of edge arrows instead of day + session arrows~~
       (v1.49.0, 2026-09-11, Chase). The tile is now a single timeline of
       sessions laid out left-to-right in time: ‹ shows the older session and
