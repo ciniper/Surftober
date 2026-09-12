@@ -1,6 +1,14 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **Pick the October default: bottom tab bar vs compact header tabs**
+      (Chase, decide from real use). Flip between them on your phone in
+      Account → Navigation (or `?nav=top` / `?nav=bottom`) for a few days.
+      Bottom bar: thumb reach, installed-app convention. Compact header:
+      ~15–20px more content, and no double bar for friends who use Safari
+      without installing. Then set `window.MOBILE_BOTTOM_NAV` in
+      docs/index.html `<head>` and push. Decide before Oct 1 — nav changes
+      mid-event confuse people.
 - [ ] **Email-code sign-in: dashboard steps before v1.45.0 fully works on
       prod** (Chase, ~5 min). Until done the page still works — the emails
       carry the LINK (tap → signed in, in Safari) and the code box has
@@ -236,6 +244,15 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Compact phone header for the "Header tabs" nav style~~ (v1.51.0,
+      2026-09-11, Chase's idea). With the bottom-nav flag off (or "Header
+      tabs" chosen in Account), phones get: wordmark hidden (the icon still
+      links to Main), the dark/light toggle + crew-album link moved into a
+      tools row at the top of Main (`#main-tools`, a real DOM move so the
+      toggle keeps its handler), and the icon + all four tabs in ONE header
+      row (~54px instead of the old 2-row ~101px). Bottom-bar mode and
+      desktop untouched. Purpose: make the two styles a fair comparison
+      before picking the October default (see Next up).
 - [x] ~~Main page: today tile header + tide/water row~~ (v1.50.0, 2026-09-11,
       Chase). The tile header drops "at Surftober" ("📅 Today" / "Yesterday" /
       "Sep 9") and gains a "See All Sessions" link that opens Sessions on

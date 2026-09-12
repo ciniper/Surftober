@@ -630,6 +630,26 @@ function reflectModeToggle(){
   if (btn) btn.textContent = appliedThemeIsDark() ? '☀️' : '🌙';
 }
 
+// Compact phone header for the HEADER-TABS nav style (bottom-nav flag off):
+// CSS hides the wordmark; this moves the two rarely used header tools — the
+// dark/light toggle and the crew-album link — into #main-tools at the top of
+// Main so the icon and all four tabs fit one header row. A real DOM move
+// (the toggle has one id and one handler; listeners survive the move),
+// reversed whenever the compact layout no longer applies.
+function relocateHeaderTools(){
+  const tools = document.getElementById('main-tools');
+  const brand = document.querySelector('.app-header .brand');
+  const toggle = document.getElementById('mode-toggle');
+  const album = document.getElementById('album-link');
+  if (!tools || !brand || !toggle) return;
+  const compact = matchMedia('(max-width: 640px)').matches &&
+    !document.documentElement.classList.contains('bottom-nav');
+  const home = compact ? tools : brand;
+  if (toggle.parentElement !== home) home.appendChild(toggle);
+  if (album && album.parentElement !== home) home.appendChild(album);
+  tools.hidden = !compact;
+}
+
 function initModeToggle(){
   const btn = document.getElementById('mode-toggle');
   if (!btn) return;
@@ -3202,6 +3222,7 @@ function attachNavStyleHandlers(){
     const v = btn.dataset.nav === 'top' ? 'top' : 'bottom';
     try { localStorage.setItem('surftober.nav', v); } catch {}
     document.documentElement.classList.toggle('bottom-nav', v === 'bottom');
+    relocateHeaderTools();
     reflectNavStyleToggle();
   });
   reflectNavStyleToggle();
@@ -3847,6 +3868,8 @@ window.addEventListener('load', () => {
   applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
   initThemeUI();
   initModeToggle();
+  relocateHeaderTools();
+  matchMedia('(max-width: 640px)').addEventListener('change', relocateHeaderTools);
   renderTabs();
   initForm();
   attachAccountHandlers();
