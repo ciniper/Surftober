@@ -250,7 +250,8 @@
       links to Main), the dark/light toggle + crew-album link moved into a
       tools row at the top of Main (`#main-tools`, a real DOM move so the
       toggle keeps its handler), and the icon + all four tabs in ONE header
-      row (~54px instead of the old 2-row ~101px). Bottom-bar mode and
+      row (~62px instead of the old 2-row ~101px), tabs right-justified
+      (v1.51.1 — Chase: not spread across). Bottom-bar mode and
       desktop untouched. Purpose: make the two styles a fair comparison
       before picking the October default (see Next up).
 - [x] ~~Main page: today tile header + tide/water row~~ (v1.50.0, 2026-09-11,
