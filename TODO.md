@@ -236,6 +236,13 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Main page: today tile header + tide/water row~~ (v1.50.0, 2026-09-11,
+      Chase). The tile header drops "at Surftober" ("📅 Today" / "Yesterday" /
+      "Sep 9") and gains a "See All Sessions" link that opens Sessions on
+      the All-surfers feed. In the conditions card, the tide section (curve
+      + text + Surfline credit) and the water-quality line (+ SFPUC/BWTF
+      credit) now share one row with a divider, tide left / water right, at
+      every width — the curve is narrower, accepted.
 - [x] ~~Deploy-time race left a desktop tab unstyled~~ (v1.49.1, 2026-09-11).
       Chase reloaded across the v1.49.0 deploy and got the page with no CSS
       (giant logo, default fonts). Prod was byte-correct; the cause was

@@ -343,6 +343,16 @@ tr.strip-row > td { padding: 6px 10px 14px; }
 .surf-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
 .surf-card-meta a { color: var(--accent-text); }
 .bwtf-link { white-space: nowrap; }
+/* v1.50: tide + water quality share one row under the conditions (Chase:
+   fine if the tide curve gets squished); each column keeps its own credit line */
+.surf-row2 { display: flex; gap: 12px; margin-top: 10px; border-top: 1px solid var(--card-border); padding-top: 8px; }
+.surf-col { flex: 1 1 0; min-width: 0; }
+.surf-col + .surf-col { border-left: 1px solid var(--card-border); padding-left: 12px; }
+.surf-col .surf-main-tide, .surf-col .surf-water { margin-top: 0; border-top: 0; padding-top: 0; }
+.surf-col .surf-card-meta { margin-top: 6px; }
+/* v1.50: today tile header — day label + "See All Sessions" link */
+.today-title { display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.today-all-link { font-size: 12px; font-weight: 600; color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 .bwtf-mark { width: 14px; height: 14px; vertical-align: -3px; }
 
 /* v1.9.2: medal thresholds as real chips instead of a text line */

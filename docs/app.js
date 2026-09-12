@@ -3478,10 +3478,10 @@ function surfMainCard(z, tides, water, fetchedAt, wind){
         ${hoffMeter(z.rel, z.max, color)}
       </div>
     </div>
-    ${tides ? surfTideSection(tides.list, color) : ''}
-    ${surflineMeta}
-    ${waterHtml}
-    ${waterMeta}
+    <div class="surf-row2">
+      <div class="surf-col surf-col-tide">${tides ? surfTideSection(tides.list, color) : ''}${surflineMeta}</div>
+      ${waterHtml ? `<div class="surf-col surf-col-water">${waterHtml}${waterMeta}</div>` : ''}
+    </div>
   </div>`;
 }
 
@@ -3694,9 +3694,7 @@ function renderTodayTile(){
     </div>`;
   }
 
-  const label = isToday ? 'Today at Surftober'
-    : isYesterday ? 'Yesterday at Surftober'
-    : `${esc(fmtDay(day))} at Surftober`;
+  const label = isToday ? 'Today' : isYesterday ? 'Yesterday' : esc(fmtDay(day));
   const fallbackNote = fellBack
     ? '<div class="hint today-fallback">Nothing logged yet today — showing the latest session day.</div>'
     : '';
@@ -3704,7 +3702,7 @@ function renderTodayTile(){
   box.innerHTML = `<div class="surf-main today-card">
     <button type="button" class="today-edge" data-nav="older" aria-label="Older session"${hasOlder ? '' : ' disabled'}>‹</button>
     <div class="today-body">
-      <div class="today-head"><span class="surf-label">📅 ${label}</span><span class="today-stat">${stat}</span></div>
+      <div class="today-head"><span class="today-title"><span class="surf-label">📅 ${label}</span><a href="#me" class="today-all-link">See All Sessions</a></span><span class="today-stat">${stat}</span></div>
       ${fallbackNote}
       ${feature}
     </div>
@@ -3725,6 +3723,16 @@ function renderTodayTile(){
     }
     renderTodayTile();
   }));
+  // "See All Sessions" → Sessions tab on the All-surfers feed
+  const allLink = box.querySelector('.today-all-link');
+  if (allLink) allLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    sessionsView = 'others';
+    otherUserSelected = ALL_SURFERS;
+    enterAllFeedLayout();
+    location.hash = '#me';
+    renderMyStats();
+  });
   const link = box.querySelector('.today-user');
   if (link) link.addEventListener('click', (e) => {
     e.preventDefault();
