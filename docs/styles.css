@@ -484,3 +484,17 @@ a.photo-zoom { cursor: zoom-in; display: inline-block; }
 .tile-surfer { margin-bottom: 2px; }
 .surfer-link { color: var(--accent); font-weight: 700; text-decoration: none; }
 .surfer-link:hover { text-decoration: underline; }
+
+/* v1.51: compact header for phones on the HEADER-TABS nav style (bottom-nav
+   flag off / "Header tabs" in Account). Wordmark hidden (icon stays the link
+   to Main), toggle + album moved to the top of Main by app.js, so the icon
+   and all four tabs share one header row. Bottom-bar mode and desktop are
+   untouched. */
+.main-tools { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin: 0 0 6px; }
+.main-tools[hidden] { display: none; }
+@media (max-width: 640px) {
+  html:not(.bottom-nav) .app-header { flex-wrap: nowrap; gap: 8px; }
+  html:not(.bottom-nav) .brand-name { display: none; }
+  html:not(.bottom-nav) .tabs { justify-content: space-between; gap: 2px; }
+  html:not(.bottom-nav) .tabs a { padding: 10px 9px; font-size: 14px; }
+}
