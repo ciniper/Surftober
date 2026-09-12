@@ -3601,8 +3601,13 @@ function hoffMeter(rel, maxFt, color){
 // weighted toward sessions with a journal or photo. It must stay put across
 // the constant realtime re-renders — a per-render random would swap the
 // feature mid-read. Browse state lives in module vars for the same reason.
+// v1.49.0: ONE pair of edge arrows walks a single timeline of sessions laid
+// out left-to-right in time — ‹ goes to the older session and rolls into the
+// previous day when the current day runs out; › goes newer (into the next
+// day's first session). Days with no sessions are skipped. The cursor is
+// (day, index-within-day), sessions in chronological order within a day.
 let todayTileDate = null; // 'YYYY-MM-DD' being viewed; null = auto (today, else last active day)
-let todayTileIdx = null;  // session index within the day; null = per-visit weighted random
+let todayTileIdx = null;  // session index within the day (chronological); null = per-visit weighted random
 const todayTileSeed = Math.floor(Math.random() * 0x7fffffff);
 
 // Stable pseudo-random in [0,1) for this visit + a key (the day), so
@@ -3626,20 +3631,25 @@ function renderTodayTile(){
   const all = loadSessions().map(SurftoberAwards.normalizeSession);
   const onDay = (d) => all.filter((s) => String(s.date).slice(0, 10) === d);
 
+  // Days that have sessions, ascending, inside the event so far
+  const activeDays = Array.from(new Set(all.map((s) => String(s.date).slice(0, 10))))
+    .filter((d) => d >= ev.start_date && d <= today)
+    .sort();
+
   let day = todayTileDate || today;
   if (day > today) day = today;
   if (day < ev.start_date) day = ev.start_date;
   // Auto mode with an empty today → the latest day that has sessions
   let fellBack = false;
-  if (!todayTileDate && !onDay(day).length) {
-    const activeDays = Array.from(new Set(all.map((s) => String(s.date).slice(0, 10))))
-      .filter((d) => d >= ev.start_date && d <= today)
-      .sort();
-    if (activeDays.length) { day = activeDays[activeDays.length - 1]; fellBack = true; }
+  if (!todayTileDate && !onDay(day).length && activeDays.length) {
+    day = activeDays[activeDays.length - 1];
+    fellBack = true;
   }
 
-  const sessions = onDay(day)
-    .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
+  // Chronological within the day: ‹ older / › newer, and the counter climbs
+  // as you move right
+  const byStart = (a, b) => String(a.start_time || '').localeCompare(String(b.start_time || ''));
+  const sessions = onDay(day).sort(byStart);
   const totalMins = sessions.reduce((a, s) => a + s.base_minutes, 0);
   const surfers = new Set(sessions.map((s) => (s.user || '').trim()).filter(Boolean));
   const isToday = day === today;
@@ -3659,6 +3669,12 @@ function renderTodayTile(){
   }
   idx = Math.min(Math.max(0, idx), Math.max(0, sessions.length - 1));
 
+  // Timeline neighbours: the next older / newer day that has sessions
+  const olderDay = [...activeDays].reverse().find((d) => d < day) || null;
+  const newerDay = activeDays.find((d) => d > day) || null;
+  const hasOlder = idx > 0 || !!olderDay;                     // ‹
+  const hasNewer = idx < sessions.length - 1 || !!newerDay;   // ›
+
   let feature = '';
   if (sessions.length) {
     const s = sessions[idx];
@@ -3669,11 +3685,9 @@ function renderTodayTile(){
       s.start_time ? esc(fmtTime(s.start_time)) : '',
       SurftoberAwards.minutesToHHMM(s.base_minutes)
     ].filter(Boolean).join(' · ');
-    const sessNav = sessions.length > 1
-      ? `<span class="today-sess-nav"><button type="button" class="today-nav" data-nav="sess-prev" aria-label="Previous session">‹</button> ${idx + 1} / ${sessions.length} <button type="button" class="today-nav" data-nav="sess-next" aria-label="Next session">›</button></span>`
-      : '';
+    const count = sessions.length > 1 ? `<span class="today-sess-count">${idx + 1} / ${sessions.length}</span>` : '';
     feature = `<div class="today-feature">
-      <div class="today-feature-head"><span><a href="#me" class="today-user" data-user="${esc(s.user || '')}">${esc(s.user || '')}</a> ${bits}</span>${sessNav}</div>
+      <div class="today-feature-head"><span><a href="#me" class="today-user" data-user="${esc(s.user || '')}">${esc(s.user || '')}</a> ${bits}</span>${count}</div>
       ${snippet ? `<blockquote class="today-quote">“${esc(snippet)}”</blockquote>` : ''}
       ${photoThumbHtml(s.photo_url, 'session-photo-card')}
       ${s.audio_url ? audioPlayerHtml(s.audio_url) : ''}
@@ -3686,26 +3700,29 @@ function renderTodayTile(){
   const fallbackNote = fellBack
     ? '<div class="hint today-fallback">Nothing logged yet today — showing the latest session day.</div>'
     : '';
-  const dayNav =
-    `<button type="button" class="today-nav" data-nav="day-prev" aria-label="Previous day"${day > ev.start_date ? '' : ' disabled'}>‹</button>` +
-    ` <span class="surf-label">📅 ${label}</span> ` +
-    `<button type="button" class="today-nav" data-nav="day-next" aria-label="Next day"${isToday ? ' disabled' : ''}>›</button>`;
 
   box.innerHTML = `<div class="surf-main today-card">
-    <div class="today-head"><span class="today-day-nav">${dayNav}</span><span class="today-stat">${stat}</span></div>
-    ${fallbackNote}
-    ${feature}
+    <button type="button" class="today-edge" data-nav="older" aria-label="Older session"${hasOlder ? '' : ' disabled'}>‹</button>
+    <div class="today-body">
+      <div class="today-head"><span class="surf-label">📅 ${label}</span><span class="today-stat">${stat}</span></div>
+      ${fallbackNote}
+      ${feature}
+    </div>
+    <button type="button" class="today-edge" data-nav="newer" aria-label="Newer session"${hasNewer ? '' : ' disabled'}>›</button>
   </div>`;
   box.hidden = false;
 
-  // Arrow taps switch to MANUAL mode (an explicit date), so the fallback
-  // stops steering and the reader can walk to today's empty state if they want.
-  box.querySelectorAll('.today-nav').forEach((b) => b.addEventListener('click', () => {
-    const nav = b.getAttribute('data-nav');
-    if (nav === 'day-prev') { todayTileDate = shiftDay(day, -1); todayTileIdx = null; }
-    else if (nav === 'day-next') { todayTileDate = shiftDay(day, 1); todayTileIdx = null; }
-    else if (nav === 'sess-prev') todayTileIdx = (idx - 1 + sessions.length) % sessions.length;
-    else if (nav === 'sess-next') todayTileIdx = (idx + 1) % sessions.length;
+  // Arrow taps pin the day (manual mode), so the fallback stops steering.
+  box.querySelectorAll('.today-edge').forEach((b) => b.addEventListener('click', () => {
+    if (b.getAttribute('data-nav') === 'older') {
+      if (idx > 0) { todayTileDate = day; todayTileIdx = idx - 1; }
+      else if (olderDay) { todayTileDate = olderDay; todayTileIdx = onDay(olderDay).length - 1; }
+      else return;
+    } else {
+      if (idx < sessions.length - 1) { todayTileDate = day; todayTileIdx = idx + 1; }
+      else if (newerDay) { todayTileDate = newerDay; todayTileIdx = 0; }
+      else return;
+    }
     renderTodayTile();
   }));
   const link = box.querySelector('.today-user');

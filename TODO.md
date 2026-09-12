@@ -236,6 +236,17 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Today tile: one pair of edge arrows instead of day + session arrows~~
+      (v1.49.0, 2026-09-11, Chase). The tile is now a single timeline of
+      sessions laid out left-to-right in time: ‹ shows the older session and
+      rolls into the previous day when the current day runs out; › goes
+      newer (into the next day's first session). Chronological within a day,
+      so the counter climbs as you move right.
+      Days without sessions are skipped (no dead pages); the header keeps
+      the day label + stat and the feature keeps a "2 / 3" counter. Arrows
+      are full-height 30px columns on the card's edges, disabled at either
+      end of the timeline. The per-visit weighted random pick still chooses
+      the starting session; the fallback note for an empty today stays.
 - [x] ~~Other Surfers opens on the All feed~~ (v1.48.0, 2026-09-10, Chase's
       call on the tradeoff): the picker starts on "All surfers" (tiles);
       a stale/unknown selection also falls back to the feed. Tapping a name
