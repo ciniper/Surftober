@@ -2266,7 +2266,7 @@ let editingPhotoUrl = null; // existing photo of the session being edited
 // buttons jump up next to it, and the form gets an accent outline.
 function setEditModeUI(editing){
   const title = document.getElementById('log-title');
-  if (title) title.textContent = editing ? 'Editing Session' : 'Quick Log';
+  if (title) title.textContent = editing ? 'Editing Session' : 'Log';
   const form = document.getElementById('log-form');
   if (form) form.classList.toggle('editing', editing);
   const actions = document.getElementById('log-actions');
