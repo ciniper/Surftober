@@ -244,6 +244,13 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~"Use this crop" saves immediately~~ (v1.53.1, 2026-09-11, Chase). The
+      crop editor's apply now runs the same save path as the Save Profile
+      button (row write + original upload + avatar refresh) and toasts
+      "Crop saved"; if it can't save (no display name yet) the crop stays
+      pending with the old "hit Save Profile" hint. Also: hovering the text
+      of either header tool shades its icon (group hover), matching what the
+      theme tool already got from its <label for>.
 - [x] ~~Main header: jump link inline with the title; tools on their own
       line; desktop icons get text~~ (v1.53.0, 2026-09-11, Chase). Main row =
       "Main" left, "Jump to leaderboard ↓" right (every device). The theme

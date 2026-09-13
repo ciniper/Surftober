@@ -1228,7 +1228,7 @@ function attachAccountHandlers(){
       || (pendingPhotoBase64 !== undefined ? pendingPhotoBase64 : avatarSrc(profileData && profileData.photo_base64));
   }
 
-  function acceptCroppedPhoto(dataUrl){
+  async function acceptCroppedPhoto(dataUrl){
     pendingPhotoBase64 = dataUrl;
     // A baked square needs no display offset; a stale one would re-crop it.
     pendingPhotoPosition = AVATAR_POS_DEFAULT;
@@ -1239,7 +1239,18 @@ function attachAccountHandlers(){
       setAvatarPosition(preview, AVATAR_POS_DEFAULT);
     }
     reflectPhotoNudge();
-    toast('Crop applied — hit Save Profile to keep it', 'success');
+    // "Use this crop" IS the decision — save it now instead of making people
+    // remember Save Profile (Chase, 2026-09-11). Same path as the button:
+    // uploads a freshly picked original, writes the row, refreshes the
+    // avatar everywhere. If it can't save (e.g. no display name yet), the
+    // crop stays pending for the Save Profile button, as before.
+    try {
+      await saveProfile();
+      toast('Crop saved', 'success');
+      await syncFromCloud();
+    } catch (e) {
+      toast('Crop applied but not saved yet (' + e.message + ') — hit Save Profile to keep it', 'warn');
+    }
   }
 
   const btnCrop = document.getElementById('btn-photo-crop');
