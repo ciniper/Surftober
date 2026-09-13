@@ -641,12 +641,20 @@ function relocateHeaderTools(){
   const brand = document.querySelector('.app-header .brand');
   const toggle = document.getElementById('mode-toggle');
   const album = document.getElementById('album-link');
-  if (!tools || !brand || !toggle) return;
+  const toolTheme = document.getElementById('tool-theme');
+  const toolAlbum = document.getElementById('tool-album');
+  if (!tools || !brand || !toggle || !toolTheme || !toolAlbum) return;
   const compact = matchMedia('(max-width: 640px)').matches &&
     !document.documentElement.classList.contains('bottom-nav');
-  const home = compact ? tools : brand;
-  if (toggle.parentElement !== home) home.appendChild(toggle);
-  if (album && album.parentElement !== home) home.appendChild(album);
+  if (compact) {
+    // icon first, then its label ("🌙 Toggle theme", "◉ Upload photos/videos")
+    if (toggle.parentElement !== toolTheme) toolTheme.prepend(toggle);
+    if (album && album.parentElement !== toolAlbum) toolAlbum.prepend(album);
+  } else {
+    if (toggle.parentElement !== brand) brand.appendChild(toggle);
+    if (album && album.parentElement !== brand) brand.appendChild(album);
+  }
+  toolAlbum.hidden = !(album && album.style.display !== 'none'); // no album configured → no tool
   tools.hidden = !compact;
 }
 
@@ -1794,6 +1802,9 @@ function attachPhotoHandlers(){
   if (albumUrl) {
     const headerLink = document.getElementById('album-link');
     if (headerLink) { headerLink.href = albumUrl; headerLink.style.display = ''; }
+    const albumLabel = document.getElementById('album-link-label');
+    if (albumLabel) albumLabel.href = albumUrl;
+    relocateHeaderTools(); // the album tool on Main can show now
     const formHint = document.getElementById('log-photo-album-hint');
     if (formHint) {
       const a = formHint.querySelector('a');
@@ -3870,6 +3881,14 @@ window.addEventListener('load', () => {
   initModeToggle();
   relocateHeaderTools();
   matchMedia('(max-width: 640px)').addEventListener('change', relocateHeaderTools);
+  // Main → "Jump to leaderboard": a scroll, not a route change (#leaderboard
+  // is the Main tab's own hash)
+  const jump = document.getElementById('jump-leaderboard');
+  if (jump) jump.addEventListener('click', (e) => {
+    e.preventDefault();
+    const h = document.querySelector('.lb-heading');
+    if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   renderTabs();
   initForm();
   attachAccountHandlers();
