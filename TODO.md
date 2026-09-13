@@ -244,6 +244,15 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Main page header row~~ (v1.52.0, 2026-09-11, Chase). Main now has a
+      "Main" title like the other pages. Same row: on phones in header-tabs
+      mode the relocated tools with labels — "🌙 Toggle theme" (a real
+      <label for>, tapping the words presses the button) and "◉ Upload
+      photos/videos" (label links to the album too) — and, on every device,
+      a "Jump to leaderboard ↓" link on the right that smooth-scrolls to the
+      Leaderboard heading (a scroll, not a route change; heading has
+      scroll-margin for the sticky header). Desktop header: 8px more space
+      between the wordmark and the icons.
 - [x] ~~Compact phone header for the "Header tabs" nav style~~ (v1.51.0,
       2026-09-11, Chase's idea). With the bottom-nav flag off (or "Header
       tabs" chosen in Account), phones get: wordmark hidden (the icon still

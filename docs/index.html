@@ -340,10 +340,19 @@
     <!-- Main Page (tab says "Main"; the hash stays #leaderboard so old
          links and the tab routing keep working) -->
     <section id="page-leaderboard" class="page">
-      <!-- Phones on the HEADER-TABS nav style: the dark/light toggle and the
-           crew-album link move here from the header (app.js relocateHeaderTools)
-           so the icon + all tabs fit one header row. Hidden otherwise. -->
-      <div id="main-tools" class="main-tools" hidden></div>
+      <!-- Main header row: title · (phones on the HEADER-TABS nav style: the
+           dark/light toggle + crew-album link move in here from the header via
+           app.js relocateHeaderTools, each with a label) · jump link to the
+           leaderboard further down. The label element for the toggle is a real
+           <label for>, so tapping the words presses the button. -->
+      <div class="main-head">
+        <h2 class="main-title">Main</h2>
+        <div id="main-tools" class="main-tools" hidden>
+          <span class="tool" id="tool-theme"><label for="mode-toggle" class="tool-label">Toggle theme</label></span>
+          <span class="tool" id="tool-album" hidden><a id="album-link-label" class="tool-label" target="_blank" rel="noopener">Upload photos/videos</a></span>
+        </div>
+        <a href="#leaderboard" id="jump-leaderboard" class="jump-leaderboard">Jump to leaderboard ↓</a>
+      </div>
       <div id="totals-tile" class="totals-tile" hidden></div>
       <div id="today-tile" hidden></div>
       <div class="lb-row">
