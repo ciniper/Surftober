@@ -639,21 +639,15 @@ function reflectModeToggle(){
 function relocateHeaderTools(){
   const tools = document.getElementById('main-tools');
   const brand = document.querySelector('.app-header .brand');
-  const toggle = document.getElementById('mode-toggle');
+  const toolTheme = document.getElementById('tool-theme');   // 🌙 + "Toggle theme"
+  const toolAlbum = document.getElementById('tool-album');   // ◉ + "Upload photos/videos"
   const album = document.getElementById('album-link');
-  const toolTheme = document.getElementById('tool-theme');
-  const toolAlbum = document.getElementById('tool-album');
-  if (!tools || !brand || !toggle || !toolTheme || !toolAlbum) return;
+  if (!tools || !brand || !toolTheme || !toolAlbum) return;
   const compact = matchMedia('(max-width: 640px)').matches &&
     !document.documentElement.classList.contains('bottom-nav');
-  if (compact) {
-    // icon first, then its label ("🌙 Toggle theme", "◉ Upload photos/videos")
-    if (toggle.parentElement !== toolTheme) toolTheme.prepend(toggle);
-    if (album && album.parentElement !== toolAlbum) toolAlbum.prepend(album);
-  } else {
-    if (toggle.parentElement !== brand) brand.appendChild(toggle);
-    if (album && album.parentElement !== brand) brand.appendChild(album);
-  }
+  const home = compact ? tools : brand;
+  if (toolTheme.parentElement !== home) home.appendChild(toolTheme);
+  if (toolAlbum.parentElement !== home) home.appendChild(toolAlbum);
   toolAlbum.hidden = !(album && album.style.display !== 'none'); // no album configured → no tool
   tools.hidden = !compact;
 }
