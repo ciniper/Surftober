@@ -244,6 +244,14 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Main header: jump link inline with the title; tools on their own
+      line; desktop icons get text~~ (v1.53.0, 2026-09-11, Chase). Main row =
+      "Main" left, "Jump to leaderboard ↓" right (every device). The theme
+      toggle and album link are now "tools" = icon + label moved as a unit:
+      desktop header shows "🌙 Toggle theme" / "◉ Upload photos/videos" next
+      to the wordmark; phones on header-tabs mode show them on the line under
+      the Main row; phones with the bottom bar keep the header icons-only
+      (labels hidden there — no room beside the wordmark).
 - [x] ~~Main page header row~~ (v1.52.0, 2026-09-11, Chase). Main now has a
       "Main" title like the other pages. Same row: on phones in header-tabs
       mode the relocated tools with labels — "🌙 Toggle theme" (a real
