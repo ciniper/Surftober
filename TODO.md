@@ -244,6 +244,16 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Bug: double-tapping "Add Entry" logged the session twice~~ (v1.53.2,
+      2026-09-13, Chase's report). The submit handler awaits uploads and the
+      cloud insert, and each await let a second tap re-enter it. Now an
+      in-flight flag refuses re-entry and the button disables + reads
+      "Saving…" (or "Updating…") until the save settles, then restores.
+      The Comment Board's Post button already had the same protection.
+      Not covered (rare, different cause): a network timeout AFTER the
+      insert committed makes the client report failure; a retry then
+      duplicates. A DB-side "same user/date/start/duration within N
+      seconds" guard would close that — only if it ever shows up.
 - [x] ~~"Use this crop" saves immediately~~ (v1.53.1, 2026-09-11, Chase). The
       crop editor's apply now runs the same save path as the Save Profile
       button (row write + original upload + avatar refresh) and toasts

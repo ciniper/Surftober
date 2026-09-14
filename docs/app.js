@@ -783,6 +783,7 @@ function todayStr(){
 //    progress across midnight is never touched. See initForm().
 const LOG_DAY_ROLLOVER_HOUR = 3;
 let logFormTouched = false; // any user input in #log-form since the last prefill/reset
+let logSubmitting = false;  // a log-form save is in flight (double-submit guard)
 function logTodayStr(){
   const t = new Date(Date.now() - LOG_DAY_ROLLOVER_HOUR * 3600000);
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
@@ -2152,6 +2153,15 @@ function initForm() {
       toast('Stop the audio recording first.', 'warn');
       return;
     }
+    // Double-submit guard (Chase, 2026-09-13: two taps on a slow save logged
+    // the session twice). Everything below awaits — uploads, the cloud insert
+    // — and each await yields to the event loop, so a second click could
+    // re-enter this handler. Refuse re-entry, and make the wait visible:
+    // the button disables and reads "Saving…" until the save settles.
+    if (logSubmitting) return;
+    logSubmitting = true;
+    const submitBtn = document.getElementById('btn-submit');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = editingId ? 'Updating…' : 'Saving…'; }
     const audioInput = document.getElementById('log-audio');
     const audioRemove = document.getElementById('log-audio-remove');
     // A fresh recording wins; otherwise a picked file.
@@ -2216,6 +2226,9 @@ function initForm() {
       const st = document.getElementById('status');
       if (st) st.textContent = 'Save failed: ' + e.message;
       toast('Save failed: ' + e.message, 'error');
+    } finally {
+      logSubmitting = false;
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = editingId ? 'Update Entry' : 'Add Entry'; }
     }
   });
   // Cancel edit
