@@ -13,14 +13,15 @@
  *     with the link") — it will contain names, emails, and phone numbers.
  *  2. Extensions -> Apps Script. Delete the starter code, paste this file.
  *  3. Gear icon (Project Settings) -> Script Properties -> add two properties:
- *       SUPABASE_URL               https://rdrblueqytucygpmjuyh.supabase.co
+ *       SUPABASE_URL               <your project URL: Supabase dashboard -> Settings
+ *                                  -> API; same value as SUPABASE_URL atop docs/app.js>
  *       SUPABASE_SERVICE_ROLE_KEY  <service_role key: Supabase dashboard -> Settings -> API>
  *     The service_role key bypasses row security (needed to read all profiles).
  *     It lives ONLY here, in Script Properties — never in any repo or web page.
  *  4. In the editor toolbar select the function `setup` and click Run.
  *     Approve the permissions prompt. This does the first sync and creates the
  *     nightly 3am trigger.
- *  5. Check the Sheet: tabs `sessions`, `profiles`, `auth_users`, `meta` should
+ *  5. Check the Sheet: tabs `sessions`, `profiles`, `auth_users`, `events`, `meta` should
  *     be filled, and `meta` shows the last sync time. Done.
  *
  * The `meta` tab is your health check: if "last sync" ever goes stale during
@@ -42,10 +43,15 @@ const PING_URL = '';
 // historical answers remain in this sheet's existing rows.
 // photo_base64 is deliberately excluded: a Sheets cell caps at 50,000
 // characters and the photos are far larger (they live in the pg_dump backup).
+// Added 2026-09-22 (all verified present in prod): photo_position (avatar
+// crop), photo_original_url (Storage URL of the full-size original) and
+// registered_event_id (which event the person re-registered for — the
+// re-registration gate's marker, needed to rebuild the roster faithfully).
 const PROFILE_COLS = [
   'id', 'display_name', 'target_hours', 'charity_commitment',
   'location_based', 'whatsapp_phone', 'fun_comment', 'additional_comments',
-  'registered_at', 'created_at', 'updated_at'
+  'photo_position', 'photo_original_url', 'registered_at',
+  'registered_event_id', 'created_at', 'updated_at'
 ];
 
 // NOTE: audio_url (v1.5) and deleted_at (v1.5.3) exist only after the upgrade
@@ -55,11 +61,12 @@ const PROFILE_COLS = [
 const SESSION_COLS = [
   'id', 'team', 'user_id', 'user_name', 'date', 'start_time', 'type', 'duration_minutes',
   'location', 'surf_craft', 'notes', 'no_wetsuit', 'costume', 'taught_kook',
-  'water_reading', 'cleanup_items', 'audio_url', 'photo_url', 'deleted_at', 'created_at'
+  'water_reading', 'cleanup_items', 'client_entry_id', 'audio_url', 'photo_url',
+  'deleted_at', 'created_at'
 ];
 
 // v1.5+: the admin-launched seasons table.
-const EVENT_COLS = ['id', 'name', 'team', 'start_date', 'end_date', 'is_active', 'created_at'];
+const EVENT_COLS = ['id', 'name', 'team', 'start_date', 'end_date', 'is_active', 'logging_frozen', 'created_at'];
 
 /** Run this once by hand: first sync + creates the nightly trigger. */
 function setup() {

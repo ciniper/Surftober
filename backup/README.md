@@ -111,9 +111,11 @@ Setup, ~10 minutes: full instructions are at the top of
 Apps Script → paste the script → set `SUPABASE_URL` +
 `SUPABASE_SERVICE_ROLE_KEY` in Script Properties → run `setup()` once.
 
-Nightly it rewrites four tabs: `sessions`, `profiles` (minus photos),
-`auth_users` (the email roster), and `meta` (last sync time + row counts —
-your freshness check).
+Nightly it rewrites five tabs: `sessions`, `profiles` (minus photos),
+`auth_users` (the email roster), `events`, and `meta` (last sync time + row
+counts — your freshness check; see TODO.md "Verify the Google Sheet mirror"
+for the full checklist). Not mirrored: `messages` (Comment Board) and
+anything in Storage buckets.
 
 Notes:
 - The Sheet holds PII — keep it private, don't switch it to link-sharing.
