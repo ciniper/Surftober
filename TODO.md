@@ -1,6 +1,36 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **Verify the Google Sheet mirror has been backing up** (Chase,
+      2026-09-22 — "important"; it's the only backup outside Supabase).
+      Checked from here today: the DB has 84 sessions (25 of them
+      soft-deleted — the mirror keeps those too), 3 events, 34 messages;
+      newest session was created 2026-09-19. The Sheet itself is in your
+      personal Drive (the work-Drive connector can't see it), so:
+      1. Open the private mirror Sheet → `meta` tab. `last_sync_utc` should
+         be within the last ~24 h (trigger: daily 03:00 in the Apps Script
+         project's timezone) and `sessions` should read 84 as of 09-22;
+         `events` 3; `profiles`/`auth_users` ≈ Supabase Auth → Users count.
+         If it's stuck around 2026-08-31/09-01 → the live script still
+         selects `sponsor_match` (dropped 08-31) and every run has 400'd;
+         step 3 fixes it.
+      2. `sessions` tab header row should include `start_time`,
+         `taught_kook`, `water_reading`, `photo_url`, `deleted_at`.
+      3. **Re-paste the template** (backup/sheets-mirror.gs, updated
+         2026-09-22 — verified against prod that every column exists):
+         profiles gain `photo_position`, `photo_original_url`,
+         `registered_event_id` (the re-registration marker); events gain
+         `logging_frozen`; sessions gain `client_entry_id`. Extensions →
+         Apps Script → replace the code → **put your real ping URL back on
+         the `PING_URL` line** (the template ships it blank) → Save → run
+         `mirror` once by hand → `meta.last_sync_utc` updates and the new
+         headers appear. Don't re-run `setup` (it would just recreate the
+         same trigger).
+      4. healthchecks.io → surftober-sheets-mirror: last ping = last night.
+         Apps Script → Executions: recent `mirror` runs show Completed.
+      Known gaps, by design: `messages` (Comment Board) isn't mirrored (say
+      the word — a sixth tab is ~6 lines), `photo_base64` is excluded
+      (cell-size cap), and Storage media is covered by its own Open item.
 - [ ] **Registration flow text — Chase refines the copy himself** (Chase,
       2026-09-22; the last pre-launch code item). Everything a registrant
       reads lives in docs/register.html:
@@ -20,6 +50,16 @@
       / "View Mode (Read Only)".
       Edit, then hand off: I bump version.js, check the built page, commit;
       you push. HTML isn't content-hashed, so nothing else to bump.
+- [ ] **Oct 1: activate "5th Surftober 2026"** (found 2026-09-22 while
+      checking the events table — nothing flips it automatically; the only
+      path is the admin Events panel → `activate_event` RPC). The row is
+      already staged: team `5th-surftober-2026`, 2026-10-01 → 10-31,
+      inactive. Until you tap it the app is still on "September Test 2026"
+      (team `surftober-2026`). Morning of Oct 1: Awards → Events →
+      **Activate** on 5th Surftober 2026. Open clients pick it up via the
+      realtime events listener; everyone else on next load. This is also the
+      moment the re-registration banner + logging block (kept as-is,
+      decided 09-22) switches on for returning members.
 
 ## Scoped, awaiting a go
 
