@@ -1,65 +1,27 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Pick the October default: bottom tab bar vs compact header tabs**
-      (Chase, decide from real use). Flip between them on your phone in
-      Account → Navigation (or `?nav=top` / `?nav=bottom`) for a few days.
-      Bottom bar: thumb reach, installed-app convention. Compact header:
-      ~15–20px more content, and no double bar for friends who use Safari
-      without installing. Then set `window.MOBILE_BOTTOM_NAV` in
-      docs/index.html `<head>` and push. Decide before Oct 1 — nav changes
-      mid-event confuse people.
-- [ ] **Email-code sign-in: dashboard steps before v1.45.0 fully works on
-      prod** (Chase, ~5 min). Until done the page still works — the emails
-      carry the LINK (tap → signed in, in Safari) and the code box has
-      nothing to type.
-      Step-by-step with copy-paste template bodies: `supabase-auth-emails.md`
-      (§1 templates — Magic Link AND Confirm sign up get `{{ .Token }}`, the
-      link stays as a fallback; §2 OTP length 6 / expiry 3600; §4 test).
-      Optional: `git push origin archive/password-signin` so the archived
-      password work lives on GitHub, not just this laptop.
-- [ ] **Sign-in email: final checks** (Chase, 2026-09-06). Custom SMTP is
-      configured on Surftober's OWN Brevo account (login alias
-      `ciniper+surftober@gmail.com`): sender `noreply@surftober.com`,
-      surftober.com authenticated (brevo1/brevo2 DKIM CNAMEs, brevo-code TXT,
-      DMARC p=none), host smtp-relay.brevo.com:587. DNS verified from outside
-      (exactly one `_dmarc` record — GoDaddy's auto-added default
-      `p=quarantine … onsecureserver.net` was deleted; two DMARC records =
-      no DMARC). Remaining:
-      1. ~~Authentication → Rate Limits → emails `60`/hour~~ DONE 2026-09-08.
-      2. ~~Send yourself a code; Show original~~ DONE 2026-09-08: SPF/DKIM/
-         DMARC all PASS, DKIM `d=surftober.com`, delivered in 2 s, code in
-         the subject. Brevo's click/open tracking stays ON (no dashboard
-         toggle; support-only) — accepted, not an action item. Debugging
-         notes if codes ever misbehave: supabase-auth-emails.md §3
-         ("Debugging notes"): tracked fallback link, and the Unsubscribe
-         button → Blocked or unsubscribed contacts list.
-      3. ~~Interim key cleanup in the BWTF Brevo account~~ N/A (Chase,
-         09-08: BWTF's Brevo account is under a different email — Surftober
-         never touched it; the two accounts are fully separate). Optional:
-         delete the auto-created Gmail sender in the new account to clear
-         its warning banner.
-      4. Full flow test INSIDE the installed PWA (see supabase-auth-emails.md
-         §4): Register → gate → email → code → form; Sign In unknown email →
-         "register first"; Sign In with your Gmail → code → app.
-      Then move this to Done.
+- [ ] **Registration flow text — Chase refines the copy himself** (Chase,
+      2026-09-22; the last pre-launch code item). Everything a registrant
+      reads lives in docs/register.html:
+      · welcome pitch + bonus list: `.welcome-message` (~L230–246; hidden on
+        the Sign In screen via `.signin-mode`)
+      · auth box `#auth-section` (~L247–274): "Register an account",
+        "(preferred option)", "Register with Google Account", "or use your
+        email", the "No account with this email yet — register first" note,
+        "6-digit code", "Resend code" / "Use a different email", "Already
+        registered? Sign in instead". The Sign In screen's wording is set in
+        JS (~L550–551: 'Sign In' / 'Sign in with Google'); the "We emailed a
+        6-digit code…" note ~L593; code-error toasts ~L623 and ~L631.
+      · registration form: "Registration Details" + labels / hints / option
+        text (~L277–360); the re-registration note + "Confirm Registration"
+        button ~L529–534; completion toasts ~L768 / ~L781.
+      landing.html buttons (~L110–112): "Register for Surftober" / "Sign In"
+      / "View Mode (Read Only)".
+      Edit, then hand off: I bump version.js, check the built page, commit;
+      you push. HTML isn't content-hashed, so nothing else to bump.
+
 ## Scoped, awaiting a go
-- [ ] **Decide re-registration for October — September is the trial**
-      (Chase, 2026-08-31: "keep the hard gate for now"). The Sept 1 swapover
-      runs on the CURRENT behavior on purpose: it's a test event, so the
-      beta testers' reaction is the data. Watch for whether anyone hits the
-      logging block and is confused rather than mildly inconvenienced.
-      The gate does three separable things — (1) the re-register banner,
-      (2) **blocks logging** until you re-register, (3) gates your 0-hour
-      leaderboard row (you appear once you re-register OR log a session).
-      Only (2) is the friction Chase is second-guessing.
-      RECOMMENDED if it changes: drop (2), keep (3) — no wall in front of a
-      returning friend on day 1, while stale/test profiles still stay off the
-      board until they opt in, and the pledge-refresh nudge survives as a
-      dismissible prompt. ~30 min of work. Full carry-over (drop 2 AND 3) is
-      the other option but puts every old profile on the board at 0 hours.
-      DECIDE BEFORE OCTOBER — switching mid-event splits users across two
-      rule sets.
 
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
       view that shipped with the Session Strip, v1.23.0) — compute at
@@ -161,12 +123,6 @@
       app standalone is much slower than in-browser Safari. Reproduce
       first; candidates: SW cache-first paths, standalone-mode cold start,
       or the big base64 photos in profile payloads.
-- [ ] **Swap the crew album link for the real October album** (Chase,
-      2026-08-08) — `window.CREW_ALBUM_URL` in docs/version.js currently
-      points at the August TEST album (photos.app.goo.gl/DJin8nEzrymarTFv9).
-      Before October: create the Surftober 2026 shared album (Share →
-      Create link + Collaborate on), paste the new link there, push. No
-      cache bump needed — version.js is network-first.
 - [ ] **Nudge existing registrants to per-hour pledge values** — the v1.8.0
       leaderboard computes Pledged = charity_commitment × hours surfed, so a
       legacy lump-sum answer like "$100" reads as $100/hour. Registration and
@@ -197,13 +153,6 @@
       9172 Lincoln Way + 9005 Vicente; public x-api-key in the BWTF repo's
       bwtf_api.py).
 
-- [ ] Restore drill before October (RESCOPED 2026-09-01: no pg_dump repo —
-      Chase skipped that leg): take a one-off manual pg_dump (commands in the
-      downgrade item above), restore it into a scratch Supabase project, and
-      do one fresh sign-up there (see `backup/README.md`). Note: storage
-      buckets aren't in pg_dump — re-run supabase-setup.sql's storage section
-      as part of the drill. Alternative that also counts: test Supabase Pro's
-      own point-in-time restore into a new project.
 - [ ] Optional: encrypt pg_dump backups with `age` (see backup/README.md
       "Optional hardening").
 
@@ -244,6 +193,35 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~October nav default: header tabs~~ (v1.54.0, 2026-09-22, Chase's
+      call after running both styles). `window.MOBILE_BOTTOM_NAV = false` in
+      docs/index.html `<head>`: phones now get the compact one-row header
+      (icon + four tabs, v1.51.0) with the theme/album tools under the Main
+      title. The bottom bar stays one tap away in Account → Navigation.
+      NOTE: that card and `?nav=` write a per-device preference that
+      OVERRIDES the flag — a phone used to test "Bottom bar" keeps the bar
+      until you pick Header tabs there (or load `?nav=auto` in Safari).
+- [x] ~~Decide re-registration for October~~ (Chase, 2026-09-22: keep the
+      current behavior — a returning member re-submits the prefilled form,
+      account and history kept; logging stays blocked until they do). No
+      code change; the "drop the logging block" recommendation was not taken.
+- [x] ~~Swap the crew album link for the October album~~ (Chase, 2026-09-22:
+      "done". NOTE: `CREW_ALBUM_URL` in docs/version.js still carries the
+      August link (photos.app.goo.gl/DJin8nEzrymarTFv9) as of v1.54.0 — so
+      either that album IS the October album now, or the new link still
+      needs pasting there. Chase to confirm; one-line edit + push if so.)
+- [x] ~~Sign-in email: final checks~~ (rate limit 60/h, SPF/DKIM/DMARC PASS,
+      BWTF isolation — all DONE 2026-09-08; step 4, the full flow test inside
+      the installed PWA, SKIPPED by Chase 2026-09-22. Real codes have been
+      sent and typed successfully on prod since 09-08.)
+- [x] ~~Email-code sign-in: dashboard steps~~ (DONE 2026-09-06/08 — templates
+      with `{{ .Token }}` in subject + body, OTP length 6 / expiry 3600,
+      custom SMTP on Surftober's own Brevo account. The archived password
+      branch is on GitHub too: `origin/archive/password-signin`.)
+- [x] ~~Restore drill before October~~ (SKIPPED by Chase 2026-09-22. Supabase
+      Pro's daily backups cover October; the one-off pg_dump stays listed
+      under the post-October downgrade item, and backup/README.md keeps the
+      drill steps if it's ever wanted.)
 - [x] ~~Bug: double-tapping "Add Entry" logged the session twice~~ (v1.53.2,
       2026-09-13, Chase's report). The submit handler awaits uploads and the
       cloud insert, and each await let a second tap re-enter it. Now an
