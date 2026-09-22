@@ -11,14 +11,15 @@
   <meta name="theme-color" content="#fff8f0" />
   <script>
   // ── Nav style flag (phones, ≤640px) ─────────────────────────────────────
-  //   true  = bottom tab bar (default since v1.43.0)
-  //   false = the original header tabs
+  //   true  = bottom tab bar (was the default v1.43.0 – v1.53.2)
+  //   false = header tabs — the October 2026 default (Chase, 2026-09-22):
+  //           the compact one-row phone header from v1.51.0
   // Flip the value, push, done — Vercel rebuilds, no cache ritual.
   // Per-device override for testing WITHOUT a deploy: open the app with
   // ?nav=top or ?nav=bottom (remembered on that device); ?nav=auto forgets it.
   // This lives in <head> rather than version.js so the class is on <html>
   // before first paint — otherwise the header tabs would flash, then jump.
-  window.MOBILE_BOTTOM_NAV = true;
+  window.MOBILE_BOTTOM_NAV = false;
   (function () {
     var pref = null;
     try {
