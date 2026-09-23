@@ -1,36 +1,6 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Verify the Google Sheet mirror has been backing up** (Chase,
-      2026-09-22 — "important"; it's the only backup outside Supabase).
-      Checked from here today: the DB has 84 sessions (25 of them
-      soft-deleted — the mirror keeps those too), 3 events, 34 messages;
-      newest session was created 2026-09-19. The Sheet itself is in your
-      personal Drive (the work-Drive connector can't see it), so:
-      1. Open the private mirror Sheet → `meta` tab. `last_sync_utc` should
-         be within the last ~24 h (trigger: daily 03:00 in the Apps Script
-         project's timezone) and `sessions` should read 84 as of 09-22;
-         `events` 3; `profiles`/`auth_users` ≈ Supabase Auth → Users count.
-         If it's stuck around 2026-08-31/09-01 → the live script still
-         selects `sponsor_match` (dropped 08-31) and every run has 400'd;
-         step 3 fixes it.
-      2. `sessions` tab header row should include `start_time`,
-         `taught_kook`, `water_reading`, `photo_url`, `deleted_at`.
-      3. **Re-paste the template** (backup/sheets-mirror.gs, updated
-         2026-09-22 — verified against prod that every column exists):
-         profiles gain `photo_position`, `photo_original_url`,
-         `registered_event_id` (the re-registration marker); events gain
-         `logging_frozen`; sessions gain `client_entry_id`. Extensions →
-         Apps Script → replace the code → **put your real ping URL back on
-         the `PING_URL` line** (the template ships it blank) → Save → run
-         `mirror` once by hand → `meta.last_sync_utc` updates and the new
-         headers appear. Don't re-run `setup` (it would just recreate the
-         same trigger).
-      4. healthchecks.io → surftober-sheets-mirror: last ping = last night.
-         Apps Script → Executions: recent `mirror` runs show Completed.
-      Known gaps, by design: `messages` (Comment Board) isn't mirrored (say
-      the word — a sixth tab is ~6 lines), `photo_base64` is excluded
-      (cell-size cap), and Storage media is covered by its own Open item.
 - [ ] **Registration flow text — Chase refines the copy himself** (Chase,
       2026-09-22; the last pre-launch code item). Everything a registrant
       reads lives in docs/register.html:
@@ -50,6 +20,40 @@
       / "View Mode (Read Only)".
       Edit, then hand off: I bump version.js, check the built page, commit;
       you push. HTML isn't content-hashed, so nothing else to bump.
+- [ ] **Logo cleanup** (Chase, 2026-09-23; replaces "Custom logo" under
+      Event prep). Current mark: docs/logo.svg — snowy plover on a teal
+      wave, sunset behind, navy disc, orange medal ring; unchanged since
+      June. Used as favicon, header brand mark, landing + register hero,
+      and manifest icon (icon-maskable.svg is the Android adaptive
+      variant). Design is Chase's; code side once the final mark exists:
+      · swap logo.svg + icon-maskable.svg (keep the 100×100 viewBox → no
+        CSS changes anywhere)
+      · ADD PNG ICONS: all three pages point `apple-touch-icon` at the SVG,
+        and iOS Safari only accepts PNG there, so the installed home-screen
+        icon is most likely a page snapshot today — check your iPhone.
+        Needs a 180×180 PNG for iOS and 192/512 PNGs in the manifest for
+        Android's install splash. build.mjs hashes css/js/svg/webmanifest
+        today, so PNGs either get added to that list or ship unhashed.
+      · `theme-color` metas if the palette shifts.
+      Shirt + trophy stay under Event prep — they wait on this mark.
+- [ ] **Decide: landing + register pages light or dark by default** (Chase,
+      2026-09-23). Both are hard-coded to the Sunset Surf DARK palette
+      (their own `<style>` blocks — landing ~15 colour rules, register ~25 —
+      plus landing's `theme-color` #0b3d91), while the app defaults to
+      LIGHT (Pumpkin Spice) and only goes dark when the header toggle says
+      so (`surftober.theme.v1`; no system-preference logic anywhere). So a
+      first-timer sees dark → dark → light. Options:
+      1. Keep dark (0 h) — reads as a hero splash, and the logo was drawn on
+         a night sky.
+      2. RECOMMENDED — follow the app (~1–2 h): light by default, dark when
+         the visitor's saved theme is dark. A tiny `<head>` script reads the
+         key before first paint (same trick as the nav flag) and sets
+         `html.light`; every hard-coded colour gets a light twin. Same look
+         on both sides of the door; returning dark-mode users stay dark.
+      3. Light always (~1 h) — simplest consistent version; dark-mode users
+         get a light flash on the way in.
+      Sequencing: the copy pass and this both edit register.html — copy
+      first, theme after.
 - [ ] **Oct 1: activate "5th Surftober 2026"** (found 2026-09-22 while
       checking the events table — nothing flips it automatically; the only
       path is the admin Events panel → `activate_event` RPC). The row is
@@ -230,12 +234,17 @@
 
 ## Event prep (non-code)
 - [ ] Contact Nina about the surfboard giveaway (Chase, 2026-09-10)
-- [ ] Custom logo (Chase, 2026-09-10) — the app's hand-drawn wave-in-circle
-      mark is a placeholder; a proper logo also feeds the shirt + trophy.
 - [ ] Shirt design (Chase, 2026-09-10)
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Verify the Google Sheet mirror has been backing up~~ (VERIFIED
+      2026-09-22 from Chase's xlsx export of the Sheet: last sync 03:09 PT
+      that morning; 84 sessions / 25 soft-deleted / 3 events / newest
+      created_at all identical to the live DB; no duplicate ids; every
+      session column present; sponsor_match gone. Template with the five
+      new columns re-pasted into Apps Script 2026-09-23 (Chase). Not
+      mirrored, by design: messages, photo_base64, Storage media.)
 - [x] ~~October nav default: header tabs~~ (v1.54.0, 2026-09-22, Chase's
       call after running both styles). `window.MOBILE_BOTTOM_NAV = false` in
       docs/index.html `<head>`: phones now get the compact one-row header
