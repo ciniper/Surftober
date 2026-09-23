@@ -7,8 +7,60 @@
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
   <link rel="apple-touch-icon" href="./logo.svg" />
   <link rel="stylesheet" href="./styles.css" />
-  <meta name="theme-color" content="#0b3d91" />
+  <meta name="theme-color" content="#fff8f0" />
+  <script>
+  // Theme follows the app (v1.55.0): LIGHT by default, dark only when the
+  // visitor's saved app theme (header toggle / admin picker) is a dark one.
+  // Runs before first paint so there is no flash. Names mirror THEMES in
+  // app.js; an unknown name falls back to light there too.
+  (function () {
+    var DARK = { 'sunset-surf': 1, 'sunset-ember': 1, 'sunset-soft': 1, 'board-wax': 1,
+                 'night-swell': 1, 'dusk-patrol': 1, 'high-tide': 1, 'golden-hour': 1,
+                 'dawn-patrol': 1, 'deep-kelp': 1, 'midnight-set': 1, 'neon-beach': 1 };
+    var dark = false;
+    try {
+      var sel = JSON.parse(localStorage.getItem('surftober.theme.v1') || 'null');
+      if (sel && sel.name === 'custom') {
+        var m = /^#([0-9a-f]{6})$/i.exec(String((sel.vars && sel.vars.bg) || ''));
+        if (m) {
+          var n = parseInt(m[1], 16);
+          dark = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) < 128;
+        }
+      } else if (sel && DARK[sel.name]) {
+        dark = true;
+      }
+    } catch (e) {}
+    if (dark) {
+      document.documentElement.classList.add('dark');
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', '#152238');
+    }
+  })();
+  </script>
   <style>
+    /* Palette: Pumpkin Spice (the app's light default) / Sunset Surf (dark),
+       switched by html.dark from the script above. */
+    :root {
+      --lp-bg-a: #f5f0e8; --lp-bg-b: #fbe9d9;
+      --lp-card: #fff8f0; --lp-card-shadow: rgba(45, 36, 22, 0.16);
+      --lp-title: #b54a17; --lp-title-glow: none;
+      --lp-sub: #6f5d46;
+      --lp-primary-a: #d1470f; --lp-primary-b: #c2410c;
+      --lp-secondary: #e8dcc8; --lp-secondary-hover: #dfd0b8; --lp-secondary-text: #2d2416;
+      --lp-border: #d4c4a8;
+      --lp-ghost-text: #6f5d46; --lp-ghost-hover-border: #2d8659;
+    }
+    html.dark {
+      --lp-bg-a: #0a1628; --lp-bg-b: #152238;
+      --lp-card: #152238; --lp-card-shadow: rgba(0, 0, 0, 0.5);
+      --lp-title: #ff6b35; --lp-title-glow: 0 0 20px rgba(255, 107, 53, 0.3);
+      --lp-sub: #7a9bb5;
+      --lp-primary-a: #ff6b35; --lp-primary-b: #ff4500;
+      --lp-secondary: #1e3a52; --lp-secondary-hover: #243b54; --lp-secondary-text: #e8f4f8;
+      --lp-border: #2d4a62;
+      --lp-ghost-text: #7a9bb5; --lp-ghost-hover-border: #4ecdc4;
+    }
+    html { background: var(--lp-bg-a); }
     body {
       margin: 0;
       padding: 0;
@@ -21,15 +73,15 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      background: linear-gradient(135deg, #0a1628 0%, #152238 100%);
+      background: linear-gradient(135deg, var(--lp-bg-a) 0%, var(--lp-bg-b) 100%);
     }
     .landing-card {
-      background: #152238;
+      background: var(--lp-card);
       border-radius: 12px;
       padding: 3rem;
       max-width: 500px;
       width: 100%;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 40px var(--lp-card-shadow);
       text-align: center;
       border: 2px solid #ff6b35;
     }
@@ -43,12 +95,12 @@
     .landing-title {
       font-size: 3rem;
       margin: 0 0 0.5rem 0;
-      color: #ff6b35;
-      text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+      color: var(--lp-title);
+      text-shadow: var(--lp-title-glow);
     }
     .landing-subtitle {
       font-size: 1.5rem;
-      color: #7a9bb5;
+      color: var(--lp-sub);
       margin: 0 0 2rem 0;
     }
     .landing-buttons {
@@ -72,32 +124,32 @@
       box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
     }
     .btn-register {
-      background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%);
+      background: linear-gradient(135deg, var(--lp-primary-a) 0%, var(--lp-primary-b) 100%);
       color: white;
       box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
     }
     .btn-signin {
-      background: #1e3a52;
-      color: #e8f4f8;
-      border: 2px solid #2d4a62;
+      background: var(--lp-secondary);
+      color: var(--lp-secondary-text);
+      border: 2px solid var(--lp-border);
     }
     .btn-signin:hover {
-      background: #243b54;
+      background: var(--lp-secondary-hover);
       border-color: #ff6b35;
     }
     .btn-view {
       background: transparent;
-      color: #7a9bb5;
-      border: 2px solid #2d4a62;
+      color: var(--lp-ghost-text);
+      border: 2px solid var(--lp-border);
     }
     .btn-view:hover {
-      background: #1e3a52;
-      color: #e8f4f8;
-      border-color: #4ecdc4;
+      background: var(--lp-secondary);
+      color: var(--lp-secondary-text);
+      border-color: var(--lp-ghost-hover-border);
     }
-    /* This page is always dark — pin colors that styles.css derives from the
-       (light-by-default) theme vars so they stay readable here. */
-    .app-version { color: #7a9bb5; }
+    /* styles.css derives .app-version from the app's LIGHT theme vars, which
+       is right for the light landing; on the dark landing pin it readable. */
+    html.dark .app-version { color: #7a9bb5; }
   </style>
 </head>
 <body>

@@ -36,24 +36,20 @@
         today, so PNGs either get added to that list or ship unhashed.
       · `theme-color` metas if the palette shifts.
       Shirt + trophy stay under Event prep — they wait on this mark.
-- [ ] **Decide: landing + register pages light or dark by default** (Chase,
-      2026-09-23). Both are hard-coded to the Sunset Surf DARK palette
-      (their own `<style>` blocks — landing ~15 colour rules, register ~25 —
-      plus landing's `theme-color` #0b3d91), while the app defaults to
-      LIGHT (Pumpkin Spice) and only goes dark when the header toggle says
-      so (`surftober.theme.v1`; no system-preference logic anywhere). So a
-      first-timer sees dark → dark → light. Options:
-      1. Keep dark (0 h) — reads as a hero splash, and the logo was drawn on
-         a night sky.
-      2. RECOMMENDED — follow the app (~1–2 h): light by default, dark when
-         the visitor's saved theme is dark. A tiny `<head>` script reads the
-         key before first paint (same trick as the nav flag) and sets
-         `html.light`; every hard-coded colour gets a light twin. Same look
-         on both sides of the door; returning dark-mode users stay dark.
-      3. Light always (~1 h) — simplest consistent version; dark-mode users
-         get a light flash on the way in.
-      Sequencing: the copy pass and this both edit register.html — copy
-      first, theme after.
+      STATUS 2026-09-23: Chase's issue is the BEAK — black bill on the navy
+      sky, near-zero contrast. Five variants presented (ember beak, golden
+      beak, outlined black beak, bird mirrored to face the sunset, full
+      cleanup = ember beak + slate legs + hairline outline); waiting on the
+      pick, then apply to logo.svg + icon-maskable.svg. PNG icons parked
+      (Chase: not worried about file types, everything has worked so far).
+- [ ] **Register page: follow the landing's theme rule** (after Chase's
+      copy pass — both edit register.html, so copy first). The landing
+      shipped LIGHT by default in v1.55.0 (2026-09-23, Chase's call): light
+      unless the visitor's saved app theme is dark. register.html is still
+      hard-coded to the dark palette (~25 rules in its <style>), so today's
+      flow is light landing → dark register → light app. Same recipe: reuse
+      the landing's <head> classifier + `--lp-*` variables, give each rule a
+      light twin. ~1 h.
 - [ ] **Oct 1: activate "5th Surftober 2026"** (found 2026-09-22 while
       checking the events table — nothing flips it automatically; the only
       path is the admin Events panel → `activate_event` RPC). The row is
@@ -238,6 +234,15 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Landing page light by default~~ (v1.55.0, 2026-09-23, Chase's call).
+      landing.html follows the app's theme rule: Pumpkin Spice light unless
+      the visitor's saved app theme (`surftober.theme.v1`) is a dark preset
+      or a custom theme with a dark background — then the old Sunset Surf
+      palette, unchanged. A <head> script classifies before first paint (no
+      flash) and sets html.dark + theme-color; the page's colours live in
+      `--lp-*` variables. The primary button uses the app's deeper #d1470f
+      on light so white text passes WCAG. Verified in the pane: no key →
+      light; sunset-surf → dark; custom dark bg → dark; sandbar → light.
 - [x] ~~Verify the Google Sheet mirror has been backing up~~ (VERIFIED
       2026-09-22 from Chase's xlsx export of the Sheet: last sync 03:09 PT
       that morning; 84 sessions / 25 soft-deleted / 3 events / newest
