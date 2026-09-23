@@ -55,7 +55,10 @@
       path is the admin Events panel → `activate_event` RPC). The row is
       already staged: team `5th-surftober-2026`, 2026-10-01 → 10-31,
       inactive. Until you tap it the app is still on "September Test 2026"
-      (team `surftober-2026`). Morning of Oct 1: Awards → Events →
+      (team `surftober-2026`), which ends 2026-09-23 BY DESIGN (Chase,
+      09-22: fine as is) — from Sep 24 the log form clamps its date to
+      Sep 23, so Sep 24–30 surfs can't be logged; a gap, not a bug.
+      Morning of Oct 1: Awards → Events →
       **Activate** on 5th Surftober 2026. Open clients pick it up via the
       realtime events listener; everyone else on next load. This is also the
       moment the re-registration banner + logging block (kept as-is,
