@@ -50,6 +50,16 @@
       sand/wave). Agent's pick: Afterglow or Blue hour — same mark, bill
       reads; any can also take the ember beak. Generator + SVGs live in the
       session scratchpad, not the repo; the chosen one gets copied in.
+      2026-09-24 (later): lighter skies exposed three flaws in the ORIGINAL
+      drawing — the teal squiggle sat on top of the dark mound and crossed
+      its edge, the mound reads as a dark hill on a light sky, and the scene
+      is clipped (r 39.5) smaller than the orange ring (inner edge r 42.4)
+      so a band of bare sky showed between them, which the faint thin ring
+      (r 39, #e8f4f8 @ .4) was dressing. Third sheet: shore redrawn as a
+      teal water band + foam line + tan sand strip the bird stands on, shown
+      on all six skies; inner ring either dropped with the scene extended to
+      the orange ring (agent's recommendation — cleaner at 20–40px) or
+      replaced by a solid navy bezel. Waiting on Chase's sky + ring pick.
 - [ ] **Register page: follow the landing's theme rule** (after Chase's
       copy pass — both edit register.html, so copy first). The landing
       shipped LIGHT by default in v1.55.0 (2026-09-23, Chase's call): light
