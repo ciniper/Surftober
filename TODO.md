@@ -42,6 +42,14 @@
       cleanup = ember beak + slate legs + hairline outline); waiting on the
       pick, then apply to logo.svg + icon-maskable.svg. PNG icons parked
       (Chase: not worried about file types, everything has worked so far).
+      2026-09-24, Chase asked for lighter INTERIOR concepts instead: five
+      presented, black bill kept in each so the background does the work —
+      Dusk (one shade lighter navy), Blue hour (clear mid-blue), Afterglow
+      (radial haze behind bird + sun, navy rim kept), Golden dusk (warm
+      horizon band, outlined bird), Daybreak (pale daylight sky, deeper
+      sand/wave). Agent's pick: Afterglow or Blue hour — same mark, bill
+      reads; any can also take the ember beak. Generator + SVGs live in the
+      session scratchpad, not the repo; the chosen one gets copied in.
 - [ ] **Register page: follow the landing's theme rule** (after Chase's
       copy pass — both edit register.html, so copy first). The landing
       shipped LIGHT by default in v1.55.0 (2026-09-23, Chase's call): light
