@@ -212,7 +212,7 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
-- [x] ~~Logo cleanup~~ (v1.56.0–v1.56.3, 2026-09-24 — Chase's picks over eleven
+- [x] ~~Logo cleanup~~ (v1.56.0–v1.56.4, 2026-09-24 — Chase's picks over twelve
       rounds of variants). Final mark: "Afterglow" sky (radial haze behind
       bird + sun, navy rim) so the plover's black bill reads; the faint inner
       ring dropped and the scene clipped out to the orange ring (r 42.4);
@@ -221,8 +221,10 @@
       variant "R4") with a teal water band (#3aa9a3) beneath and a sine foam
       line, crest just left of centre ("water line 3", v1.56.1 — the first
       "mirror" flipped the sine's phase and read as a new shape). Bird's
-      three black dots replaced by a thin black collar around the neck
-      (clipped to the silhouette), a thin forehead bar, and the folded wing
+      three black dots replaced by a thin PARTIAL collar on the side of the
+      neck (trimmed short of the back line and the breast, rounded tips —
+      v1.56.4; the full band was v1.56.1–.3), a thin forehead bar, and the
+      folded wing
       as a flat tint (#e2d8c0, no outline — v1.56.3; the outline version was
       v1.56.2) just inside the back line (Chase;
       a black tail tip and an ear patch were tried in v1.56.1 and dropped;
