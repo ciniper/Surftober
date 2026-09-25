@@ -212,14 +212,18 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
-- [x] ~~Logo cleanup~~ (v1.56.0, 2026-09-24 — Chase's picks over eight
+- [x] ~~Logo cleanup~~ (v1.56.0–v1.56.1, 2026-09-24 — Chase's picks over nine
       rounds of variants). Final mark: "Afterglow" sky (radial haze behind
       bird + sun, navy rim) so the plover's black bill reads; the faint inner
       ring dropped and the scene clipped out to the orange ring (r 42.4);
       the old dark mound + teal squiggle replaced by a wide, shallow tan
       dune (#b89b70, one crest under the feet, flank rounding off late —
-      variant "R4") with a teal water band (#3aa9a3) beneath and a foam line
-      whose scallops bow toward the sea. Bird, sun and medal ring untouched.
+      variant "R4") with a teal water band (#3aa9a3) beneath and a sine foam
+      line, crest just left of centre ("water line 3", v1.56.1 — the first
+      "mirror" flipped the sine's phase and read as a new shape). Bird's
+      three black dots replaced by a thin black collar around the neck and
+      a black tail tip, both clipped to the silhouette (v1.56.1, Chase);
+      ear-patch / forehead-bar variants offered. Sun and medal ring untouched.
       Applied to docs/logo.svg + docs/icon-maskable.svg, same viewBox, no
       CSS changes. Rejected along the way: orange/gold/outlined beaks, bird
       mirrored to face the sun, dusk / blue-hour / golden-dusk / daybreak
