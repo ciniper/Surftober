@@ -204,6 +204,17 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Footer light/dark switch on the door pages~~ (v1.58.0, 2026-09-24,
+      Chase's idea, agent recommended yes). landing.html + register.html
+      (register and sign-in modes) get a small pill next to the version line,
+      "🌙 Dark mode" / "☀️ Light mode". It flips the page on the spot and
+      writes the app's own key (`surftober.theme.v1` → `sunset-surf` /
+      `pumpkin-spice`), so a first-time visitor who wants dark gets it before
+      they're in the app and the app opens in the same mode. Also updates
+      theme-color + aria-pressed. Deliberately no system-preference detection
+      (the app has none) and no full theme picker. Verified in the pane:
+      landing light → dark → light with the key changing each time; sign-in
+      page light → dark.
 - [x] ~~Register + sign-in page follows the landing's theme rule~~ (v1.57.0,
       2026-09-24 — Chase noticed the light default "didn't propagate" to
       registration/sign-in; it had been held back to avoid colliding with the

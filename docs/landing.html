@@ -150,6 +150,13 @@
     /* styles.css derives .app-version from the app's LIGHT theme vars, which
        is right for the light landing; on the dark landing pin it readable. */
     html.dark .app-version { color: #7a9bb5; }
+    .landing-foot { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 1.5rem; }
+    .theme-switch {
+      background: transparent; box-shadow: none; width: auto; min-width: 0;
+      border: 1px solid var(--lp-border); color: var(--lp-sub);
+      font: inherit; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    }
+    .theme-switch:hover { border-color: #ff6b35; color: var(--lp-title); transform: none; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -163,10 +170,39 @@
         <a href="./index.html?mode=signin" class="landing-btn btn-signin" onclick="sessionStorage.setItem('surftober_authenticated', '1')">Sign In</a>
         <a href="./index.html?mode=view" id="btn-view-mode" class="landing-btn btn-view">View Mode (Read Only)</a>
       </div>
-      <div class="app-version" style="margin-top:1.5rem;"></div>
+      <div class="landing-foot">
+        <span class="app-version"></span>
+        <button type="button" id="theme-switch" class="theme-switch" aria-pressed="false">Dark mode</button>
+      </div>
     </div>
   </div>
   <script src="./version.js"></script>
+  <script>
+    // Footer light/dark switch: flips this page now and writes the app's own
+    // theme key, so the choice carries into the app (dark = Sunset Surf,
+    // light = Pumpkin Spice — the same pair the app's header toggle uses).
+    (function () {
+      var btn = document.getElementById('theme-switch');
+      if (!btn) return;
+      var root = document.documentElement;
+      function paint() {
+        var dark = root.classList.contains('dark');
+        btn.textContent = dark ? '\u2600\ufe0f Light mode' : '\ud83c\udf19 Dark mode';
+        btn.setAttribute('aria-pressed', String(dark));
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#152238' : '#fff8f0');
+      }
+      btn.addEventListener('click', function () {
+        var dark = !root.classList.contains('dark');
+        root.classList.toggle('dark', dark);
+        try {
+          localStorage.setItem('surftober.theme.v1', JSON.stringify({ name: dark ? 'sunset-surf' : 'pumpkin-spice' }));
+        } catch (e) {}
+        paint();
+      });
+      paint();
+    })();
+  </script>
   <script>
     // Club gate for View Mode — a friends-only speed bump, not real security
     // (the password lives in the WhatsApp group).
