@@ -15,16 +15,60 @@
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
   <link rel="apple-touch-icon" href="./logo.svg" />
   <link rel="stylesheet" href="./styles.css" />
-  <meta name="theme-color" content="#0b3d91" />
+  <meta name="theme-color" content="#fff8f0" />
+  <script>
+  // Theme follows the app (v1.57.0), same rule as landing.html: LIGHT by
+  // default, dark only when the visitor's saved app theme is a dark one.
+  // Runs before first paint so there is no flash.
+  (function () {
+    var DARK = { 'sunset-surf': 1, 'sunset-ember': 1, 'sunset-soft': 1, 'board-wax': 1,
+                 'night-swell': 1, 'dusk-patrol': 1, 'high-tide': 1, 'golden-hour': 1,
+                 'dawn-patrol': 1, 'deep-kelp': 1, 'midnight-set': 1, 'neon-beach': 1 };
+    var dark = false;
+    try {
+      var sel = JSON.parse(localStorage.getItem('surftober.theme.v1') || 'null');
+      if (sel && sel.name === 'custom') {
+        var m = /^#([0-9a-f]{6})$/i.exec(String((sel.vars && sel.vars.bg) || ''));
+        if (m) {
+          var n = parseInt(m[1], 16);
+          dark = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) < 128;
+        }
+      } else if (sel && DARK[sel.name]) {
+        dark = true;
+      }
+    } catch (e) {}
+    if (dark) {
+      document.documentElement.classList.add('dark');
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', '#152238');
+    }
+  })();
+  </script>
   <style>
-    /* html must be dark too: styles.css paints html with the light-theme
-       --bg and caps body at height:100% (one viewport), so past the first
-       screenful the light canvas showed through — the "page changes color
-       midway down" bug. With html dark, the whole scroll extent is dark. */
-    html { background: #0a1628; }
+    /* Palette: Pumpkin Spice (the app's light default) / Sunset Surf (dark),
+       switched by html.dark from the script above. */
+    :root {
+      --rp-bg: #f5f0e8; --rp-text: #2d2416; --rp-muted: #6f5d46;
+      --rp-card: #fff8f0; --rp-card-border: #d4c4a8; --rp-card-shadow: rgba(45, 36, 22, 0.12);
+      --rp-accent-text: #b54a17;
+      --rp-input-bg: #ffffff; --rp-input-focus-bg: #fffdf9; --rp-input-border: #d4c4a8;
+      --rp-well: #f3ebdd;
+    }
+    html.dark {
+      --rp-bg: #0a1628; --rp-text: #e8f4f8; --rp-muted: #7a9bb5;
+      --rp-card: #152238; --rp-card-border: #2d4a62; --rp-card-shadow: rgba(0, 0, 0, 0.3);
+      --rp-accent-text: #ff6b35;
+      --rp-input-bg: #1e3a52; --rp-input-focus-bg: #243b54; --rp-input-border: #2d4a62;
+      --rp-well: #1e3a52;
+    }
+    /* html must carry the page colour too: styles.css paints html with the
+       app's light --bg and caps body at height:100% (one viewport), so past
+       the first screenful the wrong canvas showed through — the "page
+       changes colour midway down" bug. */
+    html { background: var(--rp-bg); }
     body {
-      background: #0a1628;
-      color: #e8f4f8;
+      background: var(--rp-bg);
+      color: var(--rp-text);
     }
     .register-container {
       max-width: 800px;
@@ -39,23 +83,23 @@
       filter: drop-shadow(0 6px 18px rgba(255, 107, 53, 0.25));
     }
     .welcome-message {
-      background: #152238;
+      background: var(--rp-card);
       border-left: 4px solid #ff6b35;
       padding: 1.5rem;
       margin-bottom: 2rem;
       line-height: 1.6;
-      color: #e8f4f8;
+      color: var(--rp-text);
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px var(--rp-card-shadow);
     }
     .welcome-message h1 {
       margin-top: 0;
-      color: #ff6b35;
+      color: var(--rp-accent-text);
     }
     .welcome-message p,
     .welcome-message ul,
     .welcome-message li {
-      color: #e8f4f8;
+      color: var(--rp-text);
     }
     .auth-method {
       display: flex;
@@ -70,21 +114,21 @@
       font-size: 1rem;
     }
     .form-section {
-      background: #152238;
+      background: var(--rp-card);
       padding: 2rem;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 8px var(--rp-card-shadow);
       margin-bottom: 2rem;
-      color: #e8f4f8;
-      border: 1px solid #2d4a62;
+      color: var(--rp-text);
+      border: 1px solid var(--rp-card-border);
     }
     .form-section h2 {
-      color: #ff6b35;
+      color: var(--rp-accent-text);
       margin-top: 0;
       margin-bottom: 0.75rem;
     }
     .form-section label {
-      color: #e8f4f8;
+      color: var(--rp-text);
       display: block;
       margin-bottom: 1.5rem;
       font-weight: 600;
@@ -98,14 +142,14 @@
     }
     .form-section p,
     .form-section small {
-      color: #7a9bb5;
+      color: var(--rp-muted);
     }
     .form-section input,
     .form-section select,
     .form-section textarea {
-      background: #1e3a52 !important;
-      color: #e8f4f8 !important;
-      border: 1px solid #2d4a62;
+      background: var(--rp-input-bg) !important;
+      color: var(--rp-text) !important;
+      border: 1px solid var(--rp-input-border);
       font-size: 15px;
       border-radius: 8px;
       display: block;
@@ -119,16 +163,16 @@
       align-items: center;
       gap: 0.75rem;
       margin: 1.25rem 0 1rem;
-      color: #7a9bb5;
+      color: var(--rp-muted);
       font-size: 14px;
     }
     .auth-divider::before,
-    .auth-divider::after { content: ''; flex: 1; border-top: 1px solid #2d4a62; }
+    .auth-divider::after { content: ''; flex: 1; border-top: 1px solid var(--rp-card-border); }
     .auth-step label { margin-bottom: 1rem; }
-    .auth-note { color: #e8f4f8; margin: 0 0 0.75rem; line-height: 1.45; }
+    .auth-note { color: var(--rp-text); margin: 0 0 0.75rem; line-height: 1.45; }
     .auth-method.compact { margin-top: 0.25rem; }
     .auth-links { margin: 0.75rem 0 0; font-size: 14px; }
-    .auth-links a { color: #ff6b35; }
+    .auth-links a { color: var(--rp-accent-text); }
     /* .hidden alone loses to ".form-section label { display:block }" */
     .auth-step.hidden, .auth-step .hidden, .auth-links .hidden { display: none !important; }
     .actions {
@@ -162,33 +206,33 @@
     .form-section input:focus,
     .form-section select:focus,
     .form-section textarea:focus {
-      background: #243b54 !important;
+      background: var(--rp-input-focus-bg) !important;
       border-color: #ff6b35;
-      color: #e8f4f8 !important;
+      color: var(--rp-text) !important;
       box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
     .form-section input::placeholder,
     .form-section textarea::placeholder {
-      color: #7a9bb5 !important;
+      color: var(--rp-muted) !important;
     }
     .form-section select option {
-      background: #1e3a52;
-      color: #e8f4f8;
+      background: var(--rp-input-bg);
+      color: var(--rp-text);
     }
     .photo-upload {
-      border: 2px dashed #2d4a62;
+      border: 2px dashed var(--rp-card-border);
       padding: 2rem;
       text-align: center;
       border-radius: 8px;
       cursor: pointer;
       transition: border-color 0.3s;
-      background: #1e3a52;
+      background: var(--rp-well);
     }
     .photo-upload:hover {
       border-color: #ff6b35;
     }
     .photo-upload p {
-      color: #7a9bb5;
+      color: var(--rp-muted);
     }
     .photo-preview {
       margin: 1rem auto 0;
@@ -200,7 +244,7 @@
       height: 120px;
       object-fit: cover;
       border-radius: 18px;
-      border: 2px solid #2d4a62;
+      border: 2px solid var(--rp-card-border);
     }
     .reg-photo-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .reg-photo-actions button { padding: 8px 12px; font-size: 14px; }
@@ -210,18 +254,18 @@
     /* ?mode=signin (landing "Sign In" → index.html?mode=signin → here): a
        returning member wants the sign-in box, not the registration pitch. */
     .signin-mode .welcome-message { display: none; }
-    .auth-preferred { margin: 0.75rem 0 0; color: #7a9bb5; font-size: 14px; }
+    .auth-preferred { margin: 0.75rem 0 0; color: var(--rp-muted); font-size: 14px; }
     .auth-preferred + .auth-method { margin-top: 0.35rem; }
     .signin-mode .auth-preferred { display: none; }  /* registration only */
     .signin-mode .register-only { display: none; }
-    #otp-no-account a { color: #ff6b35; }
+    #otp-no-account a { color: var(--rp-accent-text); }
     .auth-label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
     .auth-email-row { max-width: 480px; }
-    /* This page is always dark — pin colors that styles.css derives from the
-       (light-by-default) theme vars so they stay readable here. */
-    .form-section small a { color: #ff6b35; }
-    .app-version { color: #7a9bb5; }
-    .hint { color: #7a9bb5; }
+    /* styles.css derives these from the app's LIGHT theme vars, which is right
+       for the light page; pin them readable on the dark page. */
+    .form-section small a { color: var(--rp-accent-text); }
+    html.dark .app-version { color: #7a9bb5; }
+    html.dark .hint { color: #7a9bb5; }
   </style>
 </head>
 <body>
@@ -366,8 +410,10 @@
   <script src="./photo-kit.js"></script>
   <script>
     // Load Supabase
-    const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0';
+    // Public client config, not secrets: the project URL and anon key ship to every browser by design;
+    // row-level security is the boundary. The sadscan markers below silence the secret scanner's false positive.
+    const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co'; // sadscan:disable kingfisher.supabase.3
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0'; // sadscan:disable np.jwt.1
 
     let sb = null;
     let currentUser = null;
