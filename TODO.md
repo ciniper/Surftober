@@ -1,38 +1,7 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Registration flow text — Chase refines the copy himself** (Chase,
-      2026-09-22; the last pre-launch code item). Everything a registrant
-      reads lives in docs/register.html:
-      · welcome pitch + bonus list: `.welcome-message` (~L230–246; hidden on
-        the Sign In screen via `.signin-mode`)
-      · auth box `#auth-section` (~L247–274): "Register an account",
-        "(preferred option)", "Register with Google Account", "or use your
-        email", the "No account with this email yet — register first" note,
-        "6-digit code", "Resend code" / "Use a different email", "Already
-        registered? Sign in instead". The Sign In screen's wording is set in
-        JS (~L550–551: 'Sign In' / 'Sign in with Google'); the "We emailed a
-        6-digit code…" note ~L593; code-error toasts ~L623 and ~L631.
-      · registration form: "Registration Details" + labels / hints / option
-        text (~L277–360); the re-registration note + "Confirm Registration"
-        button ~L529–534; completion toasts ~L768 / ~L781.
-      landing.html buttons (~L110–112): "Register for Surftober" / "Sign In"
-      / "View Mode (Read Only)".
-      Edit, then hand off: I bump version.js, check the built page, commit;
-      you push. HTML isn't content-hashed, so nothing else to bump.
-- [ ] **Oct 1: activate "5th Surftober 2026"** (found 2026-09-22 while
-      checking the events table — nothing flips it automatically; the only
-      path is the admin Events panel → `activate_event` RPC). The row is
-      already staged: team `5th-surftober-2026`, 2026-10-01 → 10-31,
-      inactive. Until you tap it the app is still on "September Test 2026"
-      (team `surftober-2026`), which ends 2026-09-23 BY DESIGN (Chase,
-      09-22: fine as is) — from Sep 24 the log form clamps its date to
-      Sep 23, so Sep 24–30 surfs can't be logged; a gap, not a bug.
-      Morning of Oct 1: Awards → Events →
-      **Activate** on 5th Surftober 2026. Open clients pick it up via the
-      realtime events listener; everyone else on next load. This is also the
-      moment the re-registration banner + logging block (kept as-is,
-      decided 09-22) switches on for returning members.
+(Nothing queued — everything left before Oct 1 is under Event prep.)
 
 ## Scoped, awaiting a go
 
@@ -204,6 +173,17 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Oct 1: activate "5th Surftober 2026"~~ (DONE EARLY — Chase activated
+      it 2026-09-24, a week ahead: events table shows 5th Surftober 2026
+      active, September Test 2026 inactive. Consequences from now: the app
+      shows the October event (leaderboard starts empty), the re-registration
+      banner + logging block are live for returning members, and the log
+      form only accepts Oct 1–31 dates — so the last week of September is
+      re-registration week, by choice.)
+- [x] ~~Registration flow text — Chase refines the copy himself~~ (Chase,
+      2026-09-24: done — reviewed and kept as is; no text changes were
+      committed, so the register/sign-in copy stands as shipped in v1.47.0
+      with the v1.58.0 styling.)
 - [x] ~~Footer light/dark switch on the door pages~~ (v1.58.0, 2026-09-24,
       Chase's idea, agent recommended yes). landing.html + register.html
       (register and sign-in modes) get a small pill next to the version line,
@@ -278,10 +258,10 @@
       account and history kept; logging stays blocked until they do). No
       code change; the "drop the logging block" recommendation was not taken.
 - [x] ~~Swap the crew album link for the October album~~ (Chase, 2026-09-22:
-      "done". NOTE: `CREW_ALBUM_URL` in docs/version.js still carries the
-      August link (photos.app.goo.gl/DJin8nEzrymarTFv9) as of v1.54.0 — so
-      either that album IS the October album now, or the new link still
-      needs pasting there. Chase to confirm; one-line edit + push if so.)
+      "done"; CONFIRMED 2026-09-24: the existing album
+      (photos.app.goo.gl/DJin8nEzrymarTFv9) is the October album, so the
+      link in docs/version.js stays. Its comment still says "swap when the
+      real event starts" — reword in the next release, not worth a push.)
 - [x] ~~Sign-in email: final checks~~ (rate limit 60/h, SPF/DKIM/DMARC PASS,
       BWTF isolation — all DONE 2026-09-08; step 4, the full flow test inside
       the installed PWA, SKIPPED by Chase 2026-09-22. Real codes have been
