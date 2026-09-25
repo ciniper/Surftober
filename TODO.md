@@ -20,14 +20,6 @@
       / "View Mode (Read Only)".
       Edit, then hand off: I bump version.js, check the built page, commit;
       you push. HTML isn't content-hashed, so nothing else to bump.
-- [ ] **Register page: follow the landing's theme rule** (after Chase's
-      copy pass — both edit register.html, so copy first). The landing
-      shipped LIGHT by default in v1.55.0 (2026-09-23, Chase's call): light
-      unless the visitor's saved app theme is dark. register.html is still
-      hard-coded to the dark palette (~25 rules in its <style>), so today's
-      flow is light landing → dark register → light app. Same recipe: reuse
-      the landing's <head> classifier + `--lp-*` variables, give each rule a
-      light twin. ~1 h.
 - [ ] **Oct 1: activate "5th Surftober 2026"** (found 2026-09-22 while
       checking the events table — nothing flips it automatically; the only
       path is the admin Events panel → `activate_event` RPC). The row is
@@ -212,6 +204,15 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Register + sign-in page follows the landing's theme rule~~ (v1.57.0,
+      2026-09-24 — Chase noticed the light default "didn't propagate" to
+      registration/sign-in; it had been held back to avoid colliding with the
+      copy pass, which hadn't started, so no conflict). register.html now
+      carries the same <head> classifier as landing.html and `--rp-*`
+      variables: Pumpkin Spice light by default, the old Sunset Surf palette
+      only when the saved app theme is dark. Verified in the pane: light
+      register, light sign-in (?mode=signin), dark with sunset-surf.
+      Chase's copy pass still edits this file — text only, styles are done.
 - [x] ~~Logo cleanup~~ (v1.56.0–v1.56.4, 2026-09-24 — Chase's picks over twelve
       rounds of variants). Final mark: "Afterglow" sky (radial haze behind
       bird + sun, navy rim) so the plover's black bill reads; the faint inner
