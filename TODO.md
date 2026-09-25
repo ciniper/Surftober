@@ -212,7 +212,7 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
-- [x] ~~Logo cleanup~~ (v1.56.0–v1.56.2, 2026-09-24 — Chase's picks over ten
+- [x] ~~Logo cleanup~~ (v1.56.0–v1.56.3, 2026-09-24 — Chase's picks over eleven
       rounds of variants). Final mark: "Afterglow" sky (radial haze behind
       bird + sun, navy rim) so the plover's black bill reads; the faint inner
       ring dropped and the scene clipped out to the orange ring (r 42.4);
@@ -223,7 +223,8 @@
       "mirror" flipped the sine's phase and read as a new shape). Bird's
       three black dots replaced by a thin black collar around the neck
       (clipped to the silhouette), a thin forehead bar, and the folded wing
-      drawn as a black outline just inside the back line (v1.56.2, Chase;
+      as a flat tint (#e2d8c0, no outline — v1.56.3; the outline version was
+      v1.56.2) just inside the back line (Chase;
       a black tail tip and an ear patch were tried in v1.56.1 and dropped;
       tinted-wing and feather-line variants offered). Sun and medal ring
       untouched.
