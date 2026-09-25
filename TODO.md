@@ -20,46 +20,6 @@
       / "View Mode (Read Only)".
       Edit, then hand off: I bump version.js, check the built page, commit;
       you push. HTML isn't content-hashed, so nothing else to bump.
-- [ ] **Logo cleanup** (Chase, 2026-09-23; replaces "Custom logo" under
-      Event prep). Current mark: docs/logo.svg — snowy plover on a teal
-      wave, sunset behind, navy disc, orange medal ring; unchanged since
-      June. Used as favicon, header brand mark, landing + register hero,
-      and manifest icon (icon-maskable.svg is the Android adaptive
-      variant). Design is Chase's; code side once the final mark exists:
-      · swap logo.svg + icon-maskable.svg (keep the 100×100 viewBox → no
-        CSS changes anywhere)
-      · ADD PNG ICONS: all three pages point `apple-touch-icon` at the SVG,
-        and iOS Safari only accepts PNG there, so the installed home-screen
-        icon is most likely a page snapshot today — check your iPhone.
-        Needs a 180×180 PNG for iOS and 192/512 PNGs in the manifest for
-        Android's install splash. build.mjs hashes css/js/svg/webmanifest
-        today, so PNGs either get added to that list or ship unhashed.
-      · `theme-color` metas if the palette shifts.
-      Shirt + trophy stay under Event prep — they wait on this mark.
-      STATUS 2026-09-23: Chase's issue is the BEAK — black bill on the navy
-      sky, near-zero contrast. Five variants presented (ember beak, golden
-      beak, outlined black beak, bird mirrored to face the sunset, full
-      cleanup = ember beak + slate legs + hairline outline); waiting on the
-      pick, then apply to logo.svg + icon-maskable.svg. PNG icons parked
-      (Chase: not worried about file types, everything has worked so far).
-      2026-09-24, Chase asked for lighter INTERIOR concepts instead: five
-      presented, black bill kept in each so the background does the work —
-      Dusk (one shade lighter navy), Blue hour (clear mid-blue), Afterglow
-      (radial haze behind bird + sun, navy rim kept), Golden dusk (warm
-      horizon band, outlined bird), Daybreak (pale daylight sky, deeper
-      sand/wave). Agent's pick: Afterglow or Blue hour — same mark, bill
-      reads; any can also take the ember beak. Generator + SVGs live in the
-      session scratchpad, not the repo; the chosen one gets copied in.
-      2026-09-24 (later): lighter skies exposed three flaws in the ORIGINAL
-      drawing — the teal squiggle sat on top of the dark mound and crossed
-      its edge, the mound reads as a dark hill on a light sky, and the scene
-      is clipped (r 39.5) smaller than the orange ring (inner edge r 42.4)
-      so a band of bare sky showed between them, which the faint thin ring
-      (r 39, #e8f4f8 @ .4) was dressing. Third sheet: shore redrawn as a
-      teal water band + foam line + tan sand strip the bird stands on, shown
-      on all six skies; inner ring either dropped with the scene extended to
-      the orange ring (agent's recommendation — cleaner at 20–40px) or
-      replaced by a solid navy bezel. Waiting on Chase's sky + ring pick.
 - [ ] **Register page: follow the landing's theme rule** (after Chase's
       copy pass — both edit register.html, so copy first). The landing
       shipped LIGHT by default in v1.55.0 (2026-09-23, Chase's call): light
@@ -252,6 +212,21 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Logo cleanup~~ (v1.56.0, 2026-09-24 — Chase's picks over eight
+      rounds of variants). Final mark: "Afterglow" sky (radial haze behind
+      bird + sun, navy rim) so the plover's black bill reads; the faint inner
+      ring dropped and the scene clipped out to the orange ring (r 42.4);
+      the old dark mound + teal squiggle replaced by a wide, shallow tan
+      dune (#b89b70, one crest under the feet, flank rounding off late —
+      variant "R4") with a teal water band (#3aa9a3) beneath and a foam line
+      whose scallops bow toward the sea. Bird, sun and medal ring untouched.
+      Applied to docs/logo.svg + docs/icon-maskable.svg, same viewBox, no
+      CSS changes. Rejected along the way: orange/gold/outlined beaks, bird
+      mirrored to face the sun, dusk / blue-hour / golden-dusk / daybreak
+      skies, W-shaped rolling dunes, bell dunes, near-flat swells. The
+      generator script and every variant SVG live only in the session
+      scratchpad. PNG icons for iOS/Android still parked (Chase: not
+      worried, everything has worked so far).
 - [x] ~~Landing page light by default~~ (v1.55.0, 2026-09-23, Chase's call).
       landing.html follows the app's theme rule: Pumpkin Spice light unless
       the visitor's saved app theme (`surftober.theme.v1`) is a dark preset
