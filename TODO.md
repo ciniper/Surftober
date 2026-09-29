@@ -173,6 +173,12 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Sessions page: bigger profile photo on the person card~~ (v1.58.1,
+      2026-09-28, Chase — asked for ~70% larger, previewed 48/82/96 live in
+      the pane, picked 96). One scoped rule: `.profile-head .avatar` is 96px
+      with a 16px radius and the row gap 12→14px; the 48px `.avatar` stays
+      for everything else and the Account preview already used 96, so the
+      two headers now match. Photos are baked at 512px, so no re-uploads.
 - [x] ~~Oct 1: activate "5th Surftober 2026"~~ (DONE EARLY — Chase activated
       it 2026-09-24, a week ahead: events table shows 5th Surftober 2026
       active, September Test 2026 inactive. Consequences from now: the app
