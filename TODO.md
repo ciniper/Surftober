@@ -2,8 +2,11 @@
 
 ## Next up
 - [ ] **Test branch `icloud-photo-guards` (v1.59.0), then merge** (Chase,
-      2026-09-29 — Rohan's iCloud photo report). Push the branch, open the
-      Vercel preview URL on your phone, then on Account → Profile Photo:
+      2026-09-29 — Rohan's iCloud photo report). Push the branch
+      (`EXTRA_ALLOWED_ORGS="ciniper" git push -u origin icloud-photo-guards`),
+      open the Vercel preview URL on your phone and sign in with the EMAIL
+      CODE (Google's redirect lands on surftober.com from a preview domain),
+      then on Account → Profile Photo:
       1. Pick a normal photo → the box under the picker reads "Reading photo…"
          for a moment, the preview updates, and "Photo ready — hit Save
          Profile to keep it" now stays ~10 s (was 4).
@@ -17,7 +20,8 @@
          so (same iCloud hint) and the "Choose File" label resets instead of
          showing a filename whose photo isn't in the preview.
       Same three behaviours on register.html's upload box. Then merge to main
-      (`git merge --ff-only icloud-photo-guards`), push, and I verify prod.
+      (`git checkout main && git merge --ff-only icloud-photo-guards`), push
+      with the same EXTRA_ALLOWED_ORGS prefix, and I verify prod.
 
 ## Scoped, awaiting a go
 
