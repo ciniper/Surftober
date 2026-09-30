@@ -1,27 +1,7 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **Test branch `icloud-photo-guards` (v1.59.0), then merge** (Chase,
-      2026-09-29 — Rohan's iCloud photo report). Push the branch
-      (`EXTRA_ALLOWED_ORGS="ciniper" git push -u origin icloud-photo-guards`),
-      open the Vercel preview URL on your phone and sign in with the EMAIL
-      CODE (Google's redirect lands on surftober.com from a preview domain),
-      then on Account → Profile Photo:
-      1. Pick a normal photo → the box under the picker reads "Reading photo…"
-         for a moment, the preview updates, and "Photo ready — hit Save
-         Profile to keep it" now stays ~10 s (was 4).
-      2. Pick a photo that lives in iCloud on a weak connection (or airplane
-         mode after the picker opens): if the picker sits with the empty ring
-         and you back out, a warning appears — "Nothing came back from Photos.
-         If the photo was stuck loading, it's still downloading from iCloud…".
-         Only fires when you were in the picker ≥ 6 s, so a quick cancel is
-         silent.
-      3. If Safari ever hands over an empty/unreadable file, the toast now says
-         so (same iCloud hint) and the "Choose File" label resets instead of
-         showing a filename whose photo isn't in the preview.
-      Same three behaviours on register.html's upload box. Then merge to main
-      (`git checkout main && git merge --ff-only icloud-photo-guards`), push
-      with the same EXTRA_ALLOWED_ORGS prefix, and I verify prod.
+(Nothing queued — everything left before Oct 1 is under Event prep.)
 
 ## Scoped, awaiting a go
 
@@ -193,6 +173,25 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+- [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
+      live 2026-09-30 after Chase tested the branch preview; Rohan's report
+      2026-09-29). Diagnosis from his screen recording: the iOS picker sat on
+      an iCloud photo with an empty download ring (weak cellular, "Optimize
+      iPhone Storage"), he backed out, Safari fired `cancel` not `change`, so
+      the page never received a file — and the stale "IMG_8831.jpeg" label
+      next to an old preview made it look like the app had dropped it. His
+      row has no saved photo. Shipped: `SurftoberPhoto.prepare()` (bytes read
+      with a 30 s timeout, empty result refused, decode from the in-memory
+      copy, one plain iCloud hint on every failure), "Reading photo…" status,
+      input cleared on failure, `cancel` after ≥ 6 s in the picker → stalled-
+      download hint, toast durations (ready 10 s, errors 12 s, hint 15 s).
+      Both Account and register.html. User-side fix to pass on: open the
+      photo in the Photos app on Wi-Fi so it downloads, then pick it again
+      (or Settings → Photos → Download and Keep Originals). First branch
+      tested via Vercel preview — preview URLs sit behind Vercel
+      Authentication (login on the phone once), and on a preview sign in
+      with the email code, not Google. Branch `icloud-photo-guards` can be
+      deleted (local + origin) whenever.
 - [x] ~~Sessions page: bigger profile photo on the person card~~ (v1.58.1,
       2026-09-28, Chase — asked for ~70% larger, previewed 48/82/96 live in
       the pane, picked 96). One scoped rule: `.profile-head .avatar` is 96px
