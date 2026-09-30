@@ -1,7 +1,23 @@
 # Surftober TODO
 
 ## Next up
-(Nothing queued — everything left before Oct 1 is under Event prep.)
+- [ ] **Test branch `icloud-photo-guards` (v1.59.0), then merge** (Chase,
+      2026-09-29 — Rohan's iCloud photo report). Push the branch, open the
+      Vercel preview URL on your phone, then on Account → Profile Photo:
+      1. Pick a normal photo → the box under the picker reads "Reading photo…"
+         for a moment, the preview updates, and "Photo ready — hit Save
+         Profile to keep it" now stays ~10 s (was 4).
+      2. Pick a photo that lives in iCloud on a weak connection (or airplane
+         mode after the picker opens): if the picker sits with the empty ring
+         and you back out, a warning appears — "Nothing came back from Photos.
+         If the photo was stuck loading, it's still downloading from iCloud…".
+         Only fires when you were in the picker ≥ 6 s, so a quick cancel is
+         silent.
+      3. If Safari ever hands over an empty/unreadable file, the toast now says
+         so (same iCloud hint) and the "Choose File" label resets instead of
+         showing a filename whose photo isn't in the preview.
+      Same three behaviours on register.html's upload box. Then merge to main
+      (`git merge --ff-only icloud-photo-guards`), push, and I verify prod.
 
 ## Scoped, awaiting a go
 
