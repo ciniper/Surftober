@@ -468,7 +468,7 @@
     // that proves the address) is the gate. The club password survives only
     // in front of View Mode (landing.html → index.html?mode=view).
 
-    function toast(msg, type='success'){
+    function toast(msg, type='success', ms=4000){
       const box = document.getElementById('toast-container');
       if (!box) { console.log(`[${type}]`, msg); return; }
       const el = document.createElement('div');
@@ -476,7 +476,7 @@
       el.innerHTML = `<span>${msg}</span><span class="close">✕</span>`;
       el.querySelector('.close').onclick = ()=> el.remove();
       box.appendChild(el);
-      setTimeout(()=> el.remove(), 4000);
+      setTimeout(()=> el.remove(), ms);
     }
 
     // A failed auth callback comes back as "#error=...&error_description=..."
@@ -772,13 +772,37 @@
       document.getElementById('photo-upload').click();
     });
 
-    document.getElementById('photo-upload').addEventListener('change', async (e) => {
+    // Guarded read (see photo-kit prepare): iCloud photos that never finished
+    // downloading arrive empty/unreadable or not at all. The upload box shows
+    // "Reading photo…" meanwhile; a failure clears the input so the same
+    // photo can be picked again.
+    const photoUploadInput = document.getElementById('photo-upload');
+    const photoUploadLabel = document.querySelector('#photo-upload-area p');
+    const photoUploadIdle = photoUploadLabel ? photoUploadLabel.textContent : '';
+    let photoPickSeq = 0;
+    let photoPickerOpenedAt = 0;
+    photoUploadInput.addEventListener('click', () => { photoPickerOpenedAt = Date.now(); });
+    photoUploadInput.addEventListener('cancel', () => {
+      const spent = photoPickerOpenedAt ? Date.now() - photoPickerOpenedAt : 0;
+      photoPickerOpenedAt = 0;
+      if (spent >= 6000) toast(SurftoberPhoto.PICKER_STALL_HINT, 'warn', 15000);
+    });
+    photoUploadInput.addEventListener('change', async (e) => {
+      photoPickerOpenedAt = 0;
       const file = e.target.files[0];
       if (!file) return;
+      const seq = ++photoPickSeq;
+      if (photoUploadLabel) photoUploadLabel.textContent = 'Reading photo…';
       try {
-        applyPickedPhoto(await SurftoberPhoto.render(file));
+        const rendered = await SurftoberPhoto.prepare(file);
+        if (seq !== photoPickSeq) return;
+        applyPickedPhoto(rendered);
       } catch (err) {
-        toast('Could not read that image: ' + err.message, 'error');
+        if (seq !== photoPickSeq) return;
+        e.target.value = '';
+        toast('Could not use that photo: ' + err.message, 'error', 12000);
+      } finally {
+        if (seq === photoPickSeq && photoUploadLabel) photoUploadLabel.textContent = photoUploadIdle;
       }
     });
 

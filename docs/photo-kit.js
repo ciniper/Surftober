@@ -61,6 +61,66 @@
     }
   }
 
+  // ---------- guarded read (iCloud / slow-storage cases) ----------
+
+  // Photos kept in iCloud ("Optimize iPhone Storage") reach the page only
+  // after the picker downloads the original. When that download stalls the
+  // picker usually never returns at all (the pages watch the input's `cancel`
+  // event for that), but WebKit has also been seen handing over a File whose
+  // bytes are empty or unreadable. Reading the bytes first — with a timeout —
+  // turns every one of those into one clear message instead of a silent
+  // no-op or a hang, and decoding from the in-memory copy sidesteps the
+  // disk-backed-File quirks entirely.
+  var ICLOUD_HINT = 'That photo is probably still downloading from iCloud. ' +
+    'Open it in the Photos app, wait for it to sharpen, then pick it again.';
+  var PICKER_STALL_HINT = 'Nothing came back from Photos. If the photo was stuck loading, ' +
+    'it\'s still downloading from iCloud \u2014 open it in the Photos app, wait for it to ' +
+    'sharpen, then pick it again.';
+
+  function fail(code, message) {
+    var e = new Error(message);
+    e.code = code;
+    return e;
+  }
+
+  function withTimeout(promise, ms, makeError) {
+    var timer;
+    var timeout = new Promise(function (_, reject) {
+      timer = setTimeout(function () { reject(makeError()); }, ms);
+    });
+    return Promise.race([promise, timeout]).finally(function () { clearTimeout(timer); });
+  }
+
+  /**
+   * Read the picked file's bytes (timeout-guarded), refuse an empty result,
+   * then render() from an in-memory copy. Errors carry `code`:
+   * 'nofile' | 'unreadable' | 'timeout' | 'empty' | 'decode'.
+   */
+  async function prepare(file, opts) {
+    opts = opts || {};
+    var ms = opts.timeoutMs || 30000;
+    if (!file) throw fail('nofile', 'No photo was picked.');
+    var buf;
+    try {
+      buf = await withTimeout(file.arrayBuffer(), ms, function () {
+        return fail('timeout', 'Reading that photo took too long. ' + ICLOUD_HINT);
+      });
+    } catch (e) {
+      if (e && e.code === 'timeout') throw e;
+      throw fail('unreadable', 'Could not read that photo from your device. ' + ICLOUD_HINT);
+    }
+    if (!buf || buf.byteLength === 0) throw fail('empty', 'That photo came through empty. ' + ICLOUD_HINT);
+    var blob = new Blob([buf], { type: file.type || 'image/jpeg' });
+    try {
+      return await withTimeout(render(blob), ms, function () {
+        return fail('timeout', 'Decoding that photo took too long \u2014 try a smaller one, or a screenshot of it.');
+      });
+    } catch (e) {
+      if (e && e.code) throw e;
+      throw fail('decode', 'Could not decode that image \u2014 it may not be a format this browser can open.');
+    }
+  }
+
   // ---------- crop editor ----------
 
   var cropEl = null;
@@ -369,6 +429,9 @@
 
   window.SurftoberPhoto = {
     render: render,
+    prepare: prepare,
+    ICLOUD_HINT: ICLOUD_HINT,
+    PICKER_STALL_HINT: PICKER_STALL_HINT,
     openCrop: openCrop,
     closeCrop: closeCrop,
     supportsCamera: supportsCamera,

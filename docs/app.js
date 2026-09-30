@@ -1,7 +1,9 @@
 // Simple client-side Surftober demo using localStorage as the DB
 // Supabase integration (Auth + DB)
-const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0';
+// Public client config, not secrets: the URL and anon key ship to every browser by design;
+// row-level security is the boundary. The sadscan markers silence the scanner's false positive.
+const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co'; // sadscan:disable kingfisher.supabase.3
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcmJsdWVxeXR1Y3lncG1qdXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDkwODcsImV4cCI6MjA5NzU4NTA4N30.5mIdEYPqfpr1sZygMfK_0lQrLX82iAtqao-MwXTgSN0'; // sadscan:disable np.jwt.1
 // Fallback season, used until the events table is reachable (and if the
 // upgrade SQL hasn't been run yet — the app keeps working exactly as before).
 // KEEP `team` MATCHING THE REAL OCTOBER EVENT'S SLUG. loadEvents() falls back
@@ -55,7 +57,7 @@ function fmtTime(t){
   } catch { return String(t); }
 }
 
-function toast(msg, type='success'){
+function toast(msg, type='success', ms=4000){
   const box = document.getElementById('toast-container');
   if (!box) { console.log(`[${type}]`, msg); return; }
   const el = document.createElement('div');
@@ -63,7 +65,7 @@ function toast(msg, type='success'){
   el.innerHTML = `<span>${esc(msg)}</span><span class="close">✕</span>`;
   el.querySelector('.close').onclick = ()=> el.remove();
   box.appendChild(el);
-  setTimeout(()=> el.remove(), 4000);
+  setTimeout(()=> el.remove(), ms);
 }
 
 function isAdminUser(){
@@ -1322,11 +1324,21 @@ function attachAccountHandlers(){
 
   // Profile photo: pick from library OR take one with the camera (the hidden
   // capture input opens the front camera directly on phones). Both funnel
-  // into the same compress-and-preview path; saved with Save Profile.
-  async function handlePhotoFile(file){
+  // into the same guarded read-and-preview path; saved with Save Profile.
+  const photoStatus = document.getElementById('photo-status');
+  function setPhotoStatus(text){
+    if (!photoStatus) return;
+    photoStatus.textContent = text || '';
+    photoStatus.style.display = text ? '' : 'none';
+  }
+  let photoPickSeq = 0; // only the latest pick may land (a slow read must not overwrite a newer one)
+  async function handlePhotoFile(file, input){
     if (!file) return;
+    const seq = ++photoPickSeq;
+    setPhotoStatus('Reading photo\u2026');
     try {
-      const rendered = await SurftoberPhoto.render(file);
+      const rendered = await SurftoberPhoto.prepare(file);
+      if (seq !== photoPickSeq) return;
       pendingPhotoBase64 = rendered.display;
       pendingPhotoArchive = rendered.archiveBlob;
       // Local URL for the crop editor: the just-picked archive isn't uploaded
@@ -1342,15 +1354,39 @@ function attachAccountHandlers(){
         setAvatarPosition(preview, AVATAR_POS_DEFAULT);
       }
       reflectPhotoNudge();
-      toast('Photo ready — hit Save Profile to keep it', 'success');
+      toast('Photo ready — hit Save Profile to keep it', 'success', 10000);
     } catch (e) {
-      toast('Could not process that image: ' + e.message, 'error');
+      if (seq !== photoPickSeq) return;
+      // Clear the picker so its filename never contradicts the preview, and
+      // so re-picking the same photo fires `change` again instead of `cancel`.
+      if (input) input.value = '';
+      toast('Could not use that photo: ' + e.message, 'error', 12000);
+    } finally {
+      if (seq === photoPickSeq) setPhotoStatus('');
     }
   }
-  const photoInput = document.getElementById('profile-photo');
-  if (photoInput) photoInput.addEventListener('change', () => handlePhotoFile(photoInput.files && photoInput.files[0]));
+  // iCloud stall detection (Rohan, 2026-09-29): when the picker comes back
+  // with nothing after the user sat in it a while, the photo was almost
+  // certainly stuck downloading (the empty progress ring on the thumbnail).
+  // Safari fires `cancel`, never `change`, so this is the only hook we get.
+  const PICKER_STALL_MS = 6000;
+  function watchPhotoInput(input){
+    if (!input) return;
+    let openedAt = 0;
+    input.addEventListener('click', () => { openedAt = Date.now(); });
+    input.addEventListener('cancel', () => {
+      const spent = openedAt ? Date.now() - openedAt : 0;
+      openedAt = 0;
+      if (spent >= PICKER_STALL_MS) toast(SurftoberPhoto.PICKER_STALL_HINT, 'warn', 15000);
+    });
+    input.addEventListener('change', () => {
+      openedAt = 0;
+      handlePhotoFile(input.files && input.files[0], input);
+    });
+  }
   const cameraInput = document.getElementById('profile-photo-camera');
-  if (cameraInput) cameraInput.addEventListener('change', () => handlePhotoFile(cameraInput.files && cameraInput.files[0]));
+  watchPhotoInput(document.getElementById('profile-photo'));
+  watchPhotoInput(cameraInput);
   // Real webcam capture where it exists — this is what makes "take a photo"
   // work on a Mac, where capture="user" only opens a file picker. Devices
   // without getUserMedia still fall back to the native camera input.
