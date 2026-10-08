@@ -183,6 +183,16 @@
       Notes: 1 + 3 combine naturally (laser-cut base, slot-in name tab, medal
       trim); 2 + 4 combine (metal spinner with a magnet core). The new logo
       (plover on the dune, v1.56.4) is the obvious engraving for the base.
+      MOCKUPS (2026-10-08, this branch): design/trophy/mockups.html — a
+      self-contained three.js viewer (loads three from unpkg, so needs
+      internet). Buttons switch concepts A plaque / B fin / C spinner /
+      D windmill, a dropdown switches the medal tier colour, `?name=NAHLA`
+      sets the name, "Download PNG" saves the current view. Open it from any
+      local static server (e.g. `python3 -m http.server --directory
+      design/trophy`), not via file:// (ES-module imports). Last year's
+      (2025) were 3D-printed multi-colour plaques — Golden Gate + cable car
+      carrying the name, car colour = medal tier — so the plaque + modular
+      name bar (A) is the closest evolution; B/C are the fridge-magnet ideas.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
