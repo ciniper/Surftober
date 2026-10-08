@@ -170,7 +170,19 @@
 ## Event prep (non-code)
 - [ ] Contact Nina about the surfboard giveaway (Chase, 2026-09-10)
 - [ ] Shirt design (Chase, 2026-09-10)
-- [ ] Trophy design (Chase, 2026-09-10)
+- [ ] Trophy design (Chase, 2026-09-10). Ideas floated 2026-10-08:
+      1. Wooden, laser-cut, with a trim in the medal colour (gold / silver /
+         bronze / participant) so the tier reads at a glance.
+      2. Laser-cut metal that IS the magnet — the trophy lives on the fridge.
+      3. Modular: a base piece made separately from the name/year piece, so
+         bases can be cut in bulk and names added per person (and reused
+         next year with a new name plate).
+      4. A fidget-spinner design that doubles as a fridge magnet.
+      5. Something surf-shaped — a fin, a fin key, etc.
+      6. Something riffing on the Dutch windmill (Ocean Beach landmark).
+      Notes: 1 + 3 combine naturally (laser-cut base, slot-in name tab, medal
+      trim); 2 + 4 combine (metal spinner with a magnet core). The new logo
+      (plover on the dune, v1.56.4) is the obvious engraving for the base.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
