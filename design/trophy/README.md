@@ -44,10 +44,88 @@ Buttons switch concept, the dropdown switches the medal tier colour,
   frame, separate name bar sliding into a slot. Closest evolution of 2025.
 - **B · Fin magnet** — single fin in the medal colour, name + year raised on
   the face, magnet disc recessed in the back, small wood stand.
-- **C · Spinner magnet** — tri-lobe spinner, logo in the hub, name and year on
-  the lobes, magnet core on the back.
+- **C · Spinner magnet (v2, 2026-10-10)** — see "Concept C build plan" below.
+  Stock metal tri-spinner + 608 bearing, metal weight inserts in the lobes,
+  anodized 6061 caps with the magnet in the back cap, and a wide printed
+  medal-colour ring on the front with three full-length rods through the
+  inserts' holes. Extra buttons: cap colour, **Exploded**
+  (parts pulled apart along the axis) and **On fridge** (steel door touching
+  only the back cap), plus **Spin body** to stop or start the body spinning.
+  Body dimensions are placeholders until the stock part is measured.
 - **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
   sails, name on the dune.
+
+## Concept C build plan (Chase, 2026-10-10)
+
+Past trophies were fridge magnets with 3D-printed parts; this year's leading
+idea is a **metal fidget spinner that still sticks to the fridge**. About 50
+units. No wave-shaped spinner. Chase CADs it and does the cap and ring work.
+
+**Magnet cap**
+- Magnet goes in a centre cap, not the bearing: neodymium disc, N42+,
+  ~10 × 2 mm, in a pocket on the cap's outward face ~0.2 mm oversize for a
+  glue fit, flush or slightly recessed.
+- The cap mounts on the stationary inner race, so the magnet doesn't spin;
+  keep it thin and clear of the ball track to protect spin time.
+- Bearing: 608 (8 × 22 × 7) — measure the stock piece. Cap ~14–20 mm OD,
+  matching existing caps. Bare 6061 caps, add the pocket, anodize in
+  Surftober colours.
+
+**Medal ring**
+- Every unit gets the same stock tri-spinner body and the same magnet cap —
+  no per-unit engraving.
+- A cheap printed ring sits on the front face and carries the medal colour
+  and the trophy text ("SURFTOBER 2026 · GOLD", name).
+- Stock bodies usually have a press-fit metal weight insert in each lobe,
+  which leaves only a small hole. The ring therefore has three **full rods
+  that pass all the way through** those holes (ending just short of the back
+  face), and it has to be **wide** — roughly from just outside the centre cap
+  to past the lobe tips — to cover the lobe centres. Its outer edge follows
+  the arms (r 40 over each lobe, curving in to r 30 between them) so there's
+  still an edge to flick. The mockup uses a Ø8 insert hole, Ø7.7 rods and a
+  ring from r 17; all placeholders.
+- Balance: symmetric ring, even infill, evenly inset or embossed text.
+  Retention: snug pegs or a snap fit, CA glue as backup.
+- Fridge clearance: nothing on the ring may sit proud of the back — the back
+  magnet cap stays flat on the door.
+- Filament: silk gold / silver / bronze PLA, AMS or a filament swap for
+  two-colour text, PETG if toughness matters. Extra outer mass may even help
+  spin time.
+- Pick a tri-spinner body with open lobe holes and measure them before
+  CADing the pegs.
+
+**Patterns that only show up when it spins (ideas, not yet mocked)**
+
+Spun fast, every point on the ring smears into a circle, so the eye sees the
+average colour at each radius. Only concentric rings can appear out of
+nowhere, not text or pictures. Ways to use that on the ring's front face:
+
+1. **Confetti → bullseye (favourite).** Scatter dots and dashes so the still
+   ring looks random; spinning, each radius averages into a solid band and a
+   sunset bullseye (orange / sand / teal, like the logo) appears. Denser dots
+   at a radius = a stronger band, so the rings can be shaded. Works with
+   two-colour AMS printing.
+2. **Colour mixing.** Thin alternating orange and teal wedges in one band read
+   as a single new colour in motion. Easy add-on to 1.
+3. **Benham's disk.** A specific black-and-white arc pattern that makes faint
+   illusory colours appear when spun. Needs high contrast, so black on silver
+   beats navy on gold.
+4. **Freeze-frame animation.** A motif repeated evenly around the ring (e.g.
+   12 plovers in walking poses) can seem to stand still or walk under
+   flickering LED light or in phone video. Fun, but unreliable.
+
+Related: the caps don't spin (they're what you hold), so a logo
+laser-engraved through the anodizing on the front cap stays crisp while
+everything around it blurs. It's the same cap for every unit, so it doesn't
+break the no-per-unit-engraving rule.
+
+**Sourcing**
+- gs-jj.com — finished metal spinners, $4.58–5.66 each, 50 minimum.
+- qstomize.com — laser engraving, ~$4.25 each.
+- Etsy HREFAB — magnetic 6061 608 caps, ~$15/set (good design reference);
+  cheaper bare caps: FidgetThings ~$2.00, others ~$1.25.
+- smrtgadget.com — bare 6061-T6 608 buttons made for anodizing.
+- Bulk 608 bearings: eBay (lot of 100), mklbearing.com, AliExpress.
 
 ## Image-generation prompts (Midjourney / ChatGPT / Gemini)
 
@@ -82,11 +160,12 @@ Prepend the shared style line to each concept prompt. For other tiers swap
 
 ### Concept C — spinner magnet
 
-> A tri-lobe fidget spinner about 8 cm across in metallic gold, a navy and
-> orange plover-at-sunset logo in the centre hub, the name on one lobe and
-> "2026" on another in raised navy letters, steel bearings in the lobes, a
-> black magnet disc on the back. Show it parked on a stainless fridge door at
-> a slight angle.
+> A gunmetal tri-lobe metal fidget spinner about 8 cm across with open lobe
+> holes and a 608 bearing in the centre, orange anodized aluminium centre
+> caps, and a 3D-printed silk-gold PLA ring about 8 cm across clipped onto
+> its front face, the ring reading "SURFTOBER 2026 · GOLD" around the top and
+> "NAHLA" around the bottom in raised navy letters. Show it parked on a
+> stainless fridge door, held by a small magnet in the back cap.
 
 ### Concept D — windmill
 
