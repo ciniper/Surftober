@@ -68,7 +68,7 @@ slider, "Snap to sync" and a "Flick" spin-down. "One slot on camera" plays a
 single slot big at real speed (or ×4 slower) to judge the animation itself.
 It shows the frames unrolled and downloads the ring artwork as an SVG in mm
 (ring / water / foam layers) for CAD. The frames live in `wave-frames.js`,
-which both pages import; `?wave=classic|rolling|barrel&frames=N` works on
+which both pages import; `?wave=classic|rolling|return|barrel&frames=N` works on
 both pages.
 
 ## Concept C build plan (Chase, 2026-10-10)
@@ -135,7 +135,7 @@ nowhere, not text or pictures. Ways to use that on the ring's front face:
   clockwise from the top. Navy water and cream foam on the medal colour, with
   the sea at the same height at every slot edge so it reads as one band at
   rest.
-- Three styles (2026-10-11), each available at 6–16 frames:
+- Four styles (2026-10-11), each available at 6–16 frames:
   - **Classic break** (12): one wave in place — swell, peak, lip throws,
     barrel, lip lands, impact, slump — and the next swell already rising
     behind the whitewater so the loop doesn't restart from a flat sea.
@@ -144,6 +144,10 @@ nowhere, not text or pictures. Ways to use that on the ring's front face:
     as continuous motion with no reset; waves get cut off at the slot edges.
   - **Barrel loop** (8): a standing wave that keeps throwing and landing its
     lip, like a wave pool. Shortest loop, chunkiest artwork.
+  - **Whitewater return** (10): the whitewater doesn't run off. After the
+    explosion it's drawn back to the foot of the wave, up the face and over
+    the crest, where it becomes the feathering lip that throws and explodes
+    again, so the same foam circulates (Chase's idea, 2026-10-11).
 - Fewer slots = bigger, chunkier frames but a faster, choppier loop. One loop
   always lasts N video frames on playback (0.40 s for 12 at 30 fps, 0.27 s
   for 8), which is why 12 frames can feel frantic; the demo's "Slow ×4"
