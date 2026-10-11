@@ -25,6 +25,7 @@
     <button id="fridge">On fridge</button>
     <button id="bodyspin" class="on">Spin body</button>
     <select id="ringm" title="Ring shape"><option value="wave">Ring: disk + wave</option><option value="disk">Ring: disk</option><option value="notched">Ring: notched</option></select>
+    <select id="wavev" title="Wave animation style"></select>
     <button id="phonecam">Phone-cam demo</button>
   </span>
   <button id="spin" class="on">Auto-rotate</button>
@@ -41,7 +42,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { WAVE_N, ringArt } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_DEFAULT, ringArt } from './wave-frames.js';
 
 const NAME = new URLSearchParams(location.search).get('name') || 'NAHLA';
 const TIERS = {
@@ -172,6 +173,8 @@ const SP = {
 const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
 let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true, phoneCam = false;
 let ringMode = new URLSearchParams(location.search).get('ring') || 'wave'; // wave | disk | notched
+let waveVariant = WAVE_VARIANTS[new URLSearchParams(location.search).get('wave')] ? new URLSearchParams(location.search).get('wave') : WAVE_DEFAULT;
+let waveN = +new URLSearchParams(location.search).get('frames') || WAVE_VARIANTS[waveVariant].N;
 
 function zcyl(r, z0, h, mat, seg = 48) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat);
@@ -254,14 +257,14 @@ function trefoilRing(tier) {
   geo.translate(0, 0, 0.4);
   const m = new THREE.Mesh(geo, M.tier(tier)); m.castShadow = true; m.receiveShadow = true; return m;
 }
-// The 12 breaking-wave frames on the disk's outer band. Shown slightly raised so
+// The breaking-wave frames on the disk's outer band. Shown slightly raised so
 // they read in the render; in print they'd be flush colour changes.
 function waveBand() {
   const g = new THREE.Group(), water = M.navy(), foam = M.cream();
-  ringArt({ N: WAVE_N, rIn: SP.waveIn, rOut: SP.waveOut }).slots.forEach(sl => {
-    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(sl.water.map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.2, bevelEnabled: false }), water);
-    g.add(m);
-    sl.foam.forEach(([x, y, r]) => { const c = zcyl(r, 0.2, 0.15, foam, 20); c.position.x = x; c.position.y = y; g.add(c); });
+  const slab = (poly, z, h, mat) => { const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: h, bevelEnabled: false }), mat); m.position.z = z; g.add(m); };
+  ringArt({ variant: waveVariant, N: waveN, rIn: SP.waveIn, rOut: SP.waveOut }).slots.forEach(sl => {
+    sl.water.forEach(p => slab(p, 0, 0.2, water));
+    sl.foam.forEach(p => slab(p, 0.2, 0.15, foam));
   });
   g.position.z = SP.ringT;
   return g;
@@ -334,12 +337,13 @@ function buildWindmill(tier) {
 
 const VIEWS = { plaque: { pos: [140, 110, 190], target: [0, 15, 0] }, fin: { pos: [40, 70, 230], target: [0, 45, 0] },
                 spinner: { pos: [80, 85, 190], target: [0, 50, 0] }, windmill: { pos: [30, 90, 310], target: [0, 62, 0] } };
+const PHONE_VIEW = { pos: [0, 40, 240], target: [0, 40, 0] };   // head-on, for the phone-cam demo
 const builders = { plaque: buildPlaque, fin: buildFin, spinner: buildSpinner, windmill: buildWindmill };
 let current = null, concept = 'plaque', tier = 'gold';
 function rebuild() {
   if (current) scene.remove(current);
   current = builders[concept](tier); scene.add(current);
-  const v = VIEWS[concept]; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update();
+  const v = phoneCam && concept === 'spinner' ? PHONE_VIEW : VIEWS[concept]; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update();
   document.getElementById('cap').textContent = CAPTIONS[concept] + '  ·  Tier shown: ' + TIERS[tier].label + '  ·  Name: ' + NAME + ' (add ?name=YOURNAME to the URL).';
   document.querySelectorAll('#ui [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === concept));
   document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'contents' : 'none';
@@ -351,14 +355,17 @@ document.getElementById('explode').addEventListener('click', e => { exploded = !
 document.getElementById('fridge').addEventListener('click', e => { onFridge = !onFridge; e.target.classList.toggle('on', onFridge); if (current.userData.fridge) current.userData.fridge.visible = onFridge; });
 document.getElementById('bodyspin').addEventListener('click', e => { bodySpin = !bodySpin; e.target.classList.toggle('on', bodySpin); });
 document.getElementById('ringm').value = ringMode;
+Object.entries(WAVE_VARIANTS).forEach(([k, v]) => document.getElementById('wavev').add(new Option(`Wave: ${v.label}`, k)));
+document.getElementById('wavev').value = waveVariant;
+document.getElementById('wavev').addEventListener('change', e => { waveVariant = e.target.value; waveN = WAVE_VARIANTS[waveVariant].N; if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; } rebuild(); });
 document.getElementById('ringm').addEventListener('change', e => { ringMode = e.target.value; if (ringMode !== 'wave' && phoneCam) document.getElementById('phonecam').click(); rebuild(); });
-// Phone-cam demo: step the ring like a 30 fps video sees it at ~145 RPM (0.97 slots per frame)
+// Phone-cam demo: step the ring like a 30 fps video sees it just under sync (0.97 slots per frame)
 document.getElementById('phonecam').addEventListener('click', e => {
   phoneCam = !phoneCam; e.target.classList.toggle('on', phoneCam);
   if (!phoneCam) return;
   if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; rebuild(); }
   controls.autoRotate = false; document.getElementById('spin').classList.remove('on');
-  camera.position.set(0, 40, 240); controls.target.set(0, 40, 0); controls.update();
+  camera.position.set(...PHONE_VIEW.pos); controls.target.set(...PHONE_VIEW.target); controls.update();
 });
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
@@ -371,7 +378,7 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 let lastT = performance.now(), camAcc = 0;
 (function loop(now) { requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now; controls.update(); if (current && current.userData.spinner) {
   const u = current.userData;
-  if (phoneCam) { camAcc += dt; if (camAcc >= 1 / 30) { camAcc %= 1 / 30; u.spinner.rotation.z += 2 * Math.PI / WAVE_N * 0.97; } }
+  if (phoneCam) { camAcc += dt; if (camAcc >= 1 / 30) { camAcc %= 1 / 30; u.spinner.rotation.z += 2 * Math.PI / waveN * 0.97; } }
   else if (bodySpin) u.spinner.rotation.z += 0.02;
   u.explode += ((exploded ? 1 : 0) - u.explode) * 0.08;
   u.parts.forEach(p => { p.obj.position.z = p.z0 + p.dz * u.explode; });

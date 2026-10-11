@@ -53,18 +53,23 @@ Buttons switch concept, the dropdown switches the medal tier colour,
   only the back cap), plus **Spin body** to stop or start the body spinning.
   **Ring** switches between *disk + wave* (default), plain *disk* and
   *notched*; `?ring=wave|disk|notched` does the same from the URL.
-  **Phone-cam demo** steps the ring the way a 30 fps phone video sees it near
-  the sync speed, so the wave breaks on screen. Body dimensions are
+  **Wave** picks the animation style (below). **Phone-cam demo** steps the
+  ring the way a 30 fps phone video sees it near the sync speed, so the wave
+  breaks on screen. Body dimensions are
   placeholders until the stock part is measured.
+
+- **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
+  sails, name on the dune.
 
 `wave-demo.html` — the breaking-wave animation on its own (same server):
 still artwork, what your eye sees (motion blur) and what a phone video sees,
-with camera fps, shutter, spin direction, a speed slider, "Snap to sync" and
-a "Flick" spin-down. It shows the 12 frames unrolled and downloads the ring
-artwork as an SVG in mm (ring / water / foam layers) for CAD. The frames live
-in `wave-frames.js`, which both pages import.
-- **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
-  sails, name on the dune.
+with wave style, frame count, camera fps, shutter, spin direction, a speed
+slider, "Snap to sync" and a "Flick" spin-down. "One slot on camera" plays a
+single slot big at real speed (or ×4 slower) to judge the animation itself.
+It shows the frames unrolled and downloads the ring artwork as an SVG in mm
+(ring / water / foam layers) for CAD. The frames live in `wave-frames.js`,
+which both pages import; `?wave=classic|rolling|barrel&frames=N` works on
+both pages.
 
 ## Concept C build plan (Chase, 2026-10-10)
 
@@ -126,26 +131,39 @@ nowhere, not text or pictures. Ways to use that on the ring's front face:
 
 **Breaking-wave band (disk ring)**
 
-- 12 frames of one wave in equal 30° slots on the outer band (r 30.6–39.4),
-  running clockwise from the top: swell, peak, lip throws, barrel, lip lands,
-  explosion, whitewater rolls out. Navy water and cream foam on the medal
-  colour, with the sea at the same height at every slot edge so it reads as
-  one band at rest.
+- N frames of a wave in equal slots on the outer band (r 30.6–39.4), running
+  clockwise from the top. Navy water and cream foam on the medal colour, with
+  the sea at the same height at every slot edge so it reads as one band at
+  rest.
+- Three styles (2026-10-11), each available at 6–16 frames:
+  - **Classic break** (12): one wave in place — swell, peak, lip throws,
+    barrel, lip lands, impact, slump — and the next swell already rising
+    behind the whitewater so the loop doesn't restart from a flat sea.
+  - **Rolling set** (10): waves travel through each slot ¾ of a slot apart,
+    breaking mid-slot and rolling out while the next one rises behind. Reads
+    as continuous motion with no reset; waves get cut off at the slot edges.
+  - **Barrel loop** (8): a standing wave that keeps throwing and landing its
+    lip, like a wave pool. Shortest loop, chunkiest artwork.
+- Fewer slots = bigger, chunkier frames but a faster, choppier loop. One loop
+  always lasts N video frames on playback (0.40 s for 12 at 30 fps, 0.27 s
+  for 8), which is why 12 frames can feel frantic; the demo's "Slow ×4"
+  shows the frames at a readable pace.
 - A phone video turns it into an animation when the ring turns one slot per
-  video frame: RPM = 60 × fps ÷ 12, so 150 RPM at 30 fps, 300 at 60, 600 at
-  120 slo-mo and 1200 at 240 slo-mo. Two or three slots per frame (300 / 450
-  RPM at 30 fps) also work but look choppier. A spinner slows steadily, so it
+  video frame: RPM = 60 × fps ÷ N — for 12 frames 150 RPM at 30 fps, 300 at
+  60, 1200 at 240 slo-mo; for 8 frames 225 / 450 / 1800. Two or three slots
+  per frame also work but look choppier. A spinner slows steadily, so it
   passes through these speeds by itself; just past sync the waves also drift
   clockwise, with the break.
 - Flick it **counter-clockwise** as you face it; clockwise plays it backwards.
   Film in bright light (or slo-mo, which forces a fast shutter) so it doesn't
-  blur. 240 fps slo-mo is probably the easiest because 1200 RPM is right in a
-  spinner's normal range.
-- Anything on the ring that doesn't repeat every 30° (the text, the name)
+  blur. 240 fps slo-mo is probably the easiest because the sync speed lands in
+  a spinner's normal range.
+- Anything on the ring that doesn't repeat every slot (the text, the name)
   jumps around in the video. If that's distracting, the band could also carry
-  a 12× repeated mark, or the text could move to the non-spinning cap.
+  a repeated mark, or the text could move to the non-spinning cap.
 - Print the artwork as flush colour changes, not raised, so every slot weighs
-  the same; the smallest drops are ~0.6 mm.
+  the same; the smallest drops are ~0.6 mm. Shapes within a colour overlap in
+  the SVG, so union them in CAD.
 
 Related: the caps don't spin (they're what you hold), so a logo
 laser-engraved through the anodizing on the front cap stays crisp while
