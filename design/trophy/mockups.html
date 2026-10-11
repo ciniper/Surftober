@@ -19,6 +19,12 @@
   <button data-c="spinner">C · Spinner magnet</button>
   <button data-c="windmill">D · Windmill</button>
   <select id="tier"><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="participant">Participant</option></select>
+  <span id="spinOpts" style="display:none;gap:8px;align-items:center">
+    <select id="capc" title="Cap anodize colour"><option value="orange">Cap: orange</option><option value="navy">Cap: navy</option><option value="teal">Cap: teal</option></select>
+    <button id="explode">Exploded</button>
+    <button id="fridge">On fridge</button>
+    <button id="bodyspin" class="on">Spin body</button>
+  </span>
   <button id="spin" class="on">Auto-rotate</button>
   <button id="png">Download PNG</button>
 </div>
@@ -36,15 +42,15 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const NAME = new URLSearchParams(location.search).get('name') || 'NAHLA';
 const TIERS = {
-  gold:        { color: 0xd4af37, metal: 0.8, rough: 0.3, label: 'Gold (40 h)' },
-  silver:      { color: 0xc8ccd2, metal: 0.85, rough: 0.25,  label: 'Silver (30 h)' },
-  bronze:      { color: 0xb87333, metal: 0.8, rough: 0.35,  label: 'Bronze (20 h)' },
-  participant: { color: 0x3fa98f, metal: 0.2, rough: 0.6,  label: 'Participant (10 h)' },
+  gold:        { color: 0xd4af37, metal: 0.8, rough: 0.3, label: 'Gold (40 h)', ring: 'GOLD' },
+  silver:      { color: 0xc8ccd2, metal: 0.85, rough: 0.25,  label: 'Silver (30 h)', ring: 'SILVER' },
+  bronze:      { color: 0xb87333, metal: 0.8, rough: 0.35,  label: 'Bronze (20 h)', ring: 'BRONZE' },
+  participant: { color: 0x3fa98f, metal: 0.2, rough: 0.6,  label: 'Participant (10 h)', ring: 'PARTICIPANT' },
 };
 const CAPTIONS = {
   plaque:   'A · Modular plaque — laser-cut (or printed) wood base with the plover logo in relief, a medal-colour trim frame, and a separate name bar that slides into a slot. Bases cut in bulk; one name bar per person.',
   fin:      'B · Fin magnet — a single surfboard fin in the medal colour, name and year raised on the face, magnet disc recessed into the back. Lives on the fridge.',
-  spinner:  'C · Spinner magnet — tri-lobe fidget spinner, logo in the hub, name on one lobe, magnet core on the back so it parks on the fridge.',
+  spinner:  'C · Spinner magnet — identical stock metal tri-spinner + 608 bearing for all ~50; bare 6061 caps anodized in a Surftober colour, Ø10×2 mm N42 magnet glued flush in the back cap (caps ride the stationary inner race, so the magnet never spins). The lobes carry the usual press-fit metal weight inserts, which leave only a small hole, so the cheap printed medal-colour ring has three full-length rods that pass right through those holes — which is why the ring is wide over the lobes; between the arms its edge curves in so there is still something to flick. It carries SURFTOBER 2026 · tier + name. Only the back cap touches the fridge; rods end 0.2 mm short of the back face. Body/insert dims are placeholders — measure the stock part.',
   windmill: 'D · Windmill — the Ocean Beach Dutch windmill as a layered plaque, sails in the medal colour, name on the sand base.',
 };
 
@@ -147,23 +153,145 @@ function buildFin(tier) {
   const magnet = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 1.5, 32), M.magnet()); magnet.rotation.x = Math.PI / 2; magnet.position.set(0, 24, 1.3); g.add(magnet);
   return g;
 }
-function buildSpinner(tier) {
-  const g = new THREE.Group();
-  const stand = slab(roundedRect(60, 20, 4), 5, M.wood()); stand.rotation.x = -Math.PI / 2; g.add(stand);
-  const body = new THREE.Group();
+// ---- C · spinner v2 (stock body + 608 + magnet cap + printed medal ring) ----
+// Dimensions in mm. Body numbers are a plausible stock tri-spinner, NOT a
+// measured part — measure the real body (lobe-hole Ø especially) before CAD.
+const SP = {
+  d: 25, R: 13.5, waist: 14.5, hole: 11, t: 7,       // lobe-centre distance, lobe radius, narrowest web, hole radius (Ø22), body thickness
+  capR: 9, capT: 3, spacerR: 5.5, spacerT: 0.8,      // Ø18 cap (14–20 range), spacer touches the inner race only
+  magR: 5, magT: 2, pocketR: 5.1,                    // Ø10×2 N42 disc, pocket +0.2 on Ø for a glue fit
+  insertHole: 4,                                     // lobe weight insert: Ø22 OD press fit, Ø8 through-hole (guess — measure)
+  ringOut: 40, ringWaist: 30, ringIn: 17,            // wide printed ring: r 40 over the lobes (covers the rods), dips to r 30 between them as finger notches for flicking
+  ringT: 2.4, textT: 0.6,                            // ring thickness, embossed second-colour text
+  rodR: 3.85, rodLen: 6.8,                           // Ø7.7 rods, full length through the insert, 0.2 short of the back face
+};
+const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
+let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true;
+
+function zcyl(r, z0, h, mat, seg = 48) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat);
+  m.rotation.x = Math.PI / 2; m.position.z = z0 + h / 2; m.castShadow = true; m.receiveShadow = true; return m;
+}
+// Disc or washer extruded along +z from 0 to depth, with an optional rounded edge.
+function annulus(rOut, rIn, depth, mat, bevel = 0) {
+  const s = new THREE.Shape(); s.absarc(0, 0, rOut, 0, Math.PI * 2, false);
+  if (rIn > 0) { const h = new THREE.Path(); h.absarc(0, 0, rIn, 0, Math.PI * 2, true); s.holes.push(h); }
+  const geo = new THREE.ExtrudeGeometry(s, bevel
+    ? { depth: depth - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelOffset: -bevel, bevelSegments: 2, curveSegments: 64 }
+    : { depth, bevelEnabled: false, curveSegments: 64 });
+  if (bevel) geo.translate(0, 0, bevel);
+  const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m;
+}
+// Classic tri-spinner outline: three lobe arcs joined by concave fillets sized so
+// the narrowest point between lobes is SP.waist from the centre; four Ø22 holes.
+function spinnerBodyShape() {
+  const { d, R, waist, hole } = SP;
+  const f = (waist * waist + d * d - waist * d - R * R) / (2 * R + d - 2 * waist), q = waist + f;
+  const P = i => { const a = Math.PI / 2 + i * 2 * Math.PI / 3; return [d * Math.cos(a), d * Math.sin(a)]; };
+  const Q = i => { const a = Math.PI / 2 + i * 2 * Math.PI / 3 + Math.PI / 3; return [q * Math.cos(a), q * Math.sin(a)]; }; // fillet between lobes i and i+1
+  const ang = (from, to) => Math.atan2(to[1] - from[1], to[0] - from[0]);
+  const s = new THREE.Shape();
   for (let i = 0; i < 3; i++) {
-    const a = i * 2 * Math.PI / 3 + Math.PI / 2;
-    const lobe = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 6, 48), M.tier(tier)); lobe.rotation.x = Math.PI / 2; lobe.position.set(Math.cos(a) * 24, Math.sin(a) * 24, 0); lobe.castShadow = true; body.add(lobe);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(24, 18, 6), M.tier(tier)); arm.position.set(Math.cos(a) * 12, Math.sin(a) * 12, 0); arm.rotation.z = a; arm.castShadow = true; body.add(arm);
-    const bearing = new THREE.Mesh(new THREE.TorusGeometry(8.5, 1.6, 10, 40), M.magnet()); bearing.position.set(Math.cos(a) * 24, Math.sin(a) * 24, 3.2); body.add(bearing);
+    const p = P(i), pNext = P((i + 1) % 3), qPrev = Q((i + 2) % 3), qNext = Q(i);
+    s.absarc(p[0], p[1], R, ang(p, qPrev), ang(p, qNext), false);
+    s.absarc(qNext[0], qNext[1], f, ang(qNext, p), ang(qNext, pNext), true);
   }
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(17, 17, 6.5, 48), M.tier(tier)); hub.rotation.x = Math.PI / 2; body.add(hub);
-  const med = medallion(13, 2); med.rotation.x = Math.PI / 2; med.position.set(0, 0, 4.3); body.add(med);
-  const nm = text(NAME, 4.2, 1, M.ink()); nm.position.set(Math.cos(Math.PI / 2 + 2 * Math.PI / 3) * 24, Math.sin(Math.PI / 2 + 2 * Math.PI / 3) * 24, 3.2); body.add(nm);
-  const yr = text('2026', 4.2, 1, M.ink()); yr.position.set(Math.cos(Math.PI / 2 + 4 * Math.PI / 3) * 24, Math.sin(Math.PI / 2 + 4 * Math.PI / 3) * 24, 3.2); body.add(yr);
-  const magnet = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 1.5, 32), M.magnet()); magnet.rotation.x = Math.PI / 2; magnet.position.set(0, 0, -3.9); body.add(magnet);
-  body.position.set(0, 44, 3); g.add(body);
-  g.userData.spinner = body;
+  [[0, 0], P(0), P(1), P(2)].forEach(([x, y]) => { const h = new THREE.Path(); h.absarc(x, y, hole, 0, Math.PI * 2, true); s.holes.push(h); });
+  return { shape: s, P };
+}
+// Text bent around a circle. top=true reads clockwise over the top, false reads
+// counter-clockwise along the bottom; both stay upright.
+function arcText(str, r, size, depth, mat, top) {
+  const g = new THREE.Group(), scale = size / font.data.resolution, track = size * 0.08, chars = [...str];
+  const adv = chars.map(ch => (ch === '·' ? size * 0.7 : font.data.glyphs[ch] ? font.data.glyphs[ch].ha * scale : size * 0.6) + track);
+  let s = -(adv.reduce((a, b) => a + b, 0) - track) / 2;
+  chars.forEach((ch, i) => {
+    const mid = s + adv[i] / 2; s += adv[i];
+    if (ch === ' ') return;
+    let m;
+    if (ch === '·') m = zcyl(size * 0.12, 0, depth, mat, 16);
+    else {
+      const geo = new TextGeometry(ch, { font, size, height: depth, curveSegments: 4, bevelEnabled: false });
+      geo.computeBoundingBox(); geo.translate(-(geo.boundingBox.min.x + geo.boundingBox.max.x) / 2, -size * 0.36, 0);
+      m = new THREE.Mesh(geo, mat); m.castShadow = true;
+    }
+    const th = top ? Math.PI / 2 - mid / r : -Math.PI / 2 + mid / r;
+    const w = new THREE.Group(); w.add(m);
+    w.position.set(r * Math.cos(th), r * Math.sin(th), 0); w.rotation.z = top ? th - Math.PI / 2 : th + Math.PI / 2;
+    g.add(w);
+  });
+  return g;
+}
+// Same cap part front and back; the back one gets the magnet pocket. Local +z points away from the body.
+function buildCap(withMagnet, parts) {
+  const cap = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: CAP_COLORS[capColor], metalness: 0.65, roughness: 0.32 }); // anodized 6061
+  cap.add(zcyl(3.95, -3.3, 3.3, mat, 32));                     // stem into the 8 mm bore
+  cap.add(zcyl(SP.spacerR, 0, SP.spacerT, mat));               // spacer lands on the stationary inner race
+  const disc = annulus(SP.capR, withMagnet ? SP.pocketR : 0, SP.capT, mat, 0.5); disc.position.z = SP.spacerT; cap.add(disc);
+  if (withMagnet) {
+    const floorT = SP.capT - SP.magT - 0.1;                     // magnet sits 0.1 below the face
+    cap.add(zcyl(SP.pocketR, SP.spacerT, floorT, mat));
+    const magnet = zcyl(SP.magR, SP.spacerT + floorT, SP.magT, M.magnet()); cap.add(magnet);
+    parts.push({ obj: magnet, z0: magnet.position.z, dz: 12 });
+  }
+  return cap;
+}
+// Ring outline follows the arms: r = mid + amp·cos(3φ) peaks over each lobe and
+// curves in between them, so there's still an edge to flick.
+function trefoilRing(tier) {
+  const mid = (SP.ringOut + SP.ringWaist) / 2, amp = (SP.ringOut - SP.ringWaist) / 2, N = 240;
+  const pts = [];
+  for (let i = 0; i < N; i++) { const th = i / N * Math.PI * 2, r = mid + amp * Math.cos(3 * (th - Math.PI / 2)); pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th))); }
+  const s = new THREE.Shape(pts);
+  const h = new THREE.Path(); h.absarc(0, 0, SP.ringIn, 0, Math.PI * 2, true); s.holes.push(h);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: SP.ringT - 0.8, bevelEnabled: true, bevelThickness: 0.4, bevelSize: 0.4, bevelOffset: -0.4, bevelSegments: 2, curveSegments: 64 });
+  geo.translate(0, 0, 0.4);
+  const m = new THREE.Mesh(geo, M.tier(tier)); m.castShadow = true; m.receiveShadow = true; return m;
+}
+function buildSpinner(tier) {
+  const g = new THREE.Group(), parts = [];
+  const steel = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, metalness: 0.9, roughness: 0.2 });
+  const spin = new THREE.Group(); g.add(spin);                 // everything on the outer race spins…
+  const still = new THREE.Group(); g.add(still);               // …inner race, caps and magnet don't
+
+  const { shape, P } = spinnerBodyShape();
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: SP.t - 1.2, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelOffset: -0.6, bevelSegments: 3, curveSegments: 40 });
+  bodyGeo.translate(0, 0, -SP.t / 2 + 0.6);
+  const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0x5c6168, metalness: 0.85, roughness: 0.33 }));
+  body.castShadow = true; body.receiveShadow = true; spin.add(body);
+
+  // 608 bearing: 8 × 22 × 7
+  const outer = annulus(11, 9.6, 7, steel); outer.position.z = -3.5; spin.add(outer);
+  const shield = annulus(9.6, 6.2, 6.4, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.55 })); shield.position.z = -3.2; spin.add(shield);
+  const inner = annulus(6.2, 4, 7, steel); inner.position.z = -3.5; still.add(inner);
+
+  // Metal weight inserts pressed into the lobes leave only a small through-hole
+  const insertMat = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.9, roughness: 0.28 });
+  for (let i = 0; i < 3; i++) { const [x, y] = P(i); const ins = annulus(SP.hole, SP.insertHole, SP.t, insertMat); ins.position.set(x, y, -SP.t / 2); spin.add(ins); }
+
+  // Printed medal ring: band + embossed text on the front, full rods through the inserts behind
+  const ring = new THREE.Group(); ring.position.z = SP.t / 2; spin.add(ring);
+  ring.add(trefoilRing(tier));
+  for (let i = 0; i < 3; i++) {
+    const [x, y] = P(i), rod = zcyl(SP.rodR, -SP.rodLen, SP.rodLen, M.tier(tier), 32);
+    rod.position.x = x; rod.position.y = y; ring.add(rod);
+  }
+  const textR = (SP.ringWaist + SP.ringIn) / 2;      // text lives in the band that survives the notches
+  const top = arcText(`SURFTOBER 2026 · ${TIERS[tier].ring}`, textR, 4.5, SP.textT, M.ink(), true); top.position.z = SP.ringT; ring.add(top);
+  const nm = arcText(NAME.toUpperCase(), textR, 4.5, SP.textT, M.ink(), false); nm.position.z = SP.ringT; ring.add(nm);
+  parts.push({ obj: ring, z0: ring.position.z, dz: 16 });
+
+  const front = buildCap(false, parts); front.position.z = SP.t / 2; still.add(front);
+  const back = buildCap(true, parts); back.rotation.y = Math.PI; back.position.z = -SP.t / 2; still.add(back);
+  parts.push({ obj: front, z0: front.position.z, dz: 30 }, { obj: back, z0: back.position.z, dz: -20 });
+
+  // Fridge door, touching the back cap face only
+  const fridge = new THREE.Mesh(new THREE.BoxGeometry(170, 150, 2), new THREE.MeshStandardMaterial({ color: 0xc9ccd0, metalness: 0.8, roughness: 0.38 }));
+  fridge.position.z = -(SP.t / 2 + SP.spacerT + SP.capT) - 1; fridge.receiveShadow = true; fridge.visible = onFridge; g.add(fridge);
+
+  g.position.y = 50;
+  g.userData = { spinner: spin, parts, fridge, explode: exploded ? 1 : 0 };
   return g;
 }
 function buildWindmill(tier) {
@@ -187,7 +315,7 @@ function buildWindmill(tier) {
 }
 
 const VIEWS = { plaque: { pos: [140, 110, 190], target: [0, 15, 0] }, fin: { pos: [40, 70, 230], target: [0, 45, 0] },
-                spinner: { pos: [20, 70, 230], target: [0, 40, 0] }, windmill: { pos: [30, 90, 310], target: [0, 62, 0] } };
+                spinner: { pos: [80, 85, 190], target: [0, 50, 0] }, windmill: { pos: [30, 90, 310], target: [0, 62, 0] } };
 const builders = { plaque: buildPlaque, fin: buildFin, spinner: buildSpinner, windmill: buildWindmill };
 let current = null, concept = 'plaque', tier = 'gold';
 function rebuild() {
@@ -196,17 +324,28 @@ function rebuild() {
   const v = VIEWS[concept]; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update();
   document.getElementById('cap').textContent = CAPTIONS[concept] + '  ·  Tier shown: ' + TIERS[tier].label + '  ·  Name: ' + NAME + ' (add ?name=YOURNAME to the URL).';
   document.querySelectorAll('#ui [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === concept));
+  document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'flex' : 'none';
 }
 document.querySelectorAll('#ui [data-c]').forEach(b => b.addEventListener('click', () => { concept = b.dataset.c; rebuild(); }));
 document.getElementById('tier').addEventListener('change', e => { tier = e.target.value; rebuild(); });
+document.getElementById('capc').addEventListener('change', e => { capColor = e.target.value; rebuild(); });
+document.getElementById('explode').addEventListener('click', e => { exploded = !exploded; e.target.classList.toggle('on', exploded); });
+document.getElementById('fridge').addEventListener('click', e => { onFridge = !onFridge; e.target.classList.toggle('on', onFridge); if (current.userData.fridge) current.userData.fridge.visible = onFridge; });
+document.getElementById('bodyspin').addEventListener('click', e => { bodySpin = !bodySpin; e.target.classList.toggle('on', bodySpin); });
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
-window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); }, ready: false };
+window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); },
+  setExploded: v => { exploded = v; }, setBodySpin: v => { bodySpin = v; document.getElementById('bodyspin').classList.toggle('on', v); }, setFridge: v => { onFridge = v; if (current.userData.fridge) current.userData.fridge.visible = v; }, ready: false };
 
 new FontLoader().load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => { font = f; rebuild(); window.__trophy.ready = true; });
 
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-(function loop() { requestAnimationFrame(loop); controls.update(); if (current && current.userData.spinner) current.userData.spinner.rotation.z += 0.01; renderer.render(scene, camera); })();
+(function loop() { requestAnimationFrame(loop); controls.update(); if (current && current.userData.spinner) {
+  const u = current.userData; if (bodySpin) u.spinner.rotation.z += 0.02;
+  u.explode += ((exploded ? 1 : 0) - u.explode) * 0.08;
+  u.parts.forEach(p => { p.obj.position.z = p.z0 + p.dz * u.explode; });
+}
+renderer.render(scene, camera); })();
 </script>
 </body>
 </html>

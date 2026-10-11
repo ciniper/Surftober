@@ -193,6 +193,10 @@
       (2025) were 3D-printed multi-colour plaques — Golden Gate + cable car
       carrying the name, car colour = medal tier — so the plaque + modular
       name bar (A) is the closest evolution; B/C are the fridge-magnet ideas.
+      2026-10-10: C is now the lead — metal tri-spinner, magnet in an
+      anodized 6061 back cap on the 608's inner race, printed medal-colour
+      ring pegged into the lobe holes. Mockup C rebuilt to match; full build
+      plan + sourcing in design/trophy/README.md.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
