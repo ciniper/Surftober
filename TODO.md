@@ -197,6 +197,9 @@
       anodized 6061 back cap on the 608's inner race, printed medal-colour
       ring pegged into the lobe holes. Mockup C rebuilt to match; full build
       plan + sourcing in design/trophy/README.md.
+      2026-10-11: ring options (notched / disk / disk + wave). The wave option
+      puts a 12-frame breaking wave on the outer band that animates in a phone
+      video; demo + SVG export in design/trophy/wave-demo.html.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
