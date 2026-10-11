@@ -200,6 +200,8 @@
       2026-10-11: ring options (notched / disk / disk + wave). The wave option
       puts a 12-frame breaking wave on the outer band that animates in a phone
       video; demo + SVG export in design/trophy/wave-demo.html.
+      Wave styles: classic break (12), rolling set (10), barrel loop (8),
+      any of them at 6–16 frames — pick one after filming a test print.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

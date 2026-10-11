@@ -12,28 +12,32 @@
   p{margin:6px 0;font-size:14px;line-height:1.45;color:#5a4a36;max-width:80ch}
   .controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:12px 0;padding:10px 12px;background:#fff8f0;border:1px solid #e3d6c0;border-radius:10px;font-size:13px}
   .controls label{display:flex;gap:6px;align-items:center}
-  button,select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #d4c4a8;background:#fff8f0;color:inherit;cursor:pointer}
+  button,select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #d4c4a8;background:#fff8f0;color:inherit;cursor:pointer;white-space:nowrap}
   button.on{background:#d1470f;color:#fff;border-color:#d1470f}
   input[type=range]{width:180px;max-width:50vw}
   .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
   figure{margin:0;background:#fff8f0;border:1px solid #e3d6c0;border-radius:10px;padding:10px}
-  figure canvas{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#d9dcdf}
+  .panels canvas{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#d9dcdf}
   figcaption{font-size:13px;margin-top:8px;color:#5a4a36;min-height:4.4em;line-height:1.4}
   figcaption b{color:#2d2416}
+  #flip{width:100%;max-width:720px;display:block;border-radius:8px}
   #strip{width:100%;display:block;margin-top:6px}
   .mono{font-variant-numeric:tabular-nums}
   #sync{font-size:13px;color:#5a4a36}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
 </style>
 </head>
 <body>
 <main>
   <h1>Breaking-wave spin animation</h1>
-  <p>Twelve frames of a breaking wave sit around the ring's outer band, running clockwise. To your eye a spinning ring is a blur.
+  <p>The frames of a wave sit in equal slots around the ring's outer band, running clockwise. To your eye a spinning ring is a blur.
   A phone video only samples it, though: when the ring turns exactly one slot per video frame, each slot shows the next frame and the wave
-  breaks in place. A spinner slows down steadily, so it passes through that speed on its own. Flick it <b>counter-clockwise</b> as you
-  face it; the other way plays the wave backwards. Film it in bright light so the shutter is fast enough not to blur.</p>
+  plays in place. A spinner slows down steadily, so it passes through that speed on its own. Flick it <b>counter-clockwise</b> as you
+  face it; the other way plays it backwards. Film it in bright light so the shutter is fast enough not to blur.</p>
 
   <div class="controls">
+    <label>Wave <select id="variant"></select></label>
+    <label>Frames <select id="frames"><option>6</option><option>8</option><option>10</option><option>12</option><option>16</option></select></label>
     <label>Camera <select id="fps">
       <option value="30">30 fps video</option><option value="60">60 fps video</option>
       <option value="120">120 fps slo-mo</option><option value="240">240 fps slo-mo</option></select></label>
@@ -53,7 +57,12 @@
     <figure><canvas id="phone"></canvas><figcaption id="phonecap"></figcaption></figure>
   </div>
 
-  <h2>The 12 frames, in order</h2>
+  <h2>One slot on camera</h2>
+  <p id="flipcap">What a single slot plays in the video at exact sync, big enough to judge the animation itself.</p>
+  <div class="row"><button id="slow">Slow ×4</button></div>
+  <figure style="max-width:740px"><canvas id="flip"></canvas></figure>
+
+  <h2 id="striph">The frames, in order</h2>
   <canvas id="strip"></canvas>
   <p>Navy water and cream foam on the medal colour. Print them as flush colour changes in the top layers, not raised, so every slot weighs the
   same and the ring stays balanced. The smallest drops are about 0.6 mm; check them against your nozzle.</p>
@@ -61,7 +70,7 @@
 </main>
 
 <script type="module">
-import { WAVE_N, WAVE_ASPECT, WAVE_COLORS, waveFrame, ringArt, ringSVG } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_DEFAULT, WAVE_COLORS, waveFrame, ringArt, ringSVG, cellAspect } from './wave-frames.js';
 
 // Keep in step with SP in mockups.html (disk ring + wave band)
 const RING = { in: 17, out: 40, waveIn: 30.6, waveOut: 39.4, textR: 23.5 };
@@ -69,22 +78,26 @@ const GOLD = '#d4af37', INK = '#16273d', BODY = '#5c6168', CAP = '#ff6b35', BG =
 const SPAN = 84;              // mm across each canvas
 const EYE_T = 1 / 30;         // rough integration time of the eye
 const R0 = 2400, TAU = 14;    // flick: start RPM and spin-down time constant (s)
-const NAME = (new URLSearchParams(location.search).get('name') || 'NAHLA').toUpperCase();
-const art = ringArt({ N: WAVE_N, rIn: RING.waveIn, rOut: RING.waveOut });
+const q = new URLSearchParams(location.search);
+const NAME = (q.get('name') || 'NAHLA').toUpperCase();
 const $ = id => document.getElementById(id);
 
+let variant = WAVE_VARIANTS[q.get('wave')] ? q.get('wave') : WAVE_DEFAULT;
+let N = +q.get('frames') || WAVE_VARIANTS[variant].N;
+let art = null, sprite = null, A = 2;
+Object.entries(WAVE_VARIANTS).forEach(([k, v]) => $('variant').add(new Option(`${v.label} (${v.N})`, k)));
+
+const fillPolys = (g, polys, map) => polys.forEach(p => { g.beginPath(); p.forEach((pt, i) => { const [x, y] = map(pt); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill(); });
+
 // ---- artwork ----
-let sprite = null;
 function makeSprite(px) {
   const c = document.createElement('canvas'); c.width = c.height = px;
-  const g = c.getContext('2d'), s = px / SPAN;
+  const g = c.getContext('2d'), s = px / SPAN, id = p => p;
   g.translate(px / 2, px / 2); g.scale(s, -s);      // mm, y up
   g.fillStyle = BODY; g.beginPath(); g.arc(0, 0, RING.in + 0.5, 0, 2 * Math.PI); g.fill();
   g.fillStyle = GOLD; g.beginPath(); g.arc(0, 0, RING.out, 0, 2 * Math.PI); g.arc(0, 0, RING.in, 0, 2 * Math.PI, true); g.fill();
-  g.fillStyle = WAVE_COLORS.water;
-  art.slots.forEach(sl => { g.beginPath(); sl.water.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); });
-  g.fillStyle = WAVE_COLORS.foam;
-  art.slots.forEach(sl => sl.foam.forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.fill(); }));
+  g.fillStyle = WAVE_COLORS.water; art.slots.forEach(sl => fillPolys(g, sl.water, id));
+  g.fillStyle = WAVE_COLORS.foam; art.slots.forEach(sl => fillPolys(g, sl.foam, id));
   arcText(g, 'SURFTOBER 2026 · GOLD', RING.textR, 4.5, true);
   arcText(g, NAME, RING.textR, 4.5, false);
   return c;
@@ -120,53 +133,68 @@ function drawRing(p, a, sweep) {
   g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(-2.5 * s, -2.5 * s, 4 * s, 0, 2 * Math.PI); g.fill();
 }
 
+// One cell drawn flat at (x, y) with width cw.
+function drawCell(g, k, x, y, cw) {
+  const ch = cw / A, { water, foam } = waveFrame(variant, k / N, A), map = ([u, v]) => [x + u * cw, y + (1 - v) * ch];
+  g.fillStyle = GOLD; g.fillRect(x, y, cw, ch);
+  g.fillStyle = WAVE_COLORS.water; fillPolys(g, water, map);
+  g.fillStyle = WAVE_COLORS.foam; fillPolys(g, foam, map);
+}
 function drawStrip() {
-  const c = $('strip'), W = c.clientWidth * devicePixelRatio, cols = c.clientWidth < 640 ? 6 : 12, rows = Math.ceil(WAVE_N / cols);
-  const gap = 6 * devicePixelRatio, cw = (W - gap * (cols - 1)) / cols, ch = cw / WAVE_ASPECT, lab = 16 * devicePixelRatio;
-  c.width = W; c.height = rows * (ch + lab + gap); c.style.height = c.height / devicePixelRatio + 'px';
+  const c = $('strip'), d = devicePixelRatio, W = c.clientWidth * d, cols = c.clientWidth < 640 ? Math.ceil(N / 2) : N, rows = Math.ceil(N / cols);
+  const gap = 6 * d, cw = (W - gap * (cols - 1)) / cols, ch = cw / A, lab = 16 * d;
+  c.width = W; c.height = rows * (ch + lab + gap); c.style.height = c.height / d + 'px';
   const g = c.getContext('2d');
-  for (let k = 0; k < WAVE_N; k++) {
-    const x = (k % cols) * (cw + gap), y = Math.floor(k / cols) * (ch + lab + gap) + lab, { water, foam } = waveFrame(k / WAVE_N);
-    const X = u => x + u * cw, Y = v => y + (1 - v) * ch;
-    g.fillStyle = GOLD; g.fillRect(x, y, cw, ch);
-    g.fillStyle = WAVE_COLORS.water; g.beginPath(); water.forEach(([u, v], i) => i ? g.lineTo(X(u), Y(v)) : g.moveTo(X(u), Y(v))); g.closePath(); g.fill();
-    g.fillStyle = WAVE_COLORS.foam; foam.forEach(([u, v, r]) => { g.beginPath(); g.arc(X(u), Y(v), r * ch, 0, 2 * Math.PI); g.fill(); });
-    g.fillStyle = '#5a4a36'; g.font = `${12 * devicePixelRatio}px system-ui, sans-serif`; g.fillText(String(k + 1), x, y - 4 * devicePixelRatio);
+  for (let k = 0; k < N; k++) {
+    const x = (k % cols) * (cw + gap), y = Math.floor(k / cols) * (ch + lab + gap) + lab;
+    drawCell(g, k, x, y, cw);
+    g.fillStyle = '#5a4a36'; g.font = `${12 * d}px system-ui, sans-serif`; g.fillText(String(k + 1), x, y - 4 * d);
   }
+  $('striph').textContent = `The ${N} frames, in order`;
 }
 
 // ---- motion ----
 const P = Object.fromEntries(['still', 'eye', 'phone'].map(id => [id, { c: $(id), g: $(id).getContext('2d'), angle: 0, simT: 0, flickT0: 0 }]));
-let fps = 30, shutter = 0.002, dir = 1, rpm = 0, flick = false, paused = false;
-const syncRpm = (m = 1) => 60 * fps * m / WAVE_N;
+let fps = 30, shutter = 0.002, dir = 1, rpm = 0, flick = false, paused = false, slow = false;
+const syncRpm = (m = 1) => 60 * fps * m / N;
 const rpmAt = p => flick ? R0 * Math.exp(-(p.simT - p.flickT0) / TAU) : rpm;
-function setRpm(v) { flick = false; $('flick').classList.remove('on'); rpm = v; $('rpm').value = Math.round(v); }
+const fmt = n => (Math.round(n * 10) / 10).toString();
+function setRpm(v) { flick = false; $('flick').classList.remove('on'); rpm = v; $('rpm').value = Math.round(v); $('rpmv').textContent = Math.round(v) + ' RPM'; }
 
+function rebuildArt() {
+  art = ringArt({ variant, N, rIn: RING.waveIn, rOut: RING.waveOut });
+  A = cellAspect(N, RING.waveIn, RING.waveOut);
+  $('variant').value = variant; $('frames').value = String(N);
+  resize(); syncText();
+}
 function resize() {
   const px = Math.round(P.still.c.clientWidth * devicePixelRatio);
   Object.values(P).forEach(p => { p.c.width = p.c.height = px; });
   sprite = makeSprite(px);
   drawRing(P.still, 0, 0);
   drawStrip();
+  const f = $('flip'); f.width = f.clientWidth * devicePixelRatio; f.height = f.width / A; f.style.height = f.clientWidth / A + 'px';
 }
 function syncText() {
-  $('sync').innerHTML = `Sync speeds for ${fps} fps: wave breaks forward at <b>${syncRpm(1)}</b> RPM (1 frame per video frame), `
-    + `${syncRpm(2)} RPM (2 at a time) and ${syncRpm(3)} RPM (3 at a time)${fps > 60 ? '. Slo-mo plays back at 30 fps, so the phone panel runs ' + fps / 30 + '× slower' : ''}.`;
+  $('sync').innerHTML = `Sync speeds for ${N} frames at ${fps} fps: the wave plays forward at <b>${fmt(syncRpm(1))}</b> RPM (1 frame per video frame), `
+    + `${fmt(syncRpm(2))} RPM (2 at a time) and ${fmt(syncRpm(3))} RPM (3 at a time). One loop lasts ${N} video frames`
+    + ` = ${(N / (fps > 60 ? 30 : fps)).toFixed(2)} s on playback${fps > 60 ? '; slo-mo plays back at 30 fps, so the phone panel runs ' + fps / 30 + '× slower' : ''}.`;
+  $('flipcap').textContent = `What a single slot plays in the video at exact sync: ${N} frames looping every ${(N / (fps > 60 ? 30 : fps)).toFixed(2)} s on playback.`;
 }
 function phoneCaption(w) {
-  const r = Math.abs(w) / (2 * Math.PI) * 60, m = w / (2 * Math.PI) * WAVE_N / fps, k = Math.round(m), frac = m - k, kk = ((k % WAVE_N) + WAVE_N) % WAVE_N;
+  const r = Math.abs(w) / (2 * Math.PI) * 60, m = w / (2 * Math.PI) * N / fps, k = Math.round(m), frac = m - k, kk = ((k % N) + N) % N;
   let msg;
   if (r < 1) msg = 'Not spinning.';
-  else if (Math.abs(frac) > 0.25) msg = 'Between sync speeds: slots land part-way between frames, so the wave jitters instead of breaking cleanly.';
+  else if (Math.abs(frac) > 0.25) msg = 'Between sync speeds: slots land part-way between frames, so the wave jitters instead of playing cleanly.';
   else if (kk === 0) msg = 'Wagon-wheel freeze: the ring looks parked.';
-  else if (kk <= 3) msg = `The wave breaks forward, ${kk === 1 ? 'one frame' : kk + ' frames'} per video frame${kk > 1 ? ' (choppier)' : ''}.`;
-  else if (kk >= WAVE_N - 3) msg = `The wave plays backwards (${WAVE_N - kk} per frame): flick it the other way.`;
+  else if (kk <= 3 && kk < N / 2) msg = `The wave plays forward, ${kk === 1 ? 'one frame' : kk + ' frames'} per video frame${kk > 1 ? ' (choppier)' : ''}.`;
+  else if (kk >= N - 3 && kk > N / 2) msg = `The wave plays backwards (${N - kk} per frame): flick it the other way.`;
   else msg = `Frames jump ${kk} at a time, so it looks choppy.`;
   if (r >= 1 && Math.abs(frac) <= 0.25 && kk !== 0 && Math.abs(frac) > 0.004) msg += ` The waves drift ${frac < 0 ? 'clockwise, with the break' : 'counter-clockwise, against the break'}.`;
   $('phonecap').innerHTML = `<b>Phone video</b> · <span class="mono">${r.toFixed(0)} RPM · ${m.toFixed(2)} slots per frame</span><br>${msg}`;
 }
 
-let last = performance.now(), camAcc = 0;
+let last = performance.now(), camAcc = 0, flipT = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min((now - last) / 1000, 0.1); last = now;
@@ -186,28 +214,34 @@ function loop(now) {
     drawRing(ph, ph.angle, wP * Math.min(shutter, 1 / fps));
     phoneCaption(wP);
   }
+  // flipbook: frame k of one slot at the playback rate (exact sync)
+  flipT += dt / (slow ? 4 : 1);
+  const f = $('flip'), k = Math.floor(flipT * play) % N;
+  if (f.dataset.k !== String(k)) { f.dataset.k = k; drawCell(f.getContext('2d'), k, 0, 0, f.width); }
 }
 
 // ---- controls ----
-$('rpm').addEventListener('input', e => { setRpm(+e.target.value); $('rpmv').textContent = rpm + ' RPM'; });
-$('fps').addEventListener('change', e => { fps = +e.target.value; syncText(); if (!flick) { setRpm(syncRpm() * 0.97); $('rpmv').textContent = Math.round(rpm) + ' RPM'; } });
+$('variant').addEventListener('change', e => { variant = e.target.value; N = WAVE_VARIANTS[variant].N; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
+$('frames').addEventListener('change', e => { N = +e.target.value; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
+$('rpm').addEventListener('input', e => setRpm(+e.target.value));
+$('fps').addEventListener('change', e => { fps = +e.target.value; syncText(); if (!flick) setRpm(syncRpm() * 0.97); });
 $('shutter').addEventListener('change', e => { shutter = +e.target.value; });
 $('dir').addEventListener('change', e => { dir = +e.target.value; });
-$('snap').addEventListener('click', () => { setRpm(syncRpm() * 0.97); $('rpmv').textContent = Math.round(rpm) + ' RPM'; });
+$('snap').addEventListener('click', () => setRpm(syncRpm() * 0.97));
 $('flick').addEventListener('click', e => {
   flick = !flick; e.target.classList.toggle('on', flick);
   if (flick) Object.values(P).forEach(p => { p.flickT0 = p.simT; }); else setRpm(+$('rpm').value);
 });
 $('pause').addEventListener('click', e => { paused = !paused; e.target.classList.toggle('on', paused); });
+$('slow').addEventListener('click', e => { slow = !slow; e.target.classList.toggle('on', slow); });
 $('svg').addEventListener('click', () => {
-  const blob = new Blob([ringSVG({ N: WAVE_N, rIn: RING.waveIn, rOut: RING.waveOut, ringIn: RING.in, ringOut: RING.out })], { type: 'image/svg+xml' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'surftober-ring-wave.svg'; a.click();
+  const blob = new Blob([ringSVG({ variant, N, rIn: RING.waveIn, rOut: RING.waveOut, ringIn: RING.in, ringOut: RING.out })], { type: 'image/svg+xml' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `surftober-ring-${variant}-${N}.svg`; a.click();
 });
 addEventListener('resize', resize);
 
-setRpm(syncRpm() * 0.97); $('rpmv').textContent = Math.round(rpm) + ' RPM';
-syncText(); resize(); requestAnimationFrame(loop);
-window.__wave = { setRpm, P };
+rebuildArt(); setRpm(syncRpm() * 0.97); requestAnimationFrame(loop);
+window.__wave = { setRpm, P, show: (v, n) => { variant = v; N = n || WAVE_VARIANTS[v].N; rebuildArt(); setRpm(syncRpm() * 0.97); } };
 </script>
 </body>
 </html>
