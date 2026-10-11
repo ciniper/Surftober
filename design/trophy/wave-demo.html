@@ -37,6 +37,7 @@
 
   <div class="controls">
     <label>Wave <select id="variant"></select></label>
+    <label>Text <select id="textm"><option value="ring">on the ring (spins)</option><option value="hub">on a still hub</option></select></label>
     <label>Frames <select id="frames"><option>6</option><option>8</option><option>10</option><option>12</option><option>16</option></select></label>
     <label>Camera <select id="fps">
       <option value="30">30 fps video</option><option value="60">60 fps video</option>
@@ -85,6 +86,7 @@ const $ = id => document.getElementById(id);
 
 let variant = WAVE_VARIANTS[q.get('wave')] ? q.get('wave') : WAVE_DEFAULT;
 let N = +q.get('frames') || WAVE_VARIANTS[variant].N;
+let textMode = q.get('text') === 'hub' ? 'hub' : 'ring';   // hub = text on the still front hub instead of the ring
 let art = null, sprite = null, A = 2;
 Object.entries(WAVE_VARIANTS).forEach(([k, v]) => $('variant').add(new Option(`${v.label} (${v.N})`, k)));
 
@@ -99,13 +101,12 @@ function makeSprite(px) {
   g.fillStyle = GOLD; g.beginPath(); g.arc(0, 0, RING.out, 0, 2 * Math.PI); g.arc(0, 0, RING.in, 0, 2 * Math.PI, true); g.fill();
   g.fillStyle = WAVE_COLORS.water; art.slots.forEach(sl => fillPolys(g, sl.water, id));
   g.fillStyle = WAVE_COLORS.foam; art.slots.forEach(sl => fillPolys(g, sl.foam, id));
-  arcText(g, 'SURFTOBER 2026 · GOLD', RING.textR, 4.5, true);
-  arcText(g, NAME, RING.textR, 4.5, false);
+  if (textMode === 'ring') { arcText(g, 'SURFTOBER 2026 · GOLD', RING.textR, 4.5, true); arcText(g, NAME, RING.textR, 4.5, false); }
   return c;
 }
 // Text bent around the axis in the y-up mm space; drawn 10× larger and scaled down so tiny fonts stay crisp.
-function arcText(g, str, r, size, top) {
-  g.save(); g.fillStyle = INK; g.font = `700 ${size * 10}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+function arcText(g, str, r, size, top, color = INK) {
+  g.save(); g.fillStyle = color; g.font = `700 ${size * 10}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const chars = [...str], track = size * 0.08, adv = chars.map(ch => g.measureText(ch).width / 10 + track);
   let s = -(adv.reduce((a, b) => a + b, 0) - track) / 2;
   chars.forEach((ch, i) => {
@@ -128,10 +129,15 @@ function drawRing(p, a, sweep) {
     g.globalAlpha = 1 / (i + 1);                     // running mean of the K exposures
     g.drawImage(sprite, -W / 2, -W / 2, W, W);
   }
-  // the caps don't spin (they're what you hold), so they stay sharp
-  const s = W / SPAN; g.globalAlpha = 1; g.setTransform(1, 0, 0, 1, W / 2, W / 2);
-  g.fillStyle = CAP; g.beginPath(); g.arc(0, 0, 9 * s, 0, 2 * Math.PI); g.fill();
-  g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(-2.5 * s, -2.5 * s, 4 * s, 0, 2 * Math.PI); g.fill();
+  // the cap or hub doesn't spin (it's what you hold), so it stays sharp
+  const s = W / SPAN; g.globalAlpha = 1; g.setTransform(s, 0, 0, -s, W / 2, W / 2);   // mm, y up
+  if (textMode === 'hub') {
+    g.fillStyle = WAVE_COLORS.water; g.beginPath(); g.arc(0, 0, 16, 0, 2 * Math.PI); g.fill();
+    arcText(g, 'SURFTOBER 2026', 11.8, 3.2, true, GOLD); arcText(g, NAME, 11.8, 3.2, false, GOLD);
+  } else {
+    g.fillStyle = CAP; g.beginPath(); g.arc(0, 0, 9, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(-2.5, 2.5, 4, 0, 2 * Math.PI); g.fill();
+  }
 }
 
 // One cell drawn flat at (x, y) with width cw.
@@ -227,6 +233,8 @@ function loop(now) {
 }
 
 // ---- controls ----
+$('textm').value = textMode;
+$('textm').addEventListener('change', e => { textMode = e.target.value; resize(); });
 $('variant').addEventListener('change', e => { variant = e.target.value; N = WAVE_VARIANTS[variant].N; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
 $('frames').addEventListener('change', e => { N = +e.target.value; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
 $('rpm').addEventListener('input', e => setRpm(+e.target.value));

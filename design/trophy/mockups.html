@@ -26,6 +26,8 @@
     <button id="bodyspin" class="on">Spin body</button>
     <select id="ringm" title="Ring shape"><option value="wave">Ring: disk + wave</option><option value="disk">Ring: disk</option><option value="notched">Ring: notched</option></select>
     <select id="wavev" title="Wave animation style"></select>
+    <select id="bodym" title="What spins"><option value="stock">Body: stock spinner + ring</option><option value="printed">Body: printed disc + bearing</option><option value="metal">Body: metal disc + bearing</option></select>
+    <select id="textm" title="Where the text goes"><option value="ring">Text: on the ring (spins)</option><option value="hub">Text: on a still hub</option></select>
     <button id="phonecam">Phone-cam demo</button>
   </span>
   <button id="spin" class="on">Auto-rotate</button>
@@ -54,7 +56,7 @@ const TIERS = {
 const CAPTIONS = {
   plaque:   'A · Modular plaque — laser-cut (or printed) wood base with the plover logo in relief, a medal-colour trim frame, and a separate name bar that slides into a slot. Bases cut in bulk; one name bar per person.',
   fin:      'B · Fin magnet — a single surfboard fin in the medal colour, name and year raised on the face, magnet disc recessed into the back. Lives on the fridge.',
-  spinner:  'C · Spinner magnet — the same stock tri-spinner, 608 bearing and anodized magnet cap on every unit (the N42 magnet sits flush in the back cap, on the inner race, so it never spins). The printed ring in the medal colour has three rods through the lobe inserts and carries SURFTOBER 2026 · tier + name. Ring options: disk + breaking wave (animates in a phone video; try Phone-cam demo, or wave-demo.html), plain disk, or notched. Only the back cap touches the fridge. Dimensions are placeholders.',
+  spinner:  'C · Spinner magnet — a 608 bearing with an anodized magnet cap on the back (the N42 magnet sits on the inner race, so it never spins; only that cap touches the fridge). Body: stock tri-spinner + printed ring with rods through the lobe inserts, a printed disc with 12 M6 nuts sealed inside for weight, or a laser-cut metal disc (brass / stainless / copper = tier) on a printed hub. Text: on the spinning face, or on a still hub that replaces the front cap so it stays readable while spinning. Ring: disk + breaking wave (Phone-cam demo, or wave-demo.html), plain disk, or notched. Dimensions are placeholders.',
   windmill: 'D · Windmill — the Ocean Beach Dutch windmill as a layered plaque, sails in the medal colour, name on the sand base.',
 };
 
@@ -167,12 +169,17 @@ const SP = {
   insertHole: 4,                                     // lobe weight insert: Ø22 OD press fit, Ø8 through-hole (guess — measure)
   ringOut: 40, ringWaist: 30, ringIn: 17,            // wide printed ring: r 40 over the lobes (covers the rods), dips to r 30 between them as finger notches for flicking
   ringT: 2.4, textT: 0.6,                            // ring thickness, embossed second-colour text
+  hubR: 16, hubT: 2.4,                               // still front hub that carries the text (replaces the front cap)
+  nutR: 5.55, nutT: 5, nutOrbit: 33, nuts: 12,       // printed disc: 12 M6 hex nuts (~2.5 g each) sealed in at mid-thickness for spin weight
+  discT: 2,                                          // metal disc thickness
   waveIn: 30.6, waveOut: 39.4,                       // breaking-wave band on the disk ring (frames in wave-frames.js)
   rodR: 3.85, rodLen: 6.8,                           // Ø7.7 rods, full length through the insert, 0.2 short of the back face
 };
 const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
 let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true, phoneCam = false;
 let ringMode = new URLSearchParams(location.search).get('ring') || 'wave'; // wave | disk | notched
+let bodyMode = new URLSearchParams(location.search).get('body') || 'stock';   // stock | printed | metal
+let textMode = new URLSearchParams(location.search).get('text') || 'ring';    // ring | hub
 let waveVariant = WAVE_VARIANTS[new URLSearchParams(location.search).get('wave')] ? new URLSearchParams(location.search).get('wave') : WAVE_DEFAULT;
 let waveN = +new URLSearchParams(location.search).get('frames') || WAVE_VARIANTS[waveVariant].N;
 
@@ -247,16 +254,21 @@ function buildCap(withMagnet, parts) {
 }
 // Ring outline follows the arms: r = mid + amp·cos(3φ) peaks over each lobe and
 // curves in between them, so there's still an edge to flick.
-function trefoilRing(tier) {
+function trefoilRing(mat, rIn = SP.ringIn, depth = SP.ringT) {
   const mid = (SP.ringOut + SP.ringWaist) / 2, amp = (SP.ringOut - SP.ringWaist) / 2, N = 240;
   const pts = [];
   for (let i = 0; i < N; i++) { const th = i / N * Math.PI * 2, r = mid + amp * Math.cos(3 * (th - Math.PI / 2)); pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th))); }
   const s = new THREE.Shape(pts);
-  const h = new THREE.Path(); h.absarc(0, 0, SP.ringIn, 0, Math.PI * 2, true); s.holes.push(h);
-  const geo = new THREE.ExtrudeGeometry(s, { depth: SP.ringT - 0.8, bevelEnabled: true, bevelThickness: 0.4, bevelSize: 0.4, bevelOffset: -0.4, bevelSegments: 2, curveSegments: 64 });
+  const h = new THREE.Path(); h.absarc(0, 0, rIn, 0, Math.PI * 2, true); s.holes.push(h);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: depth - 0.8, bevelEnabled: true, bevelThickness: 0.4, bevelSize: 0.4, bevelOffset: -0.4, bevelSegments: 2, curveSegments: 64 });
   geo.translate(0, 0, 0.4);
-  const m = new THREE.Mesh(geo, M.tier(tier)); m.castShadow = true; m.receiveShadow = true; return m;
+  const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m;
 }
+// Disk or notched outline (per the Ring selector), extruded from z 0 to depth.
+const outline = (mat, rIn, depth) => ringMode === 'notched' ? trefoilRing(mat, rIn, depth) : annulus(SP.ringOut, rIn, depth, mat, Math.min(0.4, depth / 4));
+// Metal disc finish per tier: brass, stainless, copper, anodized aluminium.
+const METAL = { gold: [0xd9b85c, 0.8, 0.4], silver: [0xe2e5e9, 0.8, 0.34], bronze: [0xc98250, 0.8, 0.42], participant: [0x3fa98f, 0.55, 0.38] }; // brushed
+const metalMat = t => new THREE.MeshStandardMaterial({ color: METAL[t][0], metalness: METAL[t][1], roughness: METAL[t][2] });
 // The breaking-wave frames on the disk's outer band. Shown slightly raised so
 // they read in the render; in print they'd be flush colour changes.
 function waveBand() {
@@ -266,44 +278,79 @@ function waveBand() {
     sl.water.forEach(p => slab(p, 0, 0.2, water));
     sl.foam.forEach(p => slab(p, 0.2, 0.15, foam));
   });
-  g.position.z = SP.ringT;
   return g;
+}
+// Still front hub: rides the inner race like a cap, stands off far enough to clear the
+// spinning face, and carries the text so it stays readable while spinning (and on camera).
+function buildHub(tier, standoff) {
+  const hub = new THREE.Group(), navy = M.navy(), textR = SP.hubR - 4.2;
+  hub.add(zcyl(3.95, -3.3, 3.3, navy, 32));                    // stem into the 8 mm bore
+  hub.add(zcyl(SP.spacerR, 0, standoff, navy));                // stand-off lands on the inner race only
+  const disc = annulus(SP.hubR, 0, SP.hubT, navy, 0.5); disc.position.z = standoff; hub.add(disc);
+  const t1 = arcText('SURFTOBER 2026', textR, 3.2, 0.5, M.tier(tier), true); t1.position.z = standoff + SP.hubT; hub.add(t1);
+  const t2 = arcText(NAME.toUpperCase(), textR, 3.2, 0.5, M.tier(tier), false); t2.position.z = standoff + SP.hubT; hub.add(t2);
+  return hub;
 }
 function buildSpinner(tier) {
   const g = new THREE.Group(), parts = [];
   const steel = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, metalness: 0.9, roughness: 0.2 });
   const spin = new THREE.Group(); g.add(spin);                 // everything on the outer race spins…
-  const still = new THREE.Group(); g.add(still);               // …inner race, caps and magnet don't
+  const still = new THREE.Group(); g.add(still);               // …inner race, caps, hub and magnet don't
 
-  const { shape, P } = spinnerBodyShape();
-  const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: SP.t - 1.2, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelOffset: -0.6, bevelSegments: 3, curveSegments: 40 });
-  bodyGeo.translate(0, 0, -SP.t / 2 + 0.6);
-  const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0x5c6168, metalness: 0.85, roughness: 0.33 }));
-  body.castShadow = true; body.receiveShadow = true; spin.add(body);
-
-  // 608 bearing: 8 × 22 × 7
+  // 608 bearing: 8 × 22 × 7 — the one part every body option shares
   const outer = annulus(11, 9.6, 7, steel); outer.position.z = -3.5; spin.add(outer);
   const shield = annulus(9.6, 6.2, 6.4, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.55 })); shield.position.z = -3.2; spin.add(shield);
   const inner = annulus(6.2, 4, 7, steel); inner.position.z = -3.5; still.add(inner);
 
-  // Metal weight inserts pressed into the lobes leave only a small through-hole
-  const insertMat = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.9, roughness: 0.28 });
-  for (let i = 0; i < 3; i++) { const [x, y] = P(i); const ins = annulus(SP.hole, SP.insertHole, SP.t, insertMat); ins.position.set(x, y, -SP.t / 2); spin.add(ins); }
-
-  // Printed medal ring: band + embossed text on the front, full rods through the inserts behind
-  const ring = new THREE.Group(); ring.position.z = SP.t / 2; spin.add(ring);
-  ring.add(ringMode === 'notched' ? trefoilRing(tier) : annulus(SP.ringOut, SP.ringIn, SP.ringT, M.tier(tier), 0.4));
-  if (ringMode === 'wave') ring.add(waveBand());
-  for (let i = 0; i < 3; i++) {
-    const [x, y] = P(i), rod = zcyl(SP.rodR, -SP.rodLen, SP.rodLen, M.tier(tier), 32);
-    rod.position.x = x; rod.position.y = y; ring.add(rod);
+  // `carrier` holds the spinning front face; artwork sits at faceZ inside it
+  let carrier, faceZ;
+  if (bodyMode === 'stock') {
+    const { shape, P } = spinnerBodyShape();
+    const bodyGeo = new THREE.ExtrudeGeometry(shape, { depth: SP.t - 1.2, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelOffset: -0.6, bevelSegments: 3, curveSegments: 40 });
+    bodyGeo.translate(0, 0, -SP.t / 2 + 0.6);
+    const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0x5c6168, metalness: 0.85, roughness: 0.33 }));
+    body.castShadow = true; body.receiveShadow = true; spin.add(body);
+    // Metal weight inserts pressed into the lobes leave only a small through-hole
+    const insertMat = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.9, roughness: 0.28 });
+    for (let i = 0; i < 3; i++) { const [x, y] = P(i); const ins = annulus(SP.hole, SP.insertHole, SP.t, insertMat); ins.position.set(x, y, -SP.t / 2); spin.add(ins); }
+    // Printed medal ring on the front, full rods through the inserts behind
+    carrier = new THREE.Group(); carrier.position.z = SP.t / 2; spin.add(carrier); faceZ = SP.ringT;
+    carrier.add(outline(M.tier(tier), SP.ringIn, SP.ringT));
+    for (let i = 0; i < 3; i++) { const [x, y] = P(i), rod = zcyl(SP.rodR, -SP.rodLen, SP.rodLen, M.tier(tier), 32); rod.position.x = x; rod.position.y = y; carrier.add(rod); }
+    parts.push({ obj: carrier, z0: carrier.position.z, dz: 16 });
+  } else if (bodyMode === 'printed') {
+    // One printed disc pressed onto the 608. Pause the print at the pocket depth, drop the M6
+    // nuts into their hex pockets, resume — they end up sealed in with 1 mm of plastic each side.
+    const back = outline(M.tier(tier), 11, SP.t / 2); back.position.z = -SP.t / 2; spin.add(back);
+    for (let i = 0; i < SP.nuts; i++) {
+      const a = i / SP.nuts * Math.PI * 2, nut = zcyl(SP.nutR, -SP.nutT / 2, SP.nutT, steel, 6);
+      nut.position.x = SP.nutOrbit * Math.cos(a); nut.position.y = SP.nutOrbit * Math.sin(a); nut.rotation.y = a; spin.add(nut);
+    }
+    carrier = new THREE.Group(); spin.add(carrier); faceZ = SP.t / 2;
+    carrier.add(outline(M.tier(tier), 11, SP.t / 2));
+    parts.push({ obj: carrier, z0: 0, dz: 14 });
+  } else {
+    // Laser-cut metal disc (the metal is the tier colour) glued to a printed hub that holds the 608
+    const hubMat = new THREE.MeshStandardMaterial({ color: 0x22262c, roughness: 0.6 });
+    const hub = annulus(16, 11, SP.t, hubMat, 0.4); hub.position.z = -SP.t / 2; spin.add(hub);
+    const flange = annulus(21, 15.9, 1.5, hubMat, 0.3); flange.position.z = SP.t / 2 - SP.discT - 1.5; spin.add(flange);
+    carrier = new THREE.Group(); carrier.position.z = SP.t / 2 - SP.discT; spin.add(carrier); faceZ = SP.discT;
+    carrier.add(outline(metalMat(tier), 16.1, SP.discT));
+    parts.push({ obj: carrier, z0: carrier.position.z, dz: 14 });
   }
-  const textR = (SP.ringWaist + SP.ringIn) / 2;      // text lives in the band that survives the notches
-  const top = arcText(`SURFTOBER 2026 · ${TIERS[tier].ring}`, textR, 4.5, SP.textT, M.ink(), true); top.position.z = SP.ringT; ring.add(top);
-  const nm = arcText(NAME.toUpperCase(), textR, 4.5, SP.textT, M.ink(), false); nm.position.z = SP.ringT; ring.add(nm);
-  parts.push({ obj: ring, z0: ring.position.z, dz: 16 });
 
-  const front = buildCap(false, parts); front.position.z = SP.t / 2; still.add(front);
+  // Front-face artwork: wave band, plus the text unless it moved to the still hub
+  const art = new THREE.Group(); art.position.z = faceZ; carrier.add(art);
+  if (ringMode === 'wave') art.add(waveBand());
+  if (textMode === 'ring') {
+    const textR = (SP.ringWaist + SP.ringIn) / 2;
+    art.add(arcText(`SURFTOBER 2026 · ${TIERS[tier].ring}`, textR, 4.5, SP.textT, M.ink(), true));
+    art.add(arcText(NAME.toUpperCase(), textR, 4.5, SP.textT, M.ink(), false));
+  }
+
+  const frontFace = carrier.position.z + faceZ + SP.textT;     // highest spinning point on the front
+  const front = textMode === 'hub' ? buildHub(tier, frontFace + 0.6 - SP.t / 2) : buildCap(false, parts);
+  front.position.z = SP.t / 2; still.add(front);
   const back = buildCap(true, parts); back.rotation.y = Math.PI; back.position.z = -SP.t / 2; still.add(back);
   parts.push({ obj: front, z0: front.position.z, dz: 30 }, { obj: back, z0: back.position.z, dz: -20 });
 
@@ -357,6 +404,10 @@ document.getElementById('bodyspin').addEventListener('click', e => { bodySpin = 
 document.getElementById('ringm').value = ringMode;
 Object.entries(WAVE_VARIANTS).forEach(([k, v]) => document.getElementById('wavev').add(new Option(`Wave: ${v.label}`, k)));
 document.getElementById('wavev').value = waveVariant;
+document.getElementById('bodym').value = bodyMode;
+document.getElementById('bodym').addEventListener('change', e => { bodyMode = e.target.value; rebuild(); });
+document.getElementById('textm').value = textMode;
+document.getElementById('textm').addEventListener('change', e => { textMode = e.target.value; rebuild(); });
 document.getElementById('wavev').addEventListener('change', e => { waveVariant = e.target.value; waveN = WAVE_VARIANTS[waveVariant].N; if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; } rebuild(); });
 document.getElementById('ringm').addEventListener('change', e => { ringMode = e.target.value; if (ringMode !== 'wave' && phoneCam) document.getElementById('phonecam').click(); rebuild(); });
 // Phone-cam demo: step the ring like a 30 fps video sees it just under sync (0.97 slots per frame)

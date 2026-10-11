@@ -110,6 +110,35 @@ units. No wave-shaped spinner. Chase CADs it and does the cap and ring work.
 - Pick a tri-spinner body with open lobe holes and measure them before
   CADing the pegs.
 
+**Body and text approaches (2026-10-11)**
+
+Chase wondered whether the stock spinner is needed at all, and whether the
+text should stay still. The 3D viewer now has **Body** and **Text** switches
+(`?body=stock|printed|metal&text=ring|hub`) to mix and match. Every option
+keeps the 608 bearing and the magnet back cap, so fridge clearance is the
+same for all of them.
+
+- **Body: stock spinner + ring** — the plan so far: bought metal tri-spinner
+  ($4.58–5.66), printed ring with rods through the lobe inserts. Heavy and
+  proven, but we're designing around a part we don't control.
+- **Body: printed disc + bearing** — one printed disc (7 mm, the bearing's
+  width) pressed onto the 608. Weight comes from 12 M6 hex nuts (~2.5 g each,
+  ~30 g total at r 33) sealed inside by pausing the print at the pocket depth
+  and dropping them in, with 1 mm of plastic left on each face. Cheapest by
+  far (filament + bearing + nuts + caps), full design freedom, and the whole
+  face is available for artwork. Feels less like a metal trophy.
+- **Body: metal disc + bearing** — a laser-cut 2 mm disc glued to a printed
+  hub that holds the 608, with the metal itself carrying the tier: brass =
+  gold, stainless = silver, copper = bronze. Roughly 65–75 g of disc, so it
+  spins for a long time. The artwork would have to be UV-printed or engraved
+  and filled, and it needs a quote (per-unit cutting + finishing).
+- **Text: on a still hub** — a printed hub (Ø32) replaces the front cap. It
+  rides the inner race on a stand-off that clears the spinning face, so it
+  never turns: the text stays readable while spinning, and in the phone video
+  it stays put while the waves play. Navy hub with tier-colour text, per-unit
+  names printed cheaply. It also frees the spinning face for artwork only.
+  `wave-demo.html` has the same Text switch to preview the video.
+
 **Patterns that only show up when it spins (ideas, not yet mocked)**
 
 Spun fast, every point on the ring smears into a circle, so the eye sees the
