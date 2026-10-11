@@ -52,9 +52,10 @@
   <div id="sync"></div>
 
   <div class="panels" style="margin-top:10px">
-    <figure><canvas id="still"></canvas><figcaption><b>Still</b> · the artwork at rest. Frame 1 is at the top and the frames run clockwise.</figcaption></figure>
-    <figure><canvas id="eye"></canvas><figcaption id="eyecap"></figcaption></figure>
     <figure><canvas id="phone"></canvas><figcaption id="phonecap"></figcaption></figure>
+    <figure><canvas id="eye"></canvas><figcaption id="eyecap"></figcaption></figure>
+    <figure><canvas id="slowmo"></canvas><figcaption id="slowcap"></figcaption></figure>
+    <figure><canvas id="still"></canvas><figcaption><b>Still</b> · the artwork at rest. Frame 1 is at the top and the frames run clockwise.</figcaption></figure>
   </div>
 
   <h2>One slot on camera</h2>
@@ -154,7 +155,8 @@ function drawStrip() {
 }
 
 // ---- motion ----
-const P = Object.fromEntries(['still', 'eye', 'phone'].map(id => [id, { c: $(id), g: $(id).getContext('2d'), angle: 0, simT: 0, flickT0: 0 }]));
+const SLOW = 20;              // the slowed-down panel turns this many times slower than real
+const P = Object.fromEntries(['still', 'eye', 'phone', 'slowmo'].map(id => [id, { c: $(id), g: $(id).getContext('2d'), angle: 0, simT: 0, flickT0: 0 }]));
 let fps = 30, shutter = 0.002, dir = 1, rpm = 0, flick = false, paused = false, slow = false;
 const syncRpm = (m = 1) => 60 * fps * m / N;
 const rpmAt = p => flick ? R0 * Math.exp(-(p.simT - p.flickT0) / TAU) : rpm;
@@ -187,7 +189,7 @@ function phoneCaption(w) {
   if (r < 1) msg = 'Not spinning.';
   else if (Math.abs(frac) > 0.25) msg = 'Between sync speeds: slots land part-way between frames, so the wave jitters instead of playing cleanly.';
   else if (kk === 0) msg = 'Wagon-wheel freeze: the ring looks parked.';
-  else if (kk <= 3 && kk < N / 2) msg = `The wave plays forward, ${kk === 1 ? 'one frame' : kk + ' frames'} per video frame${kk > 1 ? ' (choppier)' : ''}.`;
+  else if (kk <= 3 && kk < N / 2) msg = `The ring is really turning, but each video frame catches the next slot where the last one was, so it looks parked and the wave plays forward${kk > 1 ? ` (${kk} frames per video frame, choppier)` : ''}.`;
   else if (kk >= N - 3 && kk > N / 2) msg = `The wave plays backwards (${N - kk} per frame): flick it the other way.`;
   else msg = `Frames jump ${kk} at a time, so it looks choppy.`;
   if (r >= 1 && Math.abs(frac) <= 0.25 && kk !== 0 && Math.abs(frac) > 0.004) msg += ` The waves drift ${frac < 0 ? 'clockwise, with the break' : 'counter-clockwise, against the break'}.`;
@@ -203,7 +205,11 @@ function loop(now) {
   eye.simT += dt;
   const wE = dir * rpmAt(eye) / 60 * 2 * Math.PI; eye.angle += wE * dt;
   drawRing(eye, eye.angle, wE * EYE_T);
-  $('eyecap').innerHTML = `<b>Your eye</b> · <span class="mono">${Math.abs(rpmAt(eye)).toFixed(0)} RPM</span><br>Everything moving smears into rings. The caps stay sharp because they don't turn.`;
+  const revs = Math.abs(rpmAt(eye)) / 60;
+  $('eyecap').innerHTML = `<b>Your eye</b>, real time · <span class="mono">${revs.toFixed(1)} turns a second</span><br>Too fast to follow, so everything smears into rings. The caps stay sharp because they don't turn.`;
+  P.slowmo.angle += wE / SLOW * dt;
+  drawRing(P.slowmo, P.slowmo.angle, 0);
+  $('slowcap').innerHTML = `<b>Real spin, slowed ${SLOW}×</b> · <span class="mono">${Math.abs(rpmAt(eye)).toFixed(0)} RPM</span><br>How the ring actually moves${dir > 0 ? ' (counter-clockwise)' : ' (clockwise)'}; each slot passes the top ${(revs * N).toFixed(0)} times a second.`;
   if (flick) { $('rpm').value = Math.round(rpmAt(eye)); $('rpmv').textContent = Math.round(rpmAt(eye)) + ' RPM'; }
   const play = fps > 60 ? 30 : fps;                    // slo-mo is played back at 30 fps
   camAcc += dt;
