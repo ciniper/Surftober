@@ -6,7 +6,7 @@
 <style>
   html,body{margin:0;height:100%;background:#f3ece2;font-family:system-ui,-apple-system,sans-serif;color:#2d2416}
   #ui{position:fixed;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:2}
-  button,select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #d4c4a8;background:#fff8f0;cursor:pointer}
+  button,select{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #d4c4a8;background:#fff8f0;cursor:pointer;white-space:nowrap}
   button.on{background:#d1470f;color:#fff;border-color:#d1470f}
   #cap{position:fixed;left:10px;bottom:10px;right:10px;font-size:13px;color:#6f5d46;background:rgba(255,248,240,.85);padding:8px 10px;border-radius:8px}
   canvas{display:block}
@@ -19,11 +19,13 @@
   <button data-c="spinner">C · Spinner magnet</button>
   <button data-c="windmill">D · Windmill</button>
   <select id="tier"><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="participant">Participant</option></select>
-  <span id="spinOpts" style="display:none;gap:8px;align-items:center">
+  <span id="spinOpts" style="display:none">
     <select id="capc" title="Cap anodize colour"><option value="orange">Cap: orange</option><option value="navy">Cap: navy</option><option value="teal">Cap: teal</option></select>
     <button id="explode">Exploded</button>
     <button id="fridge">On fridge</button>
     <button id="bodyspin" class="on">Spin body</button>
+    <select id="ringm" title="Ring shape"><option value="wave">Ring: disk + wave</option><option value="disk">Ring: disk</option><option value="notched">Ring: notched</option></select>
+    <button id="phonecam">Phone-cam demo</button>
   </span>
   <button id="spin" class="on">Auto-rotate</button>
   <button id="png">Download PNG</button>
@@ -39,6 +41,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { WAVE_N, ringArt } from './wave-frames.js';
 
 const NAME = new URLSearchParams(location.search).get('name') || 'NAHLA';
 const TIERS = {
@@ -50,7 +53,7 @@ const TIERS = {
 const CAPTIONS = {
   plaque:   'A · Modular plaque — laser-cut (or printed) wood base with the plover logo in relief, a medal-colour trim frame, and a separate name bar that slides into a slot. Bases cut in bulk; one name bar per person.',
   fin:      'B · Fin magnet — a single surfboard fin in the medal colour, name and year raised on the face, magnet disc recessed into the back. Lives on the fridge.',
-  spinner:  'C · Spinner magnet — identical stock metal tri-spinner + 608 bearing for all ~50; bare 6061 caps anodized in a Surftober colour, Ø10×2 mm N42 magnet glued flush in the back cap (caps ride the stationary inner race, so the magnet never spins). The lobes carry the usual press-fit metal weight inserts, which leave only a small hole, so the cheap printed medal-colour ring has three full-length rods that pass right through those holes — which is why the ring is wide over the lobes; between the arms its edge curves in so there is still something to flick. It carries SURFTOBER 2026 · tier + name. Only the back cap touches the fridge; rods end 0.2 mm short of the back face. Body/insert dims are placeholders — measure the stock part.',
+  spinner:  'C · Spinner magnet — the same stock tri-spinner, 608 bearing and anodized magnet cap on every unit (the N42 magnet sits flush in the back cap, on the inner race, so it never spins). The printed ring in the medal colour has three rods through the lobe inserts and carries SURFTOBER 2026 · tier + name. Ring options: disk + breaking wave (animates in a phone video; try Phone-cam demo, or wave-demo.html), plain disk, or notched. Only the back cap touches the fridge. Dimensions are placeholders.',
   windmill: 'D · Windmill — the Ocean Beach Dutch windmill as a layered plaque, sails in the medal colour, name on the sand base.',
 };
 
@@ -163,10 +166,12 @@ const SP = {
   insertHole: 4,                                     // lobe weight insert: Ø22 OD press fit, Ø8 through-hole (guess — measure)
   ringOut: 40, ringWaist: 30, ringIn: 17,            // wide printed ring: r 40 over the lobes (covers the rods), dips to r 30 between them as finger notches for flicking
   ringT: 2.4, textT: 0.6,                            // ring thickness, embossed second-colour text
+  waveIn: 30.6, waveOut: 39.4,                       // breaking-wave band on the disk ring (frames in wave-frames.js)
   rodR: 3.85, rodLen: 6.8,                           // Ø7.7 rods, full length through the insert, 0.2 short of the back face
 };
 const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
-let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true;
+let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true, phoneCam = false;
+let ringMode = new URLSearchParams(location.search).get('ring') || 'wave'; // wave | disk | notched
 
 function zcyl(r, z0, h, mat, seg = 48) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat);
@@ -249,6 +254,18 @@ function trefoilRing(tier) {
   geo.translate(0, 0, 0.4);
   const m = new THREE.Mesh(geo, M.tier(tier)); m.castShadow = true; m.receiveShadow = true; return m;
 }
+// The 12 breaking-wave frames on the disk's outer band. Shown slightly raised so
+// they read in the render; in print they'd be flush colour changes.
+function waveBand() {
+  const g = new THREE.Group(), water = M.navy(), foam = M.cream();
+  ringArt({ N: WAVE_N, rIn: SP.waveIn, rOut: SP.waveOut }).slots.forEach(sl => {
+    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(sl.water.map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.2, bevelEnabled: false }), water);
+    g.add(m);
+    sl.foam.forEach(([x, y, r]) => { const c = zcyl(r, 0.2, 0.15, foam, 20); c.position.x = x; c.position.y = y; g.add(c); });
+  });
+  g.position.z = SP.ringT;
+  return g;
+}
 function buildSpinner(tier) {
   const g = new THREE.Group(), parts = [];
   const steel = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, metalness: 0.9, roughness: 0.2 });
@@ -272,7 +289,8 @@ function buildSpinner(tier) {
 
   // Printed medal ring: band + embossed text on the front, full rods through the inserts behind
   const ring = new THREE.Group(); ring.position.z = SP.t / 2; spin.add(ring);
-  ring.add(trefoilRing(tier));
+  ring.add(ringMode === 'notched' ? trefoilRing(tier) : annulus(SP.ringOut, SP.ringIn, SP.ringT, M.tier(tier), 0.4));
+  if (ringMode === 'wave') ring.add(waveBand());
   for (let i = 0; i < 3; i++) {
     const [x, y] = P(i), rod = zcyl(SP.rodR, -SP.rodLen, SP.rodLen, M.tier(tier), 32);
     rod.position.x = x; rod.position.y = y; ring.add(rod);
@@ -324,7 +342,7 @@ function rebuild() {
   const v = VIEWS[concept]; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update();
   document.getElementById('cap').textContent = CAPTIONS[concept] + '  ·  Tier shown: ' + TIERS[tier].label + '  ·  Name: ' + NAME + ' (add ?name=YOURNAME to the URL).';
   document.querySelectorAll('#ui [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === concept));
-  document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'flex' : 'none';
+  document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'contents' : 'none';
 }
 document.querySelectorAll('#ui [data-c]').forEach(b => b.addEventListener('click', () => { concept = b.dataset.c; rebuild(); }));
 document.getElementById('tier').addEventListener('change', e => { tier = e.target.value; rebuild(); });
@@ -332,6 +350,16 @@ document.getElementById('capc').addEventListener('change', e => { capColor = e.t
 document.getElementById('explode').addEventListener('click', e => { exploded = !exploded; e.target.classList.toggle('on', exploded); });
 document.getElementById('fridge').addEventListener('click', e => { onFridge = !onFridge; e.target.classList.toggle('on', onFridge); if (current.userData.fridge) current.userData.fridge.visible = onFridge; });
 document.getElementById('bodyspin').addEventListener('click', e => { bodySpin = !bodySpin; e.target.classList.toggle('on', bodySpin); });
+document.getElementById('ringm').value = ringMode;
+document.getElementById('ringm').addEventListener('change', e => { ringMode = e.target.value; if (ringMode !== 'wave' && phoneCam) document.getElementById('phonecam').click(); rebuild(); });
+// Phone-cam demo: step the ring like a 30 fps video sees it at ~145 RPM (0.97 slots per frame)
+document.getElementById('phonecam').addEventListener('click', e => {
+  phoneCam = !phoneCam; e.target.classList.toggle('on', phoneCam);
+  if (!phoneCam) return;
+  if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; rebuild(); }
+  controls.autoRotate = false; document.getElementById('spin').classList.remove('on');
+  camera.position.set(0, 40, 240); controls.target.set(0, 40, 0); controls.update();
+});
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
 window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); },
@@ -340,12 +368,15 @@ window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => 
 new FontLoader().load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => { font = f; rebuild(); window.__trophy.ready = true; });
 
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-(function loop() { requestAnimationFrame(loop); controls.update(); if (current && current.userData.spinner) {
-  const u = current.userData; if (bodySpin) u.spinner.rotation.z += 0.02;
+let lastT = performance.now(), camAcc = 0;
+(function loop(now) { requestAnimationFrame(loop); const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now; controls.update(); if (current && current.userData.spinner) {
+  const u = current.userData;
+  if (phoneCam) { camAcc += dt; if (camAcc >= 1 / 30) { camAcc %= 1 / 30; u.spinner.rotation.z += 2 * Math.PI / WAVE_N * 0.97; } }
+  else if (bodySpin) u.spinner.rotation.z += 0.02;
   u.explode += ((exploded ? 1 : 0) - u.explode) * 0.08;
   u.parts.forEach(p => { p.obj.position.z = p.z0 + p.dz * u.explode; });
 }
-renderer.render(scene, camera); })();
+renderer.render(scene, camera); })(performance.now());
 </script>
 </body>
 </html>

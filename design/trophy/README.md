@@ -51,7 +51,18 @@ Buttons switch concept, the dropdown switches the medal tier colour,
   inserts' holes. Extra buttons: cap colour, **Exploded**
   (parts pulled apart along the axis) and **On fridge** (steel door touching
   only the back cap), plus **Spin body** to stop or start the body spinning.
-  Body dimensions are placeholders until the stock part is measured.
+  **Ring** switches between *disk + wave* (default), plain *disk* and
+  *notched*; `?ring=wave|disk|notched` does the same from the URL.
+  **Phone-cam demo** steps the ring the way a 30 fps phone video sees it near
+  the sync speed, so the wave breaks on screen. Body dimensions are
+  placeholders until the stock part is measured.
+
+`wave-demo.html` — the breaking-wave animation on its own (same server):
+still artwork, what your eye sees (motion blur) and what a phone video sees,
+with camera fps, shutter, spin direction, a speed slider, "Snap to sync" and
+a "Flick" spin-down. It shows the 12 frames unrolled and downloads the ring
+artwork as an SVG in mm (ring / water / foam layers) for CAD. The frames live
+in `wave-frames.js`, which both pages import.
 - **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
   sails, name on the dune.
 
@@ -110,9 +121,31 @@ nowhere, not text or pictures. Ways to use that on the ring's front face:
 3. **Benham's disk.** A specific black-and-white arc pattern that makes faint
    illusory colours appear when spun. Needs high contrast, so black on silver
    beats navy on gold.
-4. **Freeze-frame animation.** A motif repeated evenly around the ring (e.g.
-   12 plovers in walking poses) can seem to stand still or walk under
-   flickering LED light or in phone video. Fun, but unreliable.
+4. **Freeze-frame animation — chosen, as a breaking wave (2026-10-11).** See
+   "Breaking-wave band" below.
+
+**Breaking-wave band (disk ring)**
+
+- 12 frames of one wave in equal 30° slots on the outer band (r 30.6–39.4),
+  running clockwise from the top: swell, peak, lip throws, barrel, lip lands,
+  explosion, whitewater rolls out. Navy water and cream foam on the medal
+  colour, with the sea at the same height at every slot edge so it reads as
+  one band at rest.
+- A phone video turns it into an animation when the ring turns one slot per
+  video frame: RPM = 60 × fps ÷ 12, so 150 RPM at 30 fps, 300 at 60, 600 at
+  120 slo-mo and 1200 at 240 slo-mo. Two or three slots per frame (300 / 450
+  RPM at 30 fps) also work but look choppier. A spinner slows steadily, so it
+  passes through these speeds by itself; just past sync the waves also drift
+  clockwise, with the break.
+- Flick it **counter-clockwise** as you face it; clockwise plays it backwards.
+  Film in bright light (or slo-mo, which forces a fast shutter) so it doesn't
+  blur. 240 fps slo-mo is probably the easiest because 1200 RPM is right in a
+  spinner's normal range.
+- Anything on the ring that doesn't repeat every 30° (the text, the name)
+  jumps around in the video. If that's distracting, the band could also carry
+  a 12× repeated mark, or the text could move to the non-spinning cap.
+- Print the artwork as flush colour changes, not raised, so every slot weighs
+  the same; the smallest drops are ~0.6 mm.
 
 Related: the caps don't spin (they're what you hold), so a logo
 laser-engraved through the anodizing on the front cap stays crisp while
