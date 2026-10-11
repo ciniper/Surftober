@@ -203,6 +203,10 @@
       Wave styles: classic break (12), rolling set (10), whitewater return
       (10, foam drawn back up the face into the next lip), barrel loop (8),
       any of them at 6–16 frames — pick one after filming a test print.
+      Body/text options (2026-10-11): maybe drop the stock spinner — printed
+      disc with 12 sealed-in M6 nuts, or a laser-cut brass/stainless/copper
+      disc on a printed hub — and put the text on a still front hub so it
+      doesn't spin. All mocked in the viewer; README has the trade-offs.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
