@@ -27,15 +27,48 @@ motif for the new plover-on-the-dune logo.
 Natural pairings: 1 + 3 (laser-cut base, slot-in name tab, medal trim) and
 2 + 4 (metal spinner with a magnet core).
 
+## Viewing the previews
+
+Both pages use ES-module imports and load three.js from unpkg, so they need
+internet and a local static server (opening them as `file://` won't work).
+From the repo root:
+
+    python3 -m http.server 8930 --directory design/trophy
+
+Then open these on the same computer. `localhost` links don't work from a
+phone or another machine; send screenshots, or publish a page, if someone
+else needs to see it.
+
+- 3D viewer: http://localhost:8930/mockups.html?name=NAHLA (it opens on
+  concept A; click **C · Spinner magnet** for the spinner)
+  - Printed disc + still hub + whitewater return (current pick):
+    http://localhost:8930/mockups.html?body=printed&text=hub&wave=return&name=NAHLA
+  - Metal disc + still hub:
+    http://localhost:8930/mockups.html?body=metal&text=hub&wave=return&name=NAHLA
+  - Stock spinner + ring (the original plan):
+    http://localhost:8930/mockups.html?body=stock&text=ring&name=NAHLA
+- Wave demo: http://localhost:8930/wave-demo.html?wave=return&text=hub
+  (also `?wave=rolling`, `classic`, `barrel`)
+
+URL options (both pages where they apply): `body=stock|printed|metal`,
+`text=ring|hub`, `ring=wave|disk|notched`, `wave=classic|rolling|return|barrel`,
+`frames=6…16`, `name=YOURNAME`. Every option also has a control on the page.
+
+Viewing tips:
+- In a narrow window the wave demo stacks its views; **Phone video** is the
+  first one. **Still** never moves, by design.
+- At sync the phone view looks parked while the wave plays; that's the
+  effect. **Real spin, slowed 20×** shows how the ring actually turns.
+- After changing wave style, frame count or camera, press **Snap to sync**
+  or the phone view sits between sync speeds and just jitters.
+- In the 3D viewer, **Phone-cam demo** turns the ring head-on and steps it
+  like a 30 fps video; **Auto-rotate** and **Spin body** stop the motion for
+  a close look.
+
 ## Mockup viewer
 
 `mockups.html` — self-contained three.js scene, four blocky procedural
-concepts to judge proportions and the modular idea (not finish). Loads
-three.js from unpkg, so it needs internet, and it uses ES-module imports, so
-open it from a local static server rather than `file://`:
-
-    python3 -m http.server 8930 --directory design/trophy
-    # then http://localhost:8930/mockups.html?name=NAHLA
+concepts to judge proportions and the modular idea (not finish).
 
 Buttons switch concept, the dropdown switches the medal tier colour,
 `?name=` sets the name, "Download PNG" saves the current camera angle.
@@ -55,8 +88,9 @@ Buttons switch concept, the dropdown switches the medal tier colour,
   *notched*; `?ring=wave|disk|notched` does the same from the URL.
   **Wave** picks the animation style (below). **Phone-cam demo** steps the
   ring the way a 30 fps phone video sees it near the sync speed, so the wave
-  breaks on screen. Body dimensions are
-  placeholders until the stock part is measured.
+  breaks on screen. **Body** and **Text** switch between the build approaches
+  below (stock / printed / metal disc; text on the ring or on a still hub).
+  Dimensions are placeholders until real parts are measured.
 
 - **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
   sails, name on the dune.
@@ -138,6 +172,54 @@ same for all of them.
   it stays put while the waves play. Navy hub with tier-colour text, per-unit
   names printed cheaply. It also frees the spinning face for artwork only.
   `wave-demo.html` has the same Text switch to preview the video.
+
+**Spin weight: are the M6 nuts needed? (2026-10-12)**
+
+No — they're optional. The printed disc is one print either way (the pause
+just drops the nuts in; the exploded view splits it only to show them).
+Rough rotational inertia for the r 11–40, 7 mm disc (estimates, not
+measured):
+
+| Printed disc | Mass | Inertia |
+|---|---|---|
+| ~20 % infill, no nuts | ~15 g | ~13k g·mm² |
+| **100 % infill, no nuts** | ~40 g | ~34k g·mm² |
+| ~20 % infill + 12 M6 nuts | ~45 g | ~46k g·mm² |
+
+- A solid print gets about ¾ of the nut version with no hardware and no
+  pause. Inertia goes with r², so a slicer modifier that prints only the
+  outer band at 100 % (and the middle light) does most of the work.
+- The bearing matters as much as the weight: a stock 608 is packed with
+  grease and spins down fast. Degrease it (isopropyl soak, dry, one drop of
+  light oil) or buy "fidget"/ceramic 608s.
+- The animation doesn't need a long spin: at 30 fps the wave plays around
+  180 RPM, which every spin passes through near the end. Spin time matters
+  most for 240 fps slo-mo, whose sync speed is ~1800 RPM (10 frames).
+- If a solid disc still spins too briefly: open pockets on the back face
+  (against the fridge, never seen) with nuts or steel balls pressed or glued
+  in after printing — no mid-print pause.
+- Plan: test a solid disc with a cleaned bearing first; add weight only if
+  it needs it.
+
+**Buying 608 bearings**
+
+608 = 8 × 22 × 7 mm, the skateboard-wheel bearing, so it's everywhere.
+
+- Bulk: eBay (lots of 100), AliExpress, mklbearing.com. Generic 608s are a
+  commodity part, usually well under a dollar each in 50–100 packs.
+- Quick tests: Amazon "608ZZ" 10/20-packs or "fidget spinner bearing 608"
+  (often pre-cleaned).
+- Consistent quality: a bearing specialist such as VXB.com, or McMaster-Carr
+  (pricier).
+- Premium: hybrid ceramic 608s (steel races, ceramic balls) spin noticeably
+  longer at a few dollars each.
+- Same day: any skate shop (good, but pricey per bearing).
+- In listings: **ZZ** (metal shields) beats **2RS** (rubber seals, which
+  drag); "fidget", "low-noise", "ABEC-7" or "light oil" are good signs.
+  Check it really says 608 — many commercial spinners use the smaller R188,
+  which won't fit 608 caps.
+- For the test print: a 10-pack of generic 608ZZ plus 2–3 hybrid ceramic,
+  each spun in the same disc. Then order ~60 (50 + duds and test pieces).
 
 **Patterns that only show up when it spins (ideas, not yet mocked)**
 
