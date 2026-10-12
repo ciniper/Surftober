@@ -1,4 +1,4 @@
-# Surftober 2026 trophy — concepts, mockups, image prompts
+# Surftober 2026 trophy — the spinner (concept C)
 
 **Branch note: `trophy` is a design scratch branch. Do NOT merge it into
 `main`** — nothing here is part of the site. It exists so the mockup viewer,
@@ -39,8 +39,8 @@ Then open these on the same computer. `localhost` links don't work from a
 phone or another machine; send screenshots, or publish a page, if someone
 else needs to see it.
 
-- 3D viewer: http://localhost:8930/mockups.html?name=NAHLA (it opens on
-  concept A; click **C · Spinner magnet** for the spinner)
+- 3D viewer: http://localhost:8930/mockups.html?name=NAHLA (spinner only
+  since 2026-10-12; the other concepts are archived, see the end)
   - Printed disc + still hub + whitewater return (current pick):
     http://localhost:8930/mockups.html?body=printed&text=hub&wave=return&name=NAHLA
   - Metal disc + still hub:
@@ -73,10 +73,6 @@ concepts to judge proportions and the modular idea (not finish).
 Buttons switch concept, the dropdown switches the medal tier colour,
 `?name=` sets the name, "Download PNG" saves the current camera angle.
 
-- **A · Modular plaque** — wood base, plover medallion in relief, medal-colour
-  frame, separate name bar sliding into a slot. Closest evolution of 2025.
-- **B · Fin magnet** — single fin in the medal colour, name + year raised on
-  the face, magnet disc recessed in the back, small wood stand.
 - **C · Spinner magnet (v2, 2026-10-10)** — see "Concept C build plan" below.
   Stock metal tri-spinner + 608 bearing, metal weight inserts in the lobes,
   anodized 6061 caps with the magnet in the back cap, and a wide printed
@@ -92,18 +88,6 @@ Buttons switch concept, the dropdown switches the medal tier colour,
   below (stock / printed / metal disc; text on the ring or on a still hub).
   Dimensions are placeholders until real parts are measured.
 
-- **D · Windmill** — layered plaque: navy sky, sun, tower with medal-colour
-  sails, name on the dune.
-
-`wave-demo.html` — the breaking-wave animation on its own (same server):
-still artwork, what your eye sees (motion blur) and what a phone video sees,
-with wave style, frame count, camera fps, shutter, spin direction, a speed
-slider, "Snap to sync" and a "Flick" spin-down. "One slot on camera" plays a
-single slot big at real speed (or ×4 slower) to judge the animation itself.
-It shows the frames unrolled and downloads the ring artwork as an SVG in mm
-(ring / water / foam layers) for CAD. The frames live in `wave-frames.js`,
-which both pages import; `?wave=classic|rolling|return|barrel&frames=N` works on
-both pages.
 
 ## Concept C build plan (Chase, 2026-10-10)
 
@@ -337,22 +321,6 @@ Prepend the shared style line to each concept prompt. For other tiers swap
 > #b89b70, teal #3aa9a3. Medal tier colour: metallic gold. Text reads
 > "SURFTOBER 2026" and the name "NAHLA".
 
-### Concept A — modular plaque
-
-> A rounded rectangular wooden plaque about 12 by 9 cm with a raised circular
-> logo medallion in the centre showing a snowy plover standing on a sand dune
-> at sunset inside an orange ring, a thin metallic gold frame around the
-> plaque edge, and a separate slide-in name bar at the bottom in metallic gold
-> with the name in navy raised letters. Show the name bar half slid out of its
-> slot to make the modular idea obvious.
-
-### Concept B — fin magnet
-
-> A single surfboard fin about 9 cm tall in metallic gold, standing upright in
-> a small wooden stand, the name and "SURFTOBER 2026" raised along the fin's
-> leading edge in navy, a small plover-at-sunset logo medallion near the base,
-> and a round black magnet set into the back so it can hang on a fridge.
-
 ### Concept C — spinner magnet
 
 > A gunmetal tri-lobe metal fidget spinner about 8 cm across with open lobe
@@ -362,16 +330,17 @@ Prepend the shared style line to each concept prompt. For other tiers swap
 > "NAHLA" around the bottom in raised navy letters. Show it parked on a
 > stainless fridge door, held by a small magnet in the back cap.
 
-### Concept D — windmill
-
-> A layered plaque about 10 by 12 cm with a navy sky, an orange sun, the Ocean
-> Beach Dutch windmill in profile with four metallic gold sails, a
-> sand-coloured dune across the bottom, "SURFTOBER 2026" across the top and
-> the name on the dune, all as stacked raised layers.
-
 ### Variations worth asking for
 
-- The same concept as a laser-cut plywood piece instead of a print (ideas 1/3).
-- Concept B or C in laser-cut steel, "the whole piece is the magnet" (idea 2).
-- A family shot: five of concept A in a row, one per tier colour, names
-  visible — the equivalent of the 2025 group photo.
+- The spinner in laser-cut steel, "the whole piece is the magnet" (idea 2).
+- A family shot: five spinners in a row on a fridge, one per tier colour,
+  names visible — the equivalent of the 2025 group photo.
+
+## Archived concepts (2026-10-12)
+
+Decision: all in on the spinner. Concepts A (modular plaque), B (fin magnet)
+and D (windmill) were removed from the viewer and this doc. They last exist
+in full — builders, captions, image prompts — at commit `4557532`:
+
+    git show 4557532:design/trophy/mockups.html
+    git show 4557532:design/trophy/README.md

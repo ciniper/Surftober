@@ -212,6 +212,8 @@
       arms; only the 608 and the magnet are bought. Viewer: Body "printed
       ring on arms" + arm-count selector; README "Concept C v3" has the
       3-vs-4 and weight notes. Decide arms after a test print.
+      2026-10-12: ALL IN on the spinner — concepts A/B/D archived (last in
+      full at trophy commit 4557532); viewer is spinner-only.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
