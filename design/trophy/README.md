@@ -35,7 +35,9 @@ From the repo root:
 
     python3 -m http.server 8930 --directory design/trophy
 
-Then open these on the same computer. `localhost` links don't work from a
+Then open **http://localhost:8930/** — `index.html` links both previews, and
+they link to each other, so one server session covers everything. Direct links,
+on the same computer: `localhost` links don't work from a
 phone or another machine; send screenshots, or publish a page, if someone
 else needs to see it.
 
@@ -305,6 +307,27 @@ The new body option, `Body: printed ring on arms` in the viewer
   into it at the arm roots without changing the look.
 - Caption and arm-count selector update live; `setBody('spoked', 4)` from
   the console switches it for screenshots.
+
+## Wave foam pinned to the lip (Chase, 2026-10-12)
+
+Direction: "whitewater return" has the right surface, but the whitewater
+should be minimal and stay at the tip of the wave — always at the apex. The
+hand-keyed `return` foam swells to a big cluster at impact (the keyframe
+explosion). Three new styles keep its surface shapes and instead **compute**
+the foam position from the wave's own lip point every frame (`apexFoam` in
+wave-frames.js), so it cannot drift to the base or balloon:
+
+- `apex` — **Apex cap (minimal foam)**: a three-circle cap riding the leading
+  top edge, no spray. Foam area is constant, about 30× smaller than the old
+  impact frame.
+- `apexspray` — **Apex cap + light spray**: same cap, a few droplets only
+  while the lip is actually thrown forward and high.
+- `feather` — **Feathering lip**: smaller cap plus a thin streak trailing
+  back along the crest.
+
+Compare in the demo: `wave-demo.html?wave=apex|apexspray|feather`. Smallest
+foam drops are ~0.6 mm at the 10-slot size — check against the nozzle before
+committing to `apex`'s size; `size` in each variant is one number.
 
 ## Image-generation prompts (Midjourney / ChatGPT / Gemini)
 
