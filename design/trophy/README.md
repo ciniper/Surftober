@@ -293,6 +293,35 @@ break the no-per-unit-engraving rule.
 - smrtgadget.com — bare 6061-T6 608 buttons made for anodizing.
 - Bulk 608 bearings: eBay (lot of 100), mklbearing.com, AliExpress.
 
+## Concept C v3 — fully printed, ring on arms, wide text hub (Chase, 2026-10-12)
+
+Lead direction as of 2026-10-12: **no metal body.** Everything but the 608
+bearing and the magnet is printed. The wave ring stays the hero and the
+text lives on a still front hub.
+
+The new body option, `Body: printed ring on arms` in the viewer
+(`?body=spoked&text=hub&arms=3|4`):
+
+- **One printed piece:** a hub pressed onto the bearing's outer race, three
+  or four straight arms, and the wave ring out at the rim (r 27.5 → 40).
+  Putting the mass at the rim is where it helps spin time most; the open
+  windows between the arms save material and print time versus a disc.
+- **Wide still hub (r 25.5)** on the inner race carries "SURFTOBER 2026",
+  the name and a small plover medallion. It covers the arms almost
+  entirely — from the front you see the wave ring, a ~2 mm dark reveal,
+  and the hub. The arms only show in the Exploded view or from the back.
+  Text on the ring is disabled for this body (no room, and it would spin).
+- **3 vs 4 arms.** Three echoes the tri-spinner heritage and leaves the
+  biggest windows; four is stiffer, prints with less overhang at the
+  ring joints, and divides evenly into the 8-, 12- and 16-frame wave
+  variants (three divides 12 only). Decide after a test print — stiffness
+  of the ring-to-arm joint is the thing to feel for.
+- **Weight:** the ring alone is lighter than the nut-filled disc. If spin
+  time disappoints, the ring is thick enough (7 mm) to seal six M6 nuts
+  into it at the arm roots without changing the look.
+- Caption and arm-count selector update live; `setBody('spoked', 4)` from
+  the console switches it for screenshots.
+
 ## Image-generation prompts (Midjourney / ChatGPT / Gemini)
 
 Prepend the shared style line to each concept prompt. For other tiers swap

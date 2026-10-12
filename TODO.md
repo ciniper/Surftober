@@ -207,6 +207,11 @@
       disc with 12 sealed-in M6 nuts, or a laser-cut brass/stainless/copper
       disc on a printed hub — and put the text on a still front hub so it
       doesn't spin. All mocked in the viewer; README has the trade-offs.
+      2026-10-12 (lead): fully printed — wave ring carried on 3 or 4 arms
+      instead of a disc, text on a wide still hub (r 25.5) that hides the
+      arms; only the 608 and the magnet are bought. Viewer: Body "printed
+      ring on arms" + arm-count selector; README "Concept C v3" has the
+      3-vs-4 and weight notes. Decide arms after a test print.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
