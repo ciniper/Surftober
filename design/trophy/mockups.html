@@ -26,7 +26,8 @@
     <button id="bodyspin" class="on">Spin body</button>
     <select id="ringm" title="Ring shape"><option value="wave">Ring: disk + wave</option><option value="disk">Ring: disk</option><option value="notched">Ring: notched</option></select>
     <select id="wavev" title="Wave animation style"></select>
-    <select id="bodym" title="What spins"><option value="stock">Body: stock spinner + ring</option><option value="printed">Body: printed disc + bearing</option><option value="metal">Body: metal disc + bearing</option></select>
+    <select id="bodym" title="What spins"><option value="stock">Body: stock spinner + ring</option><option value="printed">Body: printed disc + bearing</option><option value="metal">Body: metal disc + bearing</option><option value="spoked">Body: printed ring on arms</option></select>
+    <select id="armsn" title="Arms carrying the ring (ring-on-arms body only)"><option value="3">3 arms</option><option value="4">4 arms</option></select>
     <select id="textm" title="Where the text goes"><option value="ring">Text: on the ring (spins)</option><option value="hub">Text: on a still hub</option></select>
     <button id="phonecam">Phone-cam demo</button>
   </span>
@@ -174,12 +175,15 @@ const SP = {
   discT: 2,                                          // metal disc thickness
   waveIn: 30.6, waveOut: 39.4,                       // breaking-wave band on the disk ring (frames in wave-frames.js)
   rodR: 3.85, rodLen: 6.8,                           // Ø7.7 rods, full length through the insert, 0.2 short of the back face
+  spokeHubOut: 16, spokeRingIn: 27.5, armW: 9,       // ring-on-arms body: printed hub on the 608, arms out to the wave ring
+  wideHubR: 25.5,                                    // still front hub wide enough to hide the arms (leaves a 2 mm reveal before the ring)
 };
 const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
 let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true, phoneCam = false;
 let ringMode = new URLSearchParams(location.search).get('ring') || 'wave'; // wave | disk | notched
 let bodyMode = new URLSearchParams(location.search).get('body') || 'stock';   // stock | printed | metal
 let textMode = new URLSearchParams(location.search).get('text') || 'ring';    // ring | hub
+let armsN = +new URLSearchParams(location.search).get('arms') || 3;          // 3 | 4, ring-on-arms body only
 let waveVariant = WAVE_VARIANTS[new URLSearchParams(location.search).get('wave')] ? new URLSearchParams(location.search).get('wave') : WAVE_DEFAULT;
 let waveN = +new URLSearchParams(location.search).get('frames') || WAVE_VARIANTS[waveVariant].N;
 
@@ -282,13 +286,14 @@ function waveBand() {
 }
 // Still front hub: rides the inner race like a cap, stands off far enough to clear the
 // spinning face, and carries the text so it stays readable while spinning (and on camera).
-function buildHub(tier, standoff) {
-  const hub = new THREE.Group(), navy = M.navy(), textR = SP.hubR - 4.2;
+function buildHub(tier, standoff, hubR = SP.hubR) {
+  const hub = new THREE.Group(), navy = M.navy(), textR = hubR - 4.6, size = hubR > 20 ? 4.6 : 3.2;
   hub.add(zcyl(3.95, -3.3, 3.3, navy, 32));                    // stem into the 8 mm bore
   hub.add(zcyl(SP.spacerR, 0, standoff, navy));                // stand-off lands on the inner race only
-  const disc = annulus(SP.hubR, 0, SP.hubT, navy, 0.5); disc.position.z = standoff; hub.add(disc);
-  const t1 = arcText('SURFTOBER 2026', textR, 3.2, 0.5, M.tier(tier), true); t1.position.z = standoff + SP.hubT; hub.add(t1);
-  const t2 = arcText(NAME.toUpperCase(), textR, 3.2, 0.5, M.tier(tier), false); t2.position.z = standoff + SP.hubT; hub.add(t2);
+  const disc = annulus(hubR, 0, SP.hubT, navy, 0.5); disc.position.z = standoff; hub.add(disc);
+  const t1 = arcText('SURFTOBER 2026', textR, size, 0.5, M.tier(tier), true); t1.position.z = standoff + SP.hubT; hub.add(t1);
+  const t2 = arcText(NAME.toUpperCase(), textR, size, 0.5, M.tier(tier), false); t2.position.z = standoff + SP.hubT; hub.add(t2);
+  if (hubR > 20) { const med = medallion(6.5, 1.2); med.rotation.x = Math.PI / 2; med.position.z = standoff + SP.hubT + 0.6; hub.add(med); }
   return hub;
 }
 function buildSpinner(tier) {
@@ -329,6 +334,20 @@ function buildSpinner(tier) {
     carrier = new THREE.Group(); spin.add(carrier); faceZ = SP.t / 2;
     carrier.add(outline(M.tier(tier), 11, SP.t / 2));
     parts.push({ obj: carrier, z0: 0, dz: 14 });
+  } else if (bodyMode === 'spoked') {
+    // Fully printed, one piece: a hub pressed onto the 608, three or four arms, and the wave ring
+    // out at the rim where the mass does the most good. The still front hub (wideHubR) covers the
+    // arms almost entirely, so what shows is the ring, a thin dark reveal, and the text hub.
+    carrier = new THREE.Group(); spin.add(carrier); faceZ = SP.t / 2;
+    const tierMat = M.tier(tier);
+    const hubRing = annulus(SP.spokeHubOut, 11, SP.t, tierMat, 0.4); hubRing.position.z = -SP.t / 2; carrier.add(hubRing);
+    for (let i = 0; i < armsN; i++) {
+      const a = Math.PI / 2 + i * 2 * Math.PI / armsN, len = SP.spokeRingIn - SP.spokeHubOut + 1.5, mid = (SP.spokeHubOut + SP.spokeRingIn) / 2;
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(len, SP.armW, SP.t), tierMat);
+      arm.position.set(mid * Math.cos(a), mid * Math.sin(a), 0); arm.rotation.z = a; arm.castShadow = true; arm.receiveShadow = true; carrier.add(arm);
+    }
+    const rim = outline(tierMat, SP.spokeRingIn, SP.t); rim.position.z = -SP.t / 2; carrier.add(rim);
+    parts.push({ obj: carrier, z0: 0, dz: 14 });
   } else {
     // Laser-cut metal disc (the metal is the tier colour) glued to a printed hub that holds the 608
     const hubMat = new THREE.MeshStandardMaterial({ color: 0x22262c, roughness: 0.6 });
@@ -342,14 +361,15 @@ function buildSpinner(tier) {
   // Front-face artwork: wave band, plus the text unless it moved to the still hub
   const art = new THREE.Group(); art.position.z = faceZ; carrier.add(art);
   if (ringMode === 'wave') art.add(waveBand());
-  if (textMode === 'ring') {
+  const useHub = textMode === 'hub' || bodyMode === 'spoked';   // nowhere to put text on a ring-on-arms body
+  if (!useHub) {
     const textR = (SP.ringWaist + SP.ringIn) / 2;
     art.add(arcText(`SURFTOBER 2026 · ${TIERS[tier].ring}`, textR, 4.5, SP.textT, M.ink(), true));
     art.add(arcText(NAME.toUpperCase(), textR, 4.5, SP.textT, M.ink(), false));
   }
 
   const frontFace = carrier.position.z + faceZ + SP.textT;     // highest spinning point on the front
-  const front = textMode === 'hub' ? buildHub(tier, frontFace + 0.6 - SP.t / 2) : buildCap(false, parts);
+  const front = useHub ? buildHub(tier, frontFace + 0.6 - SP.t / 2, bodyMode === 'spoked' ? SP.wideHubR : SP.hubR) : buildCap(false, parts);
   front.position.z = SP.t / 2; still.add(front);
   const back = buildCap(true, parts); back.rotation.y = Math.PI; back.position.z = -SP.t / 2; still.add(back);
   parts.push({ obj: front, z0: front.position.z, dz: 30 }, { obj: back, z0: back.position.z, dz: -20 });
@@ -394,6 +414,8 @@ function rebuild() {
   document.getElementById('cap').textContent = CAPTIONS[concept] + '  ·  Tier shown: ' + TIERS[tier].label + '  ·  Name: ' + NAME + ' (add ?name=YOURNAME to the URL).';
   document.querySelectorAll('#ui [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === concept));
   document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'contents' : 'none';
+  document.getElementById('armsn').style.display = concept === 'spinner' && bodyMode === 'spoked' ? '' : 'none';
+  if (concept === 'spinner' && bodyMode === 'spoked') document.getElementById('cap').textContent += `  ·  Body: one printed piece — wave ring on ${armsN} arms, text on a wide still hub that hides the arms.`;
 }
 document.querySelectorAll('#ui [data-c]').forEach(b => b.addEventListener('click', () => { concept = b.dataset.c; rebuild(); }));
 document.getElementById('tier').addEventListener('change', e => { tier = e.target.value; rebuild(); });
@@ -406,6 +428,8 @@ Object.entries(WAVE_VARIANTS).forEach(([k, v]) => document.getElementById('wavev
 document.getElementById('wavev').value = waveVariant;
 document.getElementById('bodym').value = bodyMode;
 document.getElementById('bodym').addEventListener('change', e => { bodyMode = e.target.value; rebuild(); });
+document.getElementById('armsn').value = String(armsN);
+document.getElementById('armsn').addEventListener('change', e => { armsN = +e.target.value; rebuild(); });
 document.getElementById('textm').value = textMode;
 document.getElementById('textm').addEventListener('change', e => { textMode = e.target.value; rebuild(); });
 document.getElementById('wavev').addEventListener('change', e => { waveVariant = e.target.value; waveN = WAVE_VARIANTS[waveVariant].N; if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; } rebuild(); });
@@ -420,7 +444,7 @@ document.getElementById('phonecam').addEventListener('click', e => {
 });
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
-window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); },
+window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); }, setBody: (b, n) => { bodyMode = b; if (n) { armsN = n; document.getElementById('armsn').value = String(n); } document.getElementById('bodym').value = b; rebuild(); },
   setExploded: v => { exploded = v; }, setBodySpin: v => { bodySpin = v; document.getElementById('bodyspin').classList.toggle('on', v); }, setFridge: v => { onFridge = v; if (current.userData.fridge) current.userData.fridge.visible = v; }, ready: false };
 
 new FontLoader().load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => { font = f; rebuild(); window.__trophy.ready = true; });
