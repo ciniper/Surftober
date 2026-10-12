@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Surftober 2026 — trophy concept mockups</title>
+<title>Surftober 2026 — spinner trophy mockup</title>
 <style>
   html,body{margin:0;height:100%;background:#f3ece2;font-family:system-ui,-apple-system,sans-serif;color:#2d2416}
   #ui{position:fixed;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:2}
@@ -14,10 +14,6 @@
 </head>
 <body>
 <div id="ui">
-  <button data-c="plaque" class="on">A · Modular plaque</button>
-  <button data-c="fin">B · Fin magnet</button>
-  <button data-c="spinner">C · Spinner magnet</button>
-  <button data-c="windmill">D · Windmill</button>
   <select id="tier"><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="participant">Participant</option></select>
   <span id="spinOpts" style="display:none">
     <select id="capc" title="Cap anodize colour"><option value="orange">Cap: orange</option><option value="navy">Cap: navy</option><option value="teal">Cap: teal</option></select>
@@ -55,10 +51,7 @@ const TIERS = {
   participant: { color: 0x3fa98f, metal: 0.2, rough: 0.6,  label: 'Participant (10 h)', ring: 'PARTICIPANT' },
 };
 const CAPTIONS = {
-  plaque:   'A · Modular plaque — laser-cut (or printed) wood base with the plover logo in relief, a medal-colour trim frame, and a separate name bar that slides into a slot. Bases cut in bulk; one name bar per person.',
-  fin:      'B · Fin magnet — a single surfboard fin in the medal colour, name and year raised on the face, magnet disc recessed into the back. Lives on the fridge.',
   spinner:  'C · Spinner magnet — a 608 bearing with an anodized magnet cap on the back (the N42 magnet sits on the inner race, so it never spins; only that cap touches the fridge). Body: stock tri-spinner + printed ring with rods through the lobe inserts, a printed disc with 12 M6 nuts sealed inside for weight, or a laser-cut metal disc (brass / stainless / copper = tier) on a printed hub. Text: on the spinning face, or on a still hub that replaces the front cap so it stays readable while spinning. Ring: disk + breaking wave (Phone-cam demo, or wave-demo.html), plain disk, or notched. Dimensions are placeholders.',
-  windmill: 'D · Windmill — the Ocean Beach Dutch windmill as a layered plaque, sails in the medal colour, name on the sand base.',
 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -131,38 +124,6 @@ function medallion(r, depth) {
   return g;
 }
 
-function buildPlaque(tier) {
-  const g = new THREE.Group();
-  const base = slab(roundedRect(120, 90, 8), 6, M.wood()); base.rotation.x = -Math.PI / 2; g.add(base);
-  const frame = slab(roundedRect(116, 86, 7), 2, M.tier(tier), [roundedRect(108, 78, 5)]); frame.rotation.x = -Math.PI / 2; frame.position.y = 6; g.add(frame);
-  const med = medallion(22, 2.5); med.position.set(0, 6 + 1.25, -8); g.add(med);
-  const title = text('SURFTOBER 2026', 6, 1.5, M.ink()); title.rotation.x = -Math.PI / 2; title.position.set(0, 6.2, -36); g.add(title);
-  // slot + removable name bar
-  const slotBack = slab(roundedRect(84, 18, 3), 1, M.wood2()); slotBack.rotation.x = -Math.PI / 2; slotBack.position.set(0, 5.2, 29); g.add(slotBack);
-  const bar = slab(roundedRect(80, 14, 3), 3, M.tier(tier)); bar.rotation.x = -Math.PI / 2; bar.position.set(0, 6.2, 29); g.add(bar);
-  const nm = text(NAME, 7, 1.2, M.ink()); nm.rotation.x = -Math.PI / 2; nm.position.set(0, 9.3, 29); g.add(nm);
-  const guide = text('name bar slides in from the side  →', 2.6, 0.4, M.wood2()); guide.rotation.x = -Math.PI / 2; guide.position.set(0, 6.1, 40); g.add(guide);
-  g.rotation.x = 0.25; g.position.y = 10; // tilted like an easel-back plaque
-  return g;
-}
-function finShape() {
-  const s = new THREE.Shape();
-  s.moveTo(-28, 0); s.bezierCurveTo(-26, 40, 10, 70, 26, 92); s.bezierCurveTo(22, 60, 30, 30, 34, 0); s.lineTo(-28, 0);
-  return s;
-}
-function buildFin(tier) {
-  const g = new THREE.Group();
-  const stand = slab(roundedRect(70, 22, 4), 5, M.wood()); stand.rotation.x = -Math.PI / 2; g.add(stand);
-  const fin = slab(finShape(), 4, M.tier(tier)); fin.position.set(0, 5, 2); g.add(fin);
-  const nm = text(NAME, 6.5, 1.2, M.ink()); nm.rotation.z = 0.9; nm.position.set(-4, 38, 6.3); g.add(nm);
-  const yr = text('SURFTOBER 2026', 3.6, 1, M.ink()); yr.rotation.z = 0.9; yr.position.set(5, 30, 6.3); g.add(yr);
-  const med = medallion(8, 1.5); med.rotation.x = Math.PI / 2; med.position.set(-10, 16, 6.8); g.add(med);
-  const magnet = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 1.5, 32), M.magnet()); magnet.rotation.x = Math.PI / 2; magnet.position.set(0, 24, 1.3); g.add(magnet);
-  return g;
-}
-// ---- C · spinner v2 (stock body + 608 + magnet cap + printed medal ring) ----
-// Dimensions in mm. Body numbers are a plausible stock tri-spinner, NOT a
-// measured part — measure the real body (lobe-hole Ø especially) before CAD.
 const SP = {
   d: 25, R: 13.5, waist: 14.5, hole: 11, t: 7,       // lobe-centre distance, lobe radius, narrowest web, hole radius (Ø22), body thickness
   capR: 9, capT: 3, spacerR: 5.5, spacerT: 0.8,      // Ø18 cap (14–20 range), spacer touches the inner race only
@@ -382,31 +343,10 @@ function buildSpinner(tier) {
   g.userData = { spinner: spin, parts, fridge, explode: exploded ? 1 : 0 };
   return g;
 }
-function buildWindmill(tier) {
-  const g = new THREE.Group();
-  const base = slab(roundedRect(100, 120, 8), 5, M.wood()); base.position.set(0, 0, -5); g.add(base);
-  const sky = slab(roundedRect(92, 112, 6), 1.5, M.navy()); sky.position.set(0, 0, 0); g.add(sky);
-  const sunD = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 1.2, 40), M.orange()); sunD.rotation.x = Math.PI / 2; sunD.position.set(26, 30, 2.2); g.add(sunD);
-  const duneShape = new THREE.Shape(); duneShape.moveTo(-46, -56); duneShape.quadraticCurveTo(0, -24, 46, -56); duneShape.lineTo(46, -56); duneShape.closePath();
-  const dune = slab(duneShape, 1.6, M.sand()); dune.position.set(0, 0, 1.5); g.add(dune);
-  // windmill: tower + cap + four sails
-  const tower = slab(new THREE.Shape([new THREE.Vector2(-11, -36), new THREE.Vector2(11, -36), new THREE.Vector2(6, 4), new THREE.Vector2(-6, 4)]), 2.5, M.wood2()); tower.position.set(-14, 0, 2.3); g.add(tower);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(9, 10, 24), M.ink()); cap.position.set(-14, 9, 3.5); g.add(cap);
-  for (let i = 0; i < 4; i++) {
-    const sail = new THREE.Mesh(new THREE.BoxGeometry(3, 26, 2), M.tier(tier)); sail.position.set(-14, 6, 5.5); sail.rotation.z = i * Math.PI / 2 + 0.4;
-    sail.geometry.translate(0, 13, 0); sail.castShadow = true; g.add(sail);
-  }
-  const title = text('SURFTOBER 2026', 5, 1.2, M.cream()); title.position.set(0, 44, 2.6); g.add(title);
-  const nm = text(NAME, 6.5, 1.5, M.ink()); nm.position.set(0, -44, 3.5); g.add(nm);
-  g.position.set(0, 62, 0);
-  return g;
-}
-
-const VIEWS = { plaque: { pos: [140, 110, 190], target: [0, 15, 0] }, fin: { pos: [40, 70, 230], target: [0, 45, 0] },
-                spinner: { pos: [80, 85, 190], target: [0, 50, 0] }, windmill: { pos: [30, 90, 310], target: [0, 62, 0] } };
+const VIEWS = { spinner: { pos: [20, 70, 230], target: [0, 40, 0] } };
 const PHONE_VIEW = { pos: [0, 40, 240], target: [0, 40, 0] };   // head-on, for the phone-cam demo
-const builders = { plaque: buildPlaque, fin: buildFin, spinner: buildSpinner, windmill: buildWindmill };
-let current = null, concept = 'plaque', tier = 'gold';
+const builders = { spinner: buildSpinner };
+let current = null, concept = 'spinner', tier = 'gold';
 function rebuild() {
   if (current) scene.remove(current);
   current = builders[concept](tier); scene.add(current);
