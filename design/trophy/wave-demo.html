@@ -43,7 +43,7 @@
       <option value="30">30 fps video</option><option value="60">60 fps video</option>
       <option value="120">120 fps slo-mo</option><option value="240">240 fps slo-mo</option></select></label>
     <label>Shutter <select id="shutter">
-      <option value="0.0005">1/2000 (sunlight)</option><option value="0.002" selected>1/500 (bright)</option><option value="0.008">1/120 (indoors)</option></select></label>
+      <option value="0.0005" selected>1/2000 (sunlight)</option><option value="0.002">1/500 (bright)</option><option value="0.008">1/120 (indoors)</option></select></label>
     <label>Spin <select id="dir"><option value="1">counter-clockwise</option><option value="-1">clockwise</option></select></label>
     <label>Speed <input id="rpm" type="range" min="0" max="2400" step="1"> <span id="rpmv" class="mono"></span></label>
     <button id="snap">Snap to sync</button>
@@ -163,7 +163,7 @@ function drawStrip() {
 // ---- motion ----
 const SLOW = 20;              // the slowed-down panel turns this many times slower than real
 const P = Object.fromEntries(['still', 'eye', 'phone', 'slowmo'].map(id => [id, { c: $(id), g: $(id).getContext('2d'), angle: 0, simT: 0, flickT0: 0 }]));
-let fps = 30, shutter = 0.002, dir = 1, rpm = 0, flick = false, paused = false, slow = false;
+let fps = 30, shutter = 0.0005, dir = 1, rpm = 0, flick = false, paused = false, slow = false;
 const syncRpm = (m = 1) => 60 * fps * m / N;
 const rpmAt = p => flick ? R0 * Math.exp(-(p.simT - p.flickT0) / TAU) : rpm;
 const fmt = n => (Math.round(n * 10) / 10).toString();

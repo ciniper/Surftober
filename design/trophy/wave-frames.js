@@ -67,24 +67,6 @@ export const WAVE_VARIANTS = {
     foam: [[0, [.57, .74, .055, 0]], [.1, [.68, .84, .06, 0]], [.2, [.77, .8, .065, .3]], [.3, [.84, .36, .1, .6]], [.4, [.8, .48, .17, 1]],
            [.55, [.76, .36, .14, .3]], [.7, [.71, .4, .1, 0]], [.8, [.68, .52, .08, 0]], [.9, [.64, .63, .065, 0]], [1, [.57, .74, .055, 0]]],
   },
-  // Foam pinned to the lip (2026-10-12, Chase: "minimal whitewater, always at the tip"). The
-  // surface is 'return'; the foam position is COMPUTED from the wave's own lip point each frame
-  // (see apexFoam), so it can't drift to the base or balloon at impact.
-  apex: {
-    label: 'Apex cap (minimal foam)', N: 10, mode: 'stay',
-    keys: [[0, 'peak'], [.1, 'throw'], [.2, 'barrel'], [.3, 'land'], [.4, 'impact'], [.55, 'rebuild'], [.75, 'rebuild2'], [1, 'peak']],
-    apex: { size: .045, spray: 0, trail: 0 },
-  },
-  apexspray: {
-    label: 'Apex cap + light spray', N: 10, mode: 'stay',
-    keys: [[0, 'peak'], [.1, 'throw'], [.2, 'barrel'], [.3, 'land'], [.4, 'impact'], [.55, 'rebuild'], [.75, 'rebuild2'], [1, 'peak']],
-    apex: { size: .05, spray: .5, trail: 0 },
-  },
-  feather: {
-    label: 'Feathering lip', N: 10, mode: 'stay',
-    keys: [[0, 'peak'], [.1, 'throw'], [.2, 'barrel'], [.3, 'land'], [.4, 'impact'], [.55, 'rebuild'], [.75, 'rebuild2'], [1, 'peak']],
-    apex: { size: .04, spray: .2, trail: 3 },
-  },
   barrel: {
     label: 'Barrel loop', N: 8, mode: 'stay',
     keys: [[0, 'peak'], [2 / 8, 'throw'], [3 / 8, 'barrel'], [4 / 8, 'land'], [5 / 8, 'impact'], [6 / 8, 'rebuild'], [7 / 8, 'rebuild2'], [1, 'peak']],
@@ -98,22 +80,6 @@ export const WAVE_DEFAULT = 'classic';
 const CLUSTER = [[0, 0, 1], [-.95, -.3, .75], [.95, -.25, .8], [-.5, .62, .68], [.52, .66, .62], [-1.7, -.55, .52], [1.7, -.5, .55], [0, -.75, .7]];
 // Spray droplets above the cluster: [du, dv × spray]
 const SPRAY = [[-.06, .1], [.01, .17], [.07, .09], [-.025, .26], [.05, .24]];
-// Tight three-circle cap for the lip-pinned styles
-const APEX_CLUSTER = [[0, 0, 1], [-.8, -.25, .7], [.75, -.2, .65]];
-// Foam that rides the lip: the wave's highest crest/lip point, nudged toward the lip tip so it
-// sits on the leading top edge. Spray only while the lip is actually thrown (tip ahead of and
-// above the crest). Trail = small circles back along the crest (points 7, 6, 5) for a feathering lip.
-function apexFoam(V, k) {
-  const pts = at(V.keys, k, name => SHAPES[name]);
-  let hi = 4; for (let i = 5; i <= 8; i++) if (pts[i][1] > pts[hi][1]) hi = i;
-  const apex = pts[hi], tip = pts[8];
-  const u = apex[0] + (tip[0] - apex[0]) * .55, v = Math.max(apex[1], tip[1]) + V.apex.size * .35;
-  const thrown = Math.min(Math.max((tip[0] - apex[0]) / .12, 0), 1) * Math.min(Math.max((tip[1] - SEA - .3) / .35, 0), 1);
-  const trail = [];
-  for (let i = 0; i < V.apex.trail; i++) { const q = pts[7 - i]; trail.push([q[0] - .01 * (i + 1), q[1] + V.apex.size * .3, V.apex.size * (.75 - i * .15)]); }
-  return { u, v, s: V.apex.size, spray: V.apex.spray * thrown, trail };
-}
-
 const mix = (a, b, k) => Array.isArray(a) ? a.map((x, i) => mix(x, b[i], k)) : a + (b - a) * k;
 function at(keys, t, pick = v => v) {
   t = Math.min(Math.max(t, keys[0][0]), keys[keys.length - 1][0]);
@@ -161,15 +127,13 @@ function wave(V, k, A, anchor, place, keep) {
   const X = u => place + (u - anchor) * DA / A;
   const surface = smooth(at(V.keys, k, name => SHAPES[name])).map(([u, v]) => [X(u), v]);
   const water = [[surface[0][0], 0], ...surface, [surface[surface.length - 1][0], 0]];
-  const ap = V.apex ? apexFoam(V, k) : null;
-  const [cu, cv, s, spray] = ap ? [ap.u, ap.v, ap.s, ap.spray] : at(V.foam, k), foam = [];
-  if (ap && ap.trail.length) ap.trail.forEach(([tu, tv, tr]) => foam.push(circle(X(tu), tv, tr, A)));
+  const [cu, cv, s, spray] = at(V.foam, k), foam = [];
   if (s > 0.01) {
     const add = (u, v, r) => {
       if (keep) { u = Math.min(Math.max(u, r / A), 1 - r / A); v = Math.min(Math.max(v, r + .02), TOP - r); } // whole circles inside the cell
       foam.push(circle(u, v, r, A));
     };
-    (ap ? APEX_CLUSTER : CLUSTER).forEach(([dx, dy, r]) => add(X(cu) + dx * s / A, cv + dy * s, r * s));
+    CLUSTER.forEach(([dx, dy, r]) => add(X(cu) + dx * s / A, cv + dy * s, r * s));
     if (spray > 0.05) SPRAY.forEach(([du, dv]) => add(X(cu + du), cv + s * 1.2 + dv * spray, .035));
   }
   return { water, foam };

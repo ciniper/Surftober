@@ -308,26 +308,14 @@ The new body option, `Body: printed ring on arms` in the viewer
 - Caption and arm-count selector update live; `setBody('spoked', 4)` from
   the console switches it for screenshots.
 
-## Wave foam pinned to the lip (Chase, 2026-10-12)
+## Wave foam — direction (Chase, 2026-10-12)
 
-Direction: "whitewater return" has the right surface, but the whitewater
-should be minimal and stay at the tip of the wave — always at the apex. The
-hand-keyed `return` foam swells to a big cluster at impact (the keyframe
-explosion). Three new styles keep its surface shapes and instead **compute**
-the foam position from the wave's own lip point every frame (`apexFoam` in
-wave-frames.js), so it cannot drift to the base or balloon:
-
-- `apex` — **Apex cap (minimal foam)**: a three-circle cap riding the leading
-  top edge, no spray. Foam area is constant, about 30× smaller than the old
-  impact frame.
-- `apexspray` — **Apex cap + light spray**: same cap, a few droplets only
-  while the lip is actually thrown forward and high.
-- `feather` — **Feathering lip**: smaller cap plus a thin streak trailing
-  back along the crest.
-
-Compare in the demo: `wave-demo.html?wave=apex|apexspray|feather`. Smallest
-foam drops are ~0.6 mm at the 10-slot size — check against the nozzle before
-committing to `apex`'s size; `size` in each variant is one number.
+"Whitewater return" is the keeper. Three computed "foam pinned to the lip"
+styles were tried the same day and dropped (last at trophy commit `97d319f`);
+they parked a small cap on the crest for the whole loop, which is not it.
+What Chase actually wants, if `return` is ever iterated: foam sits at the
+**apex before the wave breaks**, then **moves with the tip of the lip** as the
+lip pitches and comes down — minimal whitewater, no base explosion.
 
 ## Image-generation prompts (Midjourney / ChatGPT / Gemini)
 
