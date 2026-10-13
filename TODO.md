@@ -3,28 +3,21 @@
 ## Next up
 (Nothing queued — everything left before Oct 1 is under Event prep.)
 
-## Branch: photography-bonus (this branch only — not on main yet)
+## Branch: photography-bonus (built here — merge to main when Chase says go)
 
-- [ ] **One-time +1h Photography bonus** (Chase, 2026-10-13, mid-event idea).
-      Open question first: what earns it?
-      (a) a dedicated photo shoot — you spend the session on the beach
-          shooting the crew and post the photos to the album; or
-      (b) attaching a photo to one of your own logged sessions
-          (the Sep 1 "photo session bonus" idea under Ideas).
-      Recommended build if (a): a **fixed 1h session type** `photography`,
-      exactly like Water Reading — type select option + Bonuses checkbox
-      that sets the type, duration locks at 1:00, no stacked bonuses,
-      once-per-event guard keyed on `type === 'photography'` (reuse
-      bonusUsedForPeriod with a type predicate), badge in the Sessions
-      table, TYPE_LABELS/TYPE_HINTS, register.html welcome list,
-      version bump. `sessions.type` is unconstrained text, so **no DB
-      migration, no sheets-mirror change** — old cached clients just
-      render the type name and still score the locked hour correctly.
-      If (b): a `photo_bonus` boolean like `taught_kook` — needs an ALTER
-      TABLE, the PGRST204 strip chain in insertCloud, awards.js one-time
-      reduce, ONE_TIME_FLAGS badge, SESSION_COLS in the live Apps Script.
-      Mid-event: additive only (nobody loses hours), ship with an
-      announcement in the crew chat; existing sessions untouched.
+- [x] **One-time +1h Photo Shoot bonus** (Chase, 2026-10-13, mid-event) —
+      built as a fixed 1h session type `photography`, the Water Reading
+      pattern: Type option "Photo Shoot" + Bonuses checkbox that sets the
+      type, duration locks at 1:00, no stacked bonuses, once-per-event
+      guard keyed on type (bonusUsedForPeriod accepts `type:<value>`),
+      "Photo Shoot" badge in the Sessions table, hint + dropdown + register
+      copy all say: shooting from the beach earns the hour; shooting in the
+      water is a Swim, log that time as its own session. **No DB change, no
+      sheets-mirror change** — sessions.type is free text. v1.60.0.
+      Decided against: a stackable `photo_bonus` column (would need an
+      ALTER TABLE, the PGRST204 strip chain, awards.js reduce, Apps Script
+      re-paste) — Chase wanted no dependencies. Mid-event it is additive
+      only; announce in the crew chat when it ships.
 
 ## Scoped, awaiting a go
 
