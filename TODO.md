@@ -214,10 +214,12 @@
       3-vs-4 and weight notes. Decide arms after a test print.
       2026-10-12: ALL IN on the spinner — concepts A/B/D archived (last in
       full at trophy commit 4557532); viewer is spinner-only.
-      Wave foam: whitewater return is the base; three lip-pinned foam
-      styles added (apex / apex+spray / feather) — foam computed from the
-      lip each frame, so it stays at the apex and never balloons. Landing
-      page design/trophy/index.html links the 3D viewer + wave demo.
+      Wave foam: "whitewater return" stays the keeper; three computed
+      lip-pinned styles tried and dropped the same day (last at trophy
+      commit 97d319f). Spec if it's ever iterated: foam at the apex before
+      the break, then riding the TIP OF THE LIP as it pitches and comes
+      down — minimal whitewater. Landing page design/trophy/index.html
+      links the 3D viewer + wave demo; demo shutter defaults to sunlight.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
