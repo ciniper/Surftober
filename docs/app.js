@@ -1993,7 +1993,7 @@ function initForm() {
     other: 'Any other open water (ocean, river, lake) activity! Including kayaking, stand up paddle, etc…',
     cleanup: 'Beach trash pickup — a one-time +1 hour bonus',
     water: 'Water sampling with the SF Blue Water Task Force — a one-time +1 hour bonus',
-    photography: 'Shoot the crew from the beach and share the photos — a one-time +1 hour bonus. If you shoot in the water, you can also count the time in the water separately. Ensure to log that time as separate session.'
+    photography: 'Shoot the crew from the beach and share the photos — a one-time +1 hour bonus. If you shoot in the water, you can also count that time by logging a separate session.'
   };
 
   function updateBonusSummary(){
