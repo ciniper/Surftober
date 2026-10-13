@@ -3,6 +3,29 @@
 ## Next up
 (Nothing queued — everything left before Oct 1 is under Event prep.)
 
+## Branch: photography-bonus (this branch only — not on main yet)
+
+- [ ] **One-time +1h Photography bonus** (Chase, 2026-10-13, mid-event idea).
+      Open question first: what earns it?
+      (a) a dedicated photo shoot — you spend the session on the beach
+          shooting the crew and post the photos to the album; or
+      (b) attaching a photo to one of your own logged sessions
+          (the Sep 1 "photo session bonus" idea under Ideas).
+      Recommended build if (a): a **fixed 1h session type** `photography`,
+      exactly like Water Reading — type select option + Bonuses checkbox
+      that sets the type, duration locks at 1:00, no stacked bonuses,
+      once-per-event guard keyed on `type === 'photography'` (reuse
+      bonusUsedForPeriod with a type predicate), badge in the Sessions
+      table, TYPE_LABELS/TYPE_HINTS, register.html welcome list,
+      version bump. `sessions.type` is unconstrained text, so **no DB
+      migration, no sheets-mirror change** — old cached clients just
+      render the type name and still score the locked hour correctly.
+      If (b): a `photo_bonus` boolean like `taught_kook` — needs an ALTER
+      TABLE, the PGRST204 strip chain in insertCloud, awards.js one-time
+      reduce, ONE_TIME_FLAGS badge, SESSION_COLS in the live Apps Script.
+      Mid-event: additive only (nobody loses hours), ship with an
+      announcement in the crew chat; existing sessions untouched.
+
 ## Scoped, awaiting a go
 
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
