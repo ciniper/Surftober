@@ -1992,7 +1992,8 @@ function initForm() {
     swim: 'Open water swim, dipping, in-water photography',
     other: 'Any other open water (ocean, river, lake) activity! Including kayaking, stand up paddle, etc…',
     cleanup: 'Beach trash pickup — a one-time +1 hour bonus',
-    water: 'Water sampling with the SF Blue Water Task Force — a one-time +1 hour bonus'
+    water: 'Water sampling with the SF Blue Water Task Force — a one-time +1 hour bonus',
+    photography: 'Shoot the crew from the beach and share the photos — a one-time +1 hour bonus. Shooting in the water counts as a Swim: log that time as a separate session.'
   };
 
   function updateBonusSummary(){
@@ -2002,13 +2003,16 @@ function initForm() {
     if (document.getElementById('log-kook').checked) parts.push('Teach a Kook +1h');
     if (document.getElementById('log-water').checked) parts.push('Water Reading');
     if (document.getElementById('log-cleanup').checked) parts.push('Beach Cleanup');
+    if (document.getElementById('log-photo-shoot').checked) parts.push('Photo Shoot');
     document.getElementById('bonus-summary').textContent = parts.length ? parts.join(' · ') : 'None';
   }
 
-  // Session types whose bonus box drives the type (and vice versa). Both are
+  // Session types whose bonus box drives the type (and vice versa). All are
   // fixed +1h sessions: duration locks at 1:00 and no other bonus can stack.
-  const FIXED_TYPE_BOX = { cleanup: 'log-cleanup', water: 'log-water' };
-  const ALL_BONUS_BOXES = ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water', 'log-cleanup'];
+  // Photo Shoot (v1.60.0) has no column of its own — it is identified by
+  // type alone, so it needs no schema change.
+  const FIXED_TYPE_BOX = { cleanup: 'log-cleanup', water: 'log-water', photography: 'log-photo-shoot' };
+  const ALL_BONUS_BOXES = ['log-no-wetsuit', 'log-costume', 'log-kook', 'log-water', 'log-cleanup', 'log-photo-shoot'];
 
   function applyTypeUI() {
     const type = document.getElementById('log-type').value;
@@ -2042,17 +2046,21 @@ function initForm() {
     if (isFixed) document.getElementById(FIXED_TYPE_BOX[type]).disabled = false;
     document.getElementById('log-cleanup').checked = type === 'cleanup';
     document.getElementById('log-water').checked = type === 'water';
+    document.getElementById('log-photo-shoot').checked = type === 'photography';
     const hint = document.getElementById('log-type-hint');
     if (hint) hint.textContent = TYPE_HINTS[type] || '';
     updateBonusSummary();
   }
 
-  // Once-per-event bonuses: costume, teach-a-kook, water-quality reading.
-  // Each checkbox locks once that user has already claimed it this event.
+  // Once-per-event bonuses: costume, teach-a-kook, water-quality reading,
+  // photo shoot. Each checkbox locks once that user has already claimed it
+  // this event. A key of 'type:<value>' matches on session type instead of
+  // a flag column (Photo Shoot has no column).
   const ONE_TIME_BONUSES = [
     { id: 'log-costume', key: 'costume', label: 'Costume' },
     { id: 'log-kook', key: 'taught_kook', label: 'Teach a Kook' },
-    { id: 'log-water', key: 'water_reading', label: 'Water reading' }
+    { id: 'log-water', key: 'water_reading', label: 'Water reading' },
+    { id: 'log-photo-shoot', key: 'type:photography', label: 'Photo Shoot' }
   ];
 
   function applyCostumeGuard() {
@@ -2081,12 +2089,15 @@ function initForm() {
     try {
       const ev = activeEvent || viewedEvent || DEFAULT_EVENT;
       const all = loadSessions();
+      const claimed = key.startsWith('type:')
+        ? (s) => s.type === key.slice('type:'.length)
+        : (s) => s[key] === 1 || s[key] === true || String(s[key]) === '1';
       return all.some(
         (s) =>
           (s.user || '').trim() === user.trim() &&
           (!editingId || s._id !== editingId) &&
           SurftoberAwards.inRange(s.date, { start: ev.start_date, end: ev.end_date }) &&
-          (s[key] === 1 || s[key] === true || String(s[key]) === '1')
+          claimed(s)
       );
     } catch {
       return false;
@@ -2135,7 +2146,8 @@ function initForm() {
     const logType = document.getElementById('log-type').value;
     const isCleanup = logType === 'cleanup';
     const isWater = logType === 'water';
-    const isFixed = isCleanup || isWater; // fixed 1h session, no stacked bonuses
+    const isPhotoShoot = logType === 'photography';
+    const isFixed = isCleanup || isWater || isPhotoShoot; // fixed 1h session, no stacked bonuses
     const row = {
       user: document.getElementById('log-user').value.trim(),
       date: document.getElementById('log-date').value,
@@ -2163,6 +2175,10 @@ function initForm() {
     }
     if (isWater && bonusUsedForPeriod(row.user, row.date, 'water_reading')) {
       toast('Water Quality Reading already claimed this event — it\'s a one-time bonus.', 'warn');
+      return;
+    }
+    if (isPhotoShoot && bonusUsedForPeriod(row.user, row.date, 'type:photography')) {
+      toast('Photo Shoot already claimed this event — it\'s a one-time bonus.', 'warn');
       return;
     }
     if (!activeEvent) {
@@ -2376,7 +2392,7 @@ function startEditSession(session){
   document.getElementById('log-no-wetsuit').checked = !!session.no_wetsuit;
   document.getElementById('log-costume').checked = !!session.costume;
   document.getElementById('log-kook').checked = !!session.taught_kook;
-  // (log-cleanup / log-water mirror the type via applyTypeUI on the
+  // (log-cleanup / log-water / log-photo-shoot mirror the type via applyTypeUI on the
   // change dispatch below)
   document.getElementById('btn-submit').textContent = 'Update Entry';
   document.getElementById('btn-cancel-edit').style.display = '';
@@ -2492,7 +2508,8 @@ const TYPE_LABELS = {
   swim: 'Swim',
   other: 'Other',
   cleanup: 'Beach Cleanup',
-  water: 'Water Reading'
+  water: 'Water Reading',
+  photography: 'Photo Shoot'
 };
 const typeLabel = (t) => TYPE_LABELS[t] || t || '';
 
@@ -2707,7 +2724,8 @@ function renderMyStats() {
       s.no_wetsuit ? '<span class="badge">No Wetsuit ×2</span>' : '',
       ...appliedFlags.map((f) => `<span class="badge">${f.badge}</span>`),
       s.type === 'cleanup' ? '<span class="badge">Cleanup</span>' : '',
-      s.type === 'water' ? '<span class="badge">Water Reading</span>' : ''
+      s.type === 'water' ? '<span class="badge">Water Reading</span>' : '',
+      s.type === 'photography' ? '<span class="badge">Photo Shoot</span>' : ''
     ]
       .filter(Boolean)
       .join(' ');
