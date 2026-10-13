@@ -3,22 +3,6 @@
 ## Next up
 (Nothing queued — everything left before Oct 1 is under Event prep.)
 
-## Branch: photography-bonus (built here — merge to main when Chase says go)
-
-- [x] **One-time +1h Photo Shoot bonus** (Chase, 2026-10-13, mid-event) —
-      built as a fixed 1h session type `photography`, the Water Reading
-      pattern: Type option "Photo Shoot" + Bonuses checkbox that sets the
-      type, duration locks at 1:00, no stacked bonuses, once-per-event
-      guard keyed on type (bonusUsedForPeriod accepts `type:<value>`),
-      "Photo Shoot" badge in the Sessions table, hint + dropdown + register
-      copy all say: shooting from the beach earns the hour; shooting in the
-      water is a Swim, log that time as its own session. **No DB change, no
-      sheets-mirror change** — sessions.type is free text. v1.60.0.
-      Decided against: a stackable `photo_bonus` column (would need an
-      ALTER TABLE, the PGRST204 strip chain, awards.js reduce, Apps Script
-      re-paste) — Chase wanted no dependencies. Mid-event it is additive
-      only; announce in the crew chat when it ships.
-
 ## Scoped, awaiting a go
 
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
@@ -189,6 +173,20 @@
 - [ ] Trophy design (Chase, 2026-09-10)
 
 ## Done
+
+- [x] ~~One-time +1h Photo Shoot bonus~~ (Chase, 2026-10-13, mid-event; shipped v1.60.3 on prod 2026-10-13, prod verified byte-identical) —
+      built as a fixed 1h session type `photography`, the Water Reading
+      pattern: Type option "Photo Shoot" + Bonuses checkbox that sets the
+      type, duration locks at 1:00, no stacked bonuses, once-per-event
+      guard keyed on type (bonusUsedForPeriod accepts `type:<value>`),
+      "Photo Shoot" badge in the Sessions table, hint + dropdown + register
+      copy all say: shooting from the beach earns the hour; shooting in the
+      water is a Swim, log that time as its own session. **No DB change, no
+      sheets-mirror change** — sessions.type is free text. v1.60.0–v1.60.3 (three copy passes on the in-water note).
+      Decided against: a stackable `photo_bonus` column (would need an
+      ALTER TABLE, the PGRST204 strip chain, awards.js reduce, Apps Script
+      re-paste) — Chase wanted no dependencies. Mid-event it is additive
+      only; announce in the crew chat (Chase).
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
       live 2026-09-30 after Chase tested the branch preview; Rohan's report
       2026-09-29). Diagnosis from his screen recording: the iOS picker sat on
