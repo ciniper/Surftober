@@ -67,6 +67,24 @@ export const WAVE_VARIANTS = {
     foam: [[0, [.57, .74, .055, 0]], [.1, [.68, .84, .06, 0]], [.2, [.77, .8, .065, .3]], [.3, [.84, .36, .1, .6]], [.4, [.8, .48, .17, 1]],
            [.55, [.76, .36, .14, .3]], [.7, [.71, .4, .1, 0]], [.8, [.68, .52, .08, 0]], [.9, [.64, .63, .065, 0]], [1, [.57, .74, .055, 0]]],
   },
+  // "Foam on the lip" iterations (Chase, 2026-10-12): same surfaces as the originals, but the
+  // foam is anchored to the wave's LIP-TIP point (surface point 8) every frame — the top-front of
+  // the swell before it breaks, the pitching lip as it throws and comes down — with a size curve
+  // that stays modest through impact instead of the hand-placed explosion. `tip.size` and
+  // `tip.spray` are keyed on loop time like the shapes.
+  returntip: {
+    label: 'Whitewater return · foam on the lip', N: 10, mode: 'stay',
+    keys: [[0, 'peak'], [.1, 'throw'], [.2, 'barrel'], [.3, 'land'], [.4, 'impact'], [.55, 'rebuild'], [.75, 'rebuild2'], [1, 'peak']],
+    tip: { size: [[0, .055], [.1, .06], [.2, .07], [.3, .085], [.4, .095], [.55, .075], [.75, .06], [1, .055]],
+           spray: [[0, 0], [.2, 0], [.3, .45], [.4, .3], [.5, 0], [1, 0]] },
+  },
+  classictip: {
+    label: 'Classic break · foam on the lip', N: 12, mode: 'stay',
+    keys: [[0, 'swell'], [2 / 12, 'rising'], [4 / 12, 'peak'], [5 / 12, 'throw'], [6 / 12, 'barrel'], [7 / 12, 'land'],
+           [8 / 12, 'impact'], [9 / 12, 'slump'], [10 / 12, 'reswell1'], [11 / 12, 'reswell2'], [1, 'swell']],
+    tip: { size: [[0, 0], [2 / 12, .03], [4 / 12, .05], [5 / 12, .06], [6 / 12, .07], [7 / 12, .09], [8 / 12, .1], [9 / 12, .085], [10 / 12, .06], [11 / 12, .03], [1, 0]],
+           spray: [[0, 0], [6 / 12, 0], [7 / 12, .45], [8 / 12, .3], [9 / 12, 0], [1, 0]] },
+  },
   barrel: {
     label: 'Barrel loop', N: 8, mode: 'stay',
     keys: [[0, 'peak'], [2 / 8, 'throw'], [3 / 8, 'barrel'], [4 / 8, 'land'], [5 / 8, 'impact'], [6 / 8, 'rebuild'], [7 / 8, 'rebuild2'], [1, 'peak']],
@@ -127,7 +145,12 @@ function wave(V, k, A, anchor, place, keep) {
   const X = u => place + (u - anchor) * DA / A;
   const surface = smooth(at(V.keys, k, name => SHAPES[name])).map(([u, v]) => [X(u), v]);
   const water = [[surface[0][0], 0], ...surface, [surface[surface.length - 1][0], 0]];
-  const [cu, cv, s, spray] = at(V.foam, k), foam = [];
+  let cu, cv, s, spray;
+  if (V.tip) {                                   // foam rides the lip tip (surface point 8)
+    const tipPt = at(V.keys, k, name => SHAPES[name])[8];
+    s = at(V.tip.size, k); spray = at(V.tip.spray, k); cu = tipPt[0]; cv = tipPt[1] + s * .25;
+  } else [cu, cv, s, spray] = at(V.foam, k);
+  const foam = [];
   if (s > 0.01) {
     const add = (u, v, r) => {
       if (keep) { u = Math.min(Math.max(u, r / A), 1 - r / A); v = Math.min(Math.max(v, r + .02), TOP - r); } // whole circles inside the cell

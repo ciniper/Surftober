@@ -317,6 +317,12 @@ What Chase actually wants, if `return` is ever iterated: foam sits at the
 **apex before the wave breaks**, then **moves with the tip of the lip** as the
 lip pitches and comes down — minimal whitewater, no base explosion.
 
+Built as `returntip` and `classictip` (2026-10-12, second attempt): same
+surface keys as the originals, foam anchored to the lip-tip point every frame
+with a keyed size curve (peaks ~0.1 at impact vs 0.17 before) and a little
+spray only at landing. Compare: `wave-demo.html?wave=returntip` /
+`?wave=classictip` against `return` / `classic`.
+
 ## Image-generation prompts (Midjourney / ChatGPT / Gemini)
 
 Prepend the shared style line to each concept prompt. For other tiers swap

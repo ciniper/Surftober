@@ -220,6 +220,8 @@
       the break, then riding the TIP OF THE LIP as it pitches and comes
       down — minimal whitewater. Landing page design/trophy/index.html
       links the 3D viewer + wave demo; demo shutter defaults to sunlight.
+      Second attempt built: returntip / classictip (foam anchored to the
+      lip-tip point, modest size curve) — awaiting Chase's verdict.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
