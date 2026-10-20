@@ -24,6 +24,7 @@
     <select id="wavev" title="Wave animation style"></select>
     <select id="bodym" title="What spins"><option value="stock">Body: stock spinner + ring</option><option value="printed">Body: printed disc + bearing</option><option value="metal">Body: metal disc + bearing</option><option value="spoked">Body: printed ring on arms</option></select>
     <select id="armsn" title="Arms carrying the ring (ring-on-arms body only)"><option value="3">3 arms</option><option value="4">4 arms</option></select>
+    <select id="weightm" title="Bought metal weight in the tier colour (ring-on-arms body only)"><option value="none">Weight: none (solid print)</option><option value="bezel">Weight: metal O-ring bezel in the rim</option><option value="cog">Weight: bike cog behind the ring</option></select>
     <select id="textm" title="Where the text goes"><option value="ring">Text: on the ring (spins)</option><option value="hub">Text: on a still hub</option></select>
     <button id="phonecam">Phone-cam demo</button>
   </span>
@@ -50,6 +51,11 @@ const TIERS = {
   silver:      { color: 0xc8ccd2, metal: 0.85, rough: 0.25,  label: 'Silver (30 h)', ring: 'SILVER' },
   bronze:      { color: 0xb87333, metal: 0.8, rough: 0.35,  label: 'Bronze (20 h)', ring: 'BRONZE' },
   participant: { color: 0x3fa98f, metal: 0.2, rough: 0.6,  label: 'Participant (10 h)', ring: 'PARTICIPANT' },
+};
+const WEIGHT_CAPTIONS = {
+  none:  '  ·  Weight: solid print only (~30 g; six M6 nuts can still be sealed into the ring at the arm roots).',
+  bezel: '  ·  Weight: a bought Ø80 × 3.5 mm metal O-ring in the tier metal (brass / stainless / copper) snapped into a groove around the rim — ~20 g at the very edge, about doubles spin time. The metal IS the tier colour, so the print is one neutral filament for everyone.',
+  cog:   '  ·  Weight: a 19T single-speed bike cog (steel, ~60 g, sold gold / chrome / black / copper-plated) glued to a boss behind the body; only the teeth show past the rim. Heaviest option, roughly 3× the spin inertia; print is one neutral filament, the cog finish is the tier.',
 };
 const CAPTIONS = {
   spinner:  'C · Spinner magnet — a 608 bearing with an anodized magnet cap on the back (the N42 magnet sits on the inner race, so it never spins; only that cap touches the fridge). Body: stock tri-spinner + printed ring with rods through the lobe inserts, a printed disc with 12 M6 nuts sealed inside for weight, or a laser-cut metal disc (brass / stainless / copper = tier) on a printed hub. Text: on the spinning face, or on a still hub that replaces the front cap so it stays readable while spinning. Ring: disk + breaking wave (Phone-cam demo, or wave-demo.html), plain disk, or notched. Dimensions are placeholders.',
@@ -139,6 +145,8 @@ const SP = {
   rodR: 3.85, rodLen: 6.8,                           // Ø7.7 rods, full length through the insert, 0.2 short of the back face
   spokeHubOut: 16, spokeRingIn: 27.5, armW: 9,       // ring-on-arms body: printed hub on the 608, arms out to the wave ring
   wideHubR: 25.5,                                    // still front hub wide enough to hide the arms (leaves a 2 mm reveal before the ring)
+  bezelWire: 3.5, bezelProud: 0.6,                   // craft metal O-ring (Ø80 × 3.5 mm wire) snapped into a half-round groove around the rim, standing 0.6 proud
+  cogTeeth: 19, cogTip: 42.6, cogRoot: 39.2, cogBore: 17.5, cogT: 2.3, // 19T 3/32" track cog behind the body: teeth show past the r 40 rim, bore sits on a printed boss
 };
 const CAP_COLORS = { orange: 0xff6b35, navy: 0x1d3050, teal: 0x3aa9a3 };
 let capColor = 'orange', exploded = false, onFridge = false, bodySpin = true, phoneCam = false;
@@ -146,6 +154,7 @@ let ringMode = new URLSearchParams(location.search).get('ring') || 'wave'; // wa
 let bodyMode = new URLSearchParams(location.search).get('body') || 'stock';   // stock | printed | metal
 let textMode = new URLSearchParams(location.search).get('text') || 'ring';    // ring | hub
 let armsN = +new URLSearchParams(location.search).get('arms') || 3;          // 3 | 4, ring-on-arms body only
+let weightMode = new URLSearchParams(location.search).get('weight') || 'none'; // none | bezel | cog, ring-on-arms body only
 let waveVariant = WAVE_VARIANTS[new URLSearchParams(location.search).get('wave')] ? new URLSearchParams(location.search).get('wave') : WAVE_DEFAULT;
 let waveN = +new URLSearchParams(location.search).get('frames') || WAVE_VARIANTS[waveVariant].N;
 
@@ -258,6 +267,16 @@ function buildHub(tier, standoff, hubR = SP.hubR) {
   if (hubR > 20) { const med = medallion(6.5, 1.2); med.rotation.x = Math.PI / 2; med.position.z = standoff + SP.hubT + 0.6; hub.add(med); }
   return hub;
 }
+// Single-speed bike cog: N pointed teeth between root and tip radius, round bore.
+function cogShape(N, rTip, rRoot, rBore) {
+  const pts = [], pitch = Math.PI * 2 / N;
+  for (let i = 0; i < N; i++) {
+    const a = i * pitch;
+    [[rRoot, 0], [rRoot, .18], [rTip, .4], [rTip, .6], [rRoot, .82]].forEach(([r, f]) => pts.push(new THREE.Vector2(r * Math.cos(a + f * pitch), r * Math.sin(a + f * pitch))));
+  }
+  const s = new THREE.Shape(pts), h = new THREE.Path(); h.absarc(0, 0, rBore, 0, Math.PI * 2, true); s.holes.push(h);
+  return s;
+}
 function buildSpinner(tier) {
   const g = new THREE.Group(), parts = [];
   const steel = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, metalness: 0.9, roughness: 0.2 });
@@ -301,7 +320,9 @@ function buildSpinner(tier) {
     // out at the rim where the mass does the most good. The still front hub (wideHubR) covers the
     // arms almost entirely, so what shows is the ring, a thin dark reveal, and the text hub.
     carrier = new THREE.Group(); spin.add(carrier); faceZ = SP.t / 2;
-    const tierMat = M.tier(tier);
+    // With a metal weight fitted, the metal carries the tier colour and the print goes neutral (one
+    // bone-coloured filament for every trophy); without it the print itself is in the tier colour.
+    const tierMat = weightMode === 'none' ? M.tier(tier) : new THREE.MeshStandardMaterial({ color: 0xe9e1cf, roughness: 0.75 });
     const hubRing = annulus(SP.spokeHubOut, 11, SP.t, tierMat, 0.4); hubRing.position.z = -SP.t / 2; carrier.add(hubRing);
     for (let i = 0; i < armsN; i++) {
       const a = Math.PI / 2 + i * 2 * Math.PI / armsN, len = SP.spokeRingIn - SP.spokeHubOut + 1.5, mid = (SP.spokeHubOut + SP.spokeRingIn) / 2;
@@ -310,6 +331,21 @@ function buildSpinner(tier) {
     }
     const rim = outline(tierMat, SP.spokeRingIn, SP.t); rim.position.z = -SP.t / 2; carrier.add(rim);
     parts.push({ obj: carrier, z0: 0, dz: 14 });
+    if (weightMode === 'bezel') {
+      // Bought metal O-ring (macramé / craft ring: steel, brass, copper, or plated) in the tier colour,
+      // snapped into a half-round groove around the rim, standing just proud so it reads as a bezel.
+      // ~18–21 g at r ≈ 38 — roughly doubles the solid ring's spin inertia. Separate part in the exploded view.
+      const wr = SP.bezelWire / 2, bez = new THREE.Mesh(new THREE.TorusGeometry(SP.ringOut - wr + SP.bezelProud, wr, 20, 160), metalMat(tier));
+      bez.castShadow = true; bez.receiveShadow = true; spin.add(bez);
+      parts.push({ obj: bez, z0: 0, dz: 26 });
+    } else if (weightMode === 'cog') {
+      // Single-speed bike cog (steel 19T, Ø ≈ 85 tip, ~60 g, sold gold / silver / black / copper-plated) glued onto a
+      // printed boss behind the body. Only the teeth show past the rim from the front — the "outer gear" look.
+      const cog = new THREE.Mesh(new THREE.ExtrudeGeometry(cogShape(SP.cogTeeth, SP.cogTip, SP.cogRoot, SP.cogBore), { depth: SP.cogT, bevelEnabled: false, curveSegments: 48 }), metalMat(tier));
+      cog.castShadow = true; cog.receiveShadow = true; cog.position.z = -SP.t / 2 - SP.cogT; spin.add(cog);
+      const boss = annulus(SP.cogBore - 0.1, 11, SP.cogT, tierMat); boss.position.z = -SP.t / 2 - SP.cogT; spin.add(boss);
+      parts.push({ obj: cog, z0: cog.position.z, dz: -12 });
+    }
   } else {
     // Laser-cut metal disc (the metal is the tier colour) glued to a printed hub that holds the 608
     const hubMat = new THREE.MeshStandardMaterial({ color: 0x22262c, roughness: 0.6 });
@@ -356,7 +392,8 @@ function rebuild() {
   document.querySelectorAll('#ui [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === concept));
   document.getElementById('spinOpts').style.display = concept === 'spinner' ? 'contents' : 'none';
   document.getElementById('armsn').style.display = concept === 'spinner' && bodyMode === 'spoked' ? '' : 'none';
-  if (concept === 'spinner' && bodyMode === 'spoked') document.getElementById('cap').textContent += `  ·  Body: one printed piece — wave ring on ${armsN} arms, text on a wide still hub that hides the arms.`;
+  document.getElementById('weightm').style.display = concept === 'spinner' && bodyMode === 'spoked' ? '' : 'none';
+  if (concept === 'spinner' && bodyMode === 'spoked') document.getElementById('cap').textContent += `  ·  Body: one printed piece — wave ring on ${armsN} arms, text on a wide still hub that hides the arms.` + WEIGHT_CAPTIONS[weightMode];
 }
 document.querySelectorAll('#ui [data-c]').forEach(b => b.addEventListener('click', () => { concept = b.dataset.c; rebuild(); }));
 document.getElementById('tier').addEventListener('change', e => { tier = e.target.value; rebuild(); });
@@ -371,6 +408,8 @@ document.getElementById('bodym').value = bodyMode;
 document.getElementById('bodym').addEventListener('change', e => { bodyMode = e.target.value; rebuild(); });
 document.getElementById('armsn').value = String(armsN);
 document.getElementById('armsn').addEventListener('change', e => { armsN = +e.target.value; rebuild(); });
+document.getElementById('weightm').value = weightMode;
+document.getElementById('weightm').addEventListener('change', e => { weightMode = e.target.value; rebuild(); });
 document.getElementById('textm').value = textMode;
 document.getElementById('textm').addEventListener('change', e => { textMode = e.target.value; rebuild(); });
 document.getElementById('wavev').addEventListener('change', e => { waveVariant = e.target.value; waveN = WAVE_VARIANTS[waveVariant].N; if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; } rebuild(); });
@@ -386,7 +425,7 @@ document.getElementById('phonecam').addEventListener('click', e => {
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
 window.__trophy = { setConcept: c => { concept = c; rebuild(); }, setTier: t => { tier = t; rebuild(); }, setBody: (b, n) => { bodyMode = b; if (n) { armsN = n; document.getElementById('armsn').value = String(n); } document.getElementById('bodym').value = b; rebuild(); },
-  setExploded: v => { exploded = v; }, setBodySpin: v => { bodySpin = v; document.getElementById('bodyspin').classList.toggle('on', v); }, setFridge: v => { onFridge = v; if (current.userData.fridge) current.userData.fridge.visible = v; }, ready: false };
+  setWeight: w => { weightMode = w; document.getElementById('weightm').value = w; rebuild(); }, setExploded: v => { exploded = v; }, setBodySpin: v => { bodySpin = v; document.getElementById('bodyspin').classList.toggle('on', v); }, setFridge: v => { onFridge = v; if (current.userData.fridge) current.userData.fridge.visible = v; }, ready: false };
 
 new FontLoader().load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => { font = f; rebuild(); window.__trophy.ready = true; });
 

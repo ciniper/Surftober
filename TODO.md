@@ -222,6 +222,13 @@
       links the 3D viewer + wave demo; demo shutter defaults to sunlight.
       Second attempt built: returntip / classictip (foam anchored to the
       lip-tip point, modest size curve) — awaiting Chase's verdict.
+      2026-10-19: metal weight ring. Viewer "Weight:" selector / ?weight=
+      bezel (bought Ø80 × 3.5 mm metal O-ring in a groove round the rim,
+      ~+20 g, ~2× spin inertia) or cog (19T bike cog glued behind the body,
+      teeth show past the rim, ~+60 g, ~3×); with a weight fitted the print
+      goes neutral bone and the metal (brass / stainless / copper) IS the
+      tier colour. Numbers + sourcing in README "Metal weight ring".
+      Decide after timing a test print bare vs ring vs cog.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
