@@ -308,6 +308,59 @@ The new body option, `Body: printed ring on arms` in the viewer
 - Caption and arm-count selector update live; `setBody('spoked', 4)` from
   the console switches it for screenshots.
 
+## Metal weight ring — and the metal as the tier colour (Chase, 2026-10-19)
+
+Question: is there a metal ring or outer gear we could build in for spin
+weight, visible is fine, maybe even as the tier indicator? Yes — two
+bought parts fit the ring-on-arms body without changing the print much,
+and both come in brass / stainless / copper finishes, so the metal can BE
+the tier and the print becomes one neutral filament for every trophy.
+Viewer: `Weight:` selector (ring-on-arms body only) or `?weight=bezel|cog`;
+with a weight fitted the print renders bone-coloured, the metal in the
+tier colour.
+
+| Spinning mass | Weight | Spin inertia (g·mm²) | vs solid print |
+|---|---|---|---|
+| Solid bone print (ring r 27.5→40 × 7, arms, hub) | ~30 g | ~29k | 1× |
+| + 12 M6 nuts sealed in (old disc idea, for reference) | ~60 g | ~46k | 1.6× |
+| **+ O-ring bezel** Ø80 × 3.5 mm wire, steel / brass / copper | +18–21 g | ~57k | **~2×** |
+| **+ bike cog** 19T 3/32" steel, Ø85 tip, 2.3 mm | +~60 g | ~89k | **~3×** |
+
+Inertia is what sets spin time once the bearing is cleaned; mass at the
+rim counts for r², which is why 20 g of ring at r 38 beats 30 g of nuts
+at r 33.
+
+**Bezel (lead if we want subtle).** A craft "metal O-ring" (macramé /
+dreamcatcher rings: steel in silver, gold and antique-bronze finishes;
+solid brass and copper rings from jewellery suppliers) snapped into a
+half-round groove around the outer face of the wave ring, standing ~0.6 mm
+proud so it reads as a bezel. Doesn't touch the wave art on the front
+face. Print the groove to the ring you buy: groove centre radius = ring
+OD / 2 − wire / 2; a 3" (76 mm) ring means ringOut 38, an 80 mm ring
+means 40. Glue with a drop of CA at three points; the groove's lip holds
+it. Tiers: brass = gold, stainless = silver, copper = bronze, black-oxide
+steel = participant.
+
+**Cog (lead if we want the gear look and the weight).** A single-speed /
+track cog, 18–19T for 3/32" chain (tip Ø ≈ 80–85 mm, bore 1.37" × 24 tpi
+≈ 34.8 mm, 2.3 mm thick, ~55–65 g in steel), glued onto a printed boss
+behind the body — print the boss at the thread's minor diameter and it
+threads/presses on. From the front only the teeth show past the r 40 rim;
+from the back it's a bike part. Finishes: gold-plated and chrome are
+everywhere (fixie market), black is everywhere, copper-plated steel is
+rare — for bronze either a copper-tone anodized aluminium cog (looks
+right, but only ~15 g) or a black cog and let the hub text carry the tier.
+Adds 2.3 mm behind the body; still clears the 3.8 mm back-cap stand-off
+and the fridge. Overall Ø grows to ~85.
+
+**Neutral print.** If the metal carries the tier, the whole run prints in
+one filament (bone / cream here so the navy wave reads), the only per-tier
+difference is the bought ring or cog. That's less filament swapping and a
+more "trophy-like" material mix than coloured plastic.
+
+Test-print plan: print one bone ring body, spin it bare, then with a $3
+craft ring and a $8 cog, and time each. Pick by feel and by look.
+
 ## Wave foam — direction (Chase, 2026-10-12)
 
 "Whitewater return" is the keeper. Three computed "foam pinned to the lip"
