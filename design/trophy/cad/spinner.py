@@ -19,6 +19,8 @@ usage (from design/trophy/cad, after `./setup.sh`):
   .venv/bin/python spinner.py --name NAHLA --arms 3 --wave return
   .venv/bin/python spinner.py --weight bezel --bezel flat --name KAI
   .venv/bin/python spinner.py --weight cog --arms 4 --no-stl   # STEP only
+  .venv/bin/python spinner.py --only ring --wave return        # just the wave ring + inlays (test print)
+  .venv/bin/python spinner.py --parts hub,hub-text --name KAI   # any subset of the parts
 
 Everything lands in ./out/ as STL (one per print colour, print orientation),
 plus spinner.step — a coloured assembly of all parts in their mounted positions.
@@ -115,16 +117,20 @@ def build(a):
     t, inl = P['t'], P['inlay']
     report = {}
 
-    # ---- body: hub ring + arms + rim --------------------------------------
-    body = cyl(P['hub_out'], 0, t, P['bore'] / 2)
-    arm_len = P['ring_in'] - P['hub_out'] + 1.5
-    mid = (P['hub_out'] + P['ring_in']) / 2
-    for i in range(a.arms):
-        ang = 90 + i * 360 / a.arms
-        arm = (cq.Workplane('XY').box(arm_len, P['arm_w'], t, centered=(True, True, False))
-               .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), ang))
-        body = body.union(arm)
-    body = body.union(cyl(P['ring_out'], 0, t, P['ring_in']))
+    # ---- body: hub ring + arms + rim (or just the rim with --only ring) ------
+    if a.only == 'ring':
+        t = a.ring_t or t
+        body = cyl(P['ring_out'], 0, t, P['ring_in'])
+    else:
+        body = cyl(P['hub_out'], 0, t, P['bore'] / 2)
+        arm_len = P['ring_in'] - P['hub_out'] + 1.5
+        mid = (P['hub_out'] + P['ring_in']) / 2
+        for i in range(a.arms):
+            ang = 90 + i * 360 / a.arms
+            arm = (cq.Workplane('XY').box(arm_len, P['arm_w'], t, centered=(True, True, False))
+                   .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), ang))
+            body = body.union(arm)
+        body = body.union(cyl(P['ring_out'], 0, t, P['ring_in']))
 
     # ---- wave artwork: flush inlays in the front face ----------------------
     art = wave_polys(a.wave, a.frames, P['wave_in'], P['wave_out'])
@@ -154,7 +160,7 @@ def build(a):
         ring_r_out = g_in + P['flat_clear'] + ring_w
         extras['metal-ring-flat'] = cyl(ring_r_out, t / 2 - P['flat_t'] / 2, P['flat_t'], ring_r_out - ring_w)
         report['flat ring'] = f'OD {2 * ring_r_out:.1f} × ID {2 * (ring_r_out - ring_w):.1f} × {P["flat_t"]} mm (DXF written)'
-    elif a.weight == 'cog':
+    elif a.weight == 'cog' and a.only != 'ring':
         boss = cyl(P['cog_bore'] / 2 - 0.1, -P['cog_t'], P['cog_t'], 12.0)
         body = body.union(boss)
         report['cog boss'] = f'Ø{P["cog_bore"] - 0.2:.1f} × {P["cog_t"]} mm behind the body'
@@ -179,7 +185,7 @@ def build(a):
     # ---- bearing, for the STEP only -----------------------------------------
     bearing = cyl(11, 0, t, 9.6).union(cyl(6.05, 0, t, 4.0)).union(cyl(9.6, 0.3, t - 0.6, 6.05))
 
-    return dict(body=body, water=water, foam=foam, hub=hub, text=text, cap=cap, bearing=bearing, extras=extras, art=art, report=report)
+    return dict(body=body, water=water, foam=foam, hub=hub, text=text, cap=cap, bearing=bearing, extras=extras, art=art, report=report, t=t)
 
 
 def main():
@@ -190,6 +196,9 @@ def main():
     ap.add_argument('--frames', type=int, default=0, help='slot count; 0 = the variant default')
     ap.add_argument('--weight', default='none', choices=['none', 'bezel', 'cog'])
     ap.add_argument('--bezel', default='flat', choices=['flat', 'round'], help='flat = laser-cut ring (SendCutSend), round = craft wire ring')
+    ap.add_argument('--only', default='all', choices=['all', 'ring'], help='ring = just the wave ring (r 27.5–40) with its inlays, no hub/arms/caps — a test print of the animation')
+    ap.add_argument('--ring-t', type=float, default=0, help='ring thickness for --only ring (default: the body thickness, 7)')
+    ap.add_argument('--parts', default='', help='comma list of parts to write, e.g. body,wave-water,wave-foam (default: all)')
     ap.add_argument('--out', default=os.path.join(HERE, 'out'))
     ap.add_argument('--no-stl', action='store_true')
     ap.add_argument('--no-step', action='store_true')
@@ -199,6 +208,9 @@ def main():
     m = build(a)
     t = P['t']
     tag = f"{a.name.lower()}-{a.arms}arm-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else ''))
+    if a.only == 'ring':
+        tag = f"ring-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else '')) + (f"-t{a.ring_t:g}" if a.ring_t else '')
+    t = m['t']
 
     # print orientation: body back face down; hub text face down; cap fridge face down
     flip = lambda wp: wp.rotate((0, 0, 0), (1, 0, 0), 180)
@@ -208,8 +220,16 @@ def main():
         'hub': flip(m['hub']).translate((0, 0, hub_z0)), 'hub-text': flip(m['text']).translate((0, 0, hub_z0)),
         'back-cap': m['cap'].translate((0, 0, P['cap_spacer'] + P['cap_t'])),
     }
-    if a.weight == 'cog':
+    if a.weight == 'cog' and a.only != 'ring':
         prints['body'] = prints['body'].translate((0, 0, P['cog_t']))
+    if a.only == 'ring':
+        prints = {k: v for k, v in prints.items() if k in ('body', 'wave-water', 'wave-foam')}
+    if a.parts:
+        want = {x.strip() for x in a.parts.split(',')}
+        unknown = want - set(prints)
+        if unknown:
+            sys.exit(f'unknown part(s) {sorted(unknown)}; choose from {sorted(prints)}')
+        prints = {k: v for k, v in prints.items() if k in want}
 
     print(f'\n{tag}  —  {m["art"]["label"]}, {m["art"]["N"]} frames, {a.arms} arms, weight: {a.weight}')
     print(f'{"part":<12}{"valid":<7}{"volume mm³":>12}{"PLA g":>8}')
@@ -233,13 +253,13 @@ def main():
         asm = cq.Assembly(name='surftober-spinner')
         navy, cream, bone, steel, metal = (cq.Color(0.11, 0.19, 0.31), cq.Color(0.94, 0.9, 0.82), cq.Color(0.91, 0.88, 0.81),
                                            cq.Color(0.75, 0.77, 0.8), cq.Color(0.85, 0.72, 0.36))
-        asm.add(m['body'], name='body', color=bone)
-        if m['water'] is not None: asm.add(m['water'], name='wave-water', color=navy)
-        if m['foam'] is not None: asm.add(m['foam'], name='wave-foam', color=cream)
-        asm.add(m['hub'], name='hub', color=navy, loc=cq.Location(cq.Vector(0, 0, t)))
-        asm.add(m['text'], name='hub-text', color=metal, loc=cq.Location(cq.Vector(0, 0, t)))
-        asm.add(m['cap'], name='back-cap', color=cq.Color(1.0, 0.42, 0.21))
-        asm.add(m['bearing'], name='608-bearing', color=steel)
+        if 'body' in prints: asm.add(m['body'], name='body', color=bone)
+        if 'wave-water' in prints and m['water'] is not None: asm.add(m['water'], name='wave-water', color=navy)
+        if 'wave-foam' in prints and m['foam'] is not None: asm.add(m['foam'], name='wave-foam', color=cream)
+        if 'hub' in prints: asm.add(m['hub'], name='hub', color=navy, loc=cq.Location(cq.Vector(0, 0, t)))
+        if 'hub-text' in prints: asm.add(m['text'], name='hub-text', color=metal, loc=cq.Location(cq.Vector(0, 0, t)))
+        if 'back-cap' in prints: asm.add(m['cap'], name='back-cap', color=cq.Color(1.0, 0.42, 0.21))
+        if a.only != 'ring': asm.add(m['bearing'], name='608-bearing', color=steel)
         for k, v in m['extras'].items():
             asm.add(v, name=k, color=metal)
         asm.export(os.path.join(a.out, f'{tag}.step'))

@@ -235,6 +235,8 @@
       --weight bezel (flat ring + SendCutSend DXF, or round) / cog, --arms,
       --wave, --name. cad/view.html checks the output in the browser. Next:
       first test print (tune bore 21.9 / stem 8.1 press fits), then time it.
+      --only ring (+ --ring-t) prints just the animated ring; --parts picks
+      any subset; viewer "CAD command" button shows the matching command.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

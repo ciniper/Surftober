@@ -27,6 +27,7 @@
     <select id="weightm" title="Bought metal weight in the tier colour (ring-on-arms body only)"><option value="none">Weight: none (solid print)</option><option value="bezel">Weight: metal O-ring bezel in the rim</option><option value="cog">Weight: bike cog behind the ring</option></select>
     <select id="textm" title="Where the text goes"><option value="ring">Text: on the ring (spins)</option><option value="hub">Text: on a still hub</option></select>
     <button id="phonecam">Phone-cam demo</button>
+    <button id="cadcmd" title="Show the spinner.py command that generates STL/STEP for what's on screen">CAD command</button>
   </span>
   <button id="spin" class="on">Auto-rotate</button>
   <button id="png">Download PNG</button>
@@ -421,6 +422,22 @@ document.getElementById('phonecam').addEventListener('click', e => {
   if (ringMode !== 'wave') { ringMode = 'wave'; document.getElementById('ringm').value = 'wave'; rebuild(); }
   controls.autoRotate = false; document.getElementById('spin').classList.remove('on');
   camera.position.set(...PHONE_VIEW.pos); controls.target.set(...PHONE_VIEW.target); controls.update();
+});
+// The cad/spinner.py command for the configuration on screen (ring-on-arms body only — that's what the generator builds)
+function cadCommand(onlyRing) {
+  const parts = [`--name ${NAME.toUpperCase()}`, `--arms ${armsN}`, `--wave ${waveVariant}`];
+  if (waveN !== WAVE_VARIANTS[waveVariant].N) parts.push(`--frames ${waveN}`);
+  if (weightMode !== 'none') parts.push(`--weight ${weightMode}` + (weightMode === 'bezel' ? ' --bezel flat' : ''));
+  if (onlyRing) parts.push('--only ring');
+  return `.venv/bin/python spinner.py ${parts.join(' ')}`;
+}
+document.getElementById('cadcmd').addEventListener('click', () => {
+  const full = cadCommand(false), ring = cadCommand(true);
+  const box = document.getElementById('cadbox') || document.body.appendChild(Object.assign(document.createElement('pre'), { id: 'cadbox' }));
+  box.style.cssText = 'position:fixed;left:10px;bottom:70px;max-width:calc(100% - 20px);margin:0;padding:10px 12px;background:#fff8f0;border:1px solid #e3d6c0;border-radius:10px;font-size:12px;white-space:pre-wrap;z-index:5';
+  box.textContent = `# in design/trophy/cad (after ./setup.sh) — STL per print colour + STEP into cad/out/\n${full}\n\n# just the wave ring with its inlays, for a test print of the animation\n${ring}\n\n(click to copy the first command; see cad/view.html to check the result)`;
+  box.onclick = () => { navigator.clipboard?.writeText(full); box.style.borderColor = '#ff6b35'; };
+  if (bodyMode !== 'spoked') box.textContent += '\n\nNote: the generator builds the ring-on-arms body; switch Body to "printed ring on arms" to match.';
 });
 document.getElementById('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); });
 document.getElementById('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${concept}-${tier}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
