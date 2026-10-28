@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(HERE, 'out')
 PY = sys.executable
-ALLOWED = {'preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'weight', 'bezel', 'parts'}
+ALLOWED = {'preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'weight', 'bezel', 'parts'}
 lock = threading.Lock()
 
 

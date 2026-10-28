@@ -244,7 +244,10 @@
       cad/serve.py runs the generator from the browser (port 8930); outputs
       = per-part STL + multi-part 3MF + STEP + manifest. Ring widened 50 %
       (r 27.5–46.5, Ø93; body ~44 g). mockups.html / cad/view.html removed.
-      --art inlay|raised|none. Next: Bambu test print of the one-colour ring.
+      --art inlay|raised|none; text=recessed|inlay|raised (recessed default,
+      Chase 2026-10-27). Waves scale to fit slots narrower than their design
+      cell (the wider band was clipping them) and frames default to auto (8
+      on this band). Next: Bambu test print of the one-colour ring.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

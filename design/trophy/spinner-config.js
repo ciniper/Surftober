@@ -10,7 +10,7 @@
 // Coordinates: the spinner axis is z, the 608 bearing sits at z 0…7 with its
 // front face at z = 7 (the face you look at), the fridge is behind z = 0.
 
-import { WAVE_VARIANTS, WAVE_DEFAULT } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames } from './wave-frames.js';
 
 // ---------------------------------------------------------------------------
 // Dimensions (mm)
@@ -83,8 +83,8 @@ export const PARTS = [
     generated: true, color: 'cream', filament: 'cream', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
   { id: 'hub',        group: 'Still parts',    label: 'Front hub',    detail: 'Rides the inner race; hides the arms; carries the text',
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
-  { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom',
-    generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.art !== 'none' },
+  { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
+    generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
   { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Inner-race cap with the magnet pocket; the only fridge contact',
     generated: true, color: 'cap',   filament: 'any (or anodized aluminium)', print: { flip: false, z: DIM.capSpacer + DIM.capT } },
   { id: 'bearing',    group: 'Bought',         label: '608 bearing',  detail: '8 × 22 × 7 — cleaned, no grease, for spin time', color: 'steel' },
@@ -105,9 +105,11 @@ export const OPTIONS = {
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
   wave:   { label: 'Wave',       type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
-  frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = the wave style’s own count' },
-  art:    { label: 'Artwork',    type: 'choice', default: 'inlay',  values: ['inlay', 'raised', 'none'],
+  frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
+  art:    { label: 'Wave',       type: 'choice', default: 'inlay',  values: ['inlay', 'raised', 'none'],
             labels: { inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
+  text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
+            labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
   weight: { label: 'Weight',     type: 'choice', default: 'none',   values: ['none', 'bezel', 'cog'],
             labels: { none: 'None — solid print', bezel: 'Metal bezel ring in the rim', cog: 'Bike cog behind the ring' } },
   bezel:  { label: 'Bezel ring', type: 'choice', default: 'flat',   values: ['flat', 'round'],
@@ -145,7 +147,7 @@ export function serializeOptions(o) {
   }
   return q.toString();
 }
-export const frameCount = o => o.frames || WAVE_VARIANTS[o.wave].N;
+export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
 
 // The parts the generator will actually write for these options.
 export const partsToGenerate = o => generatedParts(o).filter(id => !o.parts || o.parts.includes(id));
@@ -154,10 +156,11 @@ export const partsToGenerate = o => generatedParts(o).filter(id => !o.parts || o
 // name when a part carries it, `ring` for the spinning piece alone, `parts` otherwise.
 export function outputTag(o) {
   const gen = partsToGenerate(o);
-  const who = gen.includes('hub-text') ? slug(o.name) : gen.every(id => PART[id].group === 'Spinning piece') ? 'ring' : 'parts';
+  const who = gen.some(id => id === 'hub' || id === 'hub-text') ? slug(o.name) : gen.every(id => PART[id].group === 'Spinning piece') ? 'ring' : 'parts';
   return [who, `${o.arms}arm`, `${o.wave}${frameCount(o)}`]
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
     .concat(o.art === 'inlay' ? [] : [o.art])
+    .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .join('-');
 }
 export const slug = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'spinner';
@@ -167,6 +170,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   const args = [`--name "${o.name}"`, `--arms ${o.arms}`, `--wave ${o.wave}`];
   if (o.frames) args.push(`--frames ${o.frames}`);
   if (o.art !== 'inlay') args.push(`--art ${o.art}`);
+  if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
   if (o.parts) args.push(`--parts ${partsToGenerate(o).join(',')}`);
   return `${python} spinner.py ${args.join(' ')}`;

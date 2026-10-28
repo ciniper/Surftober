@@ -142,14 +142,18 @@ const circle = (u, v, r, A, n = 18) => Array.from({ length: n }, (_, i) => { con
 
 // One wave (surface + foam) at key time `k`, placed so design-cell u `anchor` lands on cell u `at`.
 function wave(V, k, A, anchor, place, keep) {
-  const X = u => place + (u - anchor) * DA / A;
-  const surface = smooth(at(V.keys, k, name => SHAPES[name])).map(([u, v]) => [X(u), v]);
+  // Cells narrower than the design cell (A < DA) would clip the wave at the slot edges, so the
+  // whole wave is scaled down uniformly to fit; wider cells just get more flat sea either side.
+  const fit = Math.min(1, A / DA);
+  const X = u => place + (u - anchor) * DA / A * fit, Y = v => SEA + (v - SEA) * fit;
+  const surface = smooth(at(V.keys, k, name => SHAPES[name])).map(([u, v]) => [X(u), Y(v)]);
   const water = [[surface[0][0], 0], ...surface, [surface[surface.length - 1][0], 0]];
   let cu, cv, s, spray;
   if (V.tip) {                                   // foam rides the lip tip (surface point 8)
     const tipPt = at(V.keys, k, name => SHAPES[name])[8];
     s = at(V.tip.size, k); spray = at(V.tip.spray, k); cu = tipPt[0]; cv = tipPt[1] + s * .25;
   } else [cu, cv, s, spray] = at(V.foam, k);
+  cv = Y(cv); s *= fit; spray *= fit;
   const foam = [];
   if (s > 0.01) {
     const add = (u, v, r) => {
@@ -179,6 +183,13 @@ export function waveFrame(variant, t, A = DA) {
 
 // Cell aspect for N slots on an r rIn–rOut band (width at mid-radius / height).
 export const cellAspect = (N, rIn, rOut) => (Math.PI * (rIn + rOut) / N) / (rOut - rIn);
+// Default slot count for a band: the most slots (up to the style's own count) whose cells are
+// still at least as wide as the design cell, so the wave fills its slot without being shrunk.
+export function autoFrames(variant, rIn, rOut, min = 6, max = 16) {
+  const V = WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT];
+  for (let N = Math.min(V.N, max); N > min; N--) if (cellAspect(N, rIn, rOut) >= DA * 0.95) return N;
+  return min;
+}
 
 // All N frames bent onto the ring band, in mm around the spinner axis (y up).
 // Slot 0 is at the top; slots and frames advance clockwise.
