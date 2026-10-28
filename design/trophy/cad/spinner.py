@@ -194,6 +194,7 @@ def main():
     ap.add_argument('--bezel', default='flat', choices=['flat', 'round'], help='flat = laser-cut ring (SendCutSend), round = craft wire ring')
     ap.add_argument('--only', default='all', choices=['all', 'ring'], help='ring = just the spinning piece (hub + arms + wave ring) with its inlays; no still hub, text or back cap')
     ap.add_argument('--parts', default='', help='comma list of parts to write, e.g. body,wave-water,wave-foam (default: all)')
+    ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl: every written part in one file (separate shells — Bambu Studio: right-click → Split → To parts to colour them)')
     ap.add_argument('--out', default=os.path.join(HERE, 'out'))
     ap.add_argument('--no-stl', action='store_true')
     ap.add_argument('--no-step', action='store_true')
@@ -237,6 +238,10 @@ def main():
             cq.exporters.export(wp, os.path.join(a.out, f'{tag}-{name}.stl'), tolerance=0.01, angularTolerance=0.05)
     for k, v in m['report'].items():
         print(f'  {k}: {v}')
+    if a.combined and not a.no_stl:
+        allp = cq.Workplane('XY').add([wp.val() for wp in prints.values() if wp is not None])
+        cq.exporters.export(allp, os.path.join(a.out, f'{tag}-all.stl'), tolerance=0.01, angularTolerance=0.05)
+        print(f'combined  → {tag}-all.stl ({len(prints)} shells in one file)')
 
     if a.weight == 'bezel' and a.bezel == 'flat':
         ring = m['extras']['metal-ring-flat'].val()
