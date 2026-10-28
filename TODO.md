@@ -247,7 +247,10 @@
       --art inlay|raised|none; text=recessed|inlay|raised (recessed default,
       Chase 2026-10-27). Waves scale to fit slots narrower than their design
       cell (the wider band was clipping them) and frames default to auto (8
-      on this band). Next: Bambu test print of the one-colour ring.
+      on this band). Then ring moved 10 mm outward (arms +10, r 37.5–56.5,
+      Ø113): slots wide enough for the native 10 frames at full size; body
+      ~56 g, ~4× the Ø80 spin inertia; arms show 12 mm between hub and ring.
+      Next: Bambu test print of the one-colour ring.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
