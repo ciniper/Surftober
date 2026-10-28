@@ -403,6 +403,13 @@ behind the body for a 1.37"×24 tpi track cog. All dimensions sit in the `P`
 dict at the top of the script — bore and stem press fits (`bore`, `stem_d`)
 are the two to tune after the first print.
 
+**Just one component.** `--only ring` builds only the wave ring (r 27.5–40)
+with its water and foam inlays — no hub, arms or caps — tagged
+`ring-<wave><N>`; add `--ring-t 3` for a thinner, faster test coin of the
+animation. `--parts body,wave-water,wave-foam` (any subset of the six names)
+limits which files are written for a full build. The viewer's **CAD
+command** button prints both commands for whatever is on screen.
+
 Quick visual check without a slicer: `cad/view.html` (linked from the
 landing page) lists whatever is in `out/`, shows the parts mounted, exploded,
 or as wireframe. Mass check from the generator (PLA, 100 %): body ~29 g,
