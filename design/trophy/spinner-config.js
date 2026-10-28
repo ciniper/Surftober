@@ -16,9 +16,12 @@ import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames } from './wave-frames.js';
 // Dimensions (mm)
 // ---------------------------------------------------------------------------
 // Ring proportions (Chase, 2026-10-27): the ring is 50 % wider than the first
-// cut (12.5 → 19 mm), growing outward only — inner radius and hub unchanged,
-// so the trophy is Ø93 overall instead of Ø80. More rim mass = longer spins.
-const RING_IN = 27.5, RING_OUT = 46.5;
+// cut (12.5 → 19 mm) and sits 10 mm further out on longer arms (r 27.5 → 37.5),
+// so the trophy is Ø113 overall (was Ø80). The longer arms widen every slot of
+// the wave band: the whitewater return fits its native 10 frames at full size
+// (cell aspect 1.98 vs the 2.06 design cell). Hub unchanged at r 25.5, so the
+// arms show for 12 mm between hub and ring. Rim mass ×2 = much longer spins.
+const RING_IN = 37.5, RING_OUT = 56.5;
 
 export const DIM = {
   // 608 bearing — the one bought part every option shares
@@ -29,7 +32,7 @@ export const DIM = {
   bore: 21.9,                   // press fit on the Ø22 outer race (21.8 tight … 22.0 loose — tune after print 1)
   hubOut: 16,                   // printed hub radius around the bearing
   armW: 9,
-  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø93 overall
+  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø113 overall
   waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.6, // artwork band on the ring's front face (15.3 wide)
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   relief: 0.6, reliefFoam: 0.9, // raised artwork heights (one-colour)
@@ -47,7 +50,7 @@ export const DIM = {
   // bought weights, in the tier metal
   bezelWire: 3.5, bezelProud: 0.6,                            // round craft ring Ø(2·ringOut) × 3.5 wire in a half-round groove (Ø93 is not a stock craft size — buy 3.5" and print to it, or go flat)
   flatOd: 2 * RING_OUT, flatId: 2 * RING_OUT - 7, flatT: 3.18, flatClear: 0.15,  // laser-cut flat ring, 3.5 mm wide section (SendCutSend 0.125")
-  cogTeeth: 22, cogTip: 48.8, cogRoot: 45.4, cogBore: 34.8, cogT: 2.3,  // 22T 3/32" track cog (tip Ø ≈ 97) so the teeth clear the Ø93 rim; 1.37"×24 tpi bore
+  cogTeeth: 22, cogTip: 48.8, cogRoot: 45.4, cogBore: 34.8, cogT: 2.3,  // 22T 3/32" track cog (tip Ø ≈ 97): hidden behind a Ø113 rim now — the cog option only makes sense with a chainring (≥ 46T) or as pure hidden weight
   cogBossIn: 12,
 };
 export const PLA_G_PER_MM3 = 1.24e-3;

@@ -105,20 +105,25 @@ volumes, grams, files.
 ## Dimensions
 
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
-hub r 16, arms 9 wide, **ring r 27.5 → 46.5** (Ø93; widened 50 % on
-2026-10-27, growing outward only), wave band r 30.6 → 45.9, inlays 0.6 deep,
-relief 0.6 / 0.9 (water / foam). Front hub r 25.5 (2 mm reveal to the ring),
-stem Ø8.1 × 3.3. Press fits to tune after the first print: `bore` and `stemD`.
+hub r 16, arms 9 wide, **ring r 37.5 → 56.5** (Ø113: widened 50 % and moved
+10 mm outward on 2026-10-27 — the longer arms widen the wave slots so the
+whitewater return fits its native 10 frames at full size), wave band
+r 40.6 → 55.9, inlays 0.6 deep, relief 0.6 / 0.9 (water / foam). Front hub
+r 25.5 (the arms show for 12 mm between hub and ring), stem Ø8.1 × 3.3.
+Press fits to tune after the first print: `bore` and `stemD`.
 
 | spinning mass | PLA | note |
 |---|---|---|
-| body, 3 arms, inlay pockets | ~44 g | the generator prints exact grams per part |
-| body, one-colour relief | ~46 g | |
-| + flat bezel ring (93 × 86 × 3.18) | +~27 g brass | rim mass, tier metal |
-| + 22T bike cog | +~70 g steel | heaviest, teeth past the rim |
+| body, 3 arms, inlay pockets | ~58 g | the generator prints exact grams per part |
+| body, one-colour relief | ~60 g | |
+| + flat bezel ring (113 × 106 × 3.18) | +~33 g brass | rim mass, tier metal |
+| + bike cog | — | a track cog hides behind a Ø113 rim; only as hidden weight, or a chainring |
 
-Mass at the rim counts for r², so the wider ring already spins much longer
-than the Ø80 version did; try it bare before adding metal.
+Mass at the rim counts for r², so this ring has about four times the spin
+inertia of the Ø80 version; try it bare before adding metal.
+
+Ring-size history: Ø80 (r 27.5–40, 8.8 mm band, 2026-10-12) → Ø93 (r 27.5–46.5,
+50 % wider band, 2026-10-27) → Ø113 (same band, 10 mm further out, 2026-10-27).
 
 # Design notes and decision log
 
