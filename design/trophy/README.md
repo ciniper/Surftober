@@ -73,8 +73,9 @@ URL, the generator (`--url` or flags) and the manifest.
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
 | `wave` | classic · rolling · return · barrel · returntip · classictip | return | animation style (see wave demo) |
-| `frames` | 0 · 6…16 | 0 = style's own | slots around the band; fewer = faster loop, bigger art |
-| `art` | inlay · raised · none | inlay | flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
+| `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
+| `art` | inlay · raised · none | inlay | wave: flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
+| `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
@@ -89,7 +90,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `wave-water` | spinning | navy water inlays, flush (inlay art only) | STL | navy |
 | `wave-foam` | spinning | cream foam inlays, flush (inlay art only) | STL | cream |
 | `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
-| `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays (inlay art only; raised text is fused into the hub) | STL | tier colour |
+| `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays — only with `text=inlay` (recessed = pocket in the hub, raised = fused into it) | STL | tier colour |
 | `back-cap` | still | Ø18 × 3 cap, stem, Ø10.2 × 2.1 magnet pocket | STL, fridge face down | any / anodized Al |
 | `bearing` · `magnet` · `weight` | bought | reference bodies | STEP only | — |
 

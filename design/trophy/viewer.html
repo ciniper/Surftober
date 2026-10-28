@@ -208,7 +208,7 @@ function renderOptions() {
     const row = document.createElement('label'); row.className = 'row'; row.innerHTML = `<span>${spec.label}</span>`;
     let ctl;
     if (spec.type === 'choice') { ctl = document.createElement('select'); spec.values.forEach(v => ctl.add(new Option(spec.labels?.[v] ?? v, v))); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
-    else if (spec.type === 'int') { ctl = document.createElement('select'); ctl.add(new Option(`style default (${WAVE_VARIANTS[o.wave].N})`, 0)); for (let n = spec.min; n <= spec.max; n++) ctl.add(new Option(`${n} frames`, n)); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
+    else if (spec.type === 'int') { ctl = document.createElement('select'); ctl.add(new Option(`auto (${frameCount({ ...o, frames: 0 })})`, 0)); for (let n = spec.min; n <= spec.max; n++) ctl.add(new Option(`${n} frames`, n)); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
     else { ctl = document.createElement('input'); ctl.type = 'text'; ctl.maxLength = spec.max; ctl.value = o[k]; ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
     row.appendChild(ctl); box.appendChild(row);
   }
@@ -255,8 +255,8 @@ function partInfo(id) {
     body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608 · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
     'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm flush inlay`,
     'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm flush inlay, on top of the water`,
-    hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring`,
-    'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${o.art === 'inlay' ? `${D.inlay} mm inlay` : 'raised'}`,
+    hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`,
+    'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${D.inlay} mm flush inlay`,
     'back-cap': `Ø${2 * D.capR} × ${D.capT} mm · stem Ø${D.stemD} · pocket Ø${D.magPocketD} × ${D.magPocketDepth} for the magnet`,
     bearing: `608: ${D.bearing.id} × ${D.bearing.od} × ${D.bearing.w} mm · outer race spins with the body, inner race carries hub + cap`,
     magnet: `Ø${D.magD} × ${D.magT} N42 disc · in the back cap, on the inner race — never spins, only part that touches the fridge`,
@@ -267,7 +267,7 @@ function partInfo(id) {
 function updateInfo() {
   const gen = partsToGenerate(o), grams = view.generated && manifests.find(m => m.tag === view.generated);
   $('info').innerHTML = selected ? partInfo(selected)
-    : `<b>${TIERS[o.tier].label}</b> · ${o.name.toUpperCase()} · ${o.arms} arms · ${WAVE_VARIANTS[o.wave].label} (${frameCount(o)}) · ${OPTIONS.art.labels[o.art]} · weight: ${OPTIONS.weight.labels[o.weight]}`
+    : `<b>${TIERS[o.tier].label}</b> · ${o.name.toUpperCase()} · ${o.arms} arms · ${WAVE_VARIANTS[o.wave].label} (${frameCount(o)}) · wave: ${OPTIONS.art.labels[o.art]} · text: ${OPTIONS.text.labels[o.text]} · weight: ${OPTIONS.weight.labels[o.weight]}`
       + ` · generate writes ${gen.length} part${gen.length === 1 ? '' : 's'}: ${gen.join(', ') || 'none'}`
       + (grams ? ` · generated set shown: ${grams.parts.reduce((s, p) => s + p.grams_pla, 0).toFixed(1)} g PLA` : '')
       + ' · click a part to inspect it';

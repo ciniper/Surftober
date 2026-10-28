@@ -19,6 +19,7 @@ export function materials(o) {
     foam:   std(COLORS.cream),
     hub:    std(COLORS.navy, { roughness: 0.5, ...flush }),
     text:   std(tier.color, { metalness: tier.metal, roughness: tier.rough }),
+    engraved: std(0x0e1829, { roughness: 0.9 }),   // the floor of a recess, drawn flush on the hub face
     cap:    std(CAP_COLORS[o.cap], { metalness: 0.65, roughness: 0.32 }),
     steel:  std(COLORS.steel, { metalness: 0.9, roughness: 0.2 }),
     shield: std(COLORS.shield, { roughness: 0.55 }),
@@ -103,7 +104,8 @@ const builders = {
     g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));
     g.add(zcyl(D.spacerR, t, D.standoff, M.hub));
     g.add(annulus(D.hubR, 0, zDisc, D.hubT, M.hub, 0.5));
-    if (o.art === 'raised' && font) g.add(hubText(o, font, M.hub, zDisc + D.hubT, D.relief));
+    if (font && o.text === 'raised') g.add(hubText(o, font, M.hub, zDisc + D.hubT, D.relief));
+    if (font && o.text === 'recessed') g.add(hubText(o, font, M.engraved, zDisc + D.hubT - 0.02, 0.02));   // preview of the engraving; the STL has the real pocket
     return g;
   },
   'hub-text'(o, M, font) { return font ? hubText(o, font, M.text, D.t + D.standoff + D.hubT - D.inlay, D.inlay) : new THREE.Group(); },

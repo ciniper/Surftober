@@ -44,7 +44,7 @@ def list_everything():
     print('parts (generated):')
     for p in cfg['generate']:
         print(f"  {p['id']:<11} {p['group']:<16} {p['filament']}")
-    print('\nquery options: name, tier, arms (3|4), wave, frames, art (inlay|raised|none), weight (none|bezel|cog), bezel (flat|round), parts')
+    print('\nquery options: name, tier, arms (3|4), wave, frames, art (inlay|raised|none), text (recessed|inlay|raised), weight (none|bezel|cog), bezel (flat|round), parts')
     print('presets: full, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
 
 
@@ -191,16 +191,16 @@ class Spinner:
         hub = (cyl(D['stemD'] / 2, t - D['stemLen'], D['stemLen'])
                .union(cyl(D['spacerR'], t, D['standoff']))
                .union(cyl(D['hubR'], z_disc, D['hubT'])))
-        if o['art'] == 'inlay':
+        if o['text'] in ('recessed', 'inlay'):      # engraved pocket; the inlay part fills it when text=inlay
             hub = hub.cut(self._text(z_disc + D['hubT'] - D['inlay'], D['inlay']))
-        elif o['art'] == 'raised':
+        elif o['text'] == 'raised':
             hub = hub.union(self._text(z_disc + D['hubT'] - 0.2, D['relief'] + 0.2))
         return hub
 
     def hub_text(self):
         D, t, o = self.D, self.t, self.o
-        if o['art'] != 'inlay':
-            return None     # raised text is fused into the hub; a plain ring has no text part
+        if o['text'] != 'inlay':
+            return None     # recessed text is a pocket in the hub, raised text is fused into it
         return self._text(t + D['standoff'] + D['hubT'] - D['inlay'], D['inlay'])
 
     def back_cap(self):
@@ -283,7 +283,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('name', 'tier', 'wave', 'art', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('name', 'tier', 'wave', 'art', 'text', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -297,7 +297,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -306,7 +306,7 @@ def main():
     t0 = time.time()
     sp = Spinner(cfg)
 
-    print(f"\n{tag}  —  {cfg['wave']['label']}, {cfg['wave']['N']} frames, {o['arms']} arms, art: {o['art']}, weight: {o['weight']}")
+    print(f"\n{tag}  —  {cfg['wave']['label']}, {cfg['wave']['N']} frames, {o['arms']} arms, wave: {o['art']}, text: {o['text']}, weight: {o['weight']}")
     print(f'{"part":<12}{"valid":<7}{"volume mm³":>12}{"PLA g":>8}  file')
     manifest = {'tag': tag, 'options': o, 'query': cfg['query'],
                 'wave': {'variant': o['wave'], 'label': cfg['wave']['label'], 'N': cfg['wave']['N']},
