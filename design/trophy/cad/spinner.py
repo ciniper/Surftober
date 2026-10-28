@@ -42,6 +42,7 @@ P = dict(
     ring_in=27.5, ring_out=40.0,
     wave_in=30.6, wave_out=39.4,
     inlay=0.6,             # flush artwork / text depth
+    relief=0.6, relief_foam=0.9,   # --art raised: water / foam height above the ring face (single-colour print)
     # still front hub (rides the inner race)
     hub_r=25.5, hub_t=2.4, standoff=0.6,
     stem_d=8.1, stem_len=3.3,  # into the 8 mm bore of the inner race (tune 8.0 … 8.2)
@@ -128,16 +129,25 @@ def build(a):
         body = body.union(arm)
     body = body.union(cyl(P['ring_out'], 0, t, P['ring_in']))
 
-    # ---- wave artwork: flush inlays in the front face ----------------------
+    # ---- wave artwork: flush inlays in the front face, or a raised relief ---
     art = wave_polys(a.wave, a.frames, P['wave_in'], P['wave_out'])
-    water = polys_to_solid(art['water'], t - inl, inl, 'water')
-    foam = polys_to_solid(art['foam'], t - inl, inl, 'foam')
-    if water is not None:
-        body = body.cut(water)
+    if a.art == 'raised':
+        # one-colour print: water and foam stand proud of the face, fused into the body
+        water = polys_to_solid(art['water'], t - 0.2, P['relief'] + 0.2, 'water')       # 0.2 overlap into the body so the fuse is clean
+        foam = polys_to_solid(art['foam'], t - 0.2, P['relief_foam'] + 0.2, 'foam')
+        for w in (water, foam):
+            if w is not None:
+                body = body.union(w)
+        water = foam = None
+    else:
+        water = polys_to_solid(art['water'], t - inl, inl, 'water')
+        foam = polys_to_solid(art['foam'], t - inl, inl, 'foam')
+        if water is not None:
+            body = body.cut(water)
+            if foam is not None:
+                water = water.cut(foam)
         if foam is not None:
-            water = water.cut(foam)
-    if foam is not None:
-        body = body.cut(foam)
+            body = body.cut(foam)
 
     # ---- bought weight -----------------------------------------------------
     extras = {}
@@ -192,6 +202,7 @@ def main():
     ap.add_argument('--frames', type=int, default=0, help='slot count; 0 = the variant default')
     ap.add_argument('--weight', default='none', choices=['none', 'bezel', 'cog'])
     ap.add_argument('--bezel', default='flat', choices=['flat', 'round'], help='flat = laser-cut ring (SendCutSend), round = craft wire ring')
+    ap.add_argument('--art', default='inlay', choices=['inlay', 'raised'], help='inlay = flush multi-colour pockets + inlay parts (default); raised = one-colour relief fused into the body')
     ap.add_argument('--only', default='all', choices=['all', 'ring'], help='ring = just the spinning piece (hub + arms + wave ring) with its inlays; no still hub, text or back cap')
     ap.add_argument('--parts', default='', help='comma list of parts to write, e.g. body,wave-water,wave-foam (default: all)')
     ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl: every written part in one file (separate shells — Bambu Studio: right-click → Split → To parts to colour them)')
@@ -206,6 +217,8 @@ def main():
     tag = f"{a.name.lower()}-{a.arms}arm-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else ''))
     if a.only == 'ring':   # no name on the spinning piece, so leave it out of the tag
         tag = f"ring-{a.arms}arm-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else ''))
+    if a.art == 'raised':
+        tag += '-raised'
     t = m['t']
 
     # print orientation: body back face down; hub text face down; cap fridge face down
