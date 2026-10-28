@@ -6,3 +6,6 @@ background/*.pdf
 
 # Build output (Vercel builds it from docs/build.mjs; never committed)
 docs/dist/
+
+# Trophy CAD output (regenerate with design/trophy/cad/spinner.py)
+design/trophy/cad/out/
