@@ -361,6 +361,53 @@ more "trophy-like" material mix than coloured plastic.
 Test-print plan: print one bone ring body, spin it bare, then with a $3
 craft ring and a $8 cog, and time each. Pick by feel and by look.
 
+## CAD generator — STL + STEP (2026-10-27)
+
+`design/trophy/cad/spinner.py` builds the real parts with CadQuery
+(OpenCascade kernel), not the three.js preview meshes: proper booleans,
+flush inlay pockets, exact bores. One-time setup, then one command per
+trophy:
+
+```bash
+cd design/trophy/cad && ./setup.sh          # venv + cadquery (Homebrew python3.12, needs node too)
+.venv/bin/python spinner.py --name NAHLA --arms 3 --wave return
+.venv/bin/python spinner.py --name KAI --arms 4 --weight bezel --bezel flat
+.venv/bin/python spinner.py --name MOANA --weight cog --wave classic
+```
+
+Output in `cad/out/` (gitignored — regenerate, don't commit), ~11 s a run:
+
+| file | what | print it in |
+|---|---|---|
+| `<tag>-body.stl` | hub on the 608 (Ø21.9 bore), N arms, wave ring with 0.6 mm pockets | bone / tier colour |
+| `<tag>-wave-water.stl` | navy water inlays, fill the pockets flush | navy |
+| `<tag>-wave-foam.stl` | cream foam inlays | cream |
+| `<tag>-hub.stl` | still front hub (Ø8.1 stem, r 5.5 spacer, r 25.5 disc) with text pockets | navy |
+| `<tag>-hub-text.stl` | "SURFTOBER 2026" over the top, name along the bottom, 0.6 mm inlays | gold / silver / copper |
+| `<tag>-back-cap.stl` | printed stand-in for the magnet cap: stem, spacer, Ø10.2 × 2.1 pocket | anything |
+| `<tag>.step` | coloured assembly of all of the above + a 608 + the metal ring, mounted | — |
+| `metal-ring-flat-81.2x74.2.dxf` | the flat bezel ring outline for SendCutSend (`--weight bezel --bezel flat`) | brass / stainless / copper 0.125" |
+
+`<tag>` = `nahla-3arm-return10[-bezel-flat|-cog]`. STLs are saved in print
+orientation: body back-face down, hub text-face down (crisp inlay on the
+bed), cap fridge-face down. In Bambu Studio drag all the STLs of one tag in
+together and answer **Yes** to "load as a single object with multiple
+parts", then set a filament per part. The wave frames come straight from
+`wave-frames.js` via node (`cad/wave-polys.mjs`), so they match the demo
+exactly.
+
+Weights (`--weight`): `bezel --bezel flat` cuts a square groove around the
+rim for a 3.18 mm laser-cut ring and writes its DXF; `--bezel round` cuts a
+half-round groove for a Ø80 × 3.5 craft ring; `cog` adds a Ø34.6 × 2.3 boss
+behind the body for a 1.37"×24 tpi track cog. All dimensions sit in the `P`
+dict at the top of the script — bore and stem press fits (`bore`, `stem_d`)
+are the two to tune after the first print.
+
+Quick visual check without a slicer: `cad/view.html` (linked from the
+landing page) lists whatever is in `out/`, shows the parts mounted, exploded,
+or as wireframe. Mass check from the generator (PLA, 100 %): body ~29 g,
+hub ~6 g, inlays < 1 g — matching the estimates in the weight table above.
+
 ## Wave foam — direction (Chase, 2026-10-12)
 
 "Whitewater return" is the keeper. Three computed "foam pinned to the lip"

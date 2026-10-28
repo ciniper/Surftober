@@ -229,6 +229,12 @@
       goes neutral bone and the metal (brass / stainless / copper) IS the
       tier colour. Numbers + sourcing in README "Metal weight ring".
       Decide after timing a test print bare vs ring vs cog.
+      2026-10-27: CAD generator — design/trophy/cad/spinner.py (CadQuery,
+      venv via cad/setup.sh) writes STL per print colour (body, water, foam,
+      hub, text, back cap) in print orientation + a coloured STEP assembly,
+      --weight bezel (flat ring + SendCutSend DXF, or round) / cog, --arms,
+      --wave, --name. cad/view.html checks the output in the browser. Next:
+      first test print (tune bore 21.9 / stem 8.1 press fits), then time it.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
