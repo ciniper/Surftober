@@ -435,7 +435,7 @@ document.getElementById('cadcmd').addEventListener('click', () => {
   const full = cadCommand(false), ring = cadCommand(true);
   const box = document.getElementById('cadbox') || document.body.appendChild(Object.assign(document.createElement('pre'), { id: 'cadbox' }));
   box.style.cssText = 'position:fixed;left:10px;bottom:70px;max-width:calc(100% - 20px);margin:0;padding:10px 12px;background:#fff8f0;border:1px solid #e3d6c0;border-radius:10px;font-size:12px;white-space:pre-wrap;z-index:5';
-  box.textContent = `# in design/trophy/cad (after ./setup.sh) — STL per print colour + STEP into cad/out/\n${full}\n\n# just the wave ring with its inlays, for a test print of the animation\n${ring}\n\n(click to copy the first command; see cad/view.html to check the result)`;
+  box.textContent = `# in design/trophy/cad (after ./setup.sh) — STL per print colour + STEP into cad/out/\n${full}\n\n# just the spinning piece — hub + arms + wave ring with its inlays (no still hub / text / cap)\n${ring}\n\n(click to copy the first command; see cad/view.html to check the result)`;
   box.onclick = () => { navigator.clipboard?.writeText(full); box.style.borderColor = '#ff6b35'; };
   if (bodyMode !== 'spoked') box.textContent += '\n\nNote: the generator builds the ring-on-arms body; switch Body to "printed ring on arms" to match.';
 });
