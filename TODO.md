@@ -235,9 +235,16 @@
       --weight bezel (flat ring + SendCutSend DXF, or round) / cog, --arms,
       --wave, --name. cad/view.html checks the output in the browser. Next:
       first test print (tune bore 21.9 / stem 8.1 press fits), then time it.
-      --only ring writes just the spinning piece (hub + arms + ring + inlays,
-      no name, so one set per arm/wave choice); --parts picks any subset;
-      viewer "CAD command" button shows the matching command.
+      --parts / --preset pick any subset (ring = spinning piece: hub + arms
+      + ring + inlays, no name, so one set per arm/wave choice).
+      2026-10-27 (later): CLEANUP — one config (spinner-config.js: dims, parts,
+      options, presets, URL state) feeds viewer.html (configurator: presets,
+      per-part show/hide + click-to-inspect, generate button, generated-STL
+      overlay), wave-demo.html and cad/spinner.py (via cad/bridge.mjs);
+      cad/serve.py runs the generator from the browser (port 8930); outputs
+      = per-part STL + multi-part 3MF + STEP + manifest. Ring widened 50 %
+      (r 27.5–46.5, Ø93; body ~44 g). mockups.html / cad/view.html removed.
+      --art inlay|raised|none. Next: Bambu test print of the one-colour ring.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

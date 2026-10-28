@@ -1,63 +1,56 @@
 #!/usr/bin/env python
 """Surftober 2026 trophy — spinner CAD generator (CadQuery / OpenCascade).
 
-Generates real solids (not the three.js preview meshes) for the fully printed
-ring-on-arms spinner, matching the dimensions in mockups.html (SP):
+Builds real solids for the fully printed ring-on-arms spinner. All dimensions,
+parts, options and the output tag come from ../spinner-config.js (read through
+cad/bridge.mjs with node), so this always matches the 3D viewer.
 
-  body        one printed piece: hub pressed onto the 608's outer race, N arms,
-              wave ring at the rim; flush 0.6 mm pockets for the wave artwork
-  wave-water  the navy water inlays (fill the pockets flush)
-  wave-foam   the cream foam inlays
-  hub         still front hub on the inner race, text pockets
-  hub-text    "SURFTOBER 2026" over the top, the name along the bottom (inlays)
-  back-cap    printed stand-in for the magnet cap (stem, spacer, Ø10×2 pocket)
+    .venv/bin/python spinner.py --name NAHLA                      # everything, flush multi-colour inlays
+    .venv/bin/python spinner.py --preset testring                 # one-colour spinning piece, wave in relief
+    .venv/bin/python spinner.py --parts hub,hub-text --name KAI   # any subset
+    .venv/bin/python spinner.py --url "arms=4&weight=cog&art=raised"
+    .venv/bin/python spinner.py --list                            # parts and presets
 
-Options add a bezel groove for a bought metal ring (round wire, or a flat
-laser-cut ring + its DXF for SendCutSend) or a boss for a bike cog.
-
-usage (from design/trophy/cad, after `./setup.sh`):
-  .venv/bin/python spinner.py --name NAHLA --arms 3 --wave return
-  .venv/bin/python spinner.py --weight bezel --bezel flat --name KAI
-  .venv/bin/python spinner.py --weight cog --arms 4 --no-stl   # STEP only
-  .venv/bin/python spinner.py --only ring --wave return        # just the spinning piece: hub + arms + wave ring + inlays
-  .venv/bin/python spinner.py --parts hub,hub-text --name KAI   # any subset of the parts
-
-Everything lands in ./out/ as STL (one per print colour, print orientation),
-plus spinner.step — a coloured assembly of all parts in their mounted positions.
-Load the STLs together in Bambu Studio and answer "yes" to "load as a single
-object with multiple parts", then assign a filament per part.
+Output, in ./out/ (gitignored):
+    <tag>-<part>.stl      one per part, in print orientation
+    <tag>.3mf             all parts as multi-part objects per print orientation (Bambu / Prusa)
+    <tag>.step            coloured assembly in the mounted pose, with the bearing and metal weight
+    <tag>-all.stl         every part as separate shells in one STL (--combined)
+    <tag>.json            manifest: options, parts, volumes, files — the viewer reads this
+    metal-ring-flat-*.dxf the flat bezel ring outline for SendCutSend (--weight bezel --bezel flat)
 """
-import argparse, json, math, os, subprocess, sys, time
+import argparse, json, math, os, subprocess, sys, time, zipfile
+from urllib.parse import parse_qsl, urlencode
+from xml.sax.saxutils import escape
 import cadquery as cq
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONT = '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
-
-# ---- dimensions (mm) — keep in step with SP in mockups.html -------------------
-P = dict(
-    t=7.0,                 # body thickness = 608 width
-    bore=21.9,             # press fit on the 608's Ø22 outer race (tune: 21.8 tight … 22.0 loose)
-    hub_out=16.0,          # printed hub radius around the bearing
-    arm_w=9.0,
-    ring_in=27.5, ring_out=40.0,
-    wave_in=30.6, wave_out=39.4,
-    inlay=0.6,             # flush artwork / text depth
-    relief=0.6, relief_foam=0.9,   # --art raised: water / foam height above the ring face (single-colour print)
-    # still front hub (rides the inner race)
-    hub_r=25.5, hub_t=2.4, standoff=0.6,
-    stem_d=8.1, stem_len=3.3,  # into the 8 mm bore of the inner race (tune 8.0 … 8.2)
-    spacer_r=5.5,              # lands on the inner race only (r 4 – 6.05)
-    text_size=4.6, text_track=0.12,
-    # back cap (printed stand-in for the anodized one)
-    cap_r=9.0, cap_t=3.0, cap_spacer=0.8, mag_d=10.2, mag_depth=2.1,
-    # bought weights
-    bezel_wire=3.5, bezel_proud=0.6,                  # round craft ring Ø(2·ring_out) × 3.5 wire
-    flat_od=80.0, flat_id=73.0, flat_t=3.18, flat_clear=0.15,  # SendCutSend ring, 0.125" brass/stainless/copper
-    cog_bore=34.8, cog_t=2.3,                         # 1.37" × 24 tpi track-cog thread, minor Ø
-)
+FONT = os.environ.get('SPINNER_FONT', '/System/Library/Fonts/Supplemental/Arial Bold.ttf')
 PLA = 1.24e-3  # g/mm³
 
 
+# ---------------------------------------------------------------------------
+# Config from the JS single source of truth
+# ---------------------------------------------------------------------------
+def bridge(query):
+    r = subprocess.run(['node', os.path.join(HERE, 'bridge.mjs'), query], capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f'bridge.mjs failed:\n{r.stderr}')
+    return json.loads(r.stdout)
+
+
+def list_everything():
+    cfg = bridge('')
+    print('parts (generated):')
+    for p in cfg['generate']:
+        print(f"  {p['id']:<11} {p['group']:<16} {p['filament']}")
+    print('\nquery options: name, tier, arms (3|4), wave, frames, art (inlay|raised|none), weight (none|bezel|cog), bezel (flat|round), parts')
+    print('presets: full, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
+
+
+# ---------------------------------------------------------------------------
+# Geometry helpers
+# ---------------------------------------------------------------------------
 def cyl(r, z0, h, r_in=0.0):
     wp = cq.Workplane('XY').workplane(offset=z0).circle(r)
     if r_in > 0:
@@ -79,19 +72,11 @@ def polys_to_solid(polys, z0, h, label):
             skipped += 1
     if skipped:
         print(f'  {label}: skipped {skipped} degenerate polygon(s)', file=sys.stderr)
-    if not solids:
-        return None
-    return cq.Workplane('XY').add(solids).combine()
+    return cq.Workplane('XY').add(solids).combine() if solids else None
 
 
-def wave_polys(variant, frames, r_in, r_out):
-    out = subprocess.run(['node', os.path.join(HERE, 'wave-polys.mjs'), variant, str(frames), str(r_in), str(r_out)],
-                         capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)
-
-
-def arc_text(text, r, size, depth, z0, top):
-    """Glyphs placed around a circle like arcText() in mockups.html — upright, left→right."""
+def arc_text(text, r, size, depth, z0, top, track):
+    """Glyphs around a circle like arcText() in the viewer — upright, reading left to right."""
     glyphs = []
     for ch in text:
         if ch == ' ':
@@ -99,9 +84,8 @@ def arc_text(text, r, size, depth, z0, top):
             continue
         g = cq.Workplane('XY').text(ch, size, depth, fontPath=FONT, halign='center', valign='center')
         bb = g.val().BoundingBox()
-        g = g.translate((-(bb.xmin + bb.xmax) / 2, -(bb.ymin + bb.ymax) / 2, 0))
-        glyphs.append((g, bb.xlen + size * 0.12))
-    total = sum(w for _, w in glyphs) - size * 0.12
+        glyphs.append((g.translate((-(bb.xmin + bb.xmax) / 2, -(bb.ymin + bb.ymax) / 2, 0)), bb.xlen + size * track))
+    total = sum(w for _, w in glyphs) - size * track
     s, parts = -total / 2, []
     for g, w in glyphs:
         mid = s + w / 2
@@ -114,169 +98,288 @@ def arc_text(text, r, size, depth, z0, top):
     return cq.Workplane('XY').add(parts).combine()
 
 
-def build(a):
-    t, inl = P['t'], P['inlay']
-    report = {}
+def cog_shape(n, r_tip, r_root, r_bore):
+    pts, pitch = [], 2 * math.pi / n
+    for i in range(n):
+        a = i * pitch
+        for r, f in ((r_root, 0), (r_root, .18), (r_tip, .4), (r_tip, .6), (r_root, .82)):
+            pts.append((r * math.cos(a + f * pitch), r * math.sin(a + f * pitch)))
+    return cq.Workplane('XY').polyline(pts).close().circle(r_bore)
 
-    # ---- body: hub ring + arms + rim — the one spinning printed piece --------
-    body = cyl(P['hub_out'], 0, t, P['bore'] / 2)
-    arm_len = P['ring_in'] - P['hub_out'] + 1.5
-    mid = (P['hub_out'] + P['ring_in']) / 2
-    for i in range(a.arms):
-        ang = 90 + i * 360 / a.arms
-        arm = (cq.Workplane('XY').box(arm_len, P['arm_w'], t, centered=(True, True, False))
-               .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), ang))
-        body = body.union(arm)
-    body = body.union(cyl(P['ring_out'], 0, t, P['ring_in']))
 
-    # ---- wave artwork: flush inlays in the front face, or a raised relief ---
-    art = wave_polys(a.wave, a.frames, P['wave_in'], P['wave_out'])
-    if a.art == 'raised':
-        # one-colour print: water and foam stand proud of the face, fused into the body
-        water = polys_to_solid(art['water'], t - 0.2, P['relief'] + 0.2, 'water')       # 0.2 overlap into the body so the fuse is clean
-        foam = polys_to_solid(art['foam'], t - 0.2, P['relief_foam'] + 0.2, 'foam')
+# ---------------------------------------------------------------------------
+# Part builders — each returns the solid in the MOUNTED pose (bearing z 0…t)
+# ---------------------------------------------------------------------------
+class Spinner:
+    BUILDERS = {'body': 'body', 'wave-water': 'wave_water', 'wave-foam': 'wave_foam', 'hub': 'hub', 'hub-text': 'hub_text',
+                'back-cap': 'back_cap', 'bearing': 'bearing', 'magnet': 'magnet', 'weight': 'weight'}
+
+    def __init__(self, cfg):
+        self.cfg, self.o, self.D = cfg, cfg['options'], cfg['dim']
+        self.t = self.D['t']
+        self._art = None
+        self.notes = {}
+
+    def build(self, part_id):
+        return getattr(self, self.BUILDERS[part_id])()
+
+    # -- artwork solids, cached: (water, foam) in their pocket / relief position
+    def art(self):
+        if self._art is None:
+            D, t, o, w = self.D, self.t, self.o, self.cfg['wave']
+            if o['art'] == 'raised':
+                water = polys_to_solid(w['water'], t - 0.2, D['relief'] + 0.2, 'water')        # 0.2 into the body so the fuse is clean
+                foam = polys_to_solid(w['foam'], t - 0.2, D['reliefFoam'] + 0.2, 'foam')
+            elif o['art'] == 'inlay':
+                water = polys_to_solid(w['water'], t - D['inlay'], D['inlay'], 'water')
+                foam = polys_to_solid(w['foam'], t - D['inlay'], D['inlay'], 'foam')
+            else:
+                water = foam = None
+            self._art = (water, foam)
+        return self._art
+
+    def body(self):
+        D, t, o = self.D, self.t, self.o
+        body = cyl(D['hubOut'], 0, t, D['bore'] / 2)
+        arm_len = D['ringIn'] - D['hubOut'] + 1.5
+        mid = (D['hubOut'] + D['ringIn']) / 2
+        for i in range(o['arms']):
+            arm = (cq.Workplane('XY').box(arm_len, D['armW'], t, centered=(True, True, False))
+                   .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), 90 + i * 360 / o['arms']))
+            body = body.union(arm)
+        body = body.union(cyl(D['ringOut'], 0, t, D['ringIn']))
+        water, foam = self.art()
         for w in (water, foam):
-            if w is not None:
-                body = body.union(w)
-        water = foam = None
-    else:
-        water = polys_to_solid(art['water'], t - inl, inl, 'water')
-        foam = polys_to_solid(art['foam'], t - inl, inl, 'foam')
-        if water is not None:
-            body = body.cut(water)
-            if foam is not None:
-                water = water.cut(foam)
-        if foam is not None:
-            body = body.cut(foam)
+            if w is None:
+                continue
+            body = body.union(w) if o['art'] == 'raised' else body.cut(w)
+        # bought weight
+        if o['weight'] == 'bezel' and o['bezel'] == 'round':
+            wr = D['bezelWire'] / 2
+            R = D['ringOut'] - wr + D['bezelProud']
+            body = body.cut(cq.Workplane('XY').add(cq.Solid.makeTorus(R, wr + 0.1, cq.Vector(0, 0, t / 2), cq.Vector(0, 0, 1))))
+            self.notes['bezel'] = f'round groove for a Ø{2 * D["ringOut"]:.0f} × {D["bezelWire"]} mm wire ring'
+        elif o['weight'] == 'bezel':
+            ring_w = (D['flatOd'] - D['flatId']) / 2
+            g_in = D['ringOut'] - (ring_w - D['bezelProud']) - D['flatClear']
+            g_t = D['flatT'] + D['flatClear']
+            body = body.cut(cyl(D['ringOut'] + 1, t / 2 - g_t / 2, g_t, g_in))
+            self.notes['bezel'] = f'flat groove: floor r {g_in:.2f}, {g_t:.2f} wide, for a {D["flatOd"]:.0f} × {D["flatId"]:.0f} × {D["flatT"]} ring'
+        elif o['weight'] == 'cog':
+            body = body.union(cyl(D['cogBore'] / 2 - 0.1, -D['cogT'], D['cogT'], D['cogBossIn']))
+            self.notes['cog'] = f'boss Ø{D["cogBore"] - 0.2:.1f} × {D["cogT"]} mm behind the body for a {D["cogTeeth"]}T cog'
+        return body
 
-    # ---- bought weight -----------------------------------------------------
-    extras = {}
-    if a.weight == 'bezel' and a.bezel == 'round':
-        wr = P['bezel_wire'] / 2
-        R = P['ring_out'] - wr + P['bezel_proud']
-        groove = cq.Workplane('XY').add(cq.Solid.makeTorus(R, wr + 0.1, cq.Vector(0, 0, t / 2), cq.Vector(0, 0, 1)))
-        body = body.cut(groove)
-        extras['metal-ring-round'] = cq.Workplane('XY').add(cq.Solid.makeTorus(R, wr, cq.Vector(0, 0, t / 2), cq.Vector(0, 0, 1)))
-    elif a.weight == 'bezel':
-        ring_w = (P['flat_od'] - P['flat_id']) / 2                      # radial section
-        proud = P['bezel_proud']
-        g_in = P['ring_out'] - (ring_w - proud) - P['flat_clear']       # groove floor radius
-        g_t = P['flat_t'] + P['flat_clear']
-        body = body.cut(cyl(P['ring_out'] + 1, t / 2 - g_t / 2, g_t, g_in))
-        ring_r_out = g_in + P['flat_clear'] + ring_w
-        extras['metal-ring-flat'] = cyl(ring_r_out, t / 2 - P['flat_t'] / 2, P['flat_t'], ring_r_out - ring_w)
-        report['flat ring'] = f'OD {2 * ring_r_out:.1f} × ID {2 * (ring_r_out - ring_w):.1f} × {P["flat_t"]} mm (DXF written)'
-    elif a.weight == 'cog':
-        boss = cyl(P['cog_bore'] / 2 - 0.1, -P['cog_t'], P['cog_t'], 12.0)
-        body = body.union(boss)
-        report['cog boss'] = f'Ø{P["cog_bore"] - 0.2:.1f} × {P["cog_t"]} mm behind the body'
+    def wave_water(self):
+        water, foam = self.art()
+        if water is None or self.o['art'] != 'inlay':
+            return None
+        return water.cut(foam) if foam is not None else water
 
-    # ---- front hub + text ---------------------------------------------------
-    z_disc = P['standoff']
-    hub = (cyl(P['stem_d'] / 2, -P['stem_len'], P['stem_len'])
-           .union(cyl(P['spacer_r'], 0, P['standoff']))
-           .union(cyl(P['hub_r'], z_disc, P['hub_t'])))
-    text_r = P['hub_r'] - 4.6
-    z_text = z_disc + P['hub_t'] - inl
-    text = arc_text('SURFTOBER 2026', text_r, P['text_size'], inl, z_text, True)
-    text = text.union(arc_text(a.name.upper(), text_r, P['text_size'], inl, z_text, False))
-    hub = hub.cut(text)
+    def wave_foam(self):
+        return self.art()[1] if self.o['art'] == 'inlay' else None
 
-    # ---- back cap (printed stand-in) ---------------------------------------
-    cap = (cyl(P['stem_d'] / 2, 0, P['stem_len'])
-           .union(cyl(P['spacer_r'], -P['cap_spacer'], P['cap_spacer']))
-           .union(cyl(P['cap_r'], -P['cap_spacer'] - P['cap_t'], P['cap_t'])))
-    cap = cap.cut(cyl(P['mag_d'] / 2, -P['cap_spacer'] - P['cap_t'], P['mag_depth']))
+    def _text(self, z0, depth):
+        D, o = self.D, self.o
+        r = D['hubR'] - D['textInset']
+        txt = arc_text('SURFTOBER 2026', r, D['textSize'], depth, z0, True, D['textTrack'])
+        return txt.union(arc_text(o['name'].upper(), r, D['textSize'], depth, z0, False, D['textTrack']))
 
-    # ---- bearing, for the STEP only -----------------------------------------
-    bearing = cyl(11, 0, t, 9.6).union(cyl(6.05, 0, t, 4.0)).union(cyl(9.6, 0.3, t - 0.6, 6.05))
+    def hub(self):
+        D, t, o = self.D, self.t, self.o
+        z_disc = t + D['standoff']
+        hub = (cyl(D['stemD'] / 2, t - D['stemLen'], D['stemLen'])
+               .union(cyl(D['spacerR'], t, D['standoff']))
+               .union(cyl(D['hubR'], z_disc, D['hubT'])))
+        if o['art'] == 'inlay':
+            hub = hub.cut(self._text(z_disc + D['hubT'] - D['inlay'], D['inlay']))
+        elif o['art'] == 'raised':
+            hub = hub.union(self._text(z_disc + D['hubT'] - 0.2, D['relief'] + 0.2))
+        return hub
 
-    return dict(body=body, water=water, foam=foam, hub=hub, text=text, cap=cap, bearing=bearing, extras=extras, art=art, report=report, t=t)
+    def hub_text(self):
+        D, t, o = self.D, self.t, self.o
+        if o['art'] != 'inlay':
+            return None     # raised text is fused into the hub; a plain ring has no text part
+        return self._text(t + D['standoff'] + D['hubT'] - D['inlay'], D['inlay'])
+
+    def back_cap(self):
+        D = self.D
+        cap = (cyl(D['stemD'] / 2, 0, D['stemLen'])
+               .union(cyl(D['spacerR'], -D['capSpacer'], D['capSpacer']))
+               .union(cyl(D['capR'], -D['capSpacer'] - D['capT'], D['capT'])))
+        return cap.cut(cyl(D['magPocketD'] / 2, -D['capSpacer'] - D['capT'], D['magPocketDepth']))
+
+    # -- bought parts, for the STEP assembly only
+    def bearing(self):
+        b, t = self.D['bearing'], self.t
+        return (cyl(b['od'] / 2, 0, t, b['outerId'] / 2).union(cyl(b['innerOd'] / 2, 0, t, b['id'] / 2))
+                .union(cyl(b['outerId'] / 2, 0.3, t - 0.6, b['innerOd'] / 2)))
+
+    def magnet(self):
+        D = self.D
+        return cyl(D['magD'] / 2, -D['capSpacer'] - D['capT'] + (D['magPocketDepth'] - D['magT']) + 0.05, D['magT'])
+
+    def weight(self):
+        D, t, o = self.D, self.t, self.o
+        if o['weight'] == 'bezel' and o['bezel'] == 'round':
+            wr = D['bezelWire'] / 2
+            return cq.Workplane('XY').add(cq.Solid.makeTorus(D['ringOut'] - wr + D['bezelProud'], wr, cq.Vector(0, 0, t / 2), cq.Vector(0, 0, 1)))
+        if o['weight'] == 'bezel':
+            r_out = D['ringOut'] + D['bezelProud']
+            return cyl(r_out, t / 2 - D['flatT'] / 2, D['flatT'], r_out - (D['flatOd'] - D['flatId']) / 2)
+        if o['weight'] == 'cog':
+            return cog_shape(D['cogTeeth'], D['cogTip'], D['cogRoot'], D['cogBore'] / 2).extrude(D['cogT']).translate((0, 0, -D['cogT']))
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+def to_print_pose(wp, print_meta):
+    """Mounted pose → on the bed: optional flip (text face down), then drop to z = 0."""
+    if print_meta['flip']:
+        wp = wp.rotate((0, 0, 0), (1, 0, 0), 180)
+    return wp.translate((0, 0, -wp.val().BoundingBox().zmin))
+
+
+def mesh(wp, tol=0.02, ang=0.1):
+    verts, tris = wp.val().tessellate(tol, ang)
+    return [(v.x, v.y, v.z) for v in verts], tris
+
+
+def write_3mf(path, groups):
+    """groups: [(group_name, [(part_name, '#rrggbb', (verts, tris)), …], (tx, ty)), …]
+    → one multi-part object per group, each placed on the bed by its (tx, ty) offset."""
+    res, items, mats, oid = [], [], [], 1
+    for gname, parts, (tx, ty) in groups:
+        comp_ids = []
+        for pname, color, (verts, tris) in parts:
+            mats.append((pname, color))
+            oid += 1
+            v = ''.join(f'<vertex x="{x:.4f}" y="{y:.4f}" z="{z:.4f}"/>' for x, y, z in verts)
+            t = ''.join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in tris)
+            res.append(f'<object id="{oid}" name="{escape(pname)}" type="model" pid="1" pindex="{len(mats) - 1}"><mesh><vertices>{v}</vertices><triangles>{t}</triangles></mesh></object>')
+            comp_ids.append(oid)
+        oid += 1
+        res.append(f'<object id="{oid}" name="{escape(gname)}" type="model"><components>' + ''.join(f'<component objectid="{c}"/>' for c in comp_ids) + '</components></object>')
+        items.append(f'<item objectid="{oid}" transform="1 0 0 0 1 0 0 0 1 {tx:.3f} {ty:.3f} 0"/>')
+    base = ''.join(f'<base name="{escape(n)}" displaycolor="{c.upper()}FF"/>' for n, c in mats)
+    model = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+             f'<metadata name="Title">Surftober 2026 spinner</metadata><resources><basematerials id="1">{base}</basematerials>{"".join(res)}</resources>'
+             f'<build>{"".join(items)}</build></model>')
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                   '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>')
+        z.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+        z.writestr('3D/3dmodel.model', model)
+
+
+def hex_color(h):
+    return cq.Color(int(h[1:3], 16) / 255, int(h[3:5], 16) / 255, int(h[5:7], 16) / 255)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--name', default='NAHLA')
-    ap.add_argument('--arms', type=int, default=3, choices=[3, 4])
-    ap.add_argument('--wave', default='return', help='classic | rolling | return | barrel | returntip | classictip')
-    ap.add_argument('--frames', type=int, default=0, help='slot count; 0 = the variant default')
-    ap.add_argument('--weight', default='none', choices=['none', 'bezel', 'cog'])
-    ap.add_argument('--bezel', default='flat', choices=['flat', 'round'], help='flat = laser-cut ring (SendCutSend), round = craft wire ring')
-    ap.add_argument('--art', default='inlay', choices=['inlay', 'raised'], help='inlay = flush multi-colour pockets + inlay parts (default); raised = one-colour relief fused into the body')
-    ap.add_argument('--only', default='all', choices=['all', 'ring'], help='ring = just the spinning piece (hub + arms + wave ring) with its inlays; no still hub, text or back cap')
-    ap.add_argument('--parts', default='', help='comma list of parts to write, e.g. body,wave-water,wave-foam (default: all)')
-    ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl: every written part in one file (separate shells — Bambu Studio: right-click → Split → To parts to colour them)')
+    for k in ('name', 'tier', 'wave', 'art', 'weight', 'bezel', 'parts', 'preset'):
+        ap.add_argument(f'--{k}')
+    ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
+    ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
+    ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl (every part, separate shells)')
+    ap.add_argument('--no-stl', action='store_true'); ap.add_argument('--no-step', action='store_true'); ap.add_argument('--no-3mf', action='store_true')
     ap.add_argument('--out', default=os.path.join(HERE, 'out'))
-    ap.add_argument('--no-stl', action='store_true')
-    ap.add_argument('--no-step', action='store_true')
+    ap.add_argument('--list', action='store_true', help='list parts and presets, then exit')
     a = ap.parse_args()
+    if a.list:
+        return list_everything()
+
+    # flags → query → bridge (validation, tag, dims, parts, wave polygons)
+    q = dict(parse_qsl(a.url))
+    for k in ('preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'weight', 'bezel', 'parts'):
+        if getattr(a, k) is not None:
+            q[k] = str(getattr(a, k))
+    cfg = bridge(urlencode(q))
+    o, tag = cfg['options'], cfg['tag']
     os.makedirs(a.out, exist_ok=True)
     t0 = time.time()
-    m = build(a)
-    t = P['t']
-    tag = f"{a.name.lower()}-{a.arms}arm-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else ''))
-    if a.only == 'ring':   # no name on the spinning piece, so leave it out of the tag
-        tag = f"ring-{a.arms}arm-{a.wave}{m['art']['N']}" + ('' if a.weight == 'none' else f"-{a.weight}" + (f"-{a.bezel}" if a.weight == 'bezel' else ''))
-    if a.art == 'raised':
-        tag += '-raised'
-    t = m['t']
+    sp = Spinner(cfg)
 
-    # print orientation: body back face down; hub text face down; cap fridge face down
-    flip = lambda wp: wp.rotate((0, 0, 0), (1, 0, 0), 180)
-    hub_z0 = P['standoff'] + P['hub_t']
-    prints = {
-        'body': m['body'], 'wave-water': m['water'], 'wave-foam': m['foam'],
-        'hub': flip(m['hub']).translate((0, 0, hub_z0)), 'hub-text': flip(m['text']).translate((0, 0, hub_z0)),
-        'back-cap': m['cap'].translate((0, 0, P['cap_spacer'] + P['cap_t'])),
-    }
-    if a.weight == 'cog':
-        prints['body'] = prints['body'].translate((0, 0, P['cog_t']))
-    if a.only == 'ring':
-        prints = {k: v for k, v in prints.items() if k in ('body', 'wave-water', 'wave-foam')}
-    if a.parts:
-        want = {x.strip() for x in a.parts.split(',')}
-        unknown = want - set(prints)
-        if unknown:
-            sys.exit(f'unknown part(s) {sorted(unknown)}; choose from {sorted(prints)}')
-        prints = {k: v for k, v in prints.items() if k in want}
-
-    print(f'\n{tag}  —  {m["art"]["label"]}, {m["art"]["N"]} frames, {a.arms} arms, weight: {a.weight}')
-    print(f'{"part":<12}{"valid":<7}{"volume mm³":>12}{"PLA g":>8}')
-    for name, wp in prints.items():
+    print(f"\n{tag}  —  {cfg['wave']['label']}, {cfg['wave']['N']} frames, {o['arms']} arms, art: {o['art']}, weight: {o['weight']}")
+    print(f'{"part":<12}{"valid":<7}{"volume mm³":>12}{"PLA g":>8}  file')
+    manifest = {'tag': tag, 'options': o, 'query': cfg['query'],
+                'wave': {'variant': o['wave'], 'label': cfg['wave']['label'], 'N': cfg['wave']['N']},
+                'dim': {k: cfg['dim'][k] for k in ('t', 'ringIn', 'ringOut', 'waveIn', 'waveOut', 'hubR', 'bore', 'stemD')},
+                'parts': [], 'files': {}, 'generated': time.strftime('%Y-%m-%d %H:%M')}
+    built, groups = {}, {}
+    for meta in cfg['generate']:
+        pid = meta['id']
+        wp = sp.build(pid)
         if wp is None:
             continue
         s = wp.val()
-        print(f'{name:<12}{str(s.isValid()):<7}{s.Volume():>12.0f}{s.Volume() * PLA:>8.1f}')
+        bb = s.BoundingBox()
+        entry = {'id': pid, 'label': meta['label'], 'group': meta['group'], 'color': meta['color'], 'filament': meta['filament'],
+                 'print': meta['print'], 'mounted_z': [round(bb.zmin, 3), round(bb.zmax, 3)],   # so the viewer can put the print-posed STL back
+                 'valid': bool(s.isValid()), 'volume_mm3': round(s.Volume(), 1), 'grams_pla': round(s.Volume() * PLA, 1)}
+        posed = to_print_pose(wp, meta['print'])
         if not a.no_stl:
-            cq.exporters.export(wp, os.path.join(a.out, f'{tag}-{name}.stl'), tolerance=0.01, angularTolerance=0.05)
-    for k, v in m['report'].items():
+            entry['file'] = f'{tag}-{pid}.stl'
+            cq.exporters.export(posed, os.path.join(a.out, entry['file']), tolerance=0.01, angularTolerance=0.05)
+        print(f"{pid:<12}{str(entry['valid']):<7}{entry['volume_mm3']:>12.0f}{entry['grams_pla']:>8.1f}  {entry.get('file', '')}")
+        manifest['parts'].append(entry)
+        built[pid] = (wp, posed, meta)
+        # 3MF print units: parts that are meant to nest (same pose, concentric) share an object; the rest get their own
+        unit = 'back cap' if pid == 'back-cap' else 'front hub' if pid in ('hub', 'hub-text') else 'spinning piece'
+        groups.setdefault(unit, []).append((pid, meta['color'], posed))
+    for k, v in sp.notes.items():
         print(f'  {k}: {v}')
-    if a.combined and not a.no_stl:
-        allp = cq.Workplane('XY').add([wp.val() for wp in prints.values() if wp is not None])
-        cq.exporters.export(allp, os.path.join(a.out, f'{tag}-all.stl'), tolerance=0.01, angularTolerance=0.05)
-        print(f'combined  → {tag}-all.stl ({len(prints)} shells in one file)')
+    if not built:
+        sys.exit('nothing to build for these options')
 
-    if a.weight == 'bezel' and a.bezel == 'flat':
-        ring = m['extras']['metal-ring-flat'].val()
-        bb = ring.BoundingBox()
-        r_out, r_in = bb.xmax, bb.xmax - (P['flat_od'] - P['flat_id']) / 2
-        cq.exporters.exportDXF(cq.Workplane('XY').circle(r_out).circle(r_in), os.path.join(a.out, f'metal-ring-flat-{2 * r_out:.1f}x{2 * r_in:.1f}.dxf'))
+    if a.combined and not a.no_stl:
+        allp = cq.Workplane('XY').add([posed.val() for _, posed, _ in built.values()])
+        cq.exporters.export(allp, os.path.join(a.out, f'{tag}-all.stl'), tolerance=0.01, angularTolerance=0.05)
+        manifest['files']['all_stl'] = f'{tag}-all.stl'
+        print(f'combined  → {tag}-all.stl ({len(built)} shells in one file)')
+
+    if not a.no_3mf:
+        # one multi-part object per print unit, laid out side by side on the bed
+        D = cfg['dim']
+        spots = {'spinning piece': (0, 0), 'front hub': (D['ringOut'] + D['hubR'] + 8, 0), 'back cap': (D['ringOut'] + D['hubR'] + 8, D['hubR'] + D['capR'] + 8)}
+        if 'spinning piece' not in groups:
+            spots = {'front hub': (0, 0), 'back cap': (0, D['hubR'] + D['capR'] + 8)}
+        write_3mf(os.path.join(a.out, f'{tag}.3mf'), [(g, [(pid, color, mesh(posed)) for pid, color, posed in parts], spots[g]) for g, parts in groups.items()])
+        manifest['files']['3mf'] = f'{tag}.3mf'
+        print(f'3mf       → {tag}.3mf ({len(groups)} object(s), {len(built)} part(s))')
+
+    if o['weight'] == 'bezel' and o['bezel'] == 'flat':
+        D = cfg['dim']
+        r_out = D['ringOut'] + D['bezelProud']
+        r_in = r_out - (D['flatOd'] - D['flatId']) / 2
+        fn = f'metal-ring-flat-{2 * r_out:.1f}x{2 * r_in:.1f}.dxf'
+        cq.exporters.exportDXF(cq.Workplane('XY').circle(r_out).circle(r_in), os.path.join(a.out, fn))
+        manifest['files']['dxf'] = fn
+        print(f'dxf       → {fn}  (SendCutSend: 0.125" brass / stainless / copper)')
 
     if not a.no_step:
         asm = cq.Assembly(name='surftober-spinner')
-        navy, cream, bone, steel, metal = (cq.Color(0.11, 0.19, 0.31), cq.Color(0.94, 0.9, 0.82), cq.Color(0.91, 0.88, 0.81),
-                                           cq.Color(0.75, 0.77, 0.8), cq.Color(0.85, 0.72, 0.36))
-        if 'body' in prints: asm.add(m['body'], name='body', color=bone)
-        if 'wave-water' in prints and m['water'] is not None: asm.add(m['water'], name='wave-water', color=navy)
-        if 'wave-foam' in prints and m['foam'] is not None: asm.add(m['foam'], name='wave-foam', color=cream)
-        if 'hub' in prints: asm.add(m['hub'], name='hub', color=navy, loc=cq.Location(cq.Vector(0, 0, t)))
-        if 'hub-text' in prints: asm.add(m['text'], name='hub-text', color=metal, loc=cq.Location(cq.Vector(0, 0, t)))
-        if 'back-cap' in prints: asm.add(m['cap'], name='back-cap', color=cq.Color(1.0, 0.42, 0.21))
-        asm.add(m['bearing'], name='608-bearing', color=steel)
-        for k, v in m['extras'].items():
-            asm.add(v, name=k, color=metal)
+        for pid, (wp, _, meta) in built.items():
+            asm.add(wp, name=pid, color=hex_color(meta['color']))
+        for pid, color in (('bearing', '#d0d4d8'), ('magnet', '#333333'), ('weight', cfg['tier']['color'])):
+            if pid in cfg['active']:
+                ref = sp.build(pid)
+                if ref is not None:
+                    asm.add(ref, name=pid, color=hex_color(color))
         asm.export(os.path.join(a.out, f'{tag}.step'))
-    print(f'\nwrote {a.out}  ({time.time() - t0:.0f} s)')
+        manifest['files']['step'] = f'{tag}.step'
+        print(f'step      → {tag}.step (mounted assembly incl. bearing / magnet / weight)')
+
+    manifest['seconds'] = round(time.time() - t0, 1)
+    with open(os.path.join(a.out, f'{tag}.json'), 'w') as f:
+        json.dump(manifest, f, indent=1)
+    print(f'\nwrote {a.out}  ({manifest["seconds"]} s)')
 
 
 if __name__ == '__main__':

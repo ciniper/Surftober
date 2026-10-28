@@ -29,7 +29,7 @@
 </head>
 <body>
 <main>
-  <div class="row" style="justify-content:space-between"><h1 style="margin:0">Breaking-wave spin animation</h1><a href="./mockups.html" style="font-size:13px;color:#b54a17">← 3D viewer</a></div>
+  <div class="row" style="justify-content:space-between"><h1 style="margin:0">Breaking-wave spin animation</h1><a id="to-viewer" href="./viewer.html" style="font-size:13px;color:#b54a17">← configurator</a></div>
   <p>The frames of a wave sit in equal slots around the ring's outer band, running clockwise. To your eye a spinning ring is a blur.
   A phone video only samples it, though: when the ring turns exactly one slot per video frame, each slot shows the next frame and the wave
   plays in place. A spinner slows down steadily, so it passes through that speed on its own. Flick it <b>counter-clockwise</b> as you
@@ -37,7 +37,6 @@
 
   <div class="controls">
     <label>Wave <select id="variant"></select></label>
-    <label>Text <select id="textm"><option value="ring">on the ring (spins)</option><option value="hub">on a still hub</option></select></label>
     <label>Frames <select id="frames"><option>6</option><option>8</option><option>10</option><option>12</option><option>16</option></select></label>
     <label>Camera <select id="fps">
       <option value="30">30 fps video</option><option value="60">60 fps video</option>
@@ -72,22 +71,23 @@
 </main>
 
 <script type="module">
-import { WAVE_VARIANTS, WAVE_DEFAULT, WAVE_COLORS, waveFrame, ringArt, ringSVG, cellAspect } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_COLORS, waveFrame, ringArt, ringSVG, cellAspect } from './wave-frames.js';
+import { DIM, TIERS, parseOptions, serializeOptions, frameCount } from './spinner-config.js';
 
-// Keep in step with SP in mockups.html (disk ring + wave band)
-const RING = { in: 17, out: 40, waveIn: 30.6, waveOut: 39.4, textR: 23.5 };
-const GOLD = '#d4af37', INK = '#16273d', BODY = '#5c6168', CAP = '#ff6b35', BG = '#d9dcdf';
-const SPAN = 84;              // mm across each canvas
+// Geometry comes from spinner-config.js — the same ring the configurator shows and the generator prints
+const o = parseOptions(location.search);
+const RING = { in: DIM.ringIn, out: DIM.ringOut, waveIn: DIM.waveIn, waveOut: DIM.waveOut };
+const GOLD = TIERS[o.tier].color, INK = '#16273d', BG = '#d9dcdf';
+const SPAN = 2 * RING.out + 6;   // mm across each canvas
 const EYE_T = 1 / 30;         // rough integration time of the eye
 const R0 = 2400, TAU = 14;    // flick: start RPM and spin-down time constant (s)
-const q = new URLSearchParams(location.search);
-const NAME = (q.get('name') || 'NAHLA').toUpperCase();
+const NAME = o.name.toUpperCase();
 const $ = id => document.getElementById(id);
 
-let variant = WAVE_VARIANTS[q.get('wave')] ? q.get('wave') : WAVE_DEFAULT;
-let N = +q.get('frames') || WAVE_VARIANTS[variant].N;
-let textMode = q.get('text') === 'hub' ? 'hub' : 'ring';   // hub = text on the still front hub instead of the ring
+let variant = o.wave;
+let N = frameCount(o);
 let art = null, sprite = null, A = 2;
+$('to-viewer').href = `./viewer.html?${serializeOptions(o)}`;
 Object.entries(WAVE_VARIANTS).forEach(([k, v]) => $('variant').add(new Option(`${v.label} (${v.N})`, k)));
 
 const fillPolys = (g, polys, map) => polys.forEach(p => { g.beginPath(); p.forEach((pt, i) => { const [x, y] = map(pt); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill(); });
@@ -97,11 +97,13 @@ function makeSprite(px) {
   const c = document.createElement('canvas'); c.width = c.height = px;
   const g = c.getContext('2d'), s = px / SPAN, id = p => p;
   g.translate(px / 2, px / 2); g.scale(s, -s);      // mm, y up
-  g.fillStyle = BODY; g.beginPath(); g.arc(0, 0, RING.in + 0.5, 0, 2 * Math.PI); g.fill();
-  g.fillStyle = GOLD; g.beginPath(); g.arc(0, 0, RING.out, 0, 2 * Math.PI); g.arc(0, 0, RING.in, 0, 2 * Math.PI, true); g.fill();
+  // the spinning body: hub on the bearing, arms, the wave ring (all one tier-colour print)
+  g.fillStyle = GOLD;
+  g.beginPath(); g.arc(0, 0, DIM.hubOut, 0, 2 * Math.PI); g.arc(0, 0, DIM.bore / 2, 0, 2 * Math.PI, true); g.fill();
+  for (let i = 0; i < o.arms; i++) { g.save(); g.rotate(Math.PI / 2 + i * 2 * Math.PI / o.arms); g.fillRect(DIM.hubOut - 1, -DIM.armW / 2, RING.in - DIM.hubOut + 2, DIM.armW); g.restore(); }
+  g.beginPath(); g.arc(0, 0, RING.out, 0, 2 * Math.PI); g.arc(0, 0, RING.in, 0, 2 * Math.PI, true); g.fill();
   g.fillStyle = WAVE_COLORS.water; art.slots.forEach(sl => fillPolys(g, sl.water, id));
   g.fillStyle = WAVE_COLORS.foam; art.slots.forEach(sl => fillPolys(g, sl.foam, id));
-  if (textMode === 'ring') { arcText(g, 'SURFTOBER 2026 · GOLD', RING.textR, 4.5, true); arcText(g, NAME, RING.textR, 4.5, false); }
   return c;
 }
 // Text bent around the axis in the y-up mm space; drawn 10× larger and scaled down so tiny fonts stay crisp.
@@ -129,15 +131,11 @@ function drawRing(p, a, sweep) {
     g.globalAlpha = 1 / (i + 1);                     // running mean of the K exposures
     g.drawImage(sprite, -W / 2, -W / 2, W, W);
   }
-  // the cap or hub doesn't spin (it's what you hold), so it stays sharp
+  // the still hub on the inner race doesn't spin (it's what you hold), so it stays sharp
   const s = W / SPAN; g.globalAlpha = 1; g.setTransform(s, 0, 0, -s, W / 2, W / 2);   // mm, y up
-  if (textMode === 'hub') {
-    g.fillStyle = WAVE_COLORS.water; g.beginPath(); g.arc(0, 0, 16, 0, 2 * Math.PI); g.fill();
-    arcText(g, 'SURFTOBER 2026', 11.8, 3.2, true, GOLD); arcText(g, NAME, 11.8, 3.2, false, GOLD);
-  } else {
-    g.fillStyle = CAP; g.beginPath(); g.arc(0, 0, 9, 0, 2 * Math.PI); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(-2.5, 2.5, 4, 0, 2 * Math.PI); g.fill();
-  }
+  g.fillStyle = WAVE_COLORS.water; g.beginPath(); g.arc(0, 0, DIM.hubR, 0, 2 * Math.PI); g.fill();
+  const tr = DIM.hubR - DIM.textInset;
+  arcText(g, 'SURFTOBER 2026', tr, DIM.textSize, true, GOLD); arcText(g, NAME, tr, DIM.textSize, false, GOLD);
 }
 
 // One cell drawn flat at (x, y) with width cw.
@@ -233,8 +231,6 @@ function loop(now) {
 }
 
 // ---- controls ----
-$('textm').value = textMode;
-$('textm').addEventListener('change', e => { textMode = e.target.value; resize(); });
 $('variant').addEventListener('change', e => { variant = e.target.value; N = WAVE_VARIANTS[variant].N; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
 $('frames').addEventListener('change', e => { N = +e.target.value; rebuildArt(); if (!flick) setRpm(syncRpm() * 0.97); });
 $('rpm').addEventListener('input', e => setRpm(+e.target.value));
