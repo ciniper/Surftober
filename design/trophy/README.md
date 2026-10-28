@@ -1,10 +1,125 @@
 # Surftober 2026 trophy — the spinner (concept C)
 
 **Branch note: `trophy` is a design scratch branch. Do NOT merge it into
-`main`** — nothing here is part of the site. It exists so the mockup viewer,
-the prompts and the idea list live somewhere versioned while the trophy is
-being decided. If a concept wins and needs printable files, start those from
-this branch and decide then whether anything belongs in main.
+`main`** — nothing here is part of the site. It holds the trophy configurator,
+the CAD generator, the wave animation and the decision log, versioned
+alongside the site but never deployed with it.
+
+## What it is
+
+A fully 3D-printed fidget-spinner fridge magnet. A 608 bearing sits in a
+printed body — hub, three or four arms, and a wide **wave ring** whose outer
+band carries the frames of a breaking wave. Spin it and film it: at one slot
+per video frame the wave plays in place (a phenakistiscope). A still **front
+hub** on the inner race carries "SURFTOBER 2026" and the name; a still **back
+cap** holds the magnet, so only that cap touches the fridge. Tier (gold /
+silver / bronze / participant) is the body colour, or — with a bought metal
+bezel ring or bike cog for spin weight — the metal itself.
+
+Everything reads **one config file**, `spinner-config.js`: dimensions, parts,
+options, presets and URL state. The configurator, the wave demo and the CAD
+generator cannot drift apart.
+
+## Quick start
+
+```bash
+cd design/trophy/cad && ./setup.sh          # once: venv + CadQuery (Homebrew python3.12; node for the config bridge)
+.venv/bin/python serve.py 8930             # local server with the generate API
+open http://localhost:8930/                 # landing → Configurator / Wave demo
+```
+
+In the **configurator** (`viewer.html`): pick a preset or set the options,
+tick the parts you want, click any part to inspect it (dimensions, filament,
+print orientation), then **Generate STL · 3MF · STEP**. The real geometry comes
+back into the same scene (choose it under *Generated*) so you can compare it
+with the preview before printing. *Copy link* writes the whole state to the
+URL. Without `serve.py` (any static server) the button shows the equivalent
+command instead.
+
+From the terminal, the same thing:
+
+```bash
+cd design/trophy/cad
+.venv/bin/python spinner.py --name NAHLA                      # full trophy, multi-colour inlays
+.venv/bin/python spinner.py --preset testring                 # one-colour spinning piece, wave in relief
+.venv/bin/python spinner.py --parts hub,hub-text --name KAI   # any subset
+.venv/bin/python spinner.py --url "arms=4&weight=cog"         # any configurator link's query
+.venv/bin/python spinner.py --list
+```
+
+## Files
+
+| file | role |
+|---|---|
+| `spinner-config.js` | **single source of truth**: `DIM`, `PARTS`, `OPTIONS`, `PRESETS`, URL ↔ options, output tag, CAD command |
+| `spinner-parts.js` | three.js builder per part (preview geometry, mounted pose) |
+| `viewer.html` | the configurator |
+| `wave-demo.html` · `wave-frames.js` | wave animation: frame shapes, variants, ring layout, phone-camera simulation, SVG export |
+| `index.html` | landing page: links + presets |
+| `cad/spinner.py` | CadQuery generator → STL per part, multi-part 3MF, STEP assembly, manifest JSON, bezel DXF |
+| `cad/bridge.mjs` | node: hands the config + wave polygons to Python as JSON |
+| `cad/serve.py` | local server: static files + `GET /api/outputs` + `POST /api/generate` |
+| `cad/setup.sh` | venv + CadQuery |
+| `cad/out/` | generated files (gitignored — regenerate, don't commit) |
+
+## Options
+
+All options live in `OPTIONS` in `spinner-config.js` and round-trip through the
+URL, the generator (`--url` or flags) and the manifest.
+
+| option | values | default | what |
+|---|---|---|---|
+| `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
+| `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
+| `arms` | 3 · 4 | 3 | arms carrying the ring |
+| `wave` | classic · rolling · return · barrel · returntip · classictip | return | animation style (see wave demo) |
+| `frames` | 0 · 6…16 | 0 = style's own | slots around the band; fewer = faster loop, bigger art |
+| `art` | inlay · raised · none | inlay | flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
+| `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
+| `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
+| `cap` | orange · navy · teal | orange | back-cap colour |
+| `parts` | comma list | all | which parts to show / generate |
+| `preset` | full · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+
+## Parts
+
+| id | group | what | generated as | printed in |
+|---|---|---|---|---|
+| `body` | spinning | hub on the 608 outer race (Ø21.9 bore), arms, wave ring; inlay pockets or relief | STL, back face down | bone / tier colour |
+| `wave-water` | spinning | navy water inlays, flush (inlay art only) | STL | navy |
+| `wave-foam` | spinning | cream foam inlays, flush (inlay art only) | STL | cream |
+| `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
+| `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays (inlay art only; raised text is fused into the hub) | STL | tier colour |
+| `back-cap` | still | Ø18 × 3 cap, stem, Ø10.2 × 2.1 magnet pocket | STL, fridge face down | any / anodized Al |
+| `bearing` · `magnet` · `weight` | bought | reference bodies | STEP only | — |
+
+The **3MF** holds one multi-part object per print unit — spinning piece
+(body + inlays), front hub (+ text), back cap — laid out side by side in print
+orientation. Open it in Bambu Studio and assign a filament per part; or load
+the per-part STLs together and answer *yes* to "single object with multiple
+parts". The **STEP** is the mounted assembly with the bearing, magnet and
+metal weight, for CAD. Each run also writes `<tag>.json`: options, parts,
+volumes, grams, files.
+
+## Dimensions
+
+Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
+hub r 16, arms 9 wide, **ring r 27.5 → 46.5** (Ø93; widened 50 % on
+2026-10-27, growing outward only), wave band r 30.6 → 45.9, inlays 0.6 deep,
+relief 0.6 / 0.9 (water / foam). Front hub r 25.5 (2 mm reveal to the ring),
+stem Ø8.1 × 3.3. Press fits to tune after the first print: `bore` and `stemD`.
+
+| spinning mass | PLA | note |
+|---|---|---|
+| body, 3 arms, inlay pockets | ~44 g | the generator prints exact grams per part |
+| body, one-colour relief | ~46 g | |
+| + flat bezel ring (93 × 86 × 3.18) | +~27 g brass | rim mass, tier metal |
+| + 22T bike cog | +~70 g steel | heaviest, teeth past the rim |
+
+Mass at the rim counts for r², so the wider ring already spins much longer
+than the Ø80 version did; try it bare before adding metal.
+
+# Design notes and decision log
 
 ## Last year (2025) for reference
 
@@ -26,70 +141,6 @@ motif for the new plover-on-the-dune logo.
 
 Natural pairings: 1 + 3 (laser-cut base, slot-in name tab, medal trim) and
 2 + 4 (metal spinner with a magnet core).
-
-## Viewing the previews
-
-Both pages use ES-module imports and load three.js from unpkg, so they need
-internet and a local static server (opening them as `file://` won't work).
-From the repo root:
-
-    python3 -m http.server 8930 --directory design/trophy
-
-Then open **http://localhost:8930/** — `index.html` links both previews, and
-they link to each other, so one server session covers everything. Direct links,
-on the same computer: `localhost` links don't work from a
-phone or another machine; send screenshots, or publish a page, if someone
-else needs to see it.
-
-- 3D viewer: http://localhost:8930/mockups.html?name=NAHLA (spinner only
-  since 2026-10-12; the other concepts are archived, see the end)
-  - Printed disc + still hub + whitewater return (current pick):
-    http://localhost:8930/mockups.html?body=printed&text=hub&wave=return&name=NAHLA
-  - Metal disc + still hub:
-    http://localhost:8930/mockups.html?body=metal&text=hub&wave=return&name=NAHLA
-  - Stock spinner + ring (the original plan):
-    http://localhost:8930/mockups.html?body=stock&text=ring&name=NAHLA
-- Wave demo: http://localhost:8930/wave-demo.html?wave=return&text=hub
-  (also `?wave=rolling`, `classic`, `barrel`)
-
-URL options (both pages where they apply): `body=stock|printed|metal`,
-`text=ring|hub`, `ring=wave|disk|notched`, `wave=classic|rolling|return|barrel`,
-`frames=6…16`, `name=YOURNAME`. Every option also has a control on the page.
-
-Viewing tips:
-- In a narrow window the wave demo stacks its views; **Phone video** is the
-  first one. **Still** never moves, by design.
-- At sync the phone view looks parked while the wave plays; that's the
-  effect. **Real spin, slowed 20×** shows how the ring actually turns.
-- After changing wave style, frame count or camera, press **Snap to sync**
-  or the phone view sits between sync speeds and just jitters.
-- In the 3D viewer, **Phone-cam demo** turns the ring head-on and steps it
-  like a 30 fps video; **Auto-rotate** and **Spin body** stop the motion for
-  a close look.
-
-## Mockup viewer
-
-`mockups.html` — self-contained three.js scene, four blocky procedural
-concepts to judge proportions and the modular idea (not finish).
-
-Buttons switch concept, the dropdown switches the medal tier colour,
-`?name=` sets the name, "Download PNG" saves the current camera angle.
-
-- **C · Spinner magnet (v2, 2026-10-10)** — see "Concept C build plan" below.
-  Stock metal tri-spinner + 608 bearing, metal weight inserts in the lobes,
-  anodized 6061 caps with the magnet in the back cap, and a wide printed
-  medal-colour ring on the front with three full-length rods through the
-  inserts' holes. Extra buttons: cap colour, **Exploded**
-  (parts pulled apart along the axis) and **On fridge** (steel door touching
-  only the back cap), plus **Spin body** to stop or start the body spinning.
-  **Ring** switches between *disk + wave* (default), plain *disk* and
-  *notched*; `?ring=wave|disk|notched` does the same from the URL.
-  **Wave** picks the animation style (below). **Phone-cam demo** steps the
-  ring the way a 30 fps phone video sees it near the sync speed, so the wave
-  breaks on screen. **Body** and **Text** switch between the build approaches
-  below (stock / printed / metal disc; text on the ring or on a still hub).
-  Dimensions are placeholders until real parts are measured.
-
 
 ## Concept C build plan (Chase, 2026-10-10)
 
@@ -310,12 +361,16 @@ The new body option, `Body: printed ring on arms` in the viewer
 
 ## Metal weight ring — and the metal as the tier colour (Chase, 2026-10-19)
 
+> Numbers in this section are for the original Ø80 ring (r 27.5–40). The ring is
+> now r 27.5–46.5 (Ø93, see Dimensions above): the solid body is ~44 g and the
+> bezel / cog weights scale up with it, so the ratios hold but not the grams.
+
 Question: is there a metal ring or outer gear we could build in for spin
 weight, visible is fine, maybe even as the tier indicator? Yes — two
 bought parts fit the ring-on-arms body without changing the print much,
 and both come in brass / stainless / copper finishes, so the metal can BE
 the tier and the print becomes one neutral filament for every trophy.
-Viewer: `Weight:` selector (ring-on-arms body only) or `?weight=bezel|cog`;
+Viewer: `Weight` option or `?weight=bezel|cog`;
 with a weight fitted the print renders bone-coloured, the metal in the
 tier colour.
 
@@ -360,60 +415,6 @@ more "trophy-like" material mix than coloured plastic.
 
 Test-print plan: print one bone ring body, spin it bare, then with a $3
 craft ring and a $8 cog, and time each. Pick by feel and by look.
-
-## CAD generator — STL + STEP (2026-10-27)
-
-`design/trophy/cad/spinner.py` builds the real parts with CadQuery
-(OpenCascade kernel), not the three.js preview meshes: proper booleans,
-flush inlay pockets, exact bores. One-time setup, then one command per
-trophy:
-
-```bash
-cd design/trophy/cad && ./setup.sh          # venv + cadquery (Homebrew python3.12, needs node too)
-.venv/bin/python spinner.py --name NAHLA --arms 3 --wave return
-.venv/bin/python spinner.py --name KAI --arms 4 --weight bezel --bezel flat
-.venv/bin/python spinner.py --name MOANA --weight cog --wave classic
-```
-
-Output in `cad/out/` (gitignored — regenerate, don't commit), ~11 s a run:
-
-| file | what | print it in |
-|---|---|---|
-| `<tag>-body.stl` | hub on the 608 (Ø21.9 bore), N arms, wave ring with 0.6 mm pockets | bone / tier colour |
-| `<tag>-wave-water.stl` | navy water inlays, fill the pockets flush | navy |
-| `<tag>-wave-foam.stl` | cream foam inlays | cream |
-| `<tag>-hub.stl` | still front hub (Ø8.1 stem, r 5.5 spacer, r 25.5 disc) with text pockets | navy |
-| `<tag>-hub-text.stl` | "SURFTOBER 2026" over the top, name along the bottom, 0.6 mm inlays | gold / silver / copper |
-| `<tag>-back-cap.stl` | printed stand-in for the magnet cap: stem, spacer, Ø10.2 × 2.1 pocket | anything |
-| `<tag>.step` | coloured assembly of all of the above + a 608 + the metal ring, mounted | — |
-| `metal-ring-flat-81.2x74.2.dxf` | the flat bezel ring outline for SendCutSend (`--weight bezel --bezel flat`) | brass / stainless / copper 0.125" |
-
-`<tag>` = `nahla-3arm-return10[-bezel-flat|-cog]`. STLs are saved in print
-orientation: body back-face down, hub text-face down (crisp inlay on the
-bed), cap fridge-face down. In Bambu Studio drag all the STLs of one tag in
-together and answer **Yes** to "load as a single object with multiple
-parts", then set a filament per part. The wave frames come straight from
-`wave-frames.js` via node (`cad/wave-polys.mjs`), so they match the demo
-exactly.
-
-Weights (`--weight`): `bezel --bezel flat` cuts a square groove around the
-rim for a 3.18 mm laser-cut ring and writes its DXF; `--bezel round` cuts a
-half-round groove for a Ø80 × 3.5 craft ring; `cog` adds a Ø34.6 × 2.3 boss
-behind the body for a 1.37"×24 tpi track cog. All dimensions sit in the `P`
-dict at the top of the script — bore and stem press fits (`bore`, `stem_d`)
-are the two to tune after the first print.
-
-**Just one component.** `--only ring` writes only the spinning piece — the
-printed body (hub on the bearing, arms, wave ring) with its water and foam
-inlays, no still hub, text or back cap — tagged `ring-<arms>arm-<wave><N>`,
-so one file set covers every name. `--parts body,wave-water,wave-foam` (any
-subset of the six names) limits which files are written for a full build. The viewer's **CAD
-command** button prints both commands for whatever is on screen.
-
-Quick visual check without a slicer: `cad/view.html` (linked from the
-landing page) lists whatever is in `out/`, shows the parts mounted, exploded,
-or as wireframe. Mass check from the generator (PLA, 100 %): body ~29 g,
-hub ~6 g, inlays < 1 g — matching the estimates in the weight table above.
 
 ## Wave foam — direction (Chase, 2026-10-12)
 
@@ -466,5 +467,5 @@ Decision: all in on the spinner. Concepts A (modular plaque), B (fin magnet)
 and D (windmill) were removed from the viewer and this doc. They last exist
 in full — builders, captions, image prompts — at commit `4557532`:
 
-    git show 4557532:design/trophy/mockups.html
+    git show 4557532:design/trophy/viewer.html
     git show 4557532:design/trophy/README.md

@@ -1,24 +1,49 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Surftober 2026 trophy — previews</title>
 <style>
-  body{margin:0;background:#f3ece2;font-family:system-ui,-apple-system,sans-serif;color:#2d2416}
-  main{max-width:760px;margin:0 auto;padding:28px 18px}
-  h1{font-size:22px;margin:0 0 6px} p{color:#5a4a36;line-height:1.45;max-width:70ch}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:18px 0}
+  body{margin:0;font:15px/1.5 system-ui,-apple-system,sans-serif;background:#f3ece2;color:#2d2416}
+  main{max-width:860px;margin:0 auto;padding:36px 20px 60px}
+  h1{color:#b54a17;margin:0 0 4px} .sub{color:#6f5d46;margin:0 0 22px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#6f5d46;margin:28px 0 10px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
   a.card{display:block;background:#fff8f0;border:1px solid #e3d6c0;border-radius:12px;padding:16px 18px;text-decoration:none;color:inherit}
   a.card:hover{border-color:#ff6b35} a.card b{display:block;font-size:17px;margin-bottom:6px;color:#b54a17}
-  code{background:#fff8f0;border:1px solid #e3d6c0;border-radius:6px;padding:1px 5px;font-size:13px}
-  ul{color:#5a4a36;line-height:1.5}
-</style></head><body><main>
-<h1>Surftober 2026 trophy — the spinner</h1>
-<p>Both previews live in this folder and link to each other, so one <code>python3 -m http.server</code> session covers everything. They load three.js from the web, so stay online.</p>
-<div class="cards">
-  <a class="card" href="./mockups.html?body=spoked&text=hub&wave=return&arms=3&name=NAHLA"><b>3D viewer</b>Orbit the spinner, switch body / arms / ring / wave / text / tier, explode it, put it on a fridge, export a PNG.</a>
-  <a class="card" href="./wave-demo.html?wave=return&text=hub"><b>Wave animation demo</b>Frame-by-frame: what a phone video sees at sync, what your eye sees, the real spin slowed down, and one slot played large. SVG export for the print.</a>
-  <a class="card" href="./cad/view.html"><b>Generated STL check</b>Real solids from <code>cad/spinner.py</code> (CadQuery): body, wave inlays, hub, text, back cap — in their mounted positions, exploded, or wireframe. Run the generator first; see the README.</a>
-</div>
-<p>Metal weight in the tier colour (2026-10-19): <a href="./mockups.html?body=spoked&text=hub&wave=return&arms=3&weight=bezel&name=NAHLA">O-ring bezel in the rim</a> · <a href="./mockups.html?body=spoked&text=hub&wave=return&arms=3&weight=cog&name=NAHLA">bike cog behind the ring</a> · <a href="./mockups.html?body=spoked&text=hub&wave=return&arms=3&weight=none&name=NAHLA">solid print, no metal</a>.</p>
-<p>URL options on both pages: <code>body=stock|printed|metal|spoked</code>, <code>arms=3|4</code>, <code>weight=none|bezel|cog</code> (metal weight in the tier colour: O-ring bezel in the rim, or a bike cog behind it), <code>text=ring|hub</code>, <code>ring=wave|disk|notched</code>, <code>wave=classic|rolling|return|barrel|returntip|classictip</code>, <code>frames=6…16</code>, <code>name=YOURNAME</code>.</p>
+  .presets a{display:inline-block;margin:0 10px 8px 0;padding:6px 12px;border-radius:999px;background:#fff8f0;border:1px solid #e3d6c0;text-decoration:none;color:#2d2416;font-size:14px}
+  .presets a:hover{border-color:#ff6b35}
+  code{background:#fff8f0;border:1px solid #e3d6c0;border-radius:6px;padding:1px 6px;font-size:13px}
+  pre{background:#fff8f0;border:1px solid #e3d6c0;border-radius:10px;padding:12px 14px;font-size:13px;overflow:auto}
+  p{margin:8px 0} a{color:#b54a17}
+</style>
+<main>
+  <h1>Surftober 2026 trophy — the spinner</h1>
+  <p class="sub">A fully printed fidget-spinner fridge magnet: a 608 bearing, a wave ring on arms that animates on a phone video, a still hub with the name. Everything below reads one config file, <code>spinner-config.js</code>, so the previews and the printed parts always agree.</p>
 
-</main></body></html>
+  <div class="cards">
+    <a class="card" href="./viewer.html"><b>Configurator</b>Orbit the spinner, pick arms / wave / artwork / weight / tier / name, tick the parts you want, inspect any part, then generate STL · 3MF · STEP and see the real geometry come back.</a>
+    <a class="card" href="./wave-demo.html"><b>Wave animation demo</b>Frame by frame: what a phone video sees at sync, what your eye sees, the real spin slowed down, one slot played large. SVG export of the band.</a>
+  </div>
+
+  <h2>Presets</h2>
+  <p class="presets">
+    <a href="./viewer.html">Full trophy · multi-colour</a>
+    <a href="./viewer.html?art=raised&parts=body">Test print · one-colour ring</a>
+    <a href="./viewer.html?parts=hub,hub-text,back-cap">Still parts only</a>
+    <a href="./viewer.html?weight=bezel">Metal bezel · brass</a>
+    <a href="./viewer.html?weight=cog&arms=4">Bike cog · 4 arms</a>
+    <a href="./viewer.html?art=none&parts=body">Plain ring · no wave</a>
+  </p>
+
+  <h2>Running it</h2>
+  <p>The configurator's <b>Generate</b> button needs the little local server (it runs the CadQuery generator for you and serves the output back):</p>
+  <pre>cd design/trophy/cad && ./setup.sh        # once: venv + CadQuery (Homebrew python3.12, node)
+.venv/bin/python serve.py 8930           # then open http://localhost:8930/</pre>
+  <p>Any static server works for the previews alone (<code>python3 -m http.server --directory design/trophy</code>); the viewer then shows the generator command instead of running it. Both pages load three.js from unpkg, so stay online. Not <code>file://</code> — ES modules.</p>
+
+  <h2>URL options</h2>
+  <p>Both pages share them, so a configured link can be passed around: <code>name=KAI</code> · <code>tier=gold|silver|bronze|participant</code> · <code>arms=3|4</code> · <code>wave=classic|rolling|return|barrel|returntip|classictip</code> · <code>frames=6…16</code> · <code>art=inlay|raised|none</code> · <code>weight=none|bezel|cog</code> · <code>bezel=flat|round</code> · <code>cap=orange|navy|teal</code> · <code>parts=body,wave-water,…</code> · <code>preset=testring</code>. The viewer's <b>Copy link</b> button writes the current state.</p>
+  <p>Generated files land in <code>design/trophy/cad/out/</code> (gitignored). Build notes, sourcing and the decision log: <a href="./README.md">README.md</a>.</p>
+</main>
+</html>

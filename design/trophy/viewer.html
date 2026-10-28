@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surftober 2026 trophy — spinner configurator</title>
+<style>
+  :root { --bg:#f3ece2; --panel:#fff8f0; --line:#e3d6c0; --ink:#2d2416; --muted:#6f5d46; --accent:#ff6b35; --link:#b54a17; }
+  * { box-sizing: border-box }
+  html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, -apple-system, sans-serif; color: var(--ink); background: var(--bg) }
+  body { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 100%; overflow: hidden }
+  body.collapsed { grid-template-columns: 0 1fr }
+  #side { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; overflow-x: hidden; padding: 12px 14px 20px; display: flex; flex-direction: column; gap: 14px }
+  body.collapsed #side { display: none }
+  #stage { position: relative; min-width: 0 }
+  canvas { display: block }
+  h1 { font-size: 16px; margin: 0; color: var(--link) } h1 small { display: block; font-size: 12px; font-weight: 400; color: var(--muted) }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px }
+  section { display: flex; flex-direction: column; gap: 6px }
+  label.row { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; font-size: 13px }
+  select, input[type=text], button { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); min-width: 0 }
+  select, input[type=text] { width: 100% }
+  button { cursor: pointer } button:hover { border-color: var(--accent) }
+  button.on { background: var(--accent); color: #fff; border-color: var(--accent) }
+  button.primary { background: var(--link); color: #fff; border-color: var(--link); font-weight: 600 }
+  button.primary:disabled { opacity: .55; cursor: wait }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px }
+  .btns button { flex: 1 1 auto }
+  .preset { text-align: left; padding: 6px 8px } .preset b { display: block; font-size: 13px } .preset span { font-size: 11.5px; color: var(--muted) }
+  .partgroup { font-size: 11px; color: var(--muted); margin-top: 4px }
+  .part { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 6px; font-size: 13px; cursor: pointer }
+  .part:hover { background: #f7ecdc } .part.sel { background: #ffe1d2; outline: 1px solid var(--accent) }
+  .part .sw { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0002; display: inline-block; margin-right: 6px; vertical-align: -1px }
+  .part .only { font-size: 10.5px; padding: 1px 6px; border-radius: 10px; opacity: 0; } .part:hover .only { opacity: 1 }
+  .part.off { color: #a0907a } .part.off .sw { opacity: .35 }
+  .hint { font-size: 11.5px; color: var(--muted) }
+  a { color: var(--link) }
+  pre { background: #f7f1e6; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 11px; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 170px; overflow: auto }
+  #info { position: absolute; left: 12px; right: 12px; bottom: 10px; background: #fff8f0e6; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; pointer-events: none }
+  #info b { color: var(--link) }
+  #top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+  #top .sp { flex: 1 }
+  #toggle { position: absolute; top: 10px; left: 12px; z-index: 2 }
+  #top { left: 70px }
+  .files a { display: inline-block; margin: 2px 8px 2px 0; font-size: 12px }
+  table.man { font-size: 11.5px; border-collapse: collapse; width: 100% } table.man td { padding: 1px 4px; border-bottom: 1px solid #eee3d2 } table.man td:last-child { text-align: right }
+  .ok { color: #2e7d4f } .bad { color: #b3261e }
+  @media (max-width: 760px) { body { grid-template-columns: 1fr; grid-template-rows: auto 1fr } #side { max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--line) } body.collapsed { grid-template-rows: 0 1fr } }
+</style>
+<body>
+<aside id="side">
+  <h1>Spinner configurator <small>Surftober 2026 trophy · <a href="./index.html">previews</a> · <a id="to-demo" href="./wave-demo.html">wave demo →</a></small></h1>
+
+  <section>
+    <h2>Presets</h2>
+    <div class="btns" id="presets" style="flex-direction:column"></div>
+  </section>
+
+  <section>
+    <h2>Configuration</h2>
+    <div id="options"></div>
+  </section>
+
+  <section>
+    <h2>Parts <span class="hint" style="text-transform:none;letter-spacing:0">· click to inspect · tick to show · generate writes the ticked printed parts</span></h2>
+    <div id="parts"></div>
+    <div class="btns"><button id="allparts">Show all</button><button id="spinonly">Spinning piece</button><button id="stillonly">Still parts</button></div>
+  </section>
+
+  <section>
+    <h2>View</h2>
+    <div class="btns">
+      <button id="explode">Exploded</button><button id="bodyspin" class="on">Spin body</button><button id="autorot" class="on">Orbit</button>
+      <button id="fridge">On fridge</button><button id="phonecam">Phone-cam</button><button id="wire">Wireframe</button><button id="front">Front view</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Output</h2>
+    <div class="btns"><button id="generate" class="primary">Generate STL · 3MF · STEP</button></div>
+    <div class="hint" id="genhint">Runs <code>cad/spinner.py</code> for the ticked printed parts. Needs <code>cad/serve.py</code> (port 8930); on a plain static server this shows the command instead.</div>
+    <label class="row" style="grid-template-columns:auto 1fr"><span>Generated</span><select id="gensel"><option value="">— procedural preview —</option></select></label>
+    <div id="genout"></div>
+    <div class="btns"><button id="cmd">CAD command</button><button id="link">Copy link</button><button id="png">Download PNG</button><button id="reset">Reset</button></div>
+    <pre id="cmdbox" style="display:none"></pre>
+  </section>
+</aside>
+
+<div id="stage">
+  <button id="toggle" title="Hide / show the panel">☰</button>
+  <div id="top"><span class="sp"></span><span class="hint" id="tag"></span></div>
+  <div id="info"></div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { DIM, TIERS, PARTS, PART, OPTIONS, PRESETS, partLabel, activeParts, generatedParts, partsToGenerate, parseOptions, serializeOptions,
+         frameCount, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS } from './spinner-config.js';
+import { buildSpinner, POSE, WEIGHT_DZ } from './spinner-parts.js';
+
+const $ = id => document.getElementById(id);
+let o = parseOptions(location.search);
+let view = { exploded: false, bodySpin: true, autoRotate: true, fridge: false, phoneCam: false, wire: false, generated: '' };
+let font = null, model = null, selected = null, explodeAmt = 0, manifests = [], apiOk = null;
+
+// ---- scene ------------------------------------------------------------------
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.shadowMap.enabled = true; renderer.toneMapping = THREE.ACESFilmicToneMapping; stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf3ece2);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 2000); camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.autoRotateSpeed = 1.2;
+const HOME = { pos: [70, -150, 150], target: [0, 0, 5] }, FRONT = { pos: [0, -0.01, 270], target: [0, 0, 5] };
+function goto(v) { camera.position.set(...v.pos); controls.target.set(...v.target); controls.update(); }
+goto(HOME);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xcbb9a0, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(120, -140, 200); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -150, right: 150, top: 150, bottom: -150 }); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffe7d0, 0.6); fill.position.set(-150, 80, -60); scene.add(fill);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.position.z = -(DIM.capSpacer + DIM.capT) - 2.5; ground.receiveShadow = true; scene.add(ground);
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px'; camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+
+// ---- model ------------------------------------------------------------------
+function rebuild() {
+  if (model) scene.remove(model.root);
+  model = buildSpinner(o, font);
+  model.fridge.visible = view.fridge;
+  scene.add(model.root);
+  applyWire();
+  if (view.generated) loadGenerated(view.generated);
+  renderParts(); renderOptions(); updateUrl(); updateInfo();
+  $('tag').textContent = `${outputTag(o)} · Ø${2 * DIM.ringOut} mm · ${WAVE_VARIANTS[o.wave].label}, ${frameCount(o)} frames`;
+  $('to-demo').href = `./wave-demo.html?${serializeOptions(o)}`;
+}
+function setOptions(next) { const prev = o; o = parseOptions({ ...o, ...next }); if (JSON.stringify(prev) !== JSON.stringify(o)) rebuild(); }
+function updateUrl() { const q = serializeOptions(o); history.replaceState(null, '', q ? `?${q}` : location.pathname); }
+const visibleIds = () => activeParts(o).filter(id => !o.parts || o.parts.includes(id));
+function setVisible(ids) { const all = activeParts(o); const v = ids.filter(id => all.includes(id)); setOptions({ parts: v.length === all.length ? null : v }); if (!v.length) { o.parts = []; model.parts.forEach(p => p.visible = false); renderParts(); updateUrl(); } }
+function applyWire() { model.root.traverse(c => { if (c.isMesh && c.material) c.material.wireframe = view.wire; }); }
+
+// ---- generated geometry (STLs from cad/out) ----------------------------------
+const stlLoader = new STLLoader();
+function loadGenerated(tag) {
+  const man = manifests.find(m => m.tag === tag);
+  if (!man) return;
+  man.parts.forEach(p => {
+    if (!p.file) return;
+    stlLoader.load(`./cad/out/${p.file}`, geo => {
+      if (!model || view.generated !== tag) return;
+      const proc = model.parts.get(p.id);
+      const mat = proc ? firstMaterial(proc) : new THREE.MeshStandardMaterial({ color: p.color });
+      const mesh = new THREE.Mesh(geo, mat.clone()); mesh.castShadow = mesh.receiveShadow = true;
+      // undo the print pose: flipped parts stand on their top face, others on their bottom face
+      if (p.print.flip) { mesh.rotation.x = Math.PI; mesh.position.z = p.mounted_z ? p.mounted_z[1] : DIM.t + p.print.z; }
+      else mesh.position.z = p.mounted_z ? p.mounted_z[0] : -p.print.z;
+      const wrap = new THREE.Group(); wrap.add(mesh);
+      wrap.userData = { part: p.id, z0: 0, dz: POSE[p.id].dz, generated: true }; mesh.userData.part = p.id;
+      wrap.visible = !o.parts || o.parts.includes(p.id);
+      if (proc) { proc.visible = false; proc.userData.hiddenByGenerated = true; }
+      (POSE[p.id].spins ? model.spin : model.still).add(wrap);
+      model.parts.set(p.id, wrap);
+      applyWire();
+    });
+  });
+}
+function firstMaterial(obj) { let m = null; obj.traverse(c => { if (!m && c.isMesh) m = c.material; }); return m || new THREE.MeshStandardMaterial(); }
+async function refreshManifests() {
+  try {
+    const r = await fetch('./api/outputs', { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    manifests = (await r.json()).outputs; apiOk = true;
+  } catch {
+    apiOk = false;
+    try {   // plain static server: scrape the directory listing for manifests
+      const html = await (await fetch('./cad/out/')).text();
+      const names = [...html.matchAll(/href="([^"]+\.json)"/g)].map(m => decodeURIComponent(m[1]));
+      manifests = (await Promise.all(names.map(n => fetch(`./cad/out/${n}`).then(r => r.json()).catch(() => null)))).filter(Boolean);
+    } catch { manifests = []; }
+  }
+  const sel = $('gensel'), cur = sel.value;
+  sel.innerHTML = '<option value="">— procedural preview —</option>';
+  manifests.sort((a, b) => (b.generated || '').localeCompare(a.generated || '')).forEach(m => sel.add(new Option(`${m.tag}  (${m.parts.length} parts, ${m.generated || ''})`, m.tag)));
+  sel.value = manifests.some(m => m.tag === cur) ? cur : '';
+  $('genhint').textContent = apiOk ? 'Runs cad/spinner.py on this machine for the ticked printed parts (10–30 s), then loads the real geometry here.'
+    : 'Static server: shows the command to run instead. Start cad/serve.py (port 8930) to generate from here.';
+  $('generate').textContent = apiOk ? 'Generate STL · 3MF · STEP' : 'Show generate command';
+}
+
+// ---- UI: presets, options, parts -------------------------------------------
+Object.entries(PRESETS).forEach(([k, p]) => {
+  const b = document.createElement('button'); b.className = 'preset'; b.innerHTML = `<b>${p.label}</b><span>${p.detail}</span>`;
+  b.addEventListener('click', () => { o = applyPreset(k); view.generated = ''; $('gensel').value = ''; rebuild(); }); $('presets').appendChild(b);
+});
+function renderOptions() {
+  const box = $('options'); box.innerHTML = '';
+  for (const [k, spec] of Object.entries(OPTIONS)) {
+    if (spec.type === 'list' || (spec.when && !spec.when(o))) continue;
+    const row = document.createElement('label'); row.className = 'row'; row.innerHTML = `<span>${spec.label}</span>`;
+    let ctl;
+    if (spec.type === 'choice') { ctl = document.createElement('select'); spec.values.forEach(v => ctl.add(new Option(spec.labels?.[v] ?? v, v))); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
+    else if (spec.type === 'int') { ctl = document.createElement('select'); ctl.add(new Option(`style default (${WAVE_VARIANTS[o.wave].N})`, 0)); for (let n = spec.min; n <= spec.max; n++) ctl.add(new Option(`${n} frames`, n)); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
+    else { ctl = document.createElement('input'); ctl.type = 'text'; ctl.maxLength = spec.max; ctl.value = o[k]; ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
+    row.appendChild(ctl); box.appendChild(row);
+  }
+}
+function renderParts() {
+  const box = $('parts'); box.innerHTML = '';
+  const active = activeParts(o), vis = visibleIds();
+  let group = null;
+  for (const p of PARTS) {
+    if (!active.includes(p.id)) continue;
+    if (p.group !== group) { group = p.group; const g = document.createElement('div'); g.className = 'partgroup'; g.textContent = group; box.appendChild(g); }
+    const row = document.createElement('div'); row.className = 'part' + (vis.includes(p.id) ? '' : ' off') + (selected === p.id ? ' sel' : '');
+    const color = p.color === 'tier' ? TIERS[o.tier].color : p.color === 'cap' ? ({ orange: '#ff6b35', navy: '#1d3050', teal: '#3aa9a3' })[o.cap] : ({ bone: '#e9e1cf', navy: '#1d3050', cream: '#efe7d2', steel: '#d0d4d8', magnet: '#333' })[p.color] || '#999';
+    row.innerHTML = `<input type="checkbox" ${vis.includes(p.id) ? 'checked' : ''}><span><i class="sw" style="background:${color}"></i>${partLabel(p.id, o)}${p.generated ? '' : ' <span class="hint">bought</span>'}</span><button class="only">only</button>`;
+    row.querySelector('input').addEventListener('click', e => { e.stopPropagation(); setVisible(e.target.checked ? [...vis, p.id] : vis.filter(x => x !== p.id)); });
+    row.querySelector('.only').addEventListener('click', e => { e.stopPropagation(); setVisible([p.id]); });
+    row.addEventListener('click', () => select(selected === p.id ? null : p.id));
+    box.appendChild(row);
+  }
+}
+$('allparts').addEventListener('click', () => setVisible(activeParts(o)));
+$('spinonly').addEventListener('click', () => setVisible(PARTS.filter(p => p.group === 'Spinning piece').map(p => p.id)));
+$('stillonly').addEventListener('click', () => setVisible(PARTS.filter(p => p.group === 'Still parts').map(p => p.id)));
+
+// ---- selection ----------------------------------------------------------------
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const hit = ray.intersectObjects([...model.parts.values()].filter(p => p.visible), true).find(h => h.object.visible && h.object.userData.part);
+  select(hit ? hit.object.userData.part : null);
+});
+function select(id) {
+  selected = id;
+  model.parts.forEach((obj, pid) => obj.traverse(c => { if (c.isMesh && c.material.emissive) c.material.emissive.setHex(pid === id ? 0x5a2a10 : 0x000000); }));
+  renderParts(); updateInfo();
+}
+function partInfo(id) {
+  const D = DIM, p = PART[id], n = frameCount(o);
+  const dims = {
+    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608 · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
+    'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm flush inlay`,
+    'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm flush inlay, on top of the water`,
+    hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring`,
+    'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${o.art === 'inlay' ? `${D.inlay} mm inlay` : 'raised'}`,
+    'back-cap': `Ø${2 * D.capR} × ${D.capT} mm · stem Ø${D.stemD} · pocket Ø${D.magPocketD} × ${D.magPocketDepth} for the magnet`,
+    bearing: `608: ${D.bearing.id} × ${D.bearing.od} × ${D.bearing.w} mm · outer race spins with the body, inner race carries hub + cap`,
+    magnet: `Ø${D.magD} × ${D.magT} N42 disc · in the back cap, on the inner race — never spins, only part that touches the fridge`,
+    weight: o.weight === 'bezel' ? (o.bezel === 'flat' ? `laser-cut ${TIERS[o.tier].metalName} ring OD ${2 * (D.ringOut + D.bezelProud)} × ID ${2 * (D.ringOut + D.bezelProud) - (D.flatOd - D.flatId)} × ${D.flatT} mm in a groove round the rim` : `Ø${2 * D.ringOut} × ${D.bezelWire} mm ${TIERS[o.tier].metalName} wire ring in a half-round groove`) : `${D.cogTeeth}T track cog, tip Ø${2 * D.cogTip}, bore Ø${D.cogBore}, on a boss behind the body`,
+  };
+  return `<b>${partLabel(id, o)}</b> — ${p.detail}. ${dims[id] || ''}${p.generated ? ` · print: ${p.filament}` : ''}`;
+}
+function updateInfo() {
+  const gen = partsToGenerate(o), grams = view.generated && manifests.find(m => m.tag === view.generated);
+  $('info').innerHTML = selected ? partInfo(selected)
+    : `<b>${TIERS[o.tier].label}</b> · ${o.name.toUpperCase()} · ${o.arms} arms · ${WAVE_VARIANTS[o.wave].label} (${frameCount(o)}) · ${OPTIONS.art.labels[o.art]} · weight: ${OPTIONS.weight.labels[o.weight]}`
+      + ` · generate writes ${gen.length} part${gen.length === 1 ? '' : 's'}: ${gen.join(', ') || 'none'}`
+      + (grams ? ` · generated set shown: ${grams.parts.reduce((s, p) => s + p.grams_pla, 0).toFixed(1)} g PLA` : '')
+      + ' · click a part to inspect it';
+}
+
+// ---- view buttons -------------------------------------------------------------
+const tog = (id, key, fn) => $(id).addEventListener('click', e => { view[key] = !view[key]; e.target.classList.toggle('on', view[key]); fn && fn(); });
+tog('explode', 'exploded');
+tog('bodyspin', 'bodySpin');
+tog('autorot', 'autoRotate');
+tog('fridge', 'fridge', () => { model.fridge.visible = view.fridge; });
+tog('wire', 'wire', applyWire);
+$('phonecam').addEventListener('click', e => {
+  view.phoneCam = !view.phoneCam; e.target.classList.toggle('on', view.phoneCam);
+  if (view.phoneCam) { view.autoRotate = false; $('autorot').classList.remove('on'); goto(FRONT); if (o.art === 'none') setOptions({ art: 'inlay' }); }
+});
+$('front').addEventListener('click', () => goto(FRONT));
+$('toggle').addEventListener('click', () => { document.body.classList.toggle('collapsed'); setTimeout(resize, 50); });
+
+// ---- output -------------------------------------------------------------------
+$('generate').addEventListener('click', async () => {
+  if (!apiOk) { showCmd(); return; }
+  const b = $('generate'); b.disabled = true; b.textContent = 'Generating… (10–30 s)';
+  $('genout').innerHTML = '';
+  try {
+    const r = await fetch('./api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: serializeOptions(o), combined: true }) });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error((d.error || r.statusText) + (d.log ? '\n' + d.log : ''));
+    await refreshManifests();
+    showManifest(d.manifest);
+    view.generated = d.manifest.tag; $('gensel').value = view.generated; rebuild();
+  } catch (err) { $('genout').innerHTML = `<pre class="bad">${String(err.message || err)}</pre>`; }
+  b.disabled = false; b.textContent = 'Generate STL · 3MF · STEP';
+});
+function showManifest(m) {
+  if (!m) { $('genout').innerHTML = ''; return; }
+  const rows = m.parts.map(p => `<tr><td>${p.valid ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'} ${p.label}</td><td>${p.filament}</td><td>${p.grams_pla} g</td></tr>`).join('');
+  const files = Object.entries(m.files).map(([k, f]) => `<a href="./cad/out/${f}" download>${k === 'all_stl' ? 'all-in-one STL' : k.toUpperCase()}</a>`).join('')
+    + m.parts.filter(p => p.file).map(p => `<a href="./cad/out/${p.file}" download>${p.id}.stl</a>`).join('');
+  $('genout').innerHTML = `<table class="man">${rows}<tr><td><b>total</b></td><td></td><td><b>${m.parts.reduce((s, p) => s + p.grams_pla, 0).toFixed(1)} g</b></td></tr></table>
+    <div class="files">${files}</div><div class="hint">${m.tag} · ${m.generated} · ${m.seconds}s · files in design/trophy/cad/out/</div>`;
+}
+$('gensel').addEventListener('change', e => { view.generated = e.target.value; showManifest(manifests.find(m => m.tag === view.generated)); rebuild(); });
+function showCmd() {
+  const box = $('cmdbox'); box.style.display = '';
+  box.textContent = `# in design/trophy/cad (after ./setup.sh)\n${cadCommand(o)}\n\n# or start the server and use the Generate button:\n.venv/bin/python serve.py 8930`;
+}
+$('cmd').addEventListener('click', () => { const b = $('cmdbox'); if (b.style.display === 'none') showCmd(); else b.style.display = 'none'; });
+$('link').addEventListener('click', e => { navigator.clipboard?.writeText(location.href); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy link', 1200); });
+$('png').addEventListener('click', () => { const a = document.createElement('a'); a.download = `surftober-trophy-${outputTag(o)}.png`; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
+$('reset').addEventListener('click', () => { o = defaults(); view.generated = ''; $('gensel').value = ''; $('genout').innerHTML = ''; rebuild(); });
+
+// ---- loop ---------------------------------------------------------------------
+let lastT = performance.now(), camAcc = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+  controls.autoRotate = view.autoRotate && !view.phoneCam; controls.update();
+  if (model) {
+    const N = frameCount(o);
+    if (view.phoneCam) { camAcc += dt; if (camAcc >= 1 / 30) { camAcc %= 1 / 30; model.spin.rotation.z -= 2 * Math.PI / N * 0.97; } }
+    else if (view.bodySpin) model.spin.rotation.z -= 0.02;
+    explodeAmt += ((view.exploded ? 1 : 0) - explodeAmt) * 0.08;
+    model.parts.forEach(obj => { obj.position.z = obj.userData.z0 + obj.userData.dz * explodeAmt; });
+  }
+  renderer.render(scene, camera);
+}
+loop(performance.now());
+
+// ---- boot -----------------------------------------------------------------------
+window.__trophy = { get options() { return o; }, set: setOptions, select, view, rebuild, get model() { return model; }, ready: false, manifests: () => manifests };
+refreshManifests().then(() => {
+  const want = new URLSearchParams(location.search).get('gen');
+  if (want && manifests.some(m => m.tag === want)) { view.generated = want; $('gensel').value = want; showManifest(manifests.find(m => m.tag === want)); }
+});
+new FontLoader().load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => { font = f; rebuild(); window.__trophy.ready = true; });
+</script>
+</body>
+</html>
