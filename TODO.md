@@ -256,6 +256,12 @@
       12.8 — still 10 frames at full size), 0.6 mm seat lip behind the bore
       (outer-race face only) + 0.6 mm entry chamfer so the ring sits square.
       Next: print 2, flip test (does wobble follow the body or the bearing?).
+      2026-10-29: output files prefixed with a version (option `version`,
+      default v3 → v3-nahla-3arm-return10-*.stl). New animation style
+      `plover`: the logo's snowy plover, side view, wings flapping + legs
+      striding + body bob, drawn procedurally (wave-frames.js sprite());
+      cream body + navy details (styles can recolour their two inlay
+      layers). Thinnest features ~0.5–0.6 mm.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

@@ -44,7 +44,7 @@ def list_everything():
     print('parts (generated):')
     for p in cfg['generate']:
         print(f"  {p['id']:<11} {p['group']:<16} {p['filament']}")
-    print('\nquery options: name, tier, arms (3|4), wave, frames, art (inlay|raised|none), text (recessed|inlay|raised), weight (none|bezel|cog), bezel (flat|round), parts')
+    print('\nquery options: version (file prefix, default v3), name, tier, arms (3|4), wave, frames, art (inlay|raised|none), text (recessed|inlay|raised), weight (none|bezel|cog), bezel (flat|round), parts')
     print('presets: full, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
 
 
@@ -290,7 +290,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('name', 'tier', 'wave', 'art', 'text', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -304,7 +304,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))

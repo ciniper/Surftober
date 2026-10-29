@@ -10,7 +10,7 @@
 // Coordinates: the spinner axis is z, the 608 bearing sits at z 0…7 with its
 // front face at z = 7 (the face you look at), the fridge is behind z = 0.
 
-import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, layerColors, layerNames } from './wave-frames.js';
 
 // ---------------------------------------------------------------------------
 // Dimensions (mm)
@@ -83,10 +83,10 @@ export const CAP_COLORS = { orange: '#ff6b35', navy: '#1d3050', teal: '#3aa9a3' 
 export const PARTS = [
   { id: 'body',       group: 'Spinning piece', label: 'Body',        detail: 'Hub on the 608 outer race, arms, wave ring — one print',
     generated: true, color: 'bone',  filament: 'bone / tier colour', print: { flip: false, z: 0 } },
-  { id: 'wave-water', group: 'Spinning piece', label: 'Wave · water', detail: 'Navy inlays, flush in the ring face',
-    generated: true, color: 'navy',  filament: 'navy', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
-  { id: 'wave-foam',  group: 'Spinning piece', label: 'Wave · foam',  detail: 'Cream inlays, flush in the ring face',
-    generated: true, color: 'cream', filament: 'cream', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
+  { id: 'wave-water', group: 'Spinning piece', label: 'Art · bottom layer', detail: 'First inlay colour, flush in the ring face (water, or the plover’s body)',
+    generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
+  { id: 'wave-foam',  group: 'Spinning piece', label: 'Art · top layer',    detail: 'Second inlay colour on top of the first (foam, or the plover’s details)',
+    generated: true, color: 'layer-foam', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
   { id: 'hub',        group: 'Still parts',    label: 'Front hub',    detail: 'Rides the inner race; hides the arms; carries the text',
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
@@ -99,7 +99,22 @@ export const PARTS = [
     color: 'tier', when: o => o.weight !== 'none' },
 ];
 export const PART = Object.fromEntries(PARTS.map(p => [p.id, p]));
-export const partLabel = (id, o) => id === 'weight' && o ? (o.weight === 'bezel' ? `Metal bezel ring (${o.bezel})` : 'Bike cog') : PART[id].label;
+export function partLabel(id, o) {
+  if (!o) return PART[id].label;
+  if (id === 'weight') return o.weight === 'bezel' ? `Metal bezel ring (${o.bezel})` : 'Bike cog';
+  if (id === 'wave-water' || id === 'wave-foam') { const n = layerNames(o.wave), noun = WAVE_VARIANTS[o.wave].kind === 'sprite' ? 'Plover' : 'Wave'; return `${noun} · ${id === 'wave-water' ? n.water : n.foam}`; }
+  return PART[id].label;
+}
+// Resolved hex colour of a part for options `o` (tier metal, cap colour, art layer, or a named colour).
+export function partColor(id, o) {
+  const c = PART[id].color;
+  if (c === 'tier') return TIERS[o.tier].color;
+  if (c === 'cap') return CAP_COLORS[o.cap];
+  if (c === 'layer-water') return layerColors(o.wave).water;
+  if (c === 'layer-foam') return layerColors(o.wave).foam;
+  return COLORS[c] || '#999999';
+}
+export const partFilament = (id, o) => PART[id].color === 'layer-water' || PART[id].color === 'layer-foam' ? partColor(id, o) : PART[id].filament;
 export const activeParts = o => PARTS.filter(p => !p.when || p.when(o)).map(p => p.id);
 export const generatedParts = o => activeParts(o).filter(id => PART[id].generated);
 
@@ -107,12 +122,13 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
+  version:{ label: 'Version',    type: 'text',   default: 'v3', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
-  wave:   { label: 'Wave',       type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
+  wave:   { label: 'Animation',  type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
   frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
-  art:    { label: 'Wave',       type: 'choice', default: 'inlay',  values: ['inlay', 'raised', 'none'],
+  art:    { label: 'Artwork',    type: 'choice', default: 'inlay',  values: ['inlay', 'raised', 'none'],
             labels: { inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
@@ -163,7 +179,7 @@ export const partsToGenerate = o => generatedParts(o).filter(id => !o.parts || o
 export function outputTag(o) {
   const gen = partsToGenerate(o);
   const who = gen.some(id => id === 'hub' || id === 'hub-text') ? slug(o.name) : gen.every(id => PART[id].group === 'Spinning piece') ? 'ring' : 'parts';
-  return [who, `${o.arms}arm`, `${o.wave}${frameCount(o)}`]
+  return [slug(o.version), who, `${o.arms}arm`, `${o.wave}${frameCount(o)}`]
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
     .concat(o.art === 'inlay' ? [] : [o.art])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
@@ -174,6 +190,7 @@ export const slug = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036
 // The generator command for these options (run from design/trophy/cad).
 export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   const args = [`--name "${o.name}"`, `--arms ${o.arms}`, `--wave ${o.wave}`];
+  if (o.version !== OPTIONS.version.default) args.push(`--version ${o.version}`);
   if (o.frames) args.push(`--frames ${o.frames}`);
   if (o.art !== 'inlay') args.push(`--art ${o.art}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
