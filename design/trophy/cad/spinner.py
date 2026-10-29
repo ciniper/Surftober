@@ -134,6 +134,9 @@ class Spinner:
             elif o['art'] == 'inlay':
                 water = polys_to_solid(w['water'], t - D['inlay'], D['inlay'], 'water')
                 foam = polys_to_solid(w['foam'], t - D['inlay'], D['inlay'], 'foam')
+            elif o['art'] == 'proud':        # same pockets, inlays stand above the face (foam above water)
+                water = polys_to_solid(w['water'], t - D['inlay'], D['inlay'] + D['proud'], 'water')
+                foam = polys_to_solid(w['foam'], t - D['inlay'], D['inlay'] + D['proudFoam'], 'foam')
             else:
                 water = foam = None
             self._art = (water, foam)
@@ -156,6 +159,14 @@ class Spinner:
                    .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), 90 + i * 360 / o['arms']))
             body = body.union(arm)
         body = body.union(cyl(D['ringOut'], 0, t, D['ringIn']))
+        # finger notches: scallops in the outer edge from the back, the front notchKeep stays a clean circle
+        n_notch = 2 * self.cfg['wave']['N'] if o['grip'] == 'notches' and o['weight'] != 'bezel' else 0
+        if n_notch:
+            Rc = D['ringOut'] + D['notchR'] - D['notchDepth']
+            for k in range(n_notch):
+                a = 2 * math.pi * k / n_notch
+                body = body.cut(cyl(D['notchR'], -0.1, t - D['notchKeep'] + 0.1).translate((Rc * math.cos(a), Rc * math.sin(a), 0)))
+            self.notes['grip'] = f"{n_notch} rim notches r{D['notchR']} × {D['notchDepth']} deep, {t - D['notchKeep']} mm tall from the back"
         water, foam = self.art()
         for w in (water, foam):
             if w is None:
@@ -182,12 +193,12 @@ class Spinner:
 
     def wave_water(self):
         water, foam = self.art()
-        if water is None or self.o['art'] != 'inlay':
+        if water is None or self.o['art'] not in ('inlay', 'proud'):
             return None
         return (water.cut(foam) if foam is not None else water).translate((0, 0, -self.shift))
 
     def wave_foam(self):
-        foam = self.art()[1] if self.o['art'] == 'inlay' else None
+        foam = self.art()[1] if self.o['art'] in ('inlay', 'proud') else None
         return foam.translate((0, 0, -self.shift)) if foam is not None else None
 
     def _text(self, z0, depth):
@@ -295,7 +306,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -309,7 +320,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))

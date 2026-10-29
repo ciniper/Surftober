@@ -29,6 +29,7 @@
   <h2>Presets</h2>
   <p class="presets">
     <a href="./viewer.html">Full trophy · multi-colour</a>
+    <a href="./viewer.html?art=inlay">Full trophy · flush inlays</a>
     <a href="./viewer.html?art=raised&parts=body">Test print · one-colour ring</a>
     <a href="./viewer.html?parts=hub,hub-text,back-cap">Still parts only</a>
     <a href="./viewer.html?weight=bezel">Metal bezel · brass</a>
@@ -43,7 +44,7 @@
   <p>Any static server works for the previews alone (<code>python3 -m http.server --directory design/trophy</code>); the viewer then shows the generator command instead of running it. Both pages load three.js from unpkg, so stay online. Not <code>file://</code> — ES modules.</p>
 
   <h2>URL options</h2>
-  <p>Both pages share them, so a configured link can be passed around: <code>name=KAI</code> · <code>tier=gold|silver|bronze|participant</code> · <code>arms=3|4</code> · <code>wave=classic|rolling|return|barrel|returntip|classictip|plover</code> · <code>version=v3</code> (output file prefix) · <code>frames=6…16</code> · <code>art=inlay|raised|none</code> · <code>text=recessed|inlay|raised</code> · <code>seat=lip|plain</code> (v3 bearing seat · old plain bore) · <code>weight=none|bezel|cog</code> · <code>bezel=flat|round</code> · <code>cap=orange|navy|teal</code> · <code>parts=body,wave-water,…</code> · <code>preset=testring</code>. The viewer's <b>Copy link</b> button writes the current state.</p>
+  <p>Both pages share them, so a configured link can be passed around: <code>name=KAI</code> · <code>tier=gold|silver|bronze|participant</code> · <code>arms=3|4</code> · <code>wave=classic|rolling|return|barrel|returntip|classictip|plover</code> · <code>version=v4</code> (output file prefix) · <code>frames=6…16</code> · <code>art=proud|inlay|raised|none</code> · <code>text=recessed|inlay|raised</code> · <code>seat=lip|plain</code> (v3 bearing seat · old plain bore) · <code>grip=notches|none</code> (rim finger notches) · <code>weight=none|bezel|cog</code> · <code>bezel=flat|round</code> · <code>cap=orange|navy|teal</code> · <code>parts=body,wave-water,…</code> · <code>preset=testring</code>. The viewer's <b>Copy link</b> button writes the current state.</p>
   <p>Generated files land in <code>design/trophy/cad/out/</code> (gitignored). Build notes, sourcing and the decision log: <a href="./README.md">README.md</a>.</p>
 </main>
 </html>

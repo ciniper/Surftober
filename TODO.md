@@ -267,7 +267,11 @@
       plain for A/B). Back cap redone for the real magnet (Ø25 × 5,
       adhesive-backed, not a press fit): Ø51 × 5.8 disc = same OD as the
       hub, Ø25.6 × 4.6 pocket on a 1.2 floor (magnet 0.4 proud), 1.8 spacer
-      (1.2 clearance over the body). Next: print the still set (hub + cap).
+      (1.2 clearance over the body). → v4 (same day): 20 finger notches in
+      the rim (option `grip`, r 3.5 × 1.2, from the back, front 1.5 mm kept
+      clean), multi-colour inlays standing proud (art=proud, 0.4 water /
+      0.7 foam, now the default; `inlay` = flush), version default v4.
+      Next: first multi-colour print (v4 body + inlays), still set (hub + cap).
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
