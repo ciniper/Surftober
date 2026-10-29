@@ -102,7 +102,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { DIM, TIERS, PARTS, PART, OPTIONS, PRESETS, partLabel, partColor, activeParts, generatedParts, partsToGenerate, parseOptions, serializeOptions,
-         frameCount, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS } from './spinner-config.js';
+         frameCount, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS, isInlay, notchCount } from './spinner-config.js';
 import { buildSpinner, POSE, WEIGHT_DZ } from './spinner-parts.js';
 
 const $ = id => document.getElementById(id);
@@ -252,9 +252,9 @@ function select(id) {
 function partInfo(id) {
   const D = DIM, p = PART[id], n = frameCount(o);
   const dims = {
-    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${o.seat === 'lip' ? `${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer (v3)` : 'plain bore (v1/v2)'} · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
-    'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm flush inlay · colour ${partColor('wave-water', o)}`,
-    'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm flush inlay on top of the bottom layer · colour ${partColor('wave-foam', o)}`,
+    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${o.seat === 'lip' ? `${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer (v3)` : 'plain bore (v1/v2)'} · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : isInlay(o) ? ` · ${D.inlay} mm inlay pockets` : '') + (notchCount(o) ? ` · ${notchCount(o)} finger notches r${D.notchR} × ${D.notchDepth} deep in the rim, from the back, front ${D.notchKeep} mm intact` : ''),
+    'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm pocket${o.art === 'proud' ? `, stands ${D.proud} proud of the face` : ', flush'} · colour ${partColor('wave-water', o)}`,
+    'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm pocket through the bottom layer${o.art === 'proud' ? `, stands ${D.proudFoam} proud (${(D.proudFoam - D.proud).toFixed(1)} above the water)` : ', flush'} · colour ${partColor('wave-foam', o)}`,
     hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`,
     'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${D.inlay} mm flush inlay`,
     'back-cap': `Ø${2 * D.capR} × ${D.capT} mm, same disc as the hub · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.capSpacer} mm spacer = ${(D.capSpacer - D.lip).toFixed(1)} clearance over the body · magnet pocket Ø${D.magPocketD} × ${D.magPocketDepth} on a ${(D.capT - D.magPocketDepth).toFixed(1)} floor`,
@@ -282,7 +282,7 @@ tog('fridge', 'fridge', () => { model.fridge.visible = view.fridge; });
 tog('wire', 'wire', applyWire);
 $('phonecam').addEventListener('click', e => {
   view.phoneCam = !view.phoneCam; e.target.classList.toggle('on', view.phoneCam);
-  if (view.phoneCam) { view.autoRotate = false; $('autorot').classList.remove('on'); goto(FRONT); if (o.art === 'none') setOptions({ art: 'inlay' }); }
+  if (view.phoneCam) { view.autoRotate = false; $('autorot').classList.remove('on'); goto(FRONT); if (o.art === 'none') setOptions({ art: OPTIONS.art.default }); }
 });
 $('front').addEventListener('click', () => goto(FRONT));
 $('toggle').addEventListener('click', () => { document.body.classList.toggle('collapsed'); setTimeout(resize, 50); });

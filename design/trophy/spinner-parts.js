@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -44,6 +44,22 @@ export function annulus(rOut, rIn, z0, depth, mat, bevel = 0) {
     : { depth, bevelEnabled: false, curveSegments: 96 });
   geo.translate(0, 0, z0 + (bevel || 0));
   return shadow(new THREE.Mesh(geo, mat));
+}
+// The wave ring with `n` scallops in its outer edge (r(θ) = the nearer of the rim and the notch circle).
+function notchedRing(n, z0, h, mat) {
+  const Rc = D.ringOut + D.notchR - D.notchDepth, pts = [];
+  for (let i = 0; i < 1440; i++) {
+    const th = i * 2 * Math.PI / 1440;
+    let r = D.ringOut;
+    const k = Math.round(th / (2 * Math.PI / n)), d = th - k * 2 * Math.PI / n;   // nearest notch centre
+    const disc = D.notchR ** 2 - (Rc * Math.sin(d)) ** 2;
+    if (disc >= 0) r = Math.min(r, Rc * Math.cos(d) - Math.sqrt(disc));
+    pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th)));
+  }
+  const shape = new THREE.Shape(pts), hole = new THREE.Path();
+  hole.absarc(0, 0, D.ringIn, 0, 2 * Math.PI, true); shape.holes.push(hole);
+  const m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 96 }), mat);
+  m.position.z = z0; return shadow(m);
 }
 function polySlab(poly, z0, h, mat) {
   const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: h, bevelEnabled: false }), mat);
@@ -93,7 +109,11 @@ const builders = {
       const a = Math.PI / 2 + i * 2 * Math.PI / o.arms, arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(len, D.armW, t), M.body));
       arm.position.set(mid * Math.cos(a), mid * Math.sin(a), t / 2); arm.rotation.z = a; g.add(arm);
     }
-    g.add(annulus(D.ringOut, D.ringIn, 0, t, M.body, 0.4));
+    const nn = notchCount(o);
+    if (nn) {                   // notched rim from the back, a plain band over the front notchKeep
+      g.add(notchedRing(nn, 0, t - D.notchKeep, M.body));
+      g.add(annulus(D.ringOut, D.ringIn, t - D.notchKeep, D.notchKeep, M.body, 0.4));
+    } else g.add(annulus(D.ringOut, D.ringIn, 0, t, M.body, 0.4));
     if (o.art === 'raised') {   // one-colour relief, same material as the body
       const art = waveArt(o);
       art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.body)));
@@ -103,8 +123,8 @@ const builders = {
     g.position.z = -bodyShift(o);      // with the lip the bearing sits 0.6 proud of the body's front face, under the hub
     return g;
   },
-  'wave-water'(o, M) { const g = new THREE.Group(); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, D.inlay, M.water))); g.position.z = -bodyShift(o); return g; },
-  'wave-foam'(o, M)  { const g = new THREE.Group(); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, D.inlay, M.foam))); g.position.z = -bodyShift(o); return g; },
+  'wave-water'(o, M) { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proud : 0); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, h, M.water))); g.position.z = -bodyShift(o); return g; },
+  'wave-foam'(o, M)  { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proudFoam : 0); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, h, M.foam))); g.position.z = -bodyShift(o); return g; },
   hub(o, M, font) {
     const g = new THREE.Group(), t = D.t, zDisc = t + D.standoff;
     g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));

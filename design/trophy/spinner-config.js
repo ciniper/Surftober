@@ -40,7 +40,11 @@ export const DIM = {
   // eases the press-in. Print 2 (v3) confirmed it: spins much better. `seat=plain` is the v1/v2 bore.
   lip: 0.6, lipIn: 9.9, chamfer: 0.6,
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
+  proud: 0.4, proudFoam: 0.7,   // art=proud: the inlays stand this far above the face (water / foam), from the same 0.6 pocket
   relief: 0.6, reliefFoam: 0.9, // raised artwork heights (one-colour)
+  // finger notches round the rim (option grip, v4): scallops cut into the outer edge from the back,
+  // stopping notchKeep short of the front face so the wave band and the rim line stay intact
+  notchR: 3.5, notchDepth: 1.2, notchKeep: 1.5,
 
   // still front hub on the inner race — carries the text, hides the arms
   hubR: HUB_R, hubT: 2.4, standoff: 0.6,  // 9.5 mm reveal to the ring; 0.6 over the bearing face = 1.2 over the spinning body
@@ -88,9 +92,9 @@ export const PARTS = [
   { id: 'body',       group: 'Spinning piece', label: 'Body',        detail: 'Hub on the 608 outer race, arms, wave ring — one print',
     generated: true, color: 'bone',  filament: 'bone / tier colour', print: { flip: false, z: 0 } },
   { id: 'wave-water', group: 'Spinning piece', label: 'Art · bottom layer', detail: 'First inlay colour, flush in the ring face (water, or the plover’s body)',
-    generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
+    generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) },
   { id: 'wave-foam',  group: 'Spinning piece', label: 'Art · top layer',    detail: 'Second inlay colour on top of the first (foam, or the plover’s details)',
-    generated: true, color: 'layer-foam', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => o.art === 'inlay' },
+    generated: true, color: 'layer-foam', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) },
   { id: 'hub',        group: 'Still parts',    label: 'Front hub',    detail: 'Rides the inner race; hides the arms; carries the text',
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
@@ -126,16 +130,18 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v3', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v4', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
   wave:   { label: 'Animation',  type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
   frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
-  art:    { label: 'Artwork',    type: 'choice', default: 'inlay',  values: ['inlay', 'raised', 'none'],
-            labels: { inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
+  art:    { label: 'Artwork',    type: 'choice', default: 'proud',  values: ['proud', 'inlay', 'raised', 'none'],
+            labels: { proud: 'Raised inlays · multi-colour, 0.4 proud', inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
+  grip:   { label: 'Rim grip',   type: 'choice', default: 'notches', values: ['notches', 'none'],
+            labels: { notches: 'Finger notches · 2 per frame', none: 'Smooth rim' }, hint: 'scallops in the outer edge, from the back, for flicking; the front face stays a clean circle', when: o => o.weight !== 'bezel' },
   seat:   { label: 'Bearing seat', type: 'choice', default: 'lip', values: ['lip', 'plain'],
             labels: { lip: 'Lip + chamfer · v3, spins best', plain: 'Plain bore · v1/v2' }, hint: 'v3 seat: 0.6 lip behind the bore on the outer race face + entry chamfer' },
   weight: { label: 'Weight',     type: 'choice', default: 'none',   values: ['none', 'bezel', 'cog'],
@@ -175,6 +181,10 @@ export function serializeOptions(o) {
   }
   return q.toString();
 }
+// Multi-colour art (separate inlay parts), flush or proud.
+export const isInlay = o => o.art === 'inlay' || o.art === 'proud';
+// Finger notches round the rim: two per animation frame, none with a bezel ring (its groove is there).
+export const notchCount = o => (o.grip === 'notches' && o.weight !== 'bezel' ? 2 * frameCount(o) : 0);
 // How far the spinning body sits behind the bearing's back face (the seat lip) — 0 for a plain bore.
 export const bodyShift = o => (o.seat === 'lip' ? DIM.lip : 0);
 export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
@@ -189,7 +199,8 @@ export function outputTag(o) {
   const who = gen.some(id => id === 'hub' || id === 'hub-text') ? slug(o.name) : gen.every(id => PART[id].group === 'Spinning piece') ? 'ring' : 'parts';
   return [slug(o.version), who, `${o.arms}arm`, `${o.wave}${frameCount(o)}`]
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
-    .concat(o.art === 'inlay' ? [] : [o.art])
+    .concat(o.art === OPTIONS.art.default ? [] : [o.art])
+    .concat(o.grip === 'notches' || o.weight === 'bezel' ? [] : ['smooth'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
     .join('-');
@@ -201,7 +212,8 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   const args = [`--name "${o.name}"`, `--arms ${o.arms}`, `--wave ${o.wave}`];
   if (o.version !== OPTIONS.version.default) args.push(`--version ${o.version}`);
   if (o.frames) args.push(`--frames ${o.frames}`);
-  if (o.art !== 'inlay') args.push(`--art ${o.art}`);
+  if (o.art !== OPTIONS.art.default) args.push(`--art ${o.art}`);
+  if (o.grip !== 'notches' && o.weight !== 'bezel') args.push(`--grip ${o.grip}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
@@ -213,7 +225,8 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
-  full:      { label: 'Full trophy · multi-colour',  detail: 'Everything, flush inlays, solid print',          options: {} },
+  full:      { label: 'Full trophy · multi-colour',  detail: 'Everything, raised inlays, notched rim, solid print', options: {} },
+  flush:     { label: 'Full trophy · flush inlays',   detail: 'Same, with the inlays flush to the face (v1–v3 look)',   options: { art: 'inlay' } },
   testring:  { label: 'Test print · one-colour ring', detail: 'Just the spinning piece with the wave in relief', options: { art: 'raised', parts: ['body'] } },
   stillset:  { label: 'Still parts only',             detail: 'Front hub, text and back cap for one name',       options: { parts: ['hub', 'hub-text', 'back-cap'] } },
   bezel:     { label: 'Metal bezel · brass',           detail: 'Laser-cut ring in the rim carries the tier',     options: { weight: 'bezel', bezel: 'flat', tier: 'gold' } },

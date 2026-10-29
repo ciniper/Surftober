@@ -69,28 +69,29 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v3 | prefix on every output file (`v3-nahla-3arm-return10-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v4 | prefix on every output file (`v4-nahla-3arm-return10-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
 | `wave` | classic · rolling · return · barrel · returntip · classictip · **plover** | return | animation style (see wave demo); `plover` = the logo's snowy plover, wings flapping + legs striding, drawn procedurally (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
-| `art` | inlay · raised · none | inlay | wave: flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
+| `art` | proud · inlay · raised · none | proud | wave: multi-colour inlay parts standing 0.4 / 0.7 mm proud (water / foam) · the same inlays flush · one-colour relief fused into the body · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
+| `grip` | notches · none | notches | finger notches: 2 per frame, r 3.5 × 1.2 deep scallops in the outer edge, cut from the back and stopping 1.5 mm short of the front face (not with a bezel — its groove is there) |
 | `seat` | lip · plain | lip | bearing seat: the v3 lip + entry chamfer (print 2: spins much better) · the plain v1/v2 bore, for comparison |
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | full · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | full · flush · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 
 | id | group | what | generated as | printed in |
 |---|---|---|---|---|
-| `body` | spinning | hub on the 608 outer race (Ø21.9 bore), arms, wave ring; inlay pockets or relief | STL, back face down | bone / tier colour |
-| `wave-water` | spinning | navy water inlays, flush (inlay art only) | STL | navy |
-| `wave-foam` | spinning | cream foam inlays, flush (inlay art only) | STL | cream |
+| `body` | spinning | hub on the 608 outer race (Ø21.9 bore + seat lip), arms, wave ring with rim notches; inlay pockets or relief | STL, back face down | bone / tier colour |
+| `wave-water` | spinning | bottom art layer (water, or the plover body), proud or flush (multi-colour art only) | STL | layer colour |
+| `wave-foam` | spinning | top art layer (foam, or the plover details), proud or flush | STL | layer colour |
 | `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
 | `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays — only with `text=inlay` (recessed = pocket in the hub, raised = fused into it) | STL | tier colour |
 | `back-cap` | still | Ø51 × 5.8 disc (same disc as the hub), stem, 1.8 spacer, Ø25.6 × 4.6 magnet pocket on a 1.2 floor | STL, fridge face down | cap colour |
@@ -109,8 +110,13 @@ volumes, grams, files.
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
 hub r 16, arms 9 wide, **ring r 35 → 51.5** (Ø103), wave band r 38.1 → 50.9
 (12.8 mm — the whitewater return fits its native 10 frames at full size, cell
-aspect 2.18 vs the 2.06 design cell), inlays 0.6 deep, relief 0.6 / 0.9
-(water / foam). Front hub r 25.5 (the arms show for 9.5 mm between hub and
+aspect 2.18 vs the 2.06 design cell), inlay pockets 0.6 deep with the inlays
+standing 0.4 / 0.7 proud by default (`art=proud`, v4; `inlay` = flush),
+relief 0.6 / 0.9 (water / foam). Rim grip (v4): 20 scallops (2 per frame)
+r 3.5 × 1.2 deep in the outer edge, cut from the back face up to 1.5 mm
+below the front, so the front rim is still a clean Ø103 circle and the wave
+band is untouched; the 1.2 mm roof over each notch prints as a short
+overhang. Front hub r 25.5 (the arms show for 9.5 mm between hub and
 ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
 
 **Back cap (2026-10-29).** The same Ø51 disc as the front hub, so the trophy
@@ -154,6 +160,9 @@ from the large open disc. Pockets were not the cause.
 Print 2 feedback (Chase, 2026-10-29, v3: Ø103 + lip + chamfer): "spins
 much better". The lip seat is now the baseline (`seat=lip`, the default);
 `seat=plain` keeps the old bore around only for A/B tests.
+
+v4 (2026-10-29): rim notches for flicking, multi-colour inlays standing
+proud, Ø51 back cap for the Ø25 × 5 adhesive magnet. First multi-colour print.
 
 # Design notes and decision log
 
