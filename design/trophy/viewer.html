@@ -252,7 +252,7 @@ function select(id) {
 function partInfo(id) {
   const D = DIM, p = PART[id], n = frameCount(o);
   const dims = {
-    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608 · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
+    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
     'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm flush inlay`,
     'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm flush inlay, on top of the water`,
     hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`,
