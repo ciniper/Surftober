@@ -15,13 +15,12 @@ import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames } from './wave-frames.js';
 // ---------------------------------------------------------------------------
 // Dimensions (mm)
 // ---------------------------------------------------------------------------
-// Ring proportions (Chase, 2026-10-27): the ring is 50 % wider than the first
-// cut (12.5 → 19 mm) and sits 10 mm further out on longer arms (r 27.5 → 37.5),
-// so the trophy is Ø113 overall (was Ø80). The longer arms widen every slot of
-// the wave band: the whitewater return fits its native 10 frames at full size
-// (cell aspect 1.98 vs the 2.06 design cell). Hub unchanged at r 25.5, so the
-// arms show for 12 mm between hub and ring. Rim mass ×2 = much longer spins.
-const RING_IN = 37.5, RING_OUT = 56.5;
+// Ring proportions (Chase, 2026-10-28, print 2): between prototypes 1 (Ø93,
+// r 27.5–46.5 — slots too narrow for 10 frames) and 2 (Ø113, r 37.5–56.5 — a
+// bit large). Ø103, r 35–51.5: the band is 12.8 mm (vs 15.3) so the whitewater
+// return fits its native 10 frames at full size with margin (cell aspect 2.18
+// vs the 2.06 design cell). Hub unchanged at r 25.5; arms show for 9.5 mm.
+const RING_IN = 35, RING_OUT = 51.5;
 
 export const DIM = {
   // 608 bearing — the one bought part every option shares
@@ -32,8 +31,12 @@ export const DIM = {
   bore: 21.9,                   // press fit on the Ø22 outer race (21.8 tight … 22.0 loose — tune after print 1)
   hubOut: 16,                   // printed hub radius around the bearing
   armW: 9,
-  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø113 overall
-  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.6, // artwork band on the ring's front face (15.3 wide)
+  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø103 overall
+  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.6, // artwork band on the ring's front face (12.8 wide)
+  // bearing seat (print 2, after the wobble on print 1): the body is still t thick but sits 0.6
+  // further back — a lip behind the bore that only the OUTER race face touches (r 9.9–10.95; the
+  // shield starts at r 9.6) squares the ring to the bearing, and a 45° chamfer eases the press-in.
+  lip: 0.6, lipIn: 9.9, chamfer: 0.6,
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   relief: 0.6, reliefFoam: 0.9, // raised artwork heights (one-colour)
 

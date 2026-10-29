@@ -139,8 +139,12 @@ class Spinner:
         return self._art
 
     def body(self):
+        """Built with the bearing at z 0…t, then shifted back by the lip: the body spans -lip … t-lip."""
         D, t, o = self.D, self.t, self.o
-        body = cyl(D['hubOut'], 0, t, D['bore'] / 2)
+        body = cyl(D['hubOut'], 0, t, D['lipIn'])                       # hub with the small hole of the seat lip…
+        body = body.cut(cyl(D['bore'] / 2, D['lip'], t))                 # …and the bearing bore above it
+        body = body.cut(cq.Workplane('XY').add(cq.Solid.makeCone(D['bore'] / 2, D['bore'] / 2 + D['chamfer'] + 0.01, D['chamfer'] + 0.01,
+                                                                 cq.Vector(0, 0, t - D['chamfer']), cq.Vector(0, 0, 1))))   # 45° entry chamfer
         arm_len = D['ringIn'] - D['hubOut'] + 1.5
         mid = (D['hubOut'] + D['ringIn']) / 2
         for i in range(o['arms']):
@@ -168,16 +172,18 @@ class Spinner:
         elif o['weight'] == 'cog':
             body = body.union(cyl(D['cogBore'] / 2 - 0.1, -D['cogT'], D['cogT'], D['cogBossIn']))
             self.notes['cog'] = f'boss Ø{D["cogBore"] - 0.2:.1f} × {D["cogT"]} mm behind the body for a {D["cogTeeth"]}T cog'
-        return body
+        self.notes['seat'] = f"lip {D['lip']} mm behind the bore (r {D['lipIn']}–{D['bore'] / 2:.2f}) seats the outer race; {D['chamfer']} mm entry chamfer"
+        return body.translate((0, 0, -D['lip']))
 
     def wave_water(self):
         water, foam = self.art()
         if water is None or self.o['art'] != 'inlay':
             return None
-        return water.cut(foam) if foam is not None else water
+        return (water.cut(foam) if foam is not None else water).translate((0, 0, -self.D['lip']))
 
     def wave_foam(self):
-        return self.art()[1] if self.o['art'] == 'inlay' else None
+        foam = self.art()[1] if self.o['art'] == 'inlay' else None
+        return foam.translate((0, 0, -self.D['lip'])) if foam is not None else None
 
     def _text(self, z0, depth):
         D, o = self.D, self.o
@@ -222,14 +228,15 @@ class Spinner:
 
     def weight(self):
         D, t, o = self.D, self.t, self.o
+        zc = t / 2 - D['lip']    # mid-thickness of the body
         if o['weight'] == 'bezel' and o['bezel'] == 'round':
             wr = D['bezelWire'] / 2
-            return cq.Workplane('XY').add(cq.Solid.makeTorus(D['ringOut'] - wr + D['bezelProud'], wr, cq.Vector(0, 0, t / 2), cq.Vector(0, 0, 1)))
+            return cq.Workplane('XY').add(cq.Solid.makeTorus(D['ringOut'] - wr + D['bezelProud'], wr, cq.Vector(0, 0, zc), cq.Vector(0, 0, 1)))
         if o['weight'] == 'bezel':
             r_out = D['ringOut'] + D['bezelProud']
-            return cyl(r_out, t / 2 - D['flatT'] / 2, D['flatT'], r_out - (D['flatOd'] - D['flatId']) / 2)
+            return cyl(r_out, zc - D['flatT'] / 2, D['flatT'], r_out - (D['flatOd'] - D['flatId']) / 2)
         if o['weight'] == 'cog':
-            return cog_shape(D['cogTeeth'], D['cogTip'], D['cogRoot'], D['cogBore'] / 2).extrude(D['cogT']).translate((0, 0, -D['cogT']))
+            return cog_shape(D['cogTeeth'], D['cogTip'], D['cogRoot'], D['cogBore'] / 2).extrude(D['cogT']).translate((0, 0, -D['cogT'] - D['lip']))
         return None
 
 

@@ -105,25 +105,39 @@ volumes, grams, files.
 ## Dimensions
 
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
-hub r 16, arms 9 wide, **ring r 37.5 → 56.5** (Ø113: widened 50 % and moved
-10 mm outward on 2026-10-27 — the longer arms widen the wave slots so the
-whitewater return fits its native 10 frames at full size), wave band
-r 40.6 → 55.9, inlays 0.6 deep, relief 0.6 / 0.9 (water / foam). Front hub
-r 25.5 (the arms show for 12 mm between hub and ring), stem Ø8.1 × 3.3.
-Press fits to tune after the first print: `bore` and `stemD`.
+hub r 16, arms 9 wide, **ring r 35 → 51.5** (Ø103), wave band r 38.1 → 50.9
+(12.8 mm — the whitewater return fits its native 10 frames at full size, cell
+aspect 2.18 vs the 2.06 design cell), inlays 0.6 deep, relief 0.6 / 0.9
+(water / foam). Front hub r 25.5 (the arms show for 9.5 mm between hub and
+ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
+
+**Bearing seat (print 2).** Print 1 wobbled visibly — the ring was not square
+to the bearing. The body only gripped the outer race over its 7 mm width, so
+any flare or taper in the bore (elephant's foot, a slightly crooked press)
+tilted the ring, and the Ø100+ rim multiplies that 8:1. Now a 0.6 mm **lip**
+behind the bore (r 9.9 → 10.95, touching only the outer race face — the
+shield starts at r 9.6) squares the ring to the bearing, and the bore has a
+0.6 mm 45° **entry chamfer**. The body still prints 7 mm thick but sits 0.6
+further back, so the bearing stands 0.6 proud of the front face under the
+hub. Press the bearing in from the front until it seats on the lip. In the
+slicer also turn on elephant's-foot compensation (≈ 0.1 mm) for the bore.
 
 | spinning mass | PLA | note |
 |---|---|---|
-| body, 3 arms, inlay pockets | ~58 g | the generator prints exact grams per part |
-| body, one-colour relief | ~60 g | |
-| + flat bezel ring (113 × 106 × 3.18) | +~33 g brass | rim mass, tier metal |
-| + bike cog | — | a track cog hides behind a Ø113 rim; only as hidden weight, or a chainring |
-
-Mass at the rim counts for r², so this ring has about four times the spin
-inertia of the Ø80 version; try it bare before adding metal.
+| body, 3 arms, inlay pockets | ~46 g | the generator prints exact grams per part |
+| body, one-colour relief | ~48 g | |
+| + flat bezel ring (103 × 96 × 3.18) | +~30 g brass | rim mass, tier metal |
+| + bike cog | — | a track cog hides behind a Ø103 rim; only as hidden weight, or a chainring |
 
 Ring-size history: Ø80 (r 27.5–40, 8.8 mm band, 2026-10-12) → Ø93 (r 27.5–46.5,
-50 % wider band, 2026-10-27) → Ø113 (same band, 10 mm further out, 2026-10-27).
+50 % wider band, 2026-10-27) → Ø113 (r 37.5–56.5, 10 mm further out, 2026-10-27,
+print 1) → **Ø103 (r 35–51.5, band 12.8, 2026-10-28, print 2)**.
+
+Print 1 feedback (Chase, 2026-10-28, Ø113 body + hub + cap on a greaseless
+608 from a 20-pack): visible wobble, enough to shake the hub; spin-down about
+70 % of a bulkier, same-weight, smaller-Ø reference spinner. Diagnosis:
+squareness of the ring to the bearing (hence the lip), with some air drag
+from the large open disc. Pockets were not the cause.
 
 # Design notes and decision log
 

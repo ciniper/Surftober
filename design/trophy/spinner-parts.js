@@ -82,7 +82,10 @@ const D = DIM;
 const builders = {
   body(o, M) {
     const g = new THREE.Group(), t = D.t;
-    g.add(annulus(D.hubOut, D.bore / 2, 0, t, M.body, 0.4));
+    g.add(annulus(D.hubOut, D.bore / 2, D.lip, t - D.lip, M.body, 0.4));
+    g.add(annulus(D.hubOut, D.lipIn, 0, D.lip, M.body));                                   // seat lip behind the outer race
+    const ch = shadow(new THREE.Mesh(new THREE.CylinderGeometry(D.bore / 2 + D.chamfer, D.bore / 2, D.chamfer, 64, 1, true), M.body));
+    ch.rotation.x = Math.PI / 2; ch.position.z = t - D.chamfer / 2; ch.material = M.body.clone(); ch.material.side = THREE.DoubleSide; g.add(ch);   // entry chamfer
     const len = D.ringIn - D.hubOut + 1.5, mid = (D.hubOut + D.ringIn) / 2;
     for (let i = 0; i < o.arms; i++) {
       const a = Math.PI / 2 + i * 2 * Math.PI / o.arms, arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(len, D.armW, t), M.body));
@@ -95,10 +98,11 @@ const builders = {
       art.foam.forEach(p => g.add(polySlab(p, t, D.reliefFoam, M.body)));
     }
     if (o.weight === 'cog') g.add(annulus(D.cogBore / 2 - 0.1, D.cogBossIn, -D.cogT, D.cogT, M.body));
+    g.position.z = -D.lip;      // the bearing sits proud of the body's front face by the lip, under the hub
     return g;
   },
-  'wave-water'(o, M) { const g = new THREE.Group(); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, D.inlay, M.water))); return g; },
-  'wave-foam'(o, M)  { const g = new THREE.Group(); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, D.inlay, M.foam))); return g; },
+  'wave-water'(o, M) { const g = new THREE.Group(); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, D.inlay, M.water))); g.position.z = -D.lip; return g; },
+  'wave-foam'(o, M)  { const g = new THREE.Group(); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, D.inlay, M.foam))); g.position.z = -D.lip; return g; },
   hub(o, M, font) {
     const g = new THREE.Group(), t = D.t, zDisc = t + D.standoff;
     g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));
@@ -129,15 +133,15 @@ const builders = {
   weight(o, M) {
     if (o.weight === 'bezel' && o.bezel === 'round') {
       const wr = D.bezelWire / 2, m = shadow(new THREE.Mesh(new THREE.TorusGeometry(D.ringOut - wr + D.bezelProud, wr, 20, 180), M.metal));
-      m.position.z = D.t / 2; return m;
+      m.position.z = D.t / 2 - D.lip; return m;
     }
     if (o.weight === 'bezel') {
       const rOut = D.ringOut + D.bezelProud;
-      return annulus(rOut, rOut - (D.flatOd - D.flatId) / 2, D.t / 2 - D.flatT / 2, D.flatT, M.metal, 0.3);
+      return annulus(rOut, rOut - (D.flatOd - D.flatId) / 2, D.t / 2 - D.flatT / 2 - D.lip, D.flatT, M.metal, 0.3);
     }
     if (o.weight === 'cog') {
       const m = shadow(new THREE.Mesh(new THREE.ExtrudeGeometry(cogShape(D.cogTeeth, D.cogTip, D.cogRoot, D.cogBore / 2), { depth: D.cogT, bevelEnabled: false, curveSegments: 48 }), M.metal));
-      m.position.z = -D.cogT; return m;
+      m.position.z = -D.cogT - D.lip; return m;
     }
     return null;
   },

@@ -250,7 +250,12 @@
       on this band). Then ring moved 10 mm outward (arms +10, r 37.5–56.5,
       Ø113): slots wide enough for the native 10 frames at full size; body
       ~56 g, ~4× the Ø80 spin inertia; arms show 12 mm between hub and ring.
-      Next: Bambu test print of the one-colour ring.
+      PRINT 1 (2026-10-28, Ø113, body + hub + cap on a greaseless 608):
+      visible wobble that shook the hub; spin-down ~70 % of a bulkier
+      same-weight smaller reference. → print 2: ring r 35–51.5 (Ø103, band
+      12.8 — still 10 frames at full size), 0.6 mm seat lip behind the bore
+      (outer-race face only) + 0.6 mm entry chamfer so the ring sits square.
+      Next: print 2, flip test (does wobble follow the body or the bearing?).
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
