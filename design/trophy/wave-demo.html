@@ -65,19 +65,20 @@
 
   <h2 id="striph">The frames, in order</h2>
   <canvas id="strip"></canvas>
-  <p>Navy water and cream foam on the medal colour. Print them as flush colour changes in the top layers, not raised, so every slot weighs the
+  <p>Two inlay colours on the medal colour (navy water + cream foam; for the plover a cream bird + navy details). Print them as flush colour changes in the top layers, not raised, so every slot weighs the
   same and the ring stays balanced. The smallest drops are about 0.6 mm; check them against your nozzle.</p>
   <button id="svg">Download ring artwork (SVG, mm)</button>
 </main>
 
 <script type="module">
-import { WAVE_VARIANTS, WAVE_COLORS, waveFrame, ringArt, ringSVG, cellAspect } from './wave-frames.js';
+import { WAVE_VARIANTS, layerColors, waveFrame, ringArt, ringSVG, cellAspect } from './wave-frames.js';
 import { DIM, TIERS, parseOptions, serializeOptions, frameCount } from './spinner-config.js';
 
 // Geometry comes from spinner-config.js — the same ring the configurator shows and the generator prints
 const o = parseOptions(location.search);
 const RING = { in: DIM.ringIn, out: DIM.ringOut, waveIn: DIM.waveIn, waveOut: DIM.waveOut };
-const GOLD = TIERS[o.tier].color, INK = '#16273d', BG = '#d9dcdf';
+const GOLD = TIERS[o.tier].color, INK = '#16273d', NAVY = '#1d3050', BG = '#d9dcdf';
+let LC = layerColors(o.wave);
 const SPAN = 2 * RING.out + 6;   // mm across each canvas
 const EYE_T = 1 / 30;         // rough integration time of the eye
 const R0 = 2400, TAU = 14;    // flick: start RPM and spin-down time constant (s)
@@ -102,8 +103,8 @@ function makeSprite(px) {
   g.beginPath(); g.arc(0, 0, DIM.hubOut, 0, 2 * Math.PI); g.arc(0, 0, DIM.bore / 2, 0, 2 * Math.PI, true); g.fill();
   for (let i = 0; i < o.arms; i++) { g.save(); g.rotate(Math.PI / 2 + i * 2 * Math.PI / o.arms); g.fillRect(DIM.hubOut - 1, -DIM.armW / 2, RING.in - DIM.hubOut + 2, DIM.armW); g.restore(); }
   g.beginPath(); g.arc(0, 0, RING.out, 0, 2 * Math.PI); g.arc(0, 0, RING.in, 0, 2 * Math.PI, true); g.fill();
-  g.fillStyle = WAVE_COLORS.water; art.slots.forEach(sl => fillPolys(g, sl.water, id));
-  g.fillStyle = WAVE_COLORS.foam; art.slots.forEach(sl => fillPolys(g, sl.foam, id));
+  g.fillStyle = LC.water; art.slots.forEach(sl => fillPolys(g, sl.water, id));
+  g.fillStyle = LC.foam; art.slots.forEach(sl => fillPolys(g, sl.foam, id));
   return c;
 }
 // Text bent around the axis in the y-up mm space; drawn 10× larger and scaled down so tiny fonts stay crisp.
@@ -133,7 +134,7 @@ function drawRing(p, a, sweep) {
   }
   // the still hub on the inner race doesn't spin (it's what you hold), so it stays sharp
   const s = W / SPAN; g.globalAlpha = 1; g.setTransform(s, 0, 0, -s, W / 2, W / 2);   // mm, y up
-  g.fillStyle = WAVE_COLORS.water; g.beginPath(); g.arc(0, 0, DIM.hubR, 0, 2 * Math.PI); g.fill();
+  g.fillStyle = NAVY; g.beginPath(); g.arc(0, 0, DIM.hubR, 0, 2 * Math.PI); g.fill();
   const tr = DIM.hubR - DIM.textInset;
   arcText(g, 'SURFTOBER 2026', tr, DIM.textSize, true, GOLD); arcText(g, NAME, tr, DIM.textSize, false, GOLD);
 }
@@ -142,8 +143,8 @@ function drawRing(p, a, sweep) {
 function drawCell(g, k, x, y, cw) {
   const ch = cw / A, { water, foam } = waveFrame(variant, k / N, A), map = ([u, v]) => [x + u * cw, y + (1 - v) * ch];
   g.fillStyle = GOLD; g.fillRect(x, y, cw, ch);
-  g.fillStyle = WAVE_COLORS.water; fillPolys(g, water, map);
-  g.fillStyle = WAVE_COLORS.foam; fillPolys(g, foam, map);
+  g.fillStyle = LC.water; fillPolys(g, water, map);
+  g.fillStyle = LC.foam; fillPolys(g, foam, map);
 }
 function drawStrip() {
   const c = $('strip'), d = devicePixelRatio, W = c.clientWidth * d, cols = c.clientWidth < 640 ? Math.ceil(N / 2) : N, rows = Math.ceil(N / cols);
@@ -168,6 +169,7 @@ const fmt = n => (Math.round(n * 10) / 10).toString();
 function setRpm(v) { flick = false; $('flick').classList.remove('on'); rpm = v; $('rpm').value = Math.round(v); $('rpmv').textContent = Math.round(v) + ' RPM'; }
 
 function rebuildArt() {
+  LC = layerColors(variant);
   art = ringArt({ variant, N, rIn: RING.waveIn, rOut: RING.waveOut });
   A = cellAspect(N, RING.waveIn, RING.waveOut);
   $('variant').value = variant; $('frames').value = String(N);

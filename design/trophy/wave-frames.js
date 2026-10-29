@@ -14,6 +14,10 @@
 // wave keeps its proportions and the flat sea around it stretches or shrinks.
 
 export const WAVE_COLORS = { water: '#1d3050', foam: '#efe7d2' };
+// A style can recolour / rename its two inlay layers (the plover is a cream bird with navy details).
+// `water` is the bottom layer, `foam` the top one — the top is cut out of the bottom in CAD.
+export const layerColors = v => ({ ...WAVE_COLORS, ...((WAVE_VARIANTS[v] || WAVE_VARIANTS[WAVE_DEFAULT]).layers || {}) });
+export const layerNames = v => ({ water: 'water', foam: 'foam', ...((WAVE_VARIANTS[v] || WAVE_VARIANTS[WAVE_DEFAULT]).layerNames || {}) });
 const SEA = 0.22;    // water height at every cell edge, so the sea reads as one band at rest
 const DA = 2.06;     // cell aspect the shapes below were drawn at (12 slots)
 const TOP = 0.98;    // keep artwork just inside the ring's outer edge
@@ -84,6 +88,12 @@ export const WAVE_VARIANTS = {
            [8 / 12, 'impact'], [9 / 12, 'slump'], [10 / 12, 'reswell1'], [11 / 12, 'reswell2'], [1, 'swell']],
     tip: { size: [[0, 0], [2 / 12, .03], [4 / 12, .05], [5 / 12, .06], [6 / 12, .07], [7 / 12, .09], [8 / 12, .1], [9 / 12, .085], [10 / 12, .06], [11 / 12, .03], [1, 0]],
            spray: [[0, 0], [6 / 12, 0], [7 / 12, .45], [8 / 12, .3], [9 / 12, 0], [1, 0]] },
+  },
+  // The logo's snowy plover (Chase, 2026-10-29): side view facing left, scurrying — wings flap once
+  // and the legs take one stride per loop, with a little body bob. Drawn procedurally by sprite().
+  plover: {
+    label: 'Snowy plover · flap + run', N: 10, mode: 'stay', kind: 'sprite',
+    layers: { water: '#efe7d2', foam: '#1d3050' }, layerNames: { water: 'body', foam: 'details' },
   },
   barrel: {
     label: 'Barrel loop', N: 8, mode: 'stay',
@@ -166,11 +176,52 @@ function wave(V, k, A, anchor, place, keep) {
   return { water, foam };
 }
 
+// ---- sprite styles: the plover -------------------------------------------------------------
+// Shapes are drawn in a square space in v units (x right, y up, origin at the cell centre), then
+// placed in the cell; like the waves they shrink uniformly if the cell is narrower than the design cell.
+const rot = (pts, a, [px, py] = [0, 0]) => { const c = Math.cos(a), s = Math.sin(a); return pts.map(([x, y]) => [px + (x - px) * c - (y - py) * s, py + (x - px) * s + (y - py) * c]); };
+const ell = (cx, cy, rx, ry, n = 24) => Array.from({ length: n }, (_, i) => { const a = i / n * 2 * Math.PI; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
+const bar = (a, b, w) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * w / 2, ny = dx / L * w / 2; return [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]]; };
+const deg = d => d * Math.PI / 180;
+function plover(t) {
+  const body = [], detail = [];
+  const bob = 0.02 * Math.sin(4 * Math.PI * t), hy = 0.1 + bob + 0.015 * Math.sin(4 * Math.PI * t + 0.6);
+  // body, tail, head
+  body.push(ell(0, bob, 0.19, 0.12), [[0.17, 0.02 + bob], [0.29, 0.09 + bob], [0.27, -0.01 + bob]], ell(-0.2, hy, 0.085, 0.085, 20));
+  // beak, eye, the logo's partial collar
+  detail.push([[-0.27, hy + 0.025], [-0.42, hy - 0.01], [-0.27, hy - 0.025]], ell(-0.215, hy + 0.025, 0.026, 0.026, 12), bar([-0.135, hy + 0.06], [-0.105, hy - 0.08], 0.036));
+  // wing: pivot at the shoulder, one flap per loop (+ = up); a thin dark leading edge keeps it readable over the body
+  const a = deg(15 + 55 * Math.sin(2 * Math.PI * t)), piv = [0, 0.07 + bob];
+  const wing = [[0, 0.035], [0.12, 0.045], [0.24, 0.03], [0.27, 0], [0.22, -0.03], [0.1, -0.04], [0, -0.03]].map(([x, y]) => [x + piv[0], y + piv[1]]);
+  body.push(rot(wing, a, piv));
+  detail.push(rot(bar([piv[0] + 0.01, piv[1] + 0.028], [piv[0] + 0.25, piv[1] + 0.022], 0.03), a, piv));
+  // legs: two, half a stride apart; the forward-swinging leg bends at the knee; feet point forward (left)
+  for (let i = 0; i < 2; i++) {
+    const ph = 2 * Math.PI * t + i * Math.PI, th = deg(28) * Math.sin(ph), bend = deg(40) * Math.max(0, Math.cos(ph));
+    const hip = [0.03 - 0.06 * i, -0.1 + bob], dir = f => [-Math.sin(f), -Math.cos(f)];
+    const knee = [hip[0] + 0.1 * dir(th)[0], hip[1] + 0.1 * dir(th)[1]];
+    const ankle = [knee[0] + 0.12 * dir(th - bend)[0], knee[1] + 0.12 * dir(th - bend)[1]];
+    detail.push(bar(hip, knee, 0.042), bar(knee, ankle, 0.036), [[ankle[0] + 0.018, ankle[1] + 0.02], [ankle[0] - 0.07, ankle[1] - 0.012], [ankle[0] + 0.018, ankle[1] - 0.02]]);
+  }
+  return { body, detail };
+}
+// The bird is drawn about 0.75 cell-heights tall; SPRITE_SCALE fills the cell (legs ~0.09, wing tip ~0.95).
+const SPRITE_SCALE = 1.35, SPRITE_CY = 0.52;
+function sprite(V, k, A) {
+  const fit = Math.min(1, A / DA) * SPRITE_SCALE, place = ([x, y]) => [0.5 + x / A * fit, SPRITE_CY + y * fit];
+  const { body, detail } = plover(k);
+  return { water: body.map(p => p.map(place)), foam: detail.map(p => p.map(place)) };
+}
+
 // One frame at loop time t ∈ [0, 1) for a cell of aspect A: water and foam
 // polygons in cell coordinates, already clipped to the cell.
 export function waveFrame(variant, t, A = DA) {
   const V = WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT];
   t = ((t % 1) + 1) % 1;
+  if (V.kind === 'sprite') {
+    const s = sprite(V, t, A);
+    return { water: s.water.map(clip).filter(p => p.length > 2), foam: s.foam.map(clip).filter(p => p.length > 2) };
+  }
   const parts = [];
   if (V.mode === 'travel') {
     // every wave still alive: ages t, t+1, t+2… each one `travel` further along
@@ -211,7 +262,7 @@ export function ringArt({ variant = WAVE_DEFAULT, N, rIn, rOut }) {
 
 // Front-face artwork as an SVG in mm, one group per print colour.
 export function ringSVG({ variant = WAVE_DEFAULT, N, rIn, rOut, ringIn, ringOut, ringColor = '#d4af37' }) {
-  const art = ringArt({ variant, N, rIn, rOut }), f = n => n.toFixed(3), half = Math.ceil(ringOut + 2);
+  const art = ringArt({ variant, N, rIn, rOut }), f = n => n.toFixed(3), half = Math.ceil(ringOut + 2), LC = layerColors(variant);
   const circ = r => `M ${f(r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(-r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(r)} 0 Z`;
   const polys = key => art.slots.flatMap(s => s[key].map(p => `<polygon points="${p.map(([x, y]) => `${f(x)},${f(y)}`).join(' ')}"/>`)).join('\n      ');
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -223,10 +274,10 @@ export function ringSVG({ variant = WAVE_DEFAULT, N, rIn, rOut, ringIn, ringOut,
 <svg xmlns="http://www.w3.org/2000/svg" width="${2 * half}mm" height="${2 * half}mm" viewBox="${-half} ${-half} ${2 * half} ${2 * half}">
   <g transform="scale(1,-1)">
     <path id="ring" fill="${ringColor}" fill-rule="evenodd" d="${circ(ringOut)} ${circ(ringIn)}"/>
-    <g id="water" fill="${WAVE_COLORS.water}">
+    <g id="water" fill="${LC.water}">
       ${polys('water')}
     </g>
-    <g id="foam" fill="${WAVE_COLORS.foam}">
+    <g id="foam" fill="${LC.foam}">
       ${polys('foam')}
     </g>
   </g>

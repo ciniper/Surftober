@@ -69,10 +69,11 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
+| `version` | text, ≤ 12 | v3 | prefix on every output file (`v3-nahla-3arm-return10-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
-| `wave` | classic · rolling · return · barrel · returntip · classictip | return | animation style (see wave demo) |
+| `wave` | classic · rolling · return · barrel · returntip · classictip · **plover** | return | animation style (see wave demo); `plover` = the logo's snowy plover, wings flapping + legs striding, drawn procedurally (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
 | `art` | inlay · raised · none | inlay | wave: flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |

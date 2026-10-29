@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount } from './spinner-config.js';
-import { ringArt } from './wave-frames.js';
+import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
@@ -15,8 +15,8 @@ export function materials(o) {
   const flush = o.art === 'inlay' ? { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 } : {};
   return {
     body:   std(o.weight === 'none' ? tier.color : COLORS.bone, { roughness: o.weight === 'none' ? tier.rough + 0.2 : 0.75, metalness: o.weight === 'none' ? tier.metal * 0.3 : 0, ...flush }),
-    water:  std(COLORS.navy, { roughness: 0.55 }),
-    foam:   std(COLORS.cream),
+    water:  std(layerColors(o.wave).water, { roughness: 0.55 }),
+    foam:   std(layerColors(o.wave).foam, { roughness: 0.6 }),
     hub:    std(COLORS.navy, { roughness: 0.5, ...flush }),
     text:   std(tier.color, { metalness: tier.metal, roughness: tier.rough }),
     engraved: std(0x0e1829, { roughness: 0.9 }),   // the floor of a recess, drawn flush on the hub face
