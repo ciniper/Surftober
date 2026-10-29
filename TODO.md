@@ -262,6 +262,12 @@
       striding + body bob, drawn procedurally (wave-frames.js sprite());
       cream body + navy details (styles can recolour their two inlay
       layers). Thinnest features ~0.5–0.6 mm.
+      PRINT 2 (2026-10-29, v3 Ø103 + lip + chamfer): "spins muchhhh better"
+      → lip seat is the baseline, kept as option `seat` (lip default |
+      plain for A/B). Back cap redone for the real magnet (Ø25 × 5,
+      adhesive-backed, not a press fit): Ø51 × 5.8 disc = same OD as the
+      hub, Ø25.6 × 4.6 pocket on a 1.2 floor (magnet 0.4 proud), 1.8 spacer
+      (1.2 clearance over the body). Next: print the still set (hub + cap).
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

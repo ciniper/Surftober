@@ -77,6 +77,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
 | `art` | inlay · raised · none | inlay | wave: flush multi-colour pockets + inlay parts · one-colour relief fused into the body · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
+| `seat` | lip · plain | lip | bearing seat: the v3 lip + entry chamfer (print 2: spins much better) · the plain v1/v2 bore, for comparison |
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
@@ -92,8 +93,8 @@ URL, the generator (`--url` or flags) and the manifest.
 | `wave-foam` | spinning | cream foam inlays, flush (inlay art only) | STL | cream |
 | `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
 | `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays — only with `text=inlay` (recessed = pocket in the hub, raised = fused into it) | STL | tier colour |
-| `back-cap` | still | Ø18 × 3 cap, stem, Ø10.2 × 2.1 magnet pocket | STL, fridge face down | any / anodized Al |
-| `bearing` · `magnet` · `weight` | bought | reference bodies | STEP only | — |
+| `back-cap` | still | Ø51 × 5.8 disc (same disc as the hub), stem, 1.8 spacer, Ø25.6 × 4.6 magnet pocket on a 1.2 floor | STL, fridge face down | cap colour |
+| `bearing` · `magnet` · `weight` | bought | reference bodies (magnet: Ø25 × 5 adhesive-backed disc) | STEP only | — |
 
 The **3MF** holds one multi-part object per print unit — spinning piece
 (body + inlays), front hub (+ text), back cap — laid out side by side in print
@@ -111,6 +112,16 @@ hub r 16, arms 9 wide, **ring r 35 → 51.5** (Ø103), wave band r 38.1 → 50.9
 aspect 2.18 vs the 2.06 design cell), inlays 0.6 deep, relief 0.6 / 0.9
 (water / foam). Front hub r 25.5 (the arms show for 9.5 mm between hub and
 ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
+
+**Back cap (2026-10-29).** The same Ø51 disc as the front hub, so the trophy
+reads as one medallion from both sides and the arms are hidden back and
+front. It carries the real magnet: a Ø25 × 5 adhesive-backed disc, so the
+pocket is a loose Ø25.6 (0.3 radial) × 4.6 deep on a 1.2 mm floor — the
+magnet stands 0.4 proud and is the only thing that touches the fridge. The
+1.8 mm spacer on the inner race gives 1.2 mm clearance over the body's back
+face (the lip makes the body 0.6 proud of the bearing there), matching the
+hub's clearance in front. Total depth behind the body: 8 mm. Prints fridge
+face down, stem up; ~11 g.
 
 **Bearing seat (print 2).** Print 1 wobbled visibly — the ring was not square
 to the bearing. The body only gripped the outer race over its 7 mm width, so
@@ -139,6 +150,10 @@ Print 1 feedback (Chase, 2026-10-28, Ø113 body + hub + cap on a greaseless
 70 % of a bulkier, same-weight, smaller-Ø reference spinner. Diagnosis:
 squareness of the ring to the bearing (hence the lip), with some air drag
 from the large open disc. Pockets were not the cause.
+
+Print 2 feedback (Chase, 2026-10-29, v3: Ø103 + lip + chamfer): "spins
+much better". The lip seat is now the baseline (`seat=lip`, the default);
+`seat=plain` keeps the old bore around only for A/B tests.
 
 # Design notes and decision log
 
