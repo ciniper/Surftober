@@ -21,6 +21,7 @@ import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, layerColors, layerNames } from
 // return fits its native 10 frames at full size with margin (cell aspect 2.18
 // vs the 2.06 design cell). Hub unchanged at r 25.5; arms show for 9.5 mm.
 const RING_IN = 35, RING_OUT = 51.5;
+const HUB_R = 25.5;           // the two still discs (front hub, back cap) share this radius
 
 export const DIM = {
   // 608 bearing — the one bought part every option shares
@@ -33,22 +34,25 @@ export const DIM = {
   armW: 9,
   ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø103 overall
   waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.6, // artwork band on the ring's front face (12.8 wide)
-  // bearing seat (print 2, after the wobble on print 1): the body is still t thick but sits 0.6
-  // further back — a lip behind the bore that only the OUTER race face touches (r 9.9–10.95; the
-  // shield starts at r 9.6) squares the ring to the bearing, and a 45° chamfer eases the press-in.
+  // bearing seat (v3, after the wobble on print 1 — option `seat`, default lip): the body is still t
+  // thick but sits 0.6 further back — a lip behind the bore that only the OUTER race face touches
+  // (r 9.9–10.95; the shield starts at r 9.6) squares the ring to the bearing, and a 45° chamfer
+  // eases the press-in. Print 2 (v3) confirmed it: spins much better. `seat=plain` is the v1/v2 bore.
   lip: 0.6, lipIn: 9.9, chamfer: 0.6,
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   relief: 0.6, reliefFoam: 0.9, // raised artwork heights (one-colour)
 
   // still front hub on the inner race — carries the text, hides the arms
-  hubR: 25.5, hubT: 2.4, standoff: 0.6,   // 2 mm reveal to the ring; 0.6 clearance over the spinning face
+  hubR: HUB_R, hubT: 2.4, standoff: 0.6,  // 9.5 mm reveal to the ring; 0.6 over the bearing face = 1.2 over the spinning body
   stemD: 8.1, stemLen: 3.3,               // into the Ø8 inner-race bore (8.0 … 8.2)
   spacerR: 5.5,                           // lands on the inner race only (r 4 … 6.05)
   textSize: 4.6, textTrack: 0.12, textInset: 4.6,
 
-  // back cap on the inner race: the only thing that touches the fridge
-  capR: 9, capT: 3, capSpacer: 0.8,
-  magD: 10, magT: 2, magPocketD: 10.2, magPocketDepth: 2.1,   // Ø10×2 N42 disc, glue fit
+  // back cap on the inner race, same Ø51 disc as the front hub: holds the magnet, the only fridge contact.
+  // capSpacer 1.8 = 1.2 clearance over the body's back face (which is 0.6 proud of the bearing, the lip).
+  // The Ø25 × 5 adhesive-backed magnet sits in a loose pocket (0.3 radial) on a 1.2 floor, 0.4 proud.
+  capR: HUB_R, capT: 5.8, capSpacer: 1.8,
+  magD: 25, magT: 5, magPocketD: 25.6, magPocketDepth: 4.6,
 
   // bought weights, in the tier metal
   bezelWire: 3.5, bezelProud: 0.6,                            // round craft ring Ø(2·ringOut) × 3.5 wire in a half-round groove (Ø93 is not a stock craft size — buy 3.5" and print to it, or go flat)
@@ -91,10 +95,10 @@ export const PARTS = [
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
     generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
-  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Inner-race cap with the magnet pocket; the only fridge contact',
+  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub; holds the magnet — the only fridge contact',
     generated: true, color: 'cap',   filament: 'any (or anodized aluminium)', print: { flip: false, z: DIM.capSpacer + DIM.capT } },
   { id: 'bearing',    group: 'Bought',         label: '608 bearing',  detail: '8 × 22 × 7 — cleaned, no grease, for spin time', color: 'steel' },
-  { id: 'magnet',     group: 'Bought',         label: 'Magnet',       detail: 'Ø10 × 2 N42 disc, in the back cap', color: 'magnet' },
+  { id: 'magnet',     group: 'Bought',         label: 'Magnet',       detail: 'Ø25 × 5 adhesive-backed disc, stuck into the back cap, 0.4 proud', color: 'magnet' },
   { id: 'weight',     group: 'Bought',         label: 'Metal weight', detail: 'Bezel ring in the rim, or a bike cog behind the body — the tier metal',
     color: 'tier', when: o => o.weight !== 'none' },
 ];
@@ -132,6 +136,8 @@ export const OPTIONS = {
             labels: { inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
+  seat:   { label: 'Bearing seat', type: 'choice', default: 'lip', values: ['lip', 'plain'],
+            labels: { lip: 'Lip + chamfer · v3, spins best', plain: 'Plain bore · v1/v2' }, hint: 'v3 seat: 0.6 lip behind the bore on the outer race face + entry chamfer' },
   weight: { label: 'Weight',     type: 'choice', default: 'none',   values: ['none', 'bezel', 'cog'],
             labels: { none: 'None — solid print', bezel: 'Metal bezel ring in the rim', cog: 'Bike cog behind the ring' } },
   bezel:  { label: 'Bezel ring', type: 'choice', default: 'flat',   values: ['flat', 'round'],
@@ -169,6 +175,8 @@ export function serializeOptions(o) {
   }
   return q.toString();
 }
+// How far the spinning body sits behind the bearing's back face (the seat lip) — 0 for a plain bore.
+export const bodyShift = o => (o.seat === 'lip' ? DIM.lip : 0);
 export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
 
 // The parts the generator will actually write for these options.
@@ -183,6 +191,7 @@ export function outputTag(o) {
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
     .concat(o.art === 'inlay' ? [] : [o.art])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
+    .concat(o.seat === 'lip' ? [] : ['plain-seat'])
     .join('-');
 }
 export const slug = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'spinner';
@@ -194,6 +203,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.frames) args.push(`--frames ${o.frames}`);
   if (o.art !== 'inlay') args.push(`--art ${o.art}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
+  if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
   if (o.parts) args.push(`--parts ${partsToGenerate(o).join(',')}`);
   return `${python} spinner.py ${args.join(' ')}`;

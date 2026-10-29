@@ -117,6 +117,7 @@ class Spinner:
     def __init__(self, cfg):
         self.cfg, self.o, self.D = cfg, cfg['options'], cfg['dim']
         self.t = self.D['t']
+        self.shift = self.D['lip'] if self.o['seat'] == 'lip' else 0    # how far the body sits behind the bearing's back face
         self._art = None
         self.notes = {}
 
@@ -139,12 +140,15 @@ class Spinner:
         return self._art
 
     def body(self):
-        """Built with the bearing at z 0…t, then shifted back by the lip: the body spans -lip … t-lip."""
+        """Built with the bearing at z 0…t, then (seat=lip) shifted back by the lip: the body spans -lip … t-lip."""
         D, t, o = self.D, self.t, self.o
-        body = cyl(D['hubOut'], 0, t, D['lipIn'])                       # hub with the small hole of the seat lip…
-        body = body.cut(cyl(D['bore'] / 2, D['lip'], t))                 # …and the bearing bore above it
-        body = body.cut(cq.Workplane('XY').add(cq.Solid.makeCone(D['bore'] / 2, D['bore'] / 2 + D['chamfer'] + 0.01, D['chamfer'] + 0.01,
-                                                                 cq.Vector(0, 0, t - D['chamfer']), cq.Vector(0, 0, 1))))   # 45° entry chamfer
+        if o['seat'] == 'lip':
+            body = cyl(D['hubOut'], 0, t, D['lipIn'])                   # hub with the small hole of the seat lip…
+            body = body.cut(cyl(D['bore'] / 2, D['lip'], t))             # …and the bearing bore above it
+            body = body.cut(cq.Workplane('XY').add(cq.Solid.makeCone(D['bore'] / 2, D['bore'] / 2 + D['chamfer'] + 0.01, D['chamfer'] + 0.01,
+                                                                     cq.Vector(0, 0, t - D['chamfer']), cq.Vector(0, 0, 1))))   # 45° entry chamfer
+        else:
+            body = cyl(D['hubOut'], 0, t, D['bore'] / 2)                 # plain v1/v2 bore
         arm_len = D['ringIn'] - D['hubOut'] + 1.5
         mid = (D['hubOut'] + D['ringIn']) / 2
         for i in range(o['arms']):
@@ -172,18 +176,19 @@ class Spinner:
         elif o['weight'] == 'cog':
             body = body.union(cyl(D['cogBore'] / 2 - 0.1, -D['cogT'], D['cogT'], D['cogBossIn']))
             self.notes['cog'] = f'boss Ø{D["cogBore"] - 0.2:.1f} × {D["cogT"]} mm behind the body for a {D["cogTeeth"]}T cog'
-        self.notes['seat'] = f"lip {D['lip']} mm behind the bore (r {D['lipIn']}–{D['bore'] / 2:.2f}) seats the outer race; {D['chamfer']} mm entry chamfer"
-        return body.translate((0, 0, -D['lip']))
+        self.notes['seat'] = (f"lip {D['lip']} mm behind the bore (r {D['lipIn']}–{D['bore'] / 2:.2f}) seats the outer race; {D['chamfer']} mm entry chamfer"
+                              if o['seat'] == 'lip' else 'plain bore (v1/v2 seat)')
+        return body.translate((0, 0, -self.shift))
 
     def wave_water(self):
         water, foam = self.art()
         if water is None or self.o['art'] != 'inlay':
             return None
-        return (water.cut(foam) if foam is not None else water).translate((0, 0, -self.D['lip']))
+        return (water.cut(foam) if foam is not None else water).translate((0, 0, -self.shift))
 
     def wave_foam(self):
         foam = self.art()[1] if self.o['art'] == 'inlay' else None
-        return foam.translate((0, 0, -self.D['lip'])) if foam is not None else None
+        return foam.translate((0, 0, -self.shift)) if foam is not None else None
 
     def _text(self, z0, depth):
         D, o = self.D, self.o
@@ -228,7 +233,7 @@ class Spinner:
 
     def weight(self):
         D, t, o = self.D, self.t, self.o
-        zc = t / 2 - D['lip']    # mid-thickness of the body
+        zc = t / 2 - self.shift    # mid-thickness of the body
         if o['weight'] == 'bezel' and o['bezel'] == 'round':
             wr = D['bezelWire'] / 2
             return cq.Workplane('XY').add(cq.Solid.makeTorus(D['ringOut'] - wr + D['bezelProud'], wr, cq.Vector(0, 0, zc), cq.Vector(0, 0, 1)))
@@ -236,7 +241,7 @@ class Spinner:
             r_out = D['ringOut'] + D['bezelProud']
             return cyl(r_out, zc - D['flatT'] / 2, D['flatT'], r_out - (D['flatOd'] - D['flatId']) / 2)
         if o['weight'] == 'cog':
-            return cog_shape(D['cogTeeth'], D['cogTip'], D['cogRoot'], D['cogBore'] / 2).extrude(D['cogT']).translate((0, 0, -D['cogT'] - D['lip']))
+            return cog_shape(D['cogTeeth'], D['cogTip'], D['cogRoot'], D['cogBore'] / 2).extrude(D['cogT']).translate((0, 0, -D['cogT'] - self.shift))
         return None
 
 
@@ -290,7 +295,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -304,7 +309,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))

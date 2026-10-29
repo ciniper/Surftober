@@ -252,14 +252,14 @@ function select(id) {
 function partInfo(id) {
   const D = DIM, p = PART[id], n = frameCount(o);
   const dims = {
-    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
+    body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${o.seat === 'lip' ? `${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer (v3)` : 'plain bore (v1/v2)'} · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : o.art === 'inlay' ? ` · ${D.inlay} mm inlay pockets` : ''),
     'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm flush inlay · colour ${partColor('wave-water', o)}`,
     'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm flush inlay on top of the bottom layer · colour ${partColor('wave-foam', o)}`,
     hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`,
     'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${D.inlay} mm flush inlay`,
-    'back-cap': `Ø${2 * D.capR} × ${D.capT} mm · stem Ø${D.stemD} · pocket Ø${D.magPocketD} × ${D.magPocketDepth} for the magnet`,
+    'back-cap': `Ø${2 * D.capR} × ${D.capT} mm, same disc as the hub · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.capSpacer} mm spacer = ${(D.capSpacer - D.lip).toFixed(1)} clearance over the body · magnet pocket Ø${D.magPocketD} × ${D.magPocketDepth} on a ${(D.capT - D.magPocketDepth).toFixed(1)} floor`,
     bearing: `608: ${D.bearing.id} × ${D.bearing.od} × ${D.bearing.w} mm · outer race spins with the body, inner race carries hub + cap`,
-    magnet: `Ø${D.magD} × ${D.magT} N42 disc · in the back cap, on the inner race — never spins, only part that touches the fridge`,
+    magnet: `Ø${D.magD} × ${D.magT} adhesive-backed disc · stuck into the back cap pocket, ${(D.magT - D.magPocketDepth).toFixed(1)} mm proud · on the inner race — never spins, the only thing that touches the fridge`,
     weight: o.weight === 'bezel' ? (o.bezel === 'flat' ? `laser-cut ${TIERS[o.tier].metalName} ring OD ${2 * (D.ringOut + D.bezelProud)} × ID ${2 * (D.ringOut + D.bezelProud) - (D.flatOd - D.flatId)} × ${D.flatT} mm in a groove round the rim` : `Ø${2 * D.ringOut} × ${D.bezelWire} mm ${TIERS[o.tier].metalName} wire ring in a half-round groove`) : `${D.cogTeeth}T track cog, tip Ø${2 * D.cogTip}, bore Ø${D.cogBore}, on a boss behind the body`,
   };
   return `<b>${partLabel(id, o)}</b> — ${p.detail}. ${dims[id] || ''}${p.generated ? ` · print: ${p.color.startsWith('layer') ? partColor(id, o) : p.filament}` : ''}`;
