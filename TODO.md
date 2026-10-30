@@ -270,8 +270,11 @@
       (1.2 clearance over the body). → v4 (same day): 20 finger notches in
       the rim (option `grip`, r 3.5 × 1.2, from the back, front 1.5 mm kept
       clean), multi-colour inlays standing proud (art=proud, 0.4 water /
-      0.7 foam, now the default; `inlay` = flush), version default v4.
-      Next: first multi-colour print (v4 body + inlays), still set (hub + cap).
+      0.7 foam; `inlay` = flush), version default v4. Separate inlay parts
+      were "a NIGHTMARE" in the slicer → default is now `art=raised`: ONE
+      solid body, water 0.4 / foam 0.8 above the face, colour the two
+      steps with height-range modifiers in Bambu Studio (7.0–7.4, 7.4–7.8).
+      Next: v4 multi-colour print of the solid body, still set (hub + cap).
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

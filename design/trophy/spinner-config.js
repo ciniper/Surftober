@@ -41,7 +41,7 @@ export const DIM = {
   lip: 0.6, lipIn: 9.9, chamfer: 0.6,
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   proud: 0.4, proudFoam: 0.7,   // art=proud: the inlays stand this far above the face (water / foam), from the same 0.6 pocket
-  relief: 0.6, reliefFoam: 0.9, // raised artwork heights (one-colour)
+  relief: 0.4, reliefFoam: 0.8, // art=raised: one solid part, water 0.4 and foam 0.8 above the face — two 0.2 mm layers each, so the slicer can colour them by height
   // finger notches round the rim (option grip, v4): scallops cut into the outer edge from the back,
   // stopping notchKeep short of the front face so the wave band and the rim line stay intact
   notchR: 3.5, notchDepth: 1.2, notchKeep: 1.5,
@@ -136,8 +136,8 @@ export const OPTIONS = {
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
   wave:   { label: 'Animation',  type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
   frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
-  art:    { label: 'Artwork',    type: 'choice', default: 'proud',  values: ['proud', 'inlay', 'raised', 'none'],
-            labels: { proud: 'Raised inlays · multi-colour, 0.4 proud', inlay: 'Flush inlays · multi-colour', raised: 'Raised relief · one colour', none: 'Plain ring' } },
+  art:    { label: 'Artwork',    type: 'choice', default: 'raised', values: ['raised', 'proud', 'inlay', 'none'],
+            labels: { raised: 'Raised relief · one solid part, water 0.4 / foam 0.8 (colour by height in the slicer)', proud: 'Separate inlay parts · 0.4 proud', inlay: 'Separate inlay parts · flush', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
   grip:   { label: 'Rim grip',   type: 'choice', default: 'notches', values: ['notches', 'none'],
@@ -225,9 +225,9 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
-  full:      { label: 'Full trophy · multi-colour',  detail: 'Everything, raised inlays, notched rim, solid print', options: {} },
-  flush:     { label: 'Full trophy · flush inlays',   detail: 'Same, with the inlays flush to the face (v1–v3 look)',   options: { art: 'inlay' } },
-  testring:  { label: 'Test print · one-colour ring', detail: 'Just the spinning piece with the wave in relief', options: { art: 'raised', parts: ['body'] } },
+  full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, notched rim; hub + cap', options: {} },
+  inlays:    { label: 'Full trophy · inlay parts',    detail: 'Wave and foam as separate proud inlay parts (v4 first try — fiddly)', options: { art: 'proud' } },
+  testring:  { label: 'Spinning piece only',          detail: 'Just the body with the wave in relief',          options: { parts: ['body'] } },
   stillset:  { label: 'Still parts only',             detail: 'Front hub, text and back cap for one name',       options: { parts: ['hub', 'hub-text', 'back-cap'] } },
   bezel:     { label: 'Metal bezel · brass',           detail: 'Laser-cut ring in the rim carries the tier',     options: { weight: 'bezel', bezel: 'flat', tier: 'gold' } },
   cog:       { label: 'Bike cog · 4 arms',             detail: 'Heaviest option, gear teeth past the rim',       options: { weight: 'cog', arms: 4 } },

@@ -6,7 +6,7 @@ parts, options and the output tag come from ../spinner-config.js (read through
 cad/bridge.mjs with node), so this always matches the 3D viewer.
 
     .venv/bin/python spinner.py --name NAHLA                      # everything, flush multi-colour inlays
-    .venv/bin/python spinner.py --preset testring                 # one-colour spinning piece, wave in relief
+    .venv/bin/python spinner.py --preset testring                 # just the spinning piece (one solid part, wave in relief)
     .venv/bin/python spinner.py --parts hub,hub-text --name KAI   # any subset
     .venv/bin/python spinner.py --url "arms=4&weight=cog&art=raised"
     .venv/bin/python spinner.py --list                            # parts and presets
@@ -45,7 +45,7 @@ def list_everything():
     for p in cfg['generate']:
         print(f"  {p['id']:<11} {p['group']:<16} {p['filament']}")
     print('\nquery options: version (file prefix, default v3), name, tier, arms (3|4), wave, frames, art (inlay|raised|none), text (recessed|inlay|raised), weight (none|bezel|cog), bezel (flat|round), parts')
-    print('presets: full, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
+    print('presets: full, inlays, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
 
 
 # ---------------------------------------------------------------------------
