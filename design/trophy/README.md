@@ -75,7 +75,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
 | `wave` | classic · rolling · return · barrel · returntip · classictip · **plover** | return | animation style (see wave demo); `plover` = the logo's snowy plover, wings flapping + legs striding, drawn procedurally (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
-| `art` | proud · inlay · raised · none | proud | wave: multi-colour inlay parts standing 0.4 / 0.7 mm proud (water / foam) · the same inlays flush · one-colour relief fused into the body · plain |
+| `art` | raised · proud · inlay · none | raised | wave: **one solid part**, water 0.4 and foam 0.8 above the face (colour the two steps by height in the slicer) · separate inlay parts standing 0.4 / 0.7 proud · the same inlay parts flush · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
 | `grip` | notches · none | notches | finger notches: 2 per frame, r 3.5 × 1.2 deep scallops in the outer edge, cut from the back and stopping 1.5 mm short of the front face (not with a bezel — its groove is there) |
 | `seat` | lip · plain | lip | bearing seat: the v3 lip + entry chamfer (print 2: spins much better) · the plain v1/v2 bore, for comparison |
@@ -83,7 +83,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | full · flush · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 
@@ -110,9 +110,13 @@ volumes, grams, files.
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
 hub r 16, arms 9 wide, **ring r 35 → 51.5** (Ø103), wave band r 38.1 → 50.9
 (12.8 mm — the whitewater return fits its native 10 frames at full size, cell
-aspect 2.18 vs the 2.06 design cell), inlay pockets 0.6 deep with the inlays
-standing 0.4 / 0.7 proud by default (`art=proud`, v4; `inlay` = flush),
-relief 0.6 / 0.9 (water / foam). Rim grip (v4): 20 scallops (2 per frame)
+aspect 2.18 vs the 2.06 design cell). Artwork by default is **relief on
+the one solid body**: water 0.4 and foam 0.8 above the face, i.e. two
+0.2 mm layers each. To print it multi-colour, slice the body alone and add
+height-range modifiers to it: face → +0.4 in the water colour, +0.4 → +0.8
+in the foam colour (body printed back face down, face at z 7.0, so 7.0–7.4
+and 7.4–7.8). The separate inlay-part modes (`proud` 0.4 / 0.7, `inlay`
+flush, 0.6 pockets) are still there but were a pain to handle. Rim grip (v4): 20 scallops (2 per frame)
 r 3.5 × 1.2 deep in the outer edge, cut from the back face up to 1.5 mm
 below the front, so the front rim is still a clean Ø103 circle and the wave
 band is untouched; the 1.2 mm roof over each notch prints as a short
@@ -161,8 +165,10 @@ Print 2 feedback (Chase, 2026-10-29, v3: Ø103 + lip + chamfer): "spins
 much better". The lip seat is now the baseline (`seat=lip`, the default);
 `seat=plain` keeps the old bore around only for A/B tests.
 
-v4 (2026-10-29): rim notches for flicking, multi-colour inlays standing
-proud, Ø51 back cap for the Ø25 × 5 adhesive magnet. First multi-colour print.
+v4 (2026-10-29): rim notches for flicking, Ø51 back cap for the Ø25 × 5
+adhesive magnet. Multi-colour tried first as separate proud inlay parts —
+"a nightmare" to handle — so the default went back to one solid body with
+the wave in two-level relief, coloured by height in the slicer.
 
 # Design notes and decision log
 
