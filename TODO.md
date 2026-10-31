@@ -274,7 +274,12 @@
       were "a NIGHTMARE" in the slicer → default is now `art=raised`: ONE
       solid body, water 0.4 / foam 0.8 above the face, colour the two
       steps with height-range modifiers in Bambu Studio (7.0–7.4, 7.4–7.8).
-      Next: v4 multi-colour print of the solid body, still set (hub + cap).
+      PRINT 3 / v4 tests (2026-10-30/31): assembly spun much worse than v3,
+      no wobble → CONFIRMED the Ø25×5 neodymium disc behind the bearing
+      slows the spin 2–3× (axial preload + magnetised balls), and the
+      20-pack bearings vary 2× (bare spin 10–20 s). Next: magnet redesign
+      (flexible magnet sheet in a shallow well, or small discs at the cap
+      rim), sort bearings bare before assembly.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
