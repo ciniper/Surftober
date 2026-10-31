@@ -82,6 +82,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
+| `magnet` | none · disc | none | back cap: plain grip plate with a finger dish · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests) |
 | `parts` | comma list | all | which parts to show / generate |
 | `preset` | full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
@@ -94,8 +95,8 @@ URL, the generator (`--url` or flags) and the manifest.
 | `wave-foam` | spinning | top art layer (foam, or the plover details), proud or flush | STL | layer colour |
 | `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
 | `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays — only with `text=inlay` (recessed = pocket in the hub, raised = fused into it) | STL | tier colour |
-| `back-cap` | still | Ø51 × 5.8 disc (same disc as the hub), stem, 1.8 spacer, Ø25.6 × 4.6 magnet pocket on a 1.2 floor | STL, fridge face down | cap colour |
-| `bearing` · `magnet` · `weight` | bought | reference bodies (magnet: Ø25 × 5 adhesive-backed disc) | STEP only | — |
+| `back-cap` | still | Ø51 × 2.4 grip plate (same disc as the hub), stem, 1.8 spacer, Ø22 × 1 finger dish; with `magnet=disc` a 5.8 plate with the Ø25.6 × 4.6 pocket | STL, back face down | cap colour |
+| `bearing` · `magnet` · `weight` | bought | reference bodies (magnet only with `magnet=disc`) | STEP only | — |
 
 The **3MF** holds one multi-part object per print unit — spinning piece
 (body + inlays), front hub (+ text), back cap — laid out side by side in print
@@ -123,15 +124,16 @@ band is untouched; the 1.2 mm roof over each notch prints as a short
 overhang. Front hub r 25.5 (the arms show for 9.5 mm between hub and
 ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
 
-**Back cap (2026-10-29).** The same Ø51 disc as the front hub, so the trophy
-reads as one medallion from both sides and the arms are hidden back and
-front. It carries the real magnet: a Ø25 × 5 adhesive-backed disc, so the
-pocket is a loose Ø25.6 (0.3 radial) × 4.6 deep on a 1.2 mm floor — the
-magnet stands 0.4 proud and is the only thing that touches the fridge. The
+**Back cap.** The same Ø51 disc as the front hub, so the trophy reads as
+one medallion from both sides and the arms are hidden back and front. The
 1.8 mm spacer on the inner race gives 1.2 mm clearance over the body's back
 face (the lip makes the body 0.6 proud of the bearing there), matching the
-hub's clearance in front. Total depth behind the body: 8 mm. Prints fridge
-face down, stem up; ~11 g.
+hub's clearance in front. Since the v4 tests (2026-10-31) the default is a
+**plain grip plate**, 2.4 thick like the hub, with a Ø22 × 1 mm spherical
+finger dish in the back — the magnet is out of the equation for now. With
+`magnet=disc` you get the 2026-10-29 cap instead: 5.8 thick, a loose
+Ø25.6 × 4.6 pocket on a 1.2 floor for the Ø25 × 5 adhesive-backed disc,
+standing 0.4 proud. Both print back face down, stem up.
 
 **Bearing seat (print 2).** Print 1 wobbled visibly — the ring was not square
 to the bearing. The body only gripped the outer race over its 7 mm width, so

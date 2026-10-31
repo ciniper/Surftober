@@ -225,12 +225,22 @@ class Spinner:
             return None     # recessed text is a pocket in the hub, raised text is fused into it
         return self._text(t + D['standoff'] + D['hubT'] - D['inlay'], D['inlay'])
 
+    def cap_t(self):
+        return self.D['capTMag'] if self.o['magnet'] == 'disc' else self.D['capT']
+
     def back_cap(self):
-        D = self.D
+        D, T = self.D, self.cap_t()
+        z_back = -D['capSpacer'] - T
         cap = (cyl(D['stemD'] / 2, 0, D['stemLen'])
                .union(cyl(D['spacerR'], -D['capSpacer'], D['capSpacer']))
-               .union(cyl(D['capR'], -D['capSpacer'] - D['capT'], D['capT'])))
-        return cap.cut(cyl(D['magPocketD'] / 2, -D['capSpacer'] - D['capT'], D['magPocketDepth']))
+               .union(cyl(D['capR'], z_back, T)))
+        if self.o['magnet'] == 'disc':
+            self.notes['cap'] = f"magnet pocket Ø{D['magPocketD']} × {D['magPocketDepth']} on a {T - D['magPocketDepth']:.1f} floor"
+            return cap.cut(cyl(D['magPocketD'] / 2, z_back, D['magPocketDepth']))
+        rd, dd = D['dishD'] / 2, D['dishDepth']                    # spherical finger dish in the back face
+        R = (rd * rd + dd * dd) / (2 * dd)
+        self.notes['cap'] = f"grip plate {T} thick, finger dish Ø{D['dishD']} × {dd} (sphere R {R:.0f})"
+        return cap.cut(cq.Workplane('XY').add(cq.Solid.makeSphere(R, cq.Vector(0, 0, z_back + dd - R), angleDegrees1=-90, angleDegrees2=90)))
 
     # -- bought parts, for the STEP assembly only
     def bearing(self):
@@ -240,7 +250,9 @@ class Spinner:
 
     def magnet(self):
         D = self.D
-        return cyl(D['magD'] / 2, -D['capSpacer'] - D['capT'] + (D['magPocketDepth'] - D['magT']) + 0.05, D['magT'])
+        if self.o['magnet'] != 'disc':
+            return None
+        return cyl(D['magD'] / 2, -D['capSpacer'] - self.cap_t() + (D['magPocketDepth'] - D['magT']) + 0.05, D['magT'])
 
     def weight(self):
         D, t, o = self.D, self.t, self.o
@@ -306,7 +318,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -320,7 +332,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
