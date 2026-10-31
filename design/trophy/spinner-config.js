@@ -52,11 +52,12 @@ export const DIM = {
   spacerR: 5.5,                           // lands on the inner race only (r 4 … 6.05)
   textSize: 4.6, textTrack: 0.12, textInset: 4.6,
 
-  // back cap on the inner race, same Ø51 disc as the front hub: holds the magnet, the only fridge contact.
-  // capSpacer 1.8 = 1.2 clearance over the body's back face (which is 0.6 proud of the bearing, the lip).
-  // The Ø25 × 5 adhesive-backed magnet sits in a loose pocket (0.3 radial) on a 1.2 floor, 0.4 proud.
-  capR: HUB_R, capT: 5.8, capSpacer: 1.8,
-  magD: 25, magT: 5, magPocketD: 25.6, magPocketDepth: 4.6,
+  // back cap on the inner race, same Ø51 disc as the front hub. capSpacer 1.8 = 1.2 clearance over the
+  // body's back face (which is 0.6 proud of the bearing, the lip). Default (magnet=none, v4 tests): a
+  // plain grip plate as thin as the hub with a shallow finger dish — the Ø25 × 5 neodymium disc behind
+  // the bearing cost 2–3× in spin time. magnet=disc keeps that pocketed cap (5.8 thick, 1.2 floor).
+  capR: HUB_R, capT: 2.4, capSpacer: 1.8, dishD: 22, dishDepth: 1.0,
+  capTMag: 5.8, magD: 25, magT: 5, magPocketD: 25.6, magPocketDepth: 4.6,
 
   // bought weights, in the tier metal
   bezelWire: 3.5, bezelProud: 0.6,                            // round craft ring Ø(2·ringOut) × 3.5 wire in a half-round groove (Ø93 is not a stock craft size — buy 3.5" and print to it, or go flat)
@@ -99,10 +100,10 @@ export const PARTS = [
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
     generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
-  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub; holds the magnet — the only fridge contact',
+  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub — the grip for the other finger (magnet pocket optional)',
     generated: true, color: 'cap',   filament: 'any (or anodized aluminium)', print: { flip: false, z: DIM.capSpacer + DIM.capT } },
   { id: 'bearing',    group: 'Bought',         label: '608 bearing',  detail: '8 × 22 × 7 — cleaned, no grease, for spin time', color: 'steel' },
-  { id: 'magnet',     group: 'Bought',         label: 'Magnet',       detail: 'Ø25 × 5 adhesive-backed disc, stuck into the back cap, 0.4 proud', color: 'magnet' },
+  { id: 'magnet',     group: 'Bought',         label: 'Magnet',       detail: 'Ø25 × 5 adhesive-backed disc in the back cap, 0.4 proud — slows the spin 2–3×, off by default', color: 'magnet', when: o => o.magnet === 'disc' },
   { id: 'weight',     group: 'Bought',         label: 'Metal weight', detail: 'Bezel ring in the rim, or a bike cog behind the body — the tier metal',
     color: 'tier', when: o => o.weight !== 'none' },
 ];
@@ -149,6 +150,8 @@ export const OPTIONS = {
   bezel:  { label: 'Bezel ring', type: 'choice', default: 'flat',   values: ['flat', 'round'],
             labels: { flat: 'Flat laser-cut ring (SendCutSend)', round: 'Round craft wire ring' }, when: o => o.weight === 'bezel' },
   cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
+  magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
+            labels: { none: 'None · plain grip cap with a finger dish', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
   parts:  { label: 'Parts',      type: 'list',   default: null, hint: 'which parts to show / generate; empty = all' },
 };
 export const defaults = () => Object.fromEntries(Object.entries(OPTIONS).map(([k, v]) => [k, v.default]));
@@ -185,6 +188,10 @@ export function serializeOptions(o) {
 export const isInlay = o => o.art === 'inlay' || o.art === 'proud';
 // Finger notches round the rim: two per animation frame, none with a bezel ring (its groove is there).
 export const notchCount = o => (o.grip === 'notches' && o.weight !== 'bezel' ? 2 * frameCount(o) : 0);
+// Back-cap plate thickness: thin grip plate, or the pocketed magnet cap.
+export const capT = o => (o.magnet === 'disc' ? DIM.capTMag : DIM.capT);
+// Where the back of the assembly touches a surface (the proud magnet face, or the cap's back face).
+export const backFace = o => -(DIM.capSpacer + capT(o)) - (o.magnet === 'disc' ? Math.max(0, DIM.magT - DIM.magPocketDepth) : 0);
 // How far the spinning body sits behind the bearing's back face (the seat lip) — 0 for a plain bore.
 export const bodyShift = o => (o.seat === 'lip' ? DIM.lip : 0);
 export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
@@ -201,6 +208,7 @@ export function outputTag(o) {
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
     .concat(o.art === OPTIONS.art.default ? [] : [o.art])
     .concat(o.grip === 'notches' || o.weight === 'bezel' ? [] : ['smooth'])
+    .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
     .join('-');
@@ -214,6 +222,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.frames) args.push(`--frames ${o.frames}`);
   if (o.art !== OPTIONS.art.default) args.push(`--art ${o.art}`);
   if (o.grip !== 'notches' && o.weight !== 'bezel') args.push(`--grip ${o.grip}`);
+  if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));

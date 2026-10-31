@@ -279,7 +279,10 @@
       slows the spin 2–3× (axial preload + magnetised balls), and the
       20-pack bearings vary 2× (bare spin 10–20 s). Next: magnet redesign
       (flexible magnet sheet in a shallow well, or small discs at the cap
-      rim), sort bearings bare before assembly.
+      rim), sort bearings bare before assembly. 2026-10-31: back cap is a
+      plain grip plate by default (2.4 thick, Ø22 × 1 finger dish; option
+      `magnet=none|disc`, disc = the old pocket) — magnet out of the
+      equation until the holding method is decided.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +

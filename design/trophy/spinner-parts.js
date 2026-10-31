@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount, capT, backFace } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -139,9 +139,16 @@ const builders = {
     const g = new THREE.Group();
     g.add(zcyl(D.stemD / 2, 0, D.stemLen, M.cap, 32));
     g.add(zcyl(D.spacerR, -D.capSpacer, D.capSpacer, M.cap));
-    const zBack = -D.capSpacer - D.capT;
-    g.add(annulus(D.capR, D.magPocketD / 2, zBack, D.capT, M.cap, 0.5));                      // disc with the pocket through…
-    g.add(zcyl(D.magPocketD / 2, zBack + D.magPocketDepth, D.capT - D.magPocketDepth, M.cap)); // …and its floor
+    const T = capT(o), zBack = -D.capSpacer - T;
+    if (o.magnet === 'disc') {
+      g.add(annulus(D.capR, D.magPocketD / 2, zBack, T, M.cap, 0.5));                      // disc with the pocket through…
+      g.add(zcyl(D.magPocketD / 2, zBack + D.magPocketDepth, T - D.magPocketDepth, M.cap)); // …and its floor
+    } else {                                                                                // grip plate with a spherical finger dish in the back face
+      const rd = D.dishD / 2, dd = D.dishDepth, R = (rd * rd + dd * dd) / (2 * dd), pts = [];
+      for (let i = 0; i <= 24; i++) { const r = rd * i / 24; pts.push(new THREE.Vector2(r, zBack + dd - (R - Math.sqrt(R * R - r * r)))); }
+      pts.push(new THREE.Vector2(D.capR, zBack), new THREE.Vector2(D.capR, zBack + T), new THREE.Vector2(0, zBack + T));
+      const m = shadow(new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.cap.clone())); m.material.side = THREE.DoubleSide; m.rotation.x = Math.PI / 2; g.add(m);
+    }
     return g;
   },
   bearing(o, M) {
@@ -151,7 +158,7 @@ const builders = {
     g.add(annulus(b.innerOd / 2, b.id / 2, 0, t, M.steel));
     return g;
   },
-  magnet(o, M) { return zcyl(D.magD / 2, -D.capSpacer - D.capT + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
+  magnet(o, M) { return zcyl(D.magD / 2, -D.capSpacer - capT(o) + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
   weight(o, M) {
     if (o.weight === 'bezel' && o.bezel === 'round') {
       const wr = D.bezelWire / 2, m = shadow(new THREE.Mesh(new THREE.TorusGeometry(D.ringOut - wr + D.bezelProud, wr, 20, 180), M.metal));
@@ -209,6 +216,7 @@ export function buildSpinner(o, font) {
     parts.set(id, obj);
   }
   const fridge = shadow(new THREE.Mesh(new THREE.BoxGeometry(190, 170, 2), M.fridge));
-  fridge.position.z = -(D.capSpacer + D.capT) - Math.max(0, D.magT - D.magPocketDepth) - 1;   // the proud magnet face is what touches fridge.visible = false; fridge.userData = { part: 'fridge' }; root.add(fridge);
+  fridge.position.z = backFace(o) - 1;   // whatever touches the surface: the proud magnet face, or the cap's back
+  fridge.visible = false; fridge.userData = { part: 'fridge' }; root.add(fridge);
   return { root, spin, still, parts, fridge, materials: M };
 }
