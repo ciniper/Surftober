@@ -170,6 +170,23 @@ adhesive magnet. Multi-colour tried first as separate proud inlay parts —
 "a nightmare" to handle — so the default went back to one solid body with
 the wave in two-level relief, coloured by height in the slicer.
 
+Print 3 / v4 feedback (Chase, 2026-10-30/31): the v4 assembly spun much
+worse than v3 with no identifiable wobble. Tested and confirmed:
+
+- **The Ø25 × 5 neodymium disc behind the bearing slows the spin 2–3×.**
+  It sits 1.2 mm behind a chrome-steel 608: it preloads the outer race
+  axially and magnetises the balls. A neodymium disc on the axis is out.
+- **Bearing quality varies 2× in the Amazon 20-pack**: bare flick
+  spin-down 10 s (worst) to 20 s (best). Sort every bearing bare before
+  it goes into a body; or buy skate-grade / hybrid-ceramic 608s.
+
+Magnet options after this (not built yet): flexible magnet sheet
+(0.75 mm, adhesive-backed, Ø50 disc in a shallow well — the striped
+poles cancel within a few mm so nothing reaches the bearing, ~800 g hold
+for a 70 g assembly, and the cap gets thin and light); small neodymium
+discs out at the cap rim (r ≈ 20) instead of one on the axis; a hybrid
+ceramic bearing only helps with the ball magnetisation, not the preload.
+
 # Design notes and decision log
 
 ## Last year (2025) for reference
