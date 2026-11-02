@@ -169,6 +169,7 @@
         <a href="./register.html" class="landing-btn btn-register">Register for Surftober</a>
         <a href="./index.html?mode=signin" class="landing-btn btn-signin" onclick="sessionStorage.setItem('surftober_authenticated', '1')">Sign In</a>
         <a href="./index.html?mode=view" id="btn-view-mode" class="landing-btn btn-view">View Mode (Read Only)</a>
+        <a href="./trophy/" id="btn-trophy" class="landing-btn btn-view" style="display:none">🏆 2026 Trophy (preview)</a>
       </div>
       <div class="landing-foot">
         <span class="app-version"></span>
@@ -176,6 +177,11 @@
       </div>
     </div>
   </div>
+  <script>
+    // Trophy previews (design/trophy, copied to /trophy/ by build.mjs) are for
+    // Vercel preview deploys only: never show the button on the live site.
+    if (!/(^|\.)surftober\.com$/.test(location.hostname)) document.getElementById('btn-trophy').style.display = '';
+  </script>
   <script src="./version.js"></script>
   <script>
     // Footer light/dark switch: flips this page now and writes the app's own

@@ -69,6 +69,17 @@ for (const entry of readdirSync(SRC)) {
   cpSync(path.join(SRC, entry), path.join(OUT, entry), { recursive: true });
 }
 
+// 1b) Trophy previews (trophy branch only): design/trophy -> dist/trophy/, so
+//     a Vercel preview serves them at /trophy/. The CadQuery generator (cad/)
+//     runs locally only, so it is left out; the viewer then shows the
+//     generator command instead of its Generate button running it.
+const TROPHY = path.join(SRC, '..', 'design', 'trophy');
+if (existsSync(TROPHY)) {
+  cpSync(TROPHY, path.join(OUT, 'trophy'), { recursive: true, filter: (p) => path.relative(TROPHY, p).split(path.sep)[0] !== 'cad' });
+} else {
+  console.warn('build.mjs: design/trophy not found, /trophy/ not built');
+}
+
 // 2) Hash the leaf assets.
 const map = new Map(); // './app.js' -> './app.3f2a9c1b.js'
 const hashedBufs = [];
