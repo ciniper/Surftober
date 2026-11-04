@@ -36,6 +36,12 @@ with the preview before printing. *Copy link* writes the whole state to the
 URL. Without `serve.py` (any static server) the button shows the equivalent
 command instead.
 
+**On a Vercel preview** of this branch the same pages are served at
+`/trophy/` (build.mjs copies `design/trophy` minus `cad/` into dist; the
+landing page shows a "2026 Trophy (preview)" button on any host that is not
+surftober.com). No generator there, and no generated files — procedural
+preview only, for showing the design around on a phone.
+
 From the terminal, the same thing:
 
 ```bash
