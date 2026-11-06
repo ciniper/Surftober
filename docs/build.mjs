@@ -34,10 +34,10 @@ const OUT = path.join(SRC, 'dist');
 // Hashed: everything cacheable-forever. Order matters only for the
 // manifest, which references the two icons — it is rewritten before ITS
 // hash is computed, so an icon change ripples into a new manifest URL.
-const HASHED = ['styles.css', 'awards.js', 'photo-kit.js', 'app.js', 'logo.svg', 'icon-maskable.svg'];
+const HASHED = ['styles.css', 'awards.js', 'photo-kit.js', 'app.js', 'logo.svg', 'icon-maskable.svg', 'deck.css', 'deck-config.js', 'deck-stats.js', 'deck.js'];
 const MANIFEST = 'manifest.webmanifest';
 // Rewritten in place (stable names, network-first at runtime).
-const REWRITTEN = ['index.html', 'register.html', 'landing.html', 'sw.js'];
+const REWRITTEN = ['index.html', 'register.html', 'landing.html', 'deck.html', 'sw.js'];
 // Deliberately NOT hashed: version.js (the human-readable deploy marker —
 // network-first by design) and sw.js (its registration URL must be stable).
 // Never shipped in the static output: this script, vercel.json (Vercel
