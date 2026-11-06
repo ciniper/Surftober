@@ -28,8 +28,8 @@
       numbers, daily chart, recap, results, medals, Ascenders, rookies,
       giving back, 26 awards (click-to-reveal winner + runners-up), 5
       conditions awards, quotes. Rehearse offline with ?fixture=<dir>/.
-- [ ] **Confirm name aliases** in deck-config.js — 'pana' → Pranav? 'Nicolas'
-      → Nico Richard? (drives Ascenders / Fall from Grace).
+- [x] **Confirm name aliases** in deck-config.js — 'pana' = Pranav
+      Madanahalli, 'Nicolas' = Nico Richard (Chase, 2026-11-06).
 - [ ] **Fill the hand-curated slides**: surfRecap, weatherRecap, charity,
       judged winners (Best Dressed, Fallen Fathers), quotes, currentCaption.
 - [ ] **Freeze logging** before the ceremony so the numbers stop moving.

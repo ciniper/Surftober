@@ -135,6 +135,9 @@ h3 { font-size: 40px; font-weight: 700; }
 table.t { border-collapse: collapse; margin-top: 40px; font-size: 32px; width: 100%; }
 table.t th { text-align: left; font-size: 22px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 0 20px 16px; }
 table.t td { padding: 16px 20px; border-top: 1px solid var(--line); }
+table.t.compact { margin-top: 26px; font-size: 28px; }
+table.t.compact td { padding: 9px 20px; }
+table.t.compact th { padding-bottom: 10px; }
 table.t td.up { color: var(--teal-2); font-weight: 800; font-variant-numeric: tabular-nums; }
 .chip { display: inline-flex; align-items: center; gap: 12px; font-weight: 700; font-size: 24px; letter-spacing: .06em; }
 
