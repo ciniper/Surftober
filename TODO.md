@@ -19,6 +19,25 @@
       re-paste) — Chase wanted no dependencies. Mid-event it is additive
       only; announce in the crew chat when it ships.
 
+## Branch: presentation (2026 award-ceremony deck — docs/deck.html)
+
+- [x] **Web deck, live from Supabase** (Chase, 2026-11-06) — deck.html +
+      deck.css + deck.js (render/nav) + deck-stats.js (all computations,
+      reuses awards.js scoring so it matches the app leaderboard) +
+      deck-config.js (hand-curated content). 2025 deck order: history,
+      numbers, daily chart, recap, results, medals, Ascenders, rookies,
+      giving back, 26 awards (click-to-reveal winner + runners-up), 5
+      conditions awards, quotes. Rehearse offline with ?fixture=<dir>/.
+- [ ] **Confirm name aliases** in deck-config.js — 'pana' → Pranav? 'Nicolas'
+      → Nico Richard? (drives Ascenders / Fall from Grace).
+- [ ] **Fill the hand-curated slides**: surfRecap, weatherRecap, charity,
+      judged winners (Best Dressed, Fallen Fathers), quotes, currentCaption.
+- [ ] **Freeze logging** before the ceremony so the numbers stop moving.
+- [ ] Big Wednesday award — blocked: surf_history.wave_min/max are null for
+      every row (the forecast pull never captured wave height).
+- [ ] Live games (Chase has ideas) — slides are plain {title, html, steps}
+      objects in deck.js buildSlides(), so a game is just another builder.
+
 ## Scoped, awaiting a go
 
 - [ ] **End-of-Surftober conditions awards** (from the `session_conditions`
