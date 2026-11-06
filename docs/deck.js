@@ -41,20 +41,22 @@
     const fixture = new URLSearchParams(location.search).get('fixture');
     if (fixture) {
       const get = (f) => fetch(fixture + f).then((r) => (r.ok ? r.json() : []));
-      const [rows, conditions, history] = await Promise.all([get('sessions.json'), get('conditions.json'), get('history.json')]);
+      const [rows, conditions, history, profiles] = await Promise.all([get('sessions.json'), get('conditions.json'), get('history.json'), get('profiles.json')]);
       const event = (await get('event.json').catch(() => null)) || { name: `${CFG.edition} Surftober ${CFG.year}`, team: CFG.team, start_date: `${CFG.year}-10-01`, end_date: `${CFG.year}-10-31` };
-      return { rows, conditions, history, event: Array.isArray(event) ? event[0] : event, source: 'fixture' };
+      return { rows, conditions, history, profiles, event: Array.isArray(event) ? event[0] : event, source: 'fixture' };
     }
     const team = encodeURIComponent(CFG.team);
     const [event] = await rest(`events?team=eq.${team}&select=*`);
     if (!event) throw new Error(`No event with team "${CFG.team}"`);
     const pad = (d, n) => { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
-    const [rows, conditions, history] = await Promise.all([
+    const [rows, conditions, history, profiles] = await Promise.all([
       rest(`sessions?team=eq.${team}&deleted_at=is.null&select=*&order=date.asc`),
       rest(`session_conditions?team=eq.${team}&select=*`).catch(() => []),
       rest(`surf_history?ts=gte.${pad(event.start_date, -1)}&ts=lt.${pad(event.end_date, 2)}&select=ts,rating,wind_kts,wind_dir,tide_ft&order=ts.asc`).catch(() => []),
+      // public_profiles is the app's public view (name, photo, goal, pledge).
+      rest('public_profiles?select=id,display_name,target_hours,charity_commitment,photo_base64,photo_position').catch(() => []),
     ]);
-    return { rows, conditions, history, event, source: 'live' };
+    return { rows, conditions, history, profiles, event, source: 'live' };
   }
 
   // ---------------- slide builders ----------------
@@ -62,6 +64,34 @@
   const todo = (what, field) => `<div class="todo">${what} — fill in <code>${esc(field)}</code> in <code>deck-config.js</code>.</div>`;
   const medalLabel = (m) => m.charAt(0) + m.slice(1).toLowerCase();
   const dot = (m) => `<span class="dot m-${m}" aria-hidden="true"></span>`;
+
+  // Profile photos: each base64 photo becomes ONE blob: URL up front (see
+  // boot), so the dozens of places a face appears share a short string
+  // instead of repeating ~50 KB of base64. No photo -> initials.
+  let AVATARS = new Map(); // display name -> { src, pos }
+  function av(d, user, size, cls = '') {
+    const a = AVATARS.get(user);
+    const style = `width:${size}px;height:${size}px;font-size:${Math.round(size * 0.4)}px`;
+    if (a) return `<span class="av ${cls}" style="${style}"><img src="${a.src}" alt="" style="object-position:${esc(a.pos)}"></span>`;
+    const ini = d.name(user).replace(/[^A-Za-z ]/g, '').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    return `<span class="av none ${cls}" style="${style}" aria-hidden="true">${esc(ini || '?')}</span>`;
+  }
+  async function buildAvatars(d) {
+    const out = new Map();
+    await Promise.all([...d.profileOf.entries()].map(async ([user, p]) => {
+      const b64 = p && p.photo_base64;
+      if (!b64) return;
+      const str = String(b64);
+      const dataUrl = str.startsWith('data:') ? str : `data:${str.startsWith('iVBOR') ? 'image/png' : 'image/jpeg'};base64,${str}`;
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        const pos = /^[\d.]+% [\d.]+%$/.test(String(p.photo_position || '').trim()) ? p.photo_position.trim() : '50% 50%';
+        out.set(user, { src: URL.createObjectURL(blob), pos });
+      } catch { /* bad photo: initials */ }
+    }));
+    for (const a of AVATARS.values()) URL.revokeObjectURL(a.src);
+    AVATARS = out;
+  }
 
   function wavesSvg() {
     return `<svg class="waves" viewBox="0 0 1920 330" preserveAspectRatio="none" aria-hidden="true">
@@ -176,7 +206,7 @@
   }
 
   function leaderboardSlide(d) {
-    const rows = d.totals.map((t, i) => `<div class="row"><span class="n">${i + 1}</span><span class="who">${esc(d.name(t.user))}</span><span class="hrs">${t.total_hours.toFixed(1)}</span>${dot(t.medal)}</div>`);
+    const rows = d.totals.map((t, i) => `<div class="row"><span class="n">${i + 1}</span>${av(d, t.user, 30)}<span class="who">${esc(d.name(t.user))}</span><span class="hrs">${t.total_hours.toFixed(1)}</span>${dot(t.medal)}</div>`);
     const per = Math.ceil(rows.length / 3);
     const cols = [0, 1, 2].map((c) => `<div>${rows.slice(c * per, (c + 1) * per).join('')}</div>`).join('');
     return { title: 'Final results', html: `
@@ -188,14 +218,15 @@
   function medalsSlide(d) {
     const tiers = [['PLATINUM', '50h+'], ['GOLD', '40h+'], ['SILVER', '30h+'], ['BRONZE', '20h+'], ['PARTICIPANT', '10h+'], ['OBSERVER', 'under 10h']];
     return { title: 'Medal count', html: `<p class="kicker">Medal count</p><h2>Trophies ${CFG.year}</h2>
-      <div class="medals">${tiers.map(([m, t]) => `<div class="medal">${dot(m)}<div class="v">${d.stats.medalCounts[m]}</div><div class="k">${m}</div><div class="t">${t}</div></div>`).join('')}</div>` };
+      <p class="lede" style="font-size:32px;margin-top:14px">${d.stats.goals.hit} of ${d.stats.goals.set} surfers hit the goal they set at sign-up</p>
+      <div class="medals" style="margin-top:40px">${tiers.map(([m, t]) => `<div class="medal">${dot(m)}<div class="v">${d.stats.medalCounts[m]}</div><div class="k">${m}</div><div class="t">${t}</div></div>`).join('')}</div>` };
   }
 
   function ascendersSlide(d) {
     const list = d.yoy.ascenders.slice(0, 10);
     const body = list.length
       ? `<table class="t${list.length > 7 ? ' compact' : ''}"><thead><tr><th>Surfer</th><th>${CFG.priorYear}</th><th>+Hours</th><th>${CFG.year}</th></tr></thead><tbody>${list.map((x) => `
-          <tr><td><b>${esc(d.name(x.user))}</b></td><td><span class="chip">${dot(x.medalBefore)} ${x.medalBefore}</span></td><td class="up">+${Math.round(x.delta)}</td><td><span class="chip">${dot(x.medalNow)} ${x.medalNow}</span></td></tr>`).join('')}</tbody></table>`
+          <tr><td><span class="chip">${av(d, x.user, list.length > 7 ? 38 : 48)}<b>${esc(d.name(x.user))}</b></span></td><td><span class="chip">${dot(x.medalBefore)} ${x.medalBefore}</span></td><td class="up">+${Math.round(x.delta)}</td><td><span class="chip">${dot(x.medalNow)} ${x.medalNow}</span></td></tr>`).join('')}</tbody></table>`
       : todo('No medal upgrades found — check the name aliases', 'aliases');
     return { title: 'The Ascenders', html: `<p class="kicker">Year over year</p><h2>The Ascenders</h2><p class="lede" style="font-size:32px;margin-top:14px">Moved up a medal from ${CFG.priorYear}</p>${body}` };
   }
@@ -203,19 +234,20 @@
   function rookiesSlide(d) {
     const r = d.yoy.rookies;
     return { title: 'Rookies', html: `<p class="kicker">Welcome to the crew</p><h2>${r.length} first-time Surftoberers</h2>
-      <div class="cloud">${r.map((u) => `<span>${esc(d.name(u))}</span>`).join('')}</div>` };
+      <div class="cloud faces-cloud">${r.map((u) => `<span>${av(d, u, 48)}${esc(d.name(u))}</span>`).join('')}</div>` };
   }
 
   function charitySlide(d) {
     const c = CFG.charity || {};
     const s = d.stats;
+    // Actual total once it's known (config); until then the pledge estimate.
     const money = c.contributed != null
       ? `<div class="stat hero"><div class="v">$${fmt(c.contributed)}</div><div class="k">contributed${c.match ? ` · ${esc(c.match)}` : ''}</div></div>`
-      : `<div class="stat hero" style="display:flex;align-items:center">${todo('Fundraising total', 'charity.contributed').replace('class="todo"', 'class="todo" style="margin:0"')}</div>`;
+      : `<div class="stat hero"><div class="v">$${fmt(s.pledged)}</div><div class="k">pledged so far: each surfer's $/hour × their hours (estimate until <code style="font-size:.8em">charity.contributed</code> is filled in)</div></div>`;
     return { title: 'Giving back', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
       <div class="stats">${money}
         <div class="stat"><div class="v">${s.cleanupSessions}</div><div class="k">beach cleanups logged</div></div>
-        <div class="stat"><div class="v">${s.costumeSurfers}</div><div class="k">surfers in costume</div></div>
+        <div class="stat"><div class="v">${s.pledgers}</div><div class="k">surfers pledged per hour</div></div>
       </div>${c.note ? `<p class="lede">${esc(c.note)}</p>` : ''}` };
   }
 
@@ -229,9 +261,11 @@
     const ruShown = a.runnersUp.slice(0, 4);
     const ruMore = a.runnersUp.length - ruShown.length;
     const ru = ruShown.length
-      ? `<div class="ru"><b>Runners-up</b>${ruShown.map((r) => `<span><em>${esc(d.name(r.user))}</em> · ${esc(r.label)}</span>`).join('')}${ruMore > 0 ? `<span>+${ruMore} more</span>` : ''}</div>` : '';
+      ? `<div class="ru"><b>Runners-up</b>${ruShown.map((r) => `<span>${av(d, r.user, 44)}<em>${esc(d.name(r.user))}</em> · ${esc(r.label)}</span>`).join('')}${ruMore > 0 ? `<span>+${ruMore} more</span>` : ''}</div>` : '';
+    const faceSize = a.winners.length > 4 ? 96 : a.winners.length > 1 ? 130 : 170;
+    const faces = `<div class="faces">${a.winners.slice(0, 8).map((w) => av(d, w.user, faceSize, 'big')).join('')}</div>`;
     const body = names.length
-      ? `<div class="reveal"><div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
+      ? `<div class="reveal">${faces}<div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
       : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
     return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
@@ -243,9 +277,9 @@
     return { title: r.name, cls: 'award', steps: 1, html: `
       <div class="head"><div><p class="kicker">Award</p><h2>${esc(r.name)}</h2><div class="desc">${esc(r.desc)}</div></div><div class="num">${i} / ${n}</div></div>
       <div class="stagefloor"><div class="mystery">?</div><div class="reveal">
-        <div class="vs"><div class="winner">${esc(a)}</div><div class="x">vs</div><div class="winner">${esc(b)}</div></div>
+        <div class="vs"><div class="side">${av(d, r.pair[0], 150, 'big')}<div class="winner">${esc(a)}</div></div><div class="x">vs</div><div class="side">${av(d, r.pair[1], 150, 'big')}<div class="winner">${esc(b)}</div></div></div>
         <div class="value">${esc(r.label)}</div>
-        ${r.twins ? `<div class="ru"><b>Separated at birth</b><span><em>${esc(r.twins.pair.map(d.name).join(' & '))}</em> · ${esc(r.twins.label)}</span></div>` : ''}
+        ${r.twins ? `<div class="ru"><b>Separated at birth</b><span>${r.twins.pair.map((u) => av(d, u, 44)).join('')}<em>${esc(r.twins.pair.map(d.name).join(' & '))}</em> · ${esc(r.twins.label)}</span></div>` : ''}
       </div></div>` };
   }
 
@@ -295,7 +329,7 @@
     const max = h.counts[0].n;
     const rows = h.counts.slice(0, 9).map((x) => `<span class="lbl">${esc(x.label)}</span><span class="track"><span class="fill" style="display:block;width:${(x.n / max) * 100}%"></span></span><span class="n">${x.n}</span>`).join('');
     const w = h.wounded.winners;
-    const ww = w.length ? `<div class="callouts"><div class="callout"><b>${esc(w.map((x) => d.name(x.user)).join(' & '))}</b>the walking wounded: ${esc(w[0].label)}${h.wounded.runnersUp.length ? ` · then ${esc(h.wounded.runnersUp.slice(0, 2).map((x) => d.name(x.user)).join(', '))}` : ''}</div></div>` : '';
+    const ww = w.length ? `<div class="callouts"><div class="callout" style="display:flex;gap:24px;align-items:center">${w.map((x) => av(d, x.user, 84)).join('')}<div><b>${esc(w.map((x) => d.name(x.user)).join(' & '))}</b>the walking wounded: ${esc(w[0].label)}${h.wounded.runnersUp.length ? ` · then ${esc(h.wounded.runnersUp.slice(0, 2).map((x) => d.name(x.user)).join(', '))}` : ''}</div></div></div>` : '';
     return { title: 'Where it hurts', html: `<p class="kicker">Describe your physical woes from the month</p><h2>Tell me where it hurts…</h2>
       <div class="hbars" role="img" aria-label="Journal entries mentioning each complaint">${rows}</div>${ww}
       <p class="muted" style="font-size:22px;margin-top:22px">Journal entries mentioning each complaint.</p>` };
@@ -333,7 +367,9 @@
   function buildSlides(d) {
     const byId = new Map(d.awards.map((a) => [a.id, a]));
     byId.set('bonus-junkies', d.bonusJunkies);
-    const order = AWARD_ORDER.filter((id) => JUDGED[id] || (id === 'rivalry' ? d.rivalry : byId.has(id)));
+    // A computed award wins over its judged fallback (e.g. Aim for the Stars
+    // is computed when goals are readable, judged otherwise).
+    const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry));
     const n = order.length + d.conditionAwards.length;
     const C = CFG;
     const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), recapSlide(), leaderboardSlide(d),
@@ -345,8 +381,8 @@
     for (const id of order) {
       i++;
       if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
+      else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
-      else slides.push(awardSlide(byId.get(id), i, n, d));
     }
     if (d.conditionAwards.length) {
       slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
@@ -387,7 +423,9 @@
     stage.innerHTML = slides.map((s, i) => `<section class="slide ${s.cls || ''}" data-i="${i}" aria-label="${esc(s.title)}">${s.html}</section>`).join('')
       + `<div class="footer"><span><img src="${LOGO}" alt="">Surftober ${CFG.year}</span><span id="pageno"></span></div><div class="progress" id="progress"></div>`
       + `<div class="status${dataInfo.err ? ' err' : ''}" id="status"><i></i>${esc(dataInfo.text)}</div>`;
-    $('#overview').innerHTML = slides.map((s, i) => `<button data-i="${i}"><small>${i + 1}</small>${esc(s.title)}</button>`).join('');
+    // Grid = live thumbnails: each slide's own markup at 1/8 scale, before
+    // any reveal (so opening the grid on the projector spoils nothing).
+    $('#overview').innerHTML = slides.map((s, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}: ${esc(s.title)}"><span class="thumb" aria-hidden="true"><span class="thumb-inner"><section class="slide ${s.cls || ''}">${s.html}</section></span></span><small>${i + 1}</small>${esc(s.title)}</button>`).join('');
     show(Math.min(cur, slides.length - 1), step);
   }
 
@@ -461,6 +499,7 @@
       const raw = await loadData();
       const d = DS.computeDeck({ ...raw, config: CFG });
       window.__deck = d; // console poking during rehearsal
+      await buildAvatars(d);
       slides = buildSlides(d);
       const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       render({ text: `${raw.source === 'live' ? 'Live' : 'Fixture'} · ${fmt(d.stats.sessions)} sessions · ${when}${raw.event.logging_frozen ? '' : ' · logging still open'}` });

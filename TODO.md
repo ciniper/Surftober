@@ -21,6 +21,13 @@
 
 ## Branch: presentation (2026 award-ceremony deck — docs/deck.html)
 
+- [x] **Profile photos + grid thumbnails** (Chase, 2026-11-06) — faces from
+      the public_profiles view (the app's own public view) on winners,
+      runners-up, Final Results, Ascenders, rookies; initials otherwise. The
+      G grid shows real slide thumbnails (pre-reveal, no spoilers). Same
+      view's goal + pledge columns now drive a computed "Aim for the Stars"
+      (judged fallback stays), "N of M hit their goal", and the Giving back
+      pledge estimate ($/hour × hours) until charity.contributed is set.
 - [x] **Light theme + 2023/2024 slides** (Chase, 2026-11-06) — light
       (Pumpkin Spice) is the default, T toggles dark. Added computed awards
       Adventurer, Tech Nomad (localSpots in config), Fish, Crabtracker, OCD
@@ -74,6 +81,13 @@
       costume session; the deck already lists them on the Best Dressed slide).
       Pairs naturally with the "Who said that?" live-voting plumbing; same
       DB-change caveat (Chase approves/runs any SQL).
+- [ ] **Instagram award** (Chase, 2026-11-06 — not started) — best profile:
+      profile photo plus the photos posted with sessions (146 session photos
+      this year; sessions.photo_url, public_profiles.photo_base64).
+- [ ] **Talker award** (Chase, 2026-11-06 — not started) — most audio logs
+      (sessions.audio_url). Heads-up: only 2 audio logs all season, both
+      Chase's, so it needs more voice notes (or a different metric) to be a
+      real contest.
 - [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — not started) —
       slides on how the money is used, a program overview, the funding lab,
       and data analysis. Related: the BWTF API notes under "Official BWTF
