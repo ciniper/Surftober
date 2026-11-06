@@ -21,6 +21,13 @@
 
 ## Branch: presentation (2026 award-ceremony deck — docs/deck.html)
 
+- [x] **Light theme + 2023/2024 slides** (Chase, 2026-11-06) — light
+      (Pumpkin Spice) is the default, T toggles dark. Added computed awards
+      Adventurer, Tech Nomad (localSpots in config), Fish, Crabtracker, OCD
+      Precision, Loosey Goosey; "Tell me where it hurts…" from journal
+      mentions; judged Aim for the Stars + Commuter; agenda, trophies
+      (past/now photo slides), Story Time prompts, donate, short film,
+      T-shirt. Not carried over: 2023's Nationalism (no country teams).
 - [x] **Web deck, live from Supabase** (Chase, 2026-11-06) — deck.html +
       deck.css + deck.js (render/nav) + deck-stats.js (all computations,
       reuses awards.js scoring so it matches the app leaderboard) +
@@ -43,8 +50,10 @@
       "buoy wave height", not Surfline surf height.
 - [ ] Live games (Chase has ideas) — slides are plain {title, html, steps}
       objects in deck.js buildSlides(), so a game is just another builder.
-- [ ] **Make the deck viewable on the site** (Chase, 2026-11-06 — not started)
-      — deck.html already builds/deploys with the rest of docs/ once merged;
+- [ ] **Make the deck viewable on the site** (Chase, 2026-11-06) — for now a
+      temporary "🏆 Award Ceremony deck" button sits under the Main heading
+      (index.html .deck-cta, presentation branch only). Still open:
+      deck.html already builds/deploys with the rest of docs/ once merged;
       still to decide: a link from the app (Account → Awards?), and timing —
       winners compute client-side from public data, so a link before the
       ceremony spoils the reveals (gate on logging_frozen / a date, or link
@@ -60,6 +69,11 @@
       results show live on the slide. Builds on the Live games item above.
       Needs somewhere to store votes (new table + realtime) = a DB change,
       Chase approves and runs any SQL.
+- [ ] **Vote for Best Dressed** (Chase, 2026-11-06 — not started) — let the
+      crew vote on the costume-surf winner (candidates = everyone who logged a
+      costume session; the deck already lists them on the Best Dressed slide).
+      Pairs naturally with the "Who said that?" live-voting plumbing; same
+      DB-change caveat (Chase approves/runs any SQL).
 - [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — not started) —
       slides on how the money is used, a program overview, the funding lab,
       and data analysis. Related: the BWTF API notes under "Official BWTF

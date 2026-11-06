@@ -47,7 +47,7 @@
   // "OB - Lawton", "ob lawton", "Lawton" -> "lawton". Commas keep only the
   // first part ("Cloudbreak, Fiji" -> "cloudbreak").
   function normLocation(loc) {
-    let t = String(loc || '').toLowerCase().split(',')[0];
+    let t = String(loc || '').toLowerCase().replace(/['’`]/g, '').split(',')[0];
     t = t.replace(/ocean beach/g, 'ob').replace(/^\s*ob\b\s*[-–:]?\s*/, '');
     t = t.replace(/[^a-z0-9/ ]+/g, ' ').replace(/\s+/g, ' ').trim();
     return t || (String(loc || '').trim() ? 'ob' : '');
@@ -59,6 +59,11 @@
     if (!t || /^(same|same board|same as|ditto|n a|na|none)( .*)?$/.test(t)) return '';
     return t;
   }
+  // OB is one beach with many street-named peaks; for "how many places did
+  // you surf" (Adventurer) the peaks collapse into OB.
+  const OB_PEAKS = ['lawton', 'noriega', 'judah', 'kirkham', 'ortega', 'pacheco', 'moraga', 'sloat', 'vfw', 'taraval', 'rivera',
+    'santiago', 'quintara', 'fulton', 'balboa', 'irving', 'lincoln', 'vicente', 'central ob', 'north ob', 'south ob', 'kelly'];
+  const spotArea = (l) => (l === 'ob' || OB_PEAKS.some((k) => l.includes(k)) ? 'ob' : l);
   const titleSpot = (t) => t.replace(/\b\w/g, (x) => x.toUpperCase()).replace(/\bOb\b/g, 'OB').replace(/\bVfw\b/g, 'VFW');
   const wordCount = (txt) => (txt && txt.trim() ? txt.trim().split(/\s+/).length : 0);
   const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -318,13 +323,63 @@
     push({ id: 'drifter', name: 'The Drifter Award', desc: 'Most mentions of drift, currents or getting swept',
       r: rank(items(users, (u) => kwCount(u, DRIFT), (v) => `${v} mentions`).filter((x) => x.value > 0)) });
 
+    // --- 2023/2024 superlatives ---
+    // Adventurer (2024; "Nomad" in 2023): most different spots.
+    push({ id: 'adventurer', name: 'The Adventurer Award', desc: 'Surfed the most different spots',
+      r: rank(users.filter((u) => water(u).length >= MIN_SESSIONS).map((u) => {
+        const m = new Map();
+        for (const [l, c] of locsOf(u)) { const a = spotArea(l); m.set(a, (m.get(a) || 0) + c); }
+        const top = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l]) => titleSpot(l)).join(' · ');
+        return { user: u, value: m.size, label: `${m.size} spots`, extra: top };
+      })) });
+    // Tech Nomad (2024): most days surfing away from home waters.
+    const local = (config.localSpots || []).map((x) => x.toLowerCase());
+    const isAway = (loc) => { const l = normLocation(loc); return !!l && !local.some((k) => l.includes(k)); };
+    push({ id: 'tech-nomad', name: 'The Tech Nomad Award', desc: 'Most days surfing away from the Bay',
+      r: rank(users.map((u) => {
+        const days = new Set(water(u).filter((s) => isAway(s.location)).map((s) => String(s.date).slice(0, 10)));
+        const spots = [...new Set(water(u).filter((s) => isAway(s.location)).map((s) => titleSpot(normLocation(s.location))))].slice(0, 4).join(' · ');
+        return { user: u, value: days.size, label: `${days.size} day${days.size === 1 ? '' : 's'} away`, extra: spots };
+      }).filter((x) => x.value > 0)) });
+    // Fish Award (2024): most sessions on a fish.
+    const FISH = /\bfish\b|\bfsh\b|\bfishes\b/i;
+    push({ id: 'fish', name: 'The Fish Award', desc: 'Most sessions on a fish',
+      r: rank(items(users, (u) => water(u).filter((s) => FISH.test(s.board || '')).length, (v) => `${v} fish sessions`).filter((x) => x.value > 0)) });
+    // Crabtracker (2024): most crab mentions.
+    push({ id: 'crabtracker', name: 'The Crabtracker Award', desc: 'Logged the most crab activity',
+      r: rank(items(users, (u) => byUser.get(u).filter((s) => /\bcrab/i.test(s.notes || '')).length, (v) => `${v} crab mention${v === 1 ? '' : 's'}`).filter((x) => x.value > 0)) });
+    // OCD Precision / Loosey Goosey (2023): how round the logged session lengths are.
+    const precUsers = users.filter((u) => durs(u).length >= 8);
+    const roundShare = (u, n) => durs(u).filter((m) => m % n === 0).length / (durs(u).length || 1);
+    push({ id: 'ocd-precision', name: 'The OCD Precision Award', desc: 'Most precise session lengths (fewest round numbers)',
+      r: rank(items(precUsers, (u) => roundShare(u, 5), (v, u) => `${pct(1 - v)} of sessions logged to the odd minute`), { dir: 'min' }) });
+    push({ id: 'loosey-goosey', name: 'The Loosey Goosey Award', desc: 'Least precise session lengths (most rounded to 15 min)',
+      // ties on share go to whoever rounded the most sessions
+      r: rank(precUsers.map((u) => ({ user: u, value: roundShare(u, 15) + durs(u).length * 1e-6, label: `${pct(roundShare(u, 15))} of ${durs(u).length} sessions rounded to 15 minutes` }))) });
+
+    // --- "Tell me where it hurts…" (2025 slide) ---
+    // One count per journal entry per complaint. Wave-size phrasing ("head
+    // high", "3-4 feet", "overhead") is deliberately not an injury.
+    const HURTS = [
+      ['Shoulders', /\bshoulders?\b/i], ['Back', /\b(lower|upper|my|sore|tweaked|bad) back\b|\bback (pain|hurts?|is sore|spasm)/i],
+      ['Neck', /\bneck\b/i], ['Knees', /\bknees?\b/i], ['Ribs', /\bribs?\b/i], ['Ears', /\bears?\b|surfer'?s ear/i],
+      ['Head', /\b(hit|bonk|smack|whack|bang|ding)\w*\b[^.!?]{0,25}\bhead\b|\bmy head\b|concuss/i],
+      ['Feet & toes', /\btoes?\b|\bmy (foot|feet)\b|\bankles?\b|\bheel\b/i], ['Arms & wrists', /\bwrists?\b|\belbows?\b|\bforearms?\b|\bmy arms?\b/i],
+      ['Hips & groin', /\bhips?\b|\bgroin\b|\bhamstring/i], ['Cuts & bruises', /\bcut\b|\bbruise|\bbleed|\bblood/i],
+      ['Stung', /\bstung\b|\bsting/i], ['Frozen', /\bfroze|\bfrozen\b|\bnumb\b|hypotherm|brain freeze|ice cream headache/i],
+      ['Just sore', /\bsore\b|\baching?\b|\bachy\b/i],
+    ];
+    const hurtCounts = HURTS.map(([label, re]) => ({ label, n: sessions.filter((s) => re.test(s.notes || '')).length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    const ouches = (u) => byUser.get(u).filter((s) => HURTS.some(([, re]) => re.test(s.notes || ''))).length;
+    const wounded = rank(items(users, ouches, (v) => `${v} entries with an ouch`).filter((x) => x.value > 0));
+
     // --- bonuses ---
     const BONUSES = [
       ['Costume', (s) => s.costume], ['No wetsuit', (s) => s.no_wetsuit], ['Beach cleanup', (s) => s.type === 'cleanup' || s.cleanup_items > 0],
       ['Taught a kook', (s) => s.taught_kook], ['Water reading', (s) => s.type === 'water' || s.water_reading], ['Photo shoot', (s) => s.type === 'photography'],
     ];
     const bonusesOf = (u) => BONUSES.filter(([, f]) => byUser.get(u).some(f)).map(([n]) => n);
-    const bonusRank = rank(items(users, (u) => bonusesOf(u).length, (v, u) => bonusesOf(u).join(' · ')).filter((x) => x.value > 0), { n: 3 });
+    const bonusRank = rank(users.map((u) => ({ user: u, value: bonusesOf(u).length, label: `${bonusesOf(u).length} of ${BONUSES.length} bonuses`, extra: bonusesOf(u).join(' · ') })).filter((x) => x.value > 0), { n: 3 });
     const bonusJunkies = { id: 'bonus-junkies', name: 'The Bonus Junkies', desc: `Collected the most bonuses (of ${BONUSES.length})`,
       winners: bonusRank.winners, runnersUp: bonusRank.runnersUp, r: bonusRank };
     const costumeSurfers = users.filter((u) => byUser.get(u).some((s) => s.costume));
@@ -424,6 +479,7 @@
     return {
       event, stats, totals, awards, conditionAwards, rivalry, bonusJunkies, costumeSurfers,
       yoy: { ascenders, returning: yoy, rookies, missing },
+      hurts: { counts: hurtCounts, wounded },
       name, RATING_ORDER, RATING_LABEL,
     };
   }

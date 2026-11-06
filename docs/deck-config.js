@@ -57,6 +57,13 @@ window.SurftoberDeckConfig = {
     'Seany Boi': 'Seany Boi',
   },
 
+  // Home waters for the Tech Nomad award: a session counts as "away" when
+  // its (normalized) location contains none of these.
+  localSpots: ['ob', 'ocean beach', 'lawton', 'noriega', 'judah', 'kirkham', 'ortega', 'pacheco', 'moraga', 'sloat',
+    'vfw', 'taraval', 'rivera', 'santiago', 'quintara', 'fulton', 'balboa', 'irving', 'lincoln', 'vicente', 'central',
+    'kelly', 'fort point', 'f pt', 'linda mar', 'pacifica', 'crespi', 'rockaway', 'sharp park', 'montara', 'half moon',
+    'hmb', 'princeton', 'jetty', 'mavericks', 'bolinas', 'stinson', 'china beach', 'sf'],
+
   // Free-text recap slides (2025 had Surf Recap + Weather Recap).
   surfRecap: '',     // size, quality, standout swells
   weatherRecap: '',  // water temp, fog, wind
@@ -68,7 +75,24 @@ window.SurftoberDeckConfig = {
   judged: {
     'best-dressed': { winner: '', value: '' },     // costume-surf candidates are listed on the slide
     'fallen-fathers': { winner: '', value: '' },
+    'aim-for-the-stars': { winner: '', value: '' }, // 2023: fewest hours vs their goal (goals live in private profiles)
+    'commuter': { winner: '', value: '' },          // 2024: travelled farthest to surf
   },
+
+  // Agenda slide (2023 had one). Empty = no agenda slide.
+  agenda: ['Overview', 'Awards', 'Story Time', 'Quotes'],
+
+  // Photo slides: { src, caption }. `src` is a URL or a path under docs/.
+  trophiesPast: [],  // 2025 deck: "Trophies Previous Years"
+  trophiesNow: [],   // 2025 deck: "Trophies 2025"
+
+  // Discussion slides from 2023/2024 — shown as big prompts.
+  storyPrompts: ['What was your favorite session, favorite wave?', 'How challenging was it to complete your goal?'],
+
+  // Closing slides. Empty strings = placeholder.
+  donate: { text: 'Consider donating to Surfrider', detail: '$3–5 per hour', link: '' },
+  shortFilm: { title: '', url: '' },  // 2023/2024 "Movie Time" / "Short Film?"
+  tshirt: { images: [], note: '' },   // 2025 "T-shirt Concept": { src, caption } images
 
   // Hand-picked journal quotes: { text, by }.
   quotes: [],
