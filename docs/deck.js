@@ -191,9 +191,9 @@
   }
 
   function ascendersSlide(d) {
-    const list = d.yoy.ascenders.slice(0, 8);
+    const list = d.yoy.ascenders.slice(0, 10);
     const body = list.length
-      ? `<table class="t"><thead><tr><th>Surfer</th><th>${CFG.priorYear}</th><th>+Hours</th><th>${CFG.year}</th></tr></thead><tbody>${list.map((x) => `
+      ? `<table class="t${list.length > 7 ? ' compact' : ''}"><thead><tr><th>Surfer</th><th>${CFG.priorYear}</th><th>+Hours</th><th>${CFG.year}</th></tr></thead><tbody>${list.map((x) => `
           <tr><td><b>${esc(d.name(x.user))}</b></td><td><span class="chip">${dot(x.medalBefore)} ${x.medalBefore}</span></td><td class="up">+${Math.round(x.delta)}</td><td><span class="chip">${dot(x.medalNow)} ${x.medalNow}</span></td></tr>`).join('')}</tbody></table>`
       : todo('No medal upgrades found — check the name aliases', 'aliases');
     return { title: 'The Ascenders', html: `<p class="kicker">Year over year</p><h2>The Ascenders</h2><p class="lede" style="font-size:32px;margin-top:14px">Moved up a medal from ${CFG.priorYear}</p>${body}` };

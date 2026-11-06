@@ -44,14 +44,15 @@ window.SurftoberDeckConfig = {
   aliases: {
     'Juliette': 'Juliette Chausson',
     'kyle n': 'Kyle Nichols',
-    // 'pana': 'Pranav Madanahalli',  // guess — confirm
-    // 'Nicolas': 'Nico Richard',     // guess — confirm
+    'pana': 'Pranav Madanahalli',   // confirmed by Chase 2026-11-06
+    'Nicolas': 'Nico Richard',       // confirmed by Chase 2026-11-06
   },
 
   // How names appear on slides. Default: first name, plus last initial when
   // two surfers share a first name. Override any of them here.
   displayNames: {
-    'pana': 'Pana',
+    'pana': 'Pranav',
+    'Nicolas': 'Nico R.',
     'EitanKiin': 'Eitan',
     'Seany Boi': 'Seany Boi',
   },
