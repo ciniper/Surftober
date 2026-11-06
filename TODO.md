@@ -33,8 +33,14 @@
 - [ ] **Fill the hand-curated slides**: surfRecap, weatherRecap, charity,
       judged winners (Best Dressed, Fallen Fathers), quotes, currentCaption.
 - [ ] **Freeze logging** before the ceremony so the numbers stop moving.
-- [ ] Big Wednesday award — blocked: surf_history.wave_min/max are null for
-      every row (the forecast pull never captured wave height).
+- [ ] Big Wednesday award — blocked for 2026: no October wave history (see
+      "Keep a wave-height history" under Scoped). Possible stand-in, NOT
+      decided (Chase thinking it over, 2026-11-06): NOAA buoy 46026 (SF)
+      wave height matched to each session's start time + duration.
+      Time-sensitive: NDBC's realtime files keep only ~45 days, so Oct 1
+      ages out around Nov 15. Needs ndbc.noaa.gov on the Surftober
+      environment allowlist; read-only download, deck slide would say
+      "buoy wave height", not Surfline surf height.
 - [ ] Live games (Chase has ideas) — slides are plain {title, html, steps}
       objects in deck.js buildSlides(), so a game is just another builder.
 
@@ -52,6 +58,26 @@
       · crew stat: "we surfed N% of all Fair+ windows this October"
       · per-person hours-vs-conditions scatter for the awards slides
       Also: add the session_conditions view as a tab in the sheets mirror.
+- [ ] **Keep a wave-height history for 2027** (found 2026-11-06 while building
+      the deck — DO NOT apply mid-season; Chase reviews and runs the SQL
+      himself) — two gaps in refresh_surf_report():
+      · surf_report.zones gets Surfline min/max/rel/rating for the 3 OB
+        zones every 30 min (cron '7,37 * * * *'), but it is a singleton row
+        (id = 1) overwritten each tick, so nothing accumulates.
+      · step 1d (hourly wave forecast → surf_history.wave_min/max/rel)
+        never stored a value — every row is null for all of Oct 2026 — and
+        its `exception when others then null` hid the failure. Wind (1e),
+        rating (1f) and tide do land. First check why: read the wave
+        request's net._http_response row (status / content shape vs
+        'data'->'wave'->'surf'->'min').
+      Fix options: (a) repair 1d so surf_history gets hourly wave height;
+      (b) also append each 30-min zones snapshot to a new
+      surf_report_history (fetched_at, zone_id, min, max, rel, rating),
+      public-read like surf_history; prune with the same 400-day rule.
+      Either way, log instead of swallowing errors (e.g. a last_error
+      column on surf_report) so a dead step is visible. Then extend the
+      session_conditions view with wave columns and wire Big Wednesday
+      (biggest waves paddled out in) into deck-stats.js.
 - [ ] **Strava import** (~1 day build + 30 min setup) — needs a Supabase Edge
       Function for the OAuth token exchange (Strava has no public-client flow),
       owner-only token table, "Import from Strava" picker mapping start→date+
