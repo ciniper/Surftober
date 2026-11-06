@@ -6,7 +6,7 @@
 // hold everyone's journals).
 //
 // Keys: → / Space / click = next (award slides reveal first) · ← = back ·
-// G = slide grid · F = fullscreen · L = reload live data · ? = key help.
+// G = slide grid · F = fullscreen · T = light/dark · L = reload live data · ? = key help.
 
 (function () {
   const CFG = window.SurftoberDeckConfig;
@@ -125,7 +125,8 @@
   }
 
   // Sequential teal ramp (dim → bright = worse → better) for the forecast.
-  const RATING_COLOR = { VERY_POOR: '#2a3f52', POOR: '#33576a', POOR_TO_FAIR: '#3f7684', FAIR: '#4ea3a6', FAIR_TO_GOOD: '#6fd1c8', GOOD: '#a8efe6', VERY_GOOD: '#d6fff9', GOOD_TO_EPIC: '#ffffff', EPIC: '#ffffff' };
+  // Colors are CSS tokens (--r-<RATING>) so the ramp follows the theme.
+  const ratingVar = (r) => `var(--r-${r || 'VERY_POOR'})`;
   function dailySlide(d) {
     const days = d.stats.daily;
     const W = 1680, H = 470, padL = 70, padB = 56, padT = 40;
@@ -139,9 +140,9 @@
     days.forEach((x, i) => {
       const h = x.minutes / 60, bx = padL + i * bw + 2, w = bw - 4;
       const by = y(h), bh = Math.max(0, y(0) - by);
-      const fill = RATING_COLOR[x.rating] || '#2a3f52';
+      const fill = ratingVar(x.rating);
       const r = Math.min(4, bh);
-      svg += `<path class="bar" fill="${fill}" d="M${bx} ${y(0)} V${by + r} Q${bx} ${by} ${bx + r} ${by} H${bx + w - r} Q${bx + w} ${by} ${bx + w} ${by + r} V${y(0)} Z"><title>${esc(dayLabel(x.date))}: ${h.toFixed(1)} h · ${x.surfers} surfers · forecast ${esc(DS.RATING_LABEL[x.rating] || 'n/a')}</title></path>`;
+      svg += `<path class="bar" style="fill:${fill}" d="M${bx} ${y(0)} V${by + r} Q${bx} ${by} ${bx + r} ${by} H${bx + w - r} Q${bx + w} ${by} ${bx + w} ${by + r} V${y(0)} Z"><title>${esc(dayLabel(x.date))}: ${h.toFixed(1)} h · ${x.surfers} surfers · forecast ${esc(DS.RATING_LABEL[x.rating] || 'n/a')}</title></path>`;
       const dn = Number(x.date.slice(8));
       const wd = new Date(`${x.date}T12:00:00`).getDay();
       svg += `<text x="${bx + w / 2}" y="${H - padB + 34}" text-anchor="middle" font-size="20" ${wd === 0 || wd === 6 ? 'font-weight="800" style="fill:var(--text)"' : ''}>${dn}</text>`;
@@ -154,7 +155,7 @@
     }
     svg += `<line class="axis" x1="${padL}" x2="${W}" y1="${y(0)}" y2="${y(0)}"/>`;
     const used = DS.RATING_ORDER.filter((r) => days.some((x) => x.rating === r));
-    const legend = used.map((r) => `<span><i style="background:${RATING_COLOR[r]}"></i>${esc(DS.RATING_LABEL[r])}</span>`).join('');
+    const legend = used.map((r) => `<span><i style="background:${ratingVar(r)}"></i>${esc(DS.RATING_LABEL[r])}</span>`).join('');
     const spots = d.stats.topSpots.slice(0, 3).map((s) => `${esc(DS.titleSpot(s.spot))} ${fmt(s.hours)}h`).join(' · ');
     return { title: 'Daily hours', html: `
       <p class="kicker">Every day of October</p>
@@ -275,34 +276,103 @@
       <div class="content"><img class="logo" src="${LOGO}" alt=""><h1>Until next<br>time…</h1><p class="lede">See you in the water. Surftober ${CFG.year + 1}.</p></div>` };
   }
 
-  // 2025 order, then the new conditions awards.
-  const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'monk', 'author', 'minimalist', 'quickie', 'budgie', 'friendship',
-    'best-dressed', 'board-hoarder', 'marathon', 'rivalry', 'localism', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'drifter', 'bonus-junkies'];
+  function agendaSlide() {
+    const a = CFG.agenda || [];
+    return a.length ? { title: 'Agenda', html: `<p class="kicker">Tonight</p><h2>Agenda</h2><ol class="agenda">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` } : null;
+  }
+
+  // Photo slides (trophies, t-shirt): config lists of { src, caption }.
+  function gallerySlide(title, kicker, heading, imgs, field, note) {
+    const body = imgs && imgs.length
+      ? `<div class="gallery">${imgs.map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.caption || heading)}">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`
+      : todo('Add photos', field);
+    return { title, html: `<p class="kicker">${esc(kicker)}</p><h2>${esc(heading)}</h2>${note ? `<p class="lede" style="font-size:30px;margin-top:14px">${esc(note)}</p>` : ''}${body}` };
+  }
+
+  function hurtsSlide(d) {
+    const h = d.hurts;
+    if (!h.counts.length) return null;
+    const max = h.counts[0].n;
+    const rows = h.counts.slice(0, 9).map((x) => `<span class="lbl">${esc(x.label)}</span><span class="track"><span class="fill" style="display:block;width:${(x.n / max) * 100}%"></span></span><span class="n">${x.n}</span>`).join('');
+    const w = h.wounded.winners;
+    const ww = w.length ? `<div class="callouts"><div class="callout"><b>${esc(w.map((x) => d.name(x.user)).join(' & '))}</b>the walking wounded: ${esc(w[0].label)}${h.wounded.runnersUp.length ? ` · then ${esc(h.wounded.runnersUp.slice(0, 2).map((x) => d.name(x.user)).join(', '))}` : ''}</div></div>` : '';
+    return { title: 'Where it hurts', html: `<p class="kicker">Describe your physical woes from the month</p><h2>Tell me where it hurts…</h2>
+      <div class="hbars" role="img" aria-label="Journal entries mentioning each complaint">${rows}</div>${ww}
+      <p class="muted" style="font-size:22px;margin-top:22px">Journal entries mentioning each complaint.</p>` };
+  }
+
+  function promptSlide(text, kicker) {
+    return { title: text, cls: 'prompt', html: `<p class="kicker">${esc(kicker)}</p><h2>${esc(text)}</h2>` };
+  }
+
+  function donateSlide() {
+    const x = CFG.donate || {};
+    return { title: 'Donate', cls: 'prompt', html: `<p class="kicker">Giving back</p><h2>${esc(x.text || 'Consider donating to Surfrider')}</h2>
+      ${x.detail ? `<p class="lede">${esc(x.detail)}</p>` : ''}${x.link ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(x.link)}</p>` : todo('Donation link', 'donate.link')}` };
+  }
+
+  function filmSlide() {
+    const f = CFG.shortFilm || {};
+    return { title: 'Short film', cls: 'prompt', html: `<p class="kicker">Movie time</p><h2>${esc(f.title || 'Short film')}</h2>
+      ${f.url ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(f.url)}</p>` : todo('Film title + link', 'shortFilm')}` };
+  }
+
+  // 2025 order, with the 2023/2024 superlatives slotted next to their
+  // cousins; the conditions awards follow as their own section.
+  const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
+    'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'best-dressed', 'board-hoarder', 'fish', 'marathon', 'rivalry',
+    'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
+    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies'];
+  const JUDGED = {
+    'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
+    'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
+    'aim-for-the-stars': ['The “Aim for the Stars and Land on the Earth” Award', 'Fewest hours compared to their original goal'],
+    'commuter': ['The Commuter Award', 'Travelled the farthest to surf'],
+  };
 
   function buildSlides(d) {
     const byId = new Map(d.awards.map((a) => [a.id, a]));
     byId.set('bonus-junkies', d.bonusJunkies);
-    const n = AWARD_ORDER.length + d.conditionAwards.length;
-    const slides = [titleSlide(d), historySlide(d), overviewSlide(d), dailySlide(d), recapSlide(), leaderboardSlide(d), medalsSlide(d),
-      ascendersSlide(d), rookiesSlide(d), charitySlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
+    const order = AWARD_ORDER.filter((id) => JUDGED[id] || (id === 'rivalry' ? d.rivalry : byId.has(id)));
+    const n = order.length + d.conditionAwards.length;
+    const C = CFG;
+    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), recapSlide(), leaderboardSlide(d),
+      medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
+      gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast'),
+      gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow'),
+      charitySlide(d), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
     let i = 0;
-    for (const id of AWARD_ORDER) {
+    for (const id of order) {
       i++;
-      if (id === 'rivalry' && d.rivalry) slides.push(rivalrySlide(d.rivalry, i, n, d));
-      else if (id === 'best-dressed') slides.push(judgedSlide(id, 'The Best Dressed Award', 'Best costume-surf attire', i, n, d, d.costumeSurfers));
-      else if (id === 'fallen-fathers') slides.push(judgedSlide(id, 'The Fallen Fathers Award', 'DNF Surftober due to fatherhood', i, n, d));
-      else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
+      if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
+      else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
+      else slides.push(awardSlide(byId.get(id), i, n, d));
     }
     if (d.conditionAwards.length) {
       slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
-    slides.push(sectionSlide('From the journals', 'Quotes'), ...quoteSlides(), outroSlide());
-    return slides;
+    slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
+    slides.push(sectionSlide('From the journals', 'Quotes'), ...quoteSlides(), donateSlide(), filmSlide(),
+      gallerySlide('T-shirt', 'Merch', 'T-shirt concept', (C.tshirt || {}).images, 'tshirt.images', (C.tshirt || {}).note), outroSlide());
+    return slides.filter(Boolean);
   }
 
   // ---------------- runtime: render, scale, navigate ----------------
+  // Theme: light by default; ?theme=dark|light forces it, T toggles and the
+  // choice is remembered in this browser (best-effort — storage can throw).
+  const THEME_KEY = 'surftober.deck.theme';
+  function setTheme(t, persist) {
+    if (t === 'dark') document.documentElement.dataset.theme = 'dark';
+    else delete document.documentElement.dataset.theme;
+    if (persist) { try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode */ } }
+  }
+  {
+    const q = new URLSearchParams(location.search).get('theme');
+    let saved = null;
+    try { saved = localStorage.getItem(THEME_KEY); } catch { /* ignore */ }
+    setTheme(q || saved || 'light', false);
+  }
   const stage = $('#stage');
   let slides = [], cur = 0, step = 0;
 
@@ -327,6 +397,7 @@
     stage.querySelectorAll('.slide').forEach((el) => el.classList.toggle('active', Number(el.dataset.i) === cur));
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
+    stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;
@@ -360,6 +431,7 @@
       case 'f': case 'F': (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())?.catch?.(() => {}); break;
       case 'l': case 'L': boot(); break;
       case '?': $('#keys').classList.toggle('open'); break;
+      case 't': case 'T': setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true); break;
       default:
     }
   });
