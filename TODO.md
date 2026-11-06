@@ -43,6 +43,31 @@
       "buoy wave height", not Surfline surf height.
 - [ ] Live games (Chase has ideas) — slides are plain {title, html, steps}
       objects in deck.js buildSlides(), so a game is just another builder.
+- [ ] **Make the deck viewable on the site** (Chase, 2026-11-06 — not started)
+      — deck.html already builds/deploys with the rest of docs/ once merged;
+      still to decide: a link from the app (Account → Awards?), and timing —
+      winners compute client-side from public data, so a link before the
+      ceremony spoils the reveals (gate on logging_frozen / a date, or link
+      only afterwards).
+- [ ] **Surftober archive** (Chase, 2026-11-06 — not started) — after the
+      season, signed-in people can revisit their own Surftober (sessions,
+      totals, medal, awards won) and the whole event, plus the deck. Past
+      seasons are already rows in `events` and the app scopes by viewedEvent;
+      open questions: per-surfer recap page vs. app event-switcher, and
+      whether the deck takes ?team= to show any past season.
+- [ ] **"Who said that?" live game** (Chase, 2026-11-06 — not started) —
+      deck shows a journal quote, people vote on the site from their phones,
+      results show live on the slide. Builds on the Live games item above.
+      Needs somewhere to store votes (new table + realtime) = a DB change,
+      Chase approves and runs any SQL.
+- [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — not started) —
+      slides on how the money is used, a program overview, the funding lab,
+      and data analysis. Related: the BWTF API notes under "Official BWTF
+      logo" (lab 76; OB sites 9172 Lincoln Way + 9005 Vicente) for real
+      enterococcus readings.
+- [ ] **Trophy demo section** (Chase, 2026-11-06 — not started) — show the
+      trophies in the deck. Related: "Trophy design" item and the Surftober
+      Spinner Trophy artifact.
 
 ## Scoped, awaiting a go
 
