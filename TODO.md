@@ -60,7 +60,7 @@
       Also: add the session_conditions view as a tab in the sheets mirror.
 - [ ] **Keep a wave-height history for 2027** (found 2026-11-06 while building
       the deck — DO NOT apply mid-season; Chase reviews and runs the SQL
-      himself) — two gaps in refresh_surf_report():
+      by hand) — two gaps in refresh_surf_report():
       · surf_report.zones gets Surfline min/max/rel/rating for the 3 OB
         zones every 30 min (cron '7,37 * * * *'), but it is a singleton row
         (id = 1) overwritten each tick, so nothing accumulates.
