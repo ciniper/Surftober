@@ -26,6 +26,7 @@
   function fromCloudRow(s) {
     return A.normalizeSession({
       _id: s.id,
+      user_id: s.user_id || null,
       user: (s.user_name || '').trim(),
       date: s.date,
       type: s.type,
@@ -131,7 +132,10 @@
   };
 
   // ======================================================================
-  function computeDeck({ rows, conditions = [], history = [], event, config }) {
+  // Pledge text is free-form ("$5 per hour", "2") — same parse as app.js.
+  const parsePledgeRate = (t) => { const m = String(t || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+
+  function computeDeck({ rows, conditions = [], history = [], profiles = [], event, config }) {
     const range = { start: event.start_date, end: event.end_date };
     const sessions = rows.map(fromCloudRow).filter((s) => s.user && A.inRange(s.date, range));
     const totals = A.rollupByUser(sessions, range); // app-identical scoring, sorted by hours
@@ -140,6 +144,16 @@
     const byUser = new Map(users.map((u) => [u, []]));
     for (const s of sessions) byUser.get(s.user).push(s);
     const totalOf = new Map(totals.map((t) => [t.user, t]));
+    // Display name -> public profile (photo, goal, pledge), via the sessions'
+    // user_id (a surfer's most-used id, in case of a re-registered account).
+    const profById = new Map(profiles.map((p) => [p.id, p]));
+    const profileOf = new Map();
+    for (const u of users) {
+      const ids = new Map();
+      for (const s of byUser.get(u)) if (s.user_id) ids.set(s.user_id, (ids.get(s.user_id) || 0) + 1);
+      const id = [...ids.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (id && profById.has(id)) profileOf.set(u, profById.get(id));
+    }
     const water = (u) => byUser.get(u).filter((s) => WATER_TYPES.has(s.type));
     const hoursOf = (u) => totalOf.get(u).total_hours;
 
@@ -323,6 +337,13 @@
     push({ id: 'drifter', name: 'The Drifter Award', desc: 'Most mentions of drift, currents or getting swept',
       r: rank(items(users, (u) => kwCount(u, DRIFT), (v) => `${v} mentions`).filter((x) => x.value > 0)) });
 
+    // Aim for the Stars (2023): furthest short of the goal set at sign-up.
+    const goalOf = (u) => { const g = parseFloat(String((profileOf.get(u) || {}).target_hours || '').replace(/[^\d.]/g, '')); return g > 0 ? g : null; };
+    const goalUsers = users.filter((u) => goalOf(u));
+    if (goalUsers.length) push({ id: 'aim-for-the-stars', name: 'The “Aim for the Stars and Land on the Earth” Award', desc: 'Fewest hours compared to their original goal',
+      r: rank(goalUsers.filter((u) => hoursOf(u) < goalOf(u)).map((u) => ({ user: u, value: hoursOf(u) / goalOf(u), label: `${hoursOf(u).toFixed(1)} hours of a ${goalOf(u)}-hour goal`, extra: `${pct(hoursOf(u) / goalOf(u))} of the goal` })), { dir: 'min' }) });
+    const goalsHit = goalUsers.filter((u) => hoursOf(u) >= goalOf(u)).length;
+
     // --- 2023/2024 superlatives ---
     // Adventurer (2024; "Nomad" in 2023): most different spots.
     push({ id: 'adventurer', name: 'The Adventurer Award', desc: 'Surfed the most different spots',
@@ -474,13 +495,17 @@
       fairWindows, fairSurfed, timedSessions: timed.length,
       topSpots: [...spots.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([spot, m]) => ({ spot, hours: m / 60 })),
       midRange: [midStart, midEnd], halfway,
+      goals: { set: goalUsers.length, hit: goalsHit },
+      // Pledged = each surfer's $/hour × their scored hours (app.js's formula).
+      pledged: users.reduce((a, u) => a + parsePledgeRate((profileOf.get(u) || {}).charity_commitment) * hoursOf(u), 0),
+      pledgers: users.filter((u) => parsePledgeRate((profileOf.get(u) || {}).charity_commitment) > 0).length,
     };
 
     return {
       event, stats, totals, awards, conditionAwards, rivalry, bonusJunkies, costumeSurfers,
       yoy: { ascenders, returning: yoy, rookies, missing },
       hurts: { counts: hurtCounts, wounded },
-      name, RATING_ORDER, RATING_LABEL,
+      name, RATING_ORDER, RATING_LABEL, profileOf,
     };
   }
 
