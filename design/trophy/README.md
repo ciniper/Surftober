@@ -23,7 +23,8 @@ generator cannot drift apart.
 ## Quick start
 
 ```bash
-cd design/trophy/cad && ./setup.sh          # once: venv + CadQuery (Homebrew python3.12; node for the config bridge)
+brew install node uv && uv python install 3.12   # once per machine (Homebrew's python@3.12 breaks pip on macOS 26.2)
+cd design/trophy/cad && ./setup.sh          # once: venv + CadQuery + shapely (uv's python3.12; node for the config bridge)
 .venv/bin/python serve.py 8930             # local server with the generate API
 open http://localhost:8930/                 # landing → Configurator / Wave demo
 ```
@@ -321,6 +322,12 @@ between a line and either edge of the wave or another line (measured in every fr
 is only ~0.25 thick and the lip ~0.13 with its foam edge, so the lines stay on the back below the crest,
 at most two at a time, and none in the lip. They also stop above the flat sea, where the sea band would
 fill a carved line back in.
+
+CAD note (2026-11-07, first v5 generate): the plover's cream body and head carry holes (collar, cap,
+eye) cut as one outline with hairline slits, which OpenCascade rejects — `spinner.py` was silently
+dropping them, so the bird would have printed as a navy blob. `polys_to_solid` now heals such
+polygons (shapely: close the slits by 0.03 mm, rebuild with real inner wires); the same path handles
+the carved texture lines (`ploverleancarve…`).
 
 The four whitewater options came from Chase's 2026-11-04 notes ("foam a little closer to
 whitewater return", "legs crossed over each other", added as new styles without changing the

@@ -59,18 +59,49 @@ def cyl(r, z0, h, r_in=0.0):
     return wp.extrude(h)
 
 
+def healed(pts, z0, h):
+    """Rebuild a polygon the kernel rejects. wave-frames.js cuts holes (the plover's collar, cap and eye,
+    carved texture lines) as one outline that runs in to each hole along a hairline slit (~0.02 mm),
+    which OpenCascade sees as self-touching. Closing it by a hair seals the slits, then the outline is
+    extruded with its holes as real inner wires."""
+    from shapely.geometry import Polygon
+    g = Polygon(pts).buffer(0.03, join_style=2).buffer(-0.03, join_style=2)
+    out = []
+    for poly in getattr(g, 'geoms', [g]):                # the collar splits the plover's body in two: keep both
+        poly = poly.simplify(0.005)                       # drops the near-zero edges the closing leaves (5 µm)
+        if poly.is_empty or poly.area < 1e-3:
+            continue
+        wp = cq.Workplane('XY').workplane(offset=z0).polyline(list(poly.exterior.coords)[:-1]).close()
+        for ring in poly.interiors:
+            if len(ring.coords) > 3:
+                wp = wp.polyline(list(ring.coords)[:-1]).close()
+        s = wp.extrude(h).val()
+        if s.isValid() and s.Volume() > 1e-4:
+            out.append(s)
+    return out
+
+
 def polys_to_solid(polys, z0, h, label):
-    """Union of extruded simple polygons; skips any the kernel rejects."""
-    solids, skipped = [], 0
+    """Union of extruded simple polygons; heals slit-cut holes, skips anything still rejected."""
+    solids, skipped, fixed = [], 0, 0
     for pts in polys:
         try:
             s = cq.Workplane('XY').workplane(offset=z0).polyline([tuple(p) for p in pts]).close().extrude(h).val()
             if s.isValid() and s.Volume() > 1e-4:
                 solids.append(s)
-            else:
-                skipped += 1
+                continue
         except Exception:
+            pass
+        try:
+            hs = healed(pts, z0, h)
+        except Exception:
+            hs = []
+        if hs:
+            solids.extend(hs); fixed += 1
+        else:
             skipped += 1
+    if fixed:
+        print(f'  {label}: rebuilt {fixed} polygon(s) with holes', file=sys.stderr)
     if skipped:
         print(f'  {label}: skipped {skipped} degenerate polygon(s)', file=sys.stderr)
     return cq.Workplane('XY').add(solids).combine() if solids else None
