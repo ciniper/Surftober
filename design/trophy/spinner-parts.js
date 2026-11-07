@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount, capT, backFace } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -45,14 +45,15 @@ export function annulus(rOut, rIn, z0, depth, mat, bevel = 0) {
   geo.translate(0, 0, z0 + (bevel || 0));
   return shadow(new THREE.Mesh(geo, mat));
 }
-// The wave ring with `n` scallops in its outer edge (r(θ) = the nearer of the rim and the notch circle).
-function notchedRing(n, z0, h, mat) {
-  const Rc = D.ringOut + D.notchR - D.notchDepth, pts = [];
-  for (let i = 0; i < 1440; i++) {
-    const th = i * 2 * Math.PI / 1440;
+// The wave ring with `n` round cuts of radius rho, `depth` deep, in its outer edge
+// (r(θ) = the nearer of the rim and the cut circle): v4 notches or v5 micro ridges.
+function notchedRing(n, rho, depth, z0, h, mat) {
+  const Rc = D.ringOut + rho - depth, pts = [], M = Math.max(1440, n * 16);
+  for (let i = 0; i < M; i++) {
+    const th = i * 2 * Math.PI / M;
     let r = D.ringOut;
-    const k = Math.round(th / (2 * Math.PI / n)), d = th - k * 2 * Math.PI / n;   // nearest notch centre
-    const disc = D.notchR ** 2 - (Rc * Math.sin(d)) ** 2;
+    const k = Math.round(th / (2 * Math.PI / n)), d = th - k * 2 * Math.PI / n;   // nearest cut centre
+    const disc = rho ** 2 - (Rc * Math.sin(d)) ** 2;
     if (disc >= 0) r = Math.min(r, Rc * Math.cos(d) - Math.sqrt(disc));
     pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th)));
   }
@@ -109,9 +110,12 @@ const builders = {
       const a = Math.PI / 2 + i * 2 * Math.PI / o.arms, arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(len, D.armW, t), M.body));
       arm.position.set(mid * Math.cos(a), mid * Math.sin(a), t / 2); arm.rotation.z = a; g.add(arm);
     }
-    const nn = notchCount(o);
-    if (nn) {                   // notched rim from the back, a plain band over the front notchKeep
-      g.add(notchedRing(nn, 0, t - D.notchKeep, M.body));
+    const nn = notchCount(o), nr = ridgeCount(o);
+    if (nr) {                   // v5 micro ridges, front to back: grooves ridgeW wide, ridgeDepth deep
+      const rho = ((D.ridgeW / 2) ** 2 + D.ridgeDepth ** 2) / (2 * D.ridgeDepth);
+      g.add(notchedRing(nr, rho, D.ridgeDepth, 0, t, M.body));
+    } else if (nn) {            // v4 notched rim from the back, a plain band over the front notchKeep
+      g.add(notchedRing(nn, D.notchR, D.notchDepth, 0, t - D.notchKeep, M.body));
       g.add(annulus(D.ringOut, D.ringIn, t - D.notchKeep, D.notchKeep, M.body, 0.4));
     } else g.add(annulus(D.ringOut, D.ringIn, 0, t, M.body, 0.4));
     if (o.art === 'raised') {   // one-colour relief, same material as the body
@@ -127,7 +131,8 @@ const builders = {
   'wave-foam'(o, M)  { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proudFoam : 0); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, h, M.foam))); g.position.z = -bodyShift(o); return g; },
   hub(o, M, font) {
     const g = new THREE.Group(), t = D.t, zDisc = t + D.standoff;
-    g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));
+    if (hasScrew(o)) g.add(annulus(D.stemD / 2, D.screwPilot / 2, t - D.stemLen, D.stemLen, M.hub));   // pilot for the centre screw
+    else g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));
     g.add(zcyl(D.spacerR, t, D.standoff, M.hub));
     g.add(annulus(D.hubR, 0, zDisc, D.hubT, M.hub, 0.5));
     if (font && o.text === 'raised') g.add(hubText(o, font, M.hub, zDisc + D.hubT, D.relief));
@@ -136,17 +141,24 @@ const builders = {
   },
   'hub-text'(o, M, font) { return font ? hubText(o, font, M.text, D.t + D.standoff + D.hubT - D.inlay, D.inlay) : new THREE.Group(); },
   'back-cap'(o, M) {
-    const g = new THREE.Group();
-    g.add(zcyl(D.stemD / 2, 0, D.stemLen, M.cap, 32));
-    g.add(zcyl(D.spacerR, -D.capSpacer, D.capSpacer, M.cap));
+    const g = new THREE.Group(), screw = hasScrew(o), rs = D.screwD / 2;
+    g.add(screw ? annulus(D.stemD / 2, rs, 0, D.stemLen, M.cap) : zcyl(D.stemD / 2, 0, D.stemLen, M.cap, 32));
+    g.add(screw ? annulus(D.spacerR, rs, -D.capSpacer, D.capSpacer, M.cap) : zcyl(D.spacerR, -D.capSpacer, D.capSpacer, M.cap));
     const T = capT(o), zBack = -D.capSpacer - T;
     if (o.magnet === 'disc') {
       g.add(annulus(D.capR, D.magPocketD / 2, zBack, T, M.cap, 0.5));                      // disc with the pocket through…
       g.add(zcyl(D.magPocketD / 2, zBack + D.magPocketDepth, T - D.magPocketDepth, M.cap)); // …and its floor
-    } else {                                                                                // grip plate with a spherical finger dish in the back face
+    } else {                                                                                // grip plate with a spherical finger divot in the back face
       const rd = D.dishD / 2, dd = D.dishDepth, R = (rd * rd + dd * dd) / (2 * dd), pts = [];
-      for (let i = 0; i <= 24; i++) { const r = rd * i / 24; pts.push(new THREE.Vector2(r, zBack + dd - (R - Math.sqrt(R * R - r * r)))); }
-      pts.push(new THREE.Vector2(D.capR, zBack), new THREE.Vector2(D.capR, zBack + T), new THREE.Vector2(0, zBack + T));
+      const zd = r => zBack + dd - (R - Math.sqrt(R * R - r * r));
+      let r0 = 0;
+      if (screw) {              // countersink from the divot bottom, then the clearance hole up through the plate
+        const rh = D.screwHeadD / 2, csk = screwZ(o).csk, top = zBack + T;
+        pts.push(new THREE.Vector2(rs, top), new THREE.Vector2(rs, Math.min(top, csk + rh - rs)), new THREE.Vector2(rh, csk));
+        r0 = rh;
+      }
+      for (let i = 0; i <= 24; i++) { const r = r0 + (rd - r0) * i / 24; pts.push(new THREE.Vector2(r, zd(r))); }
+      pts.push(new THREE.Vector2(D.capR, zBack), new THREE.Vector2(D.capR, zBack + T), new THREE.Vector2(screw ? rs : 0, zBack + T));
       const m = shadow(new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.cap.clone())); m.material.side = THREE.DoubleSide; m.rotation.x = Math.PI / 2; g.add(m);
     }
     return g;
@@ -156,6 +168,15 @@ const builders = {
     g.add(annulus(b.od / 2, b.outerId / 2, 0, t, M.steel));
     g.add(annulus(b.outerId / 2, b.innerOd / 2, 0.3, t - 0.6, M.shield));
     g.add(annulus(b.innerOd / 2, b.id / 2, 0, t, M.steel));
+    return g;
+  },
+  screw(o, M) {               // M3 countersunk, no thread: 90° head, shank to the tip
+    const z = screwZ(o), rh = D.screwHead / 2, r = 1.5, g = new THREE.Group();
+    const head = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r, rh, rh - r, 32), M.steel));
+    head.rotation.x = Math.PI / 2; head.position.z = z.head + (rh - r) / 2; g.add(head);
+    g.add(zcyl(r, z.head + rh - r, z.tip - z.head - (rh - r), M.steel, 24));
+    const slot = shadow(new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.3, 6), M.shield));   // hex socket
+    slot.rotation.x = Math.PI / 2; slot.position.z = z.head + 0.14; g.add(slot);
     return g;
   },
   magnet(o, M) { return zcyl(D.magD / 2, -D.capSpacer - capT(o) + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
@@ -195,7 +216,7 @@ export function waveArt(o) {
 export const POSE = {
   body: { spins: true, dz: 0 }, 'wave-water': { spins: true, dz: 10 }, 'wave-foam': { spins: true, dz: 14 },
   hub: { spins: false, dz: 30 }, 'hub-text': { spins: false, dz: 36 }, 'back-cap': { spins: false, dz: -20 },
-  bearing: { spins: false, dz: 0 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
+  bearing: { spins: false, dz: 0 }, screw: { spins: false, dz: -38 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
 };
 export const WEIGHT_DZ = o => (o.weight === 'cog' ? -12 : 24);
 

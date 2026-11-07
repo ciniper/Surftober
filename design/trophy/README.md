@@ -75,20 +75,21 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v4 | prefix on every output file (`v4-nahla-3arm-return10-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v5 | prefix on every output file (`v5-nahla-3arm-ploverleanlines10-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
-| `wave` | classic · rolling · return · barrel · returntip · classictip · **plover** | return | animation style (see wave demo); `plover` = the logo's snowy plover, wings flapping + legs striding, drawn procedurally (cream body + navy details instead of navy water + cream foam) |
-| `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots whose cells don't shrink the wave (8 on this band); fewer = faster loop, bigger art |
+| `wave` | **ploverleanlines** · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanlines | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
+| `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots, up to the style's own count, whose cells don't shrink the art (10 fit on the v5 band); fewer = faster loop, bigger art |
 | `art` | raised · proud · inlay · none | raised | wave: **one solid part**, water 0.4 and foam 0.8 above the face (colour the two steps by height in the slicer) · separate inlay parts standing 0.4 / 0.7 proud · the same inlay parts flush · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
-| `grip` | notches · none | notches | finger notches: 2 per frame, r 3.5 × 1.2 deep scallops in the outer edge, cut from the back and stopping 1.5 mm short of the front face (not with a bezel — its groove is there) |
+| `grip` | ridges · notches · none | ridges | rim grip, not with a bezel (its groove is there). **ridges** (v5): micro ridges the full thickness of the rim, front to back — round-bottomed grooves 0.9 wide × 0.35 deep, ~1.5 mm pitch (210 on Ø98, a multiple of the frame count so they freeze with the art under a strobe) · notches (v4): 2 per frame, r 3.5 × 1.2 scallops from the back, stopping 1.5 mm short of the front · smooth |
 | `seat` | lip · plain | lip | bearing seat: the v3 lip + entry chamfer (print 2: spins much better) · the plain v1/v2 bore, for comparison |
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
-| `magnet` | none · disc | none | back cap: plain grip plate with a finger dish · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests) |
+| `magnet` | none · disc | none | back cap: plain grip plate with a finger divot · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests; no centre screw then) |
+| `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
 | `preset` | full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
@@ -96,13 +97,13 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | id | group | what | generated as | printed in |
 |---|---|---|---|---|
-| `body` | spinning | hub on the 608 outer race (Ø21.9 bore + seat lip), arms, wave ring with rim notches; inlay pockets or relief | STL, back face down | bone / tier colour |
+| `body` | spinning | hub on the 608 outer race (Ø21.9 bore + seat lip), arms, Ø98 wave ring with micro-ridged rim; inlay pockets or relief | STL, back face down | bone / tier colour |
 | `wave-water` | spinning | bottom art layer (water, or the plover body), proud or flush (multi-colour art only) | STL | layer colour |
 | `wave-foam` | spinning | top art layer (foam, or the plover details), proud or flush | STL | layer colour |
-| `hub` | still | Ø51 × 2.4 disc, Ø8.1 stem into the inner race, 0.6 stand-off; text pockets | STL, text face down | navy |
+| `hub` | still | Ø51 × 3.0 disc, Ø8.1 stem into the inner race, 1.0 stand-off; text pockets; Ø2.6 blind pilot up the stem for the screw (1.6 skin under the face) | STL, text face down | navy |
 | `hub-text` | still | "SURFTOBER 2026" / name, 0.6 inlays — only with `text=inlay` (recessed = pocket in the hub, raised = fused into it) | STL | tier colour |
-| `back-cap` | still | Ø51 × 2.4 grip plate (same disc as the hub), stem, 1.8 spacer, Ø22 × 1 finger dish; with `magnet=disc` a 5.8 plate with the Ø25.6 × 4.6 pocket | STL, back face down | cap colour |
-| `bearing` · `magnet` · `weight` | bought | reference bodies (magnet only with `magnet=disc`) | STEP only | — |
+| `back-cap` | still | Ø51 × 3.0 grip plate (same disc as the hub), stem, 2.2 spacer, Ø18 × 1.6 finger divot with a Ø3.4 hole + Ø6 90° countersink in its bottom; with `magnet=disc` a 5.8 plate with the Ø25.6 × 4.6 pocket | STL, back face down (the divot faces the bed — see print notes) | cap colour |
+| `bearing` · `screw` · `magnet` · `weight` | bought | reference bodies (screw with `screw=m3`, magnet only with `magnet=disc`) | STEP only | — |
 
 The **3MF** holds one multi-part object per print unit — spinning piece
 (body + inlays), front hub (+ text), back cap — laid out side by side in print
@@ -115,28 +116,50 @@ volumes, grams, files.
 ## Dimensions
 
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
-hub r 16, arms 9 wide, **ring r 35 → 51.5** (Ø103), wave band r 38.1 → 50.9
-(12.8 mm — the whitewater return fits its native 10 frames at full size, cell
-aspect 2.18 vs the 2.06 design cell). Artwork by default is **relief on
+hub r 16, arms 9 wide, **ring r 33 → 49** (Ø98, v5), wave band r 36.1 → 48.2
+(12.1 mm — 10 frames still fit at full size, cell aspect 2.19 vs the 2.06
+design cell). Artwork by default is **relief on
 the one solid body**: water 0.4 and foam 0.8 above the face, i.e. two
 0.2 mm layers each. To print it multi-colour, slice the body alone and add
 height-range modifiers to it: face → +0.4 in the water colour, +0.4 → +0.8
 in the foam colour (body printed back face down, face at z 7.0, so 7.0–7.4
 and 7.4–7.8). The separate inlay-part modes (`proud` 0.4 / 0.7, `inlay`
-flush, 0.6 pockets) are still there but were a pain to handle. Rim grip (v4): 20 scallops (2 per frame)
-r 3.5 × 1.2 deep in the outer edge, cut from the back face up to 1.5 mm
-below the front, so the front rim is still a clean Ø103 circle and the wave
-band is untouched; the 1.2 mm roof over each notch prints as a short
-overhang. Front hub r 25.5 (the arms show for 9.5 mm between hub and
-ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
+flush, 0.6 pockets) are still there but were a pain to handle. Rim grip
+(v5): **micro ridges** — 210 round-bottomed grooves, 0.9 wide × 0.35 deep at
+~1.47 mm pitch, running the full 7 mm from the back face to the front edge,
+like a coin's reeded edge. They print as perimeter detail (no overhangs);
+keep elephant's-foot compensation on so the first layer doesn't fill them.
+The wave band stops 0.8 short of the rim, clear of the grooves. (v4's 20
+r 3.5 scallops from the back, stopping 1.5 short of the front, are still
+`grip=notches`.) Front hub r 25.5 (the arms show for 7.5 mm between hub
+and ring), stem Ø8.1 × 3.3. Press fits to tune: `bore` and `stemD`.
+
+**Clearances and the centre screw (v5).** The front hub rubbed the body on
+v4: a 2.4 disc on a press-fit stem could rock, and it sat only 0.6 over the
+bearing's spinning outer race (1.2 over the body). Now the hub is **3.0
+thick on a 1.0 stand-off** — 1.0 over the outer race, 1.6 over the body —
+and the cap matches (2.2 spacer, 1.6 over the body's back face). An **M3 × 12
+countersunk screw** (ISO 10642 / DIN 7991, A2 stainless) goes in from the
+back: Ø3.4 clearance hole through the cap and its stem, head flush in a
+Ø6 countersink at the bottom of the finger divot, self-tapping into a Ø2.6
+blind pilot up the hub's stem (≈ 5 mm of thread, 0.75 spare, 1.6 mm of
+plastic left under the hub face). Tightened, it clamps the inner race
+between the two spacers, so neither disc can rock into the body. Snug it,
+don't crank it — the stems are PLA. For a joint that comes apart a lot,
+open the pilot to Ø4.0 for an M3 × 4 heat-set insert (`screwPilot`).
 
 **Back cap.** The same Ø51 disc as the front hub, so the trophy reads as
 one medallion from both sides and the arms are hidden back and front. The
-1.8 mm spacer on the inner race gives 1.2 mm clearance over the body's back
+2.2 mm spacer on the inner race gives 1.6 mm clearance over the body's back
 face (the lip makes the body 0.6 proud of the bearing there), matching the
 hub's clearance in front. Since the v4 tests (2026-10-31) the default is a
-**plain grip plate**, 2.4 thick like the hub, with a Ø22 × 1 mm spherical
-finger dish in the back — the magnet is out of the equation for now. With
+**plain grip plate**, 3.0 thick like the hub (v5), with a **Ø18 × 1.6 mm
+spherical finger divot** in the back (v5; v4 had a shallow Ø22 × 1 dish) and
+the centre screw's head flush in its bottom — the magnet is out of the
+equation for now. Print note: the cap prints back face down, so the divot
+faces the bed and its middle is an overhang — paint a support enforcer into
+the divot (1.6 mm of support, pops out) or print it bare and sand the
+middle smooth. With
 `magnet=disc` you get the 2026-10-29 cap instead: 5.8 thick, a loose
 Ø25.6 × 4.6 pocket on a 1.2 floor for the Ø25 × 5 adhesive-backed disc,
 standing 0.4 proud. Both print back face down, stem up.
@@ -156,12 +179,16 @@ slicer also turn on elephant's-foot compensation (≈ 0.1 mm) for the bore.
 |---|---|---|
 | body, 3 arms, inlay pockets | ~46 g | the generator prints exact grams per part |
 | body, one-colour relief | ~48 g | |
-| + flat bezel ring (103 × 96 × 3.18) | +~30 g brass | rim mass, tier metal |
-| + bike cog | — | a track cog hides behind a Ø103 rim; only as hidden weight, or a chainring |
+| + flat bezel ring (98 × 91 × 3.18) | +~28 g brass | rim mass, tier metal |
+| + bike cog | — | a 22T track cog (tip Ø97.6) just hides behind the Ø98 rim; only as hidden weight, or a chainring |
+
+v5's smaller ring (Ø98 vs Ø103, same width) has ~17 % less spinning inertia in the ring,
+so expect a little less spin time from the same bearing.
 
 Ring-size history: Ø80 (r 27.5–40, 8.8 mm band, 2026-10-12) → Ø93 (r 27.5–46.5,
 50 % wider band, 2026-10-27) → Ø113 (r 37.5–56.5, 10 mm further out, 2026-10-27,
-print 1) → **Ø103 (r 35–51.5, band 12.8, 2026-10-28, print 2)**.
+print 1) → Ø103 (r 35–51.5, band 12.8, 2026-10-28, print 2) → **Ø98 (r 33–49,
+band 12.1, 2026-11-04, v5)**.
 
 Print 1 feedback (Chase, 2026-10-28, Ø113 body + hub + cap on a greaseless
 608 from a 20-pack): visible wobble, enough to shake the hub; spin-down about
@@ -194,6 +221,123 @@ poles cancel within a few mm so nothing reaches the bearing, ~800 g hold
 for a 70 g assembly, and the cap gets thin and light); small neodymium
 discs out at the cap rim (r ≈ 20) instead of one on the axis; a hybrid
 ceramic bearing only helps with the ball magnetisation, not the preload.
+
+v5 (Chase, 2026-11-04), after handling the v4 prints:
+
+- "I really don't like how ridges feel right now and I hate that it doesn't
+  go to edge" → **micro ridges** the full thickness of the rim (`grip=ridges`).
+- "the back should have a nice little divot for finger" → Ø18 × 1.6 divot.
+- "the medallion portion is a little too close to spinner and sometimes rubs"
+  → hub 2.4 → 3.0 thick, stand-off 0.6 → 1.0, cap spacer 1.8 → 2.2, and the
+  **M3 centre screw** through the back cap clamping both to the inner race.
+- "reduce OD of spinner by 5 more mm" → Ø103 → Ø98, ring moved in at both
+  edges so the band (and 10 full-size frames) survives.
+- New animations, 8–10 frames: the plover getting barreled, and a break whose
+  lip "extends out further instead of breaks so vertical" (below).
+
+## Animations — the plover in the barrel, the hollow throw (v5)
+
+First v5 try (a filled navy wave with a cream bird, streaks and a bubbly
+lip) was "god awful" (Chase, 2026-11-04). Redone:
+
+**Plover in the barrel** (`kind: 'scene'`, drawn by `barrelScene()` in
+`wave-frames.js`). The wave pitches to the **left** and stays open: the tube
+is a real hole in the navy, so the ring's own colour shows through it. The
+plover is **the logo bird**, traced from the Surftober logo (its own pixel
+coordinates in `LOGO_BODY` / `LOGO_COLLAR`, head circle r 65 at 470,480,
+scaled by `LOGO.s`): cream body and head, navy cap, eye and partial collar
+(holes in the cream, joined to its edge by hairline slits the slicer
+ignores), navy pointed bill and long thin legs with flat feet, and a navy
+outline round the cream so it reads against the ring colour. It faces left
+like the logo, out of the tube's mouth, on a cream board with a navy rim.
+The lip **throws out and pulls back** hard each loop — the whole lip scales
+about a pivot under the crest (`lip` in `motion`: ±40 % in all three; when
+throwing it reaches out only 0.6× as far as it drops, so the tip stays in the
+slot), from reaching the water to pulled well back — while spray flicks off
+its tip and the bird bobs and rocks its board, knees taking the crouch.
+The plover **walks with the wave** (`walk` in `motion`, ±0.06 of the slot
+height): as the lip pulls back it takes two steps forward along the board,
+front foot then back foot, each lifted mid-swing; as the lip throws over it
+takes two steps back, back foot first. In `plovertuck` the lip only throws,
+so the bird is fully forward when it's open and fully back when it closes out.
+(History, 2026-11-04: v1 a filled wave with a cream songbird, "god awful";
+v2 an open tube with a navy songbird, "doesn't look like a plover"; v3 the
+logo plover at ±24 %; v4 this — "swing the wave 40 %", and the walk.)
+
+| style | frames | what moves |
+|---|---|---|
+| `plovertube` — Plover in the barrel (v5 default until 2026-11-07) | 10 | the base loop above |
+| `ploverspit` — the barrel spits | 8 | + a stream of spray blown out of the tube's mouth; the bird crouches lower |
+| `plovertuck` — tuck and stand | 9 | the lip pitches all the way out (closing out the frame) mid-loop while the bird tucks, then both open up again |
+| `ploverwash` — whitewater lip | 10 | the base loop, but the foam is the whitewater-return bubble cluster riding the lip tip (small as it pulls back, boiling up as it throws), with a thinner feathering edge (`foam: 'ww'`) |
+| `plovercross` — crossed legs | 10 | whitewater lip + the legs crossed in an X, each foot under the other hip (`legs: 'cross'`) |
+| `ploverxstep` — cross-steps | 10 | whitewater lip + cross-stepping: the back foot crosses over the front one, like walking to the nose; longer walk ±0.09 (`lead: 'back'`) |
+| `plovertuckx` — tuck, crossed legs | 9 | `plovertuck` with the whitewater lip and crossed legs |
+| `ploverback` — cross-steps, breathing back | 10 | `ploverxstep` + the back slope widens ±12 % about the crest while the lip is pulled back and narrows as it crashes (`back`); wave moved further right (`shift: .32`) with the plover left where it was (`birdShift: .22`) so its tail clears the back wall |
+| `ploverbacklag` — back follows the crash | 10 | the same, ±14 %, narrowing a tenth of a loop after the crash (`backLag: .1`) |
+| `ploverbackrise` — back stands up | 10 | the same, ±12 % with a small lag, and the back's shoulder stands up 7 % as it narrows (`rise`) |
+| `ploverxstep2` — shorter walk, wobblier board | 10 | `ploverxstep` with the walk cut to ±0.04 (was ±0.054) and the plover centred in the tube (`shift: .3`, `birdShift: .25`), so beak and tail stay ≥ 0.03 clear of the wave in every frame; the board rocks ±2° (`tilt: 2`) plus a quicker wobble twice a loop (`wobble: .8`); the wave itself is still |
+| `ploverfull` — back fills and hollows | 10 | `ploverxstep2` + the back slope bulges out along its normal while the lip draws back and sucks in once it has thrown (`full: .09`), foot and crest fixed |
+| `ploverswell` — swell rolls up the back | 10 | `ploverxstep2` + a bump runs up the back once a loop and reaches the crest as the lip throws (`swell: .07`) |
+| `ploverlean` — wave leans into the throw | 10 | `ploverxstep2` + the whole wave shears with height, leaning into the throw and rocking back (`lean: .07`); the plover rides with it |
+| `ploverslide` — whole wave surges left | 10 | `ploverxstep2` + the whole wave and the plover surge ±0.07 left as the lip throws and back right as it draws up (`slide: .07`, `shift: .37`) |
+| `ploverlive` — all of it a little | 10 | `full .05`, `swell .04`, `lean .03`, `slide .05` together |
+| `ploverleanlines` — lean + flowing face lines (**default**, Chase's pick 2026-11-07) | 10 | `ploverlean` + one cream line inside the back (`TEX.face`), broken into two dashes flowing up towards the crest once a loop (`tex: { face, dash: 2 }`) |
+| `ploverleancarve` — lean + carved face lines | 10 | the same, cut out of the navy so the ring colour shows (`carve`) |
+| `ploverleanbarrel` — lean + spinning barrel lines | 10 | cream dashes running up the back wall and along the tube's ceiling towards the lip (`TEX.barrel`) |
+| `ploverleanbubbles` — lean + bubbles up the face | 10 | four cream bubbles (r ≥ 0.034) drifting up the back and popping near the crest |
+| `ploverleanwoodcut` — lean + woodcut strokes | 10 | two solid tapered cream strokes up the back (`face` + `face2`), no flow |
+| `ploverleancarvecut` — lean + carved woodcut | 10 | the woodcut strokes cut out of the navy |
+
+Calmer pass (Chase, 2026-11-04, "plover movement lessened by 40 %", "less overall movement" for the
+barrel, "the foam ball splashes a little bit when it crashes over"): in the four whitewater options
+the lip swings ±30 % (the older styles keep ±40 %); the walk, foot lift, bob, rock and crouch are all
+0.6× (`ploverxstep` gets a narrower stance, `stance: .6`, so its feet still cross on the shorter
+walk); and near the top of the throw droplets flick up and out of the foam ball and fall back in
+(`splash`, `SPLASH`), none smaller than 0.034 of the band (~0.8 mm) so they print.
+
+In all four the wave sits further right in its slot (`shift: .22`, with the back slope squeezed so its foot
+stays at the edge), which lets the lip throw out further (`reach: 1` of its drop, `.85` for the tuck)
+with the whitewater still whole inside the slot ("too far left in frame and the white water is
+getting cut off").
+
+Chase picked the cross-step (2026-11-04) and asked for more movement in the back of the wave
+("a little bit wider" before it barrels, "compress and get a little bit skinnier" once the whitewater
+has crashed) and the wave a bit further right so the plover's tail stops going into it on the
+step back; those three are new styles beside `ploverxstep`, which is unchanged.
+
+Round 3 (Chase, 2026-11-04): "plover is now moving too far forward and beak is hitting wave", "make
+surfboard wobble a little more", and the breathing back didn't look natural — "maybe the whole wave is
+moving right to left if there's room in frame … play around with some options". Measured clearances
+first: `ploverxstep` ran its tail ~0.02 into the back wall stepping back, `ploverback` its beak ~0.02
+into the lip stepping forward. `ploverxstep2` fixes both, and five styles try whole-wave motion
+instead of scaling the back (`full`, `swell`, `lean`, `slide` in `barrelScene`). All are new styles;
+nothing earlier changed.
+
+Texture (Chase, 2026-11-04: liking `ploverlean`, "should we add any texture to the wave itself? Riff on
+this"): `texture()` / `TEX` lay lines a fixed depth under the wave's surface, so they lean and throw with it.
+Print limits set the layout: lines ≥ 0.045 of the band (~0.55 mm), bubbles r ≥ 0.034, and ≥ ~0.04 of navy
+between a line and either edge of the wave or another line (measured in every frame). The back of the wave
+is only ~0.25 thick and the lip ~0.13 with its foam edge, so the lines stay on the back below the crest,
+at most two at a time, and none in the lip. They also stop above the flat sea, where the sea band would
+fill a carved line back in.
+
+The four whitewater options came from Chase's 2026-11-04 notes ("foam a little closer to
+whitewater return", "legs crossed over each other", added as new styles without changing the
+old ones; no more work on `ploverspit`). Note for 2D renders: fill each polygon on its own
+(non-zero). An even-odd fill over a whole layer cancels where shapes overlap, which put gold
+spots on the bird in the first GIFs; the demo, viewer and CAD already fill per polygon / union.
+
+**Hollow throw** (`hollow`, 10 frames, a keyed wave like the whitewater
+return). The lip doesn't pitch straight down: it throws out almost
+horizontally over a long open tube, lands near the far edge of the slot,
+explodes, and the foam is drawn back up into the next lip. Shapes `hpeak` →
+`hthrow` → `htube` → `hcurtain` → `hland` → `himpact` → `hrebuild` in
+`SHAPES`; foam rides the lip tip (`tip` keys).
+
+Colours as before: navy (0.4 relief) and cream (0.8). In the plover scenes
+the bird is cream with navy markings showing through holes, on a navy outline, so no third colour.
+Smallest features at the v5 band: legs ≈ 0.45 mm, eye ≈ 0.5 mm.
 
 # Design notes and decision log
 

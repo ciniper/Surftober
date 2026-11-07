@@ -3,7 +3,7 @@
 // Prints one JSON document: validated options, output tag, dimensions, the
 // parts to generate (with print poses), tier colours and the wave artwork as
 // polygons in mm (origin = spinner axis, y up, slot 0 at the top, clockwise).
-import { DIM, TIERS, PART, parseOptions, serializeOptions, outputTag, partsToGenerate, activeParts, frameCount, partColor, partFilament, partLabel, WAVE_VARIANTS } from '../spinner-config.js';
+import { DIM, TIERS, PART, parseOptions, serializeOptions, outputTag, partsToGenerate, activeParts, frameCount, ridgeCount, partColor, partFilament, partLabel, WAVE_VARIANTS } from '../spinner-config.js';
 import { ringArt } from '../wave-frames.js';
 
 const o = parseOptions(process.argv[2] || '');
@@ -19,6 +19,6 @@ const meta = id => ({ id, label: partLabel(id, o), group: PART[id].group, color:
 process.stdout.write(JSON.stringify({
   options: o, query: serializeOptions(o), tag: outputTag(o),
   dim: DIM, tier: { key: o.tier, ...TIERS[o.tier] },
-  generate: partsToGenerate(o).map(meta), active: activeParts(o),
+  generate: partsToGenerate(o).map(meta), active: activeParts(o), ridges: ridgeCount(o),
   wave: { variant: o.wave, label: WAVE_VARIANTS[o.wave].label, N: art.N, water: gather('water'), foam: gather('foam') },
 }));

@@ -15,12 +15,12 @@ import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, layerColors, layerNames } from
 // ---------------------------------------------------------------------------
 // Dimensions (mm)
 // ---------------------------------------------------------------------------
-// Ring proportions (Chase, 2026-10-28, print 2): between prototypes 1 (Ø93,
-// r 27.5–46.5 — slots too narrow for 10 frames) and 2 (Ø113, r 37.5–56.5 — a
-// bit large). Ø103, r 35–51.5: the band is 12.8 mm (vs 15.3) so the whitewater
-// return fits its native 10 frames at full size with margin (cell aspect 2.18
-// vs the 2.06 design cell). Hub unchanged at r 25.5; arms show for 9.5 mm.
-const RING_IN = 35, RING_OUT = 51.5;
+// Ring proportions. v3/v4 (Chase, 2026-10-28, print 2): Ø103, r 35–51.5, between
+// prototypes 1 (Ø93 — slots too narrow for 10 frames) and 2 (Ø113 — a bit large).
+// v5 (2026-11-04): 5 mm smaller again, Ø98, r 33–49 — the ring keeps its 16 mm
+// width (it moves in 2 mm at both edges), so the band is still 12 mm and 10 frames
+// stay full size (cell aspect 2.20 vs the 2.06 design cell). Arms show for 7.5 mm.
+const RING_IN = 33, RING_OUT = 49;
 const HUB_R = 25.5;           // the two still discs (front hub, back cap) share this radius
 
 export const DIM = {
@@ -32,8 +32,8 @@ export const DIM = {
   bore: 21.9,                   // press fit on the Ø22 outer race (21.8 tight … 22.0 loose — tune after print 1)
   hubOut: 16,                   // printed hub radius around the bearing
   armW: 9,
-  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø103 overall
-  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.6, // artwork band on the ring's front face (12.8 wide)
+  ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø98 overall
+  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.8, // artwork band on the ring's front face (12.1 wide), clear of the rim ridges
   // bearing seat (v3, after the wobble on print 1 — option `seat`, default lip): the body is still t
   // thick but sits 0.6 further back — a lip behind the bore that only the OUTER race face touches
   // (r 9.9–10.95; the shield starts at r 9.6) squares the ring to the bearing, and a 45° chamfer
@@ -42,27 +42,41 @@ export const DIM = {
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   proud: 0.4, proudFoam: 0.7,   // art=proud: the inlays stand this far above the face (water / foam), from the same 0.6 pocket
   relief: 0.4, reliefFoam: 0.8, // art=raised: one solid part, water 0.4 and foam 0.8 above the face — two 0.2 mm layers each, so the slicer can colour them by height
-  // finger notches round the rim (option grip, v4): scallops cut into the outer edge from the back,
-  // stopping notchKeep short of the front face so the wave band and the rim line stay intact
+  // rim grip (option grip). v5 default: micro ridges — fine reeding like a coin edge, the full
+  // thickness of the ring, front to back. Round-bottomed grooves ridgeW wide and ridgeDepth deep,
+  // about ridgePitch apart; the count is rounded to a multiple of the frame count so the ridges
+  // freeze with the art under a strobe. v4: notches — scallops cut from the back that stopped
+  // notchKeep short of the front face (they felt coarse, and didn't reach the edge).
+  ridgePitch: 1.5, ridgeW: 0.9, ridgeDepth: 0.35,
   notchR: 3.5, notchDepth: 1.2, notchKeep: 1.5,
 
   // still front hub on the inner race — carries the text, hides the arms
-  hubR: HUB_R, hubT: 2.4, standoff: 0.6,  // 9.5 mm reveal to the ring; 0.6 over the bearing face = 1.2 over the spinning body
+  // v5: 3.0 thick (was 2.4, it flexed and rubbed) and 1.0 stand-off (was 0.6): 1.0 over the bearing's
+  // spinning outer race, 1.6 over the body's front face (the lip puts the body 0.6 behind the bearing)
+  hubR: HUB_R, hubT: 3.0, standoff: 1.0,
   stemD: 8.1, stemLen: 3.3,               // into the Ø8 inner-race bore (8.0 … 8.2)
   spacerR: 5.5,                           // lands on the inner race only (r 4 … 6.05)
   textSize: 4.6, textTrack: 0.12, textInset: 4.6,
 
-  // back cap on the inner race, same Ø51 disc as the front hub. capSpacer 1.8 = 1.2 clearance over the
-  // body's back face (which is 0.6 proud of the bearing, the lip). Default (magnet=none, v4 tests): a
-  // plain grip plate as thin as the hub with a shallow finger dish — the Ø25 × 5 neodymium disc behind
-  // the bearing cost 2–3× in spin time. magnet=disc keeps that pocketed cap (5.8 thick, 1.2 floor).
-  capR: HUB_R, capT: 2.4, capSpacer: 1.8, dishD: 22, dishDepth: 1.0,
+  // back cap on the inner race, same Ø51 disc as the front hub. v5: capSpacer 2.2 = 1.6 clearance over
+  // the body's back face (which is 0.6 proud of the bearing, the lip), matching the front. Default
+  // (magnet=none, v4 tests): a plain grip plate as thick as the hub with a spherical finger divot —
+  // v5 makes it a proper fingertip divot, Ø18 × 1.6 (v4: a Ø22 × 1 dish). The Ø25 × 5 neodymium disc
+  // behind the bearing cost 2–3× in spin time; magnet=disc keeps that pocketed cap (5.8 thick).
+  capR: HUB_R, capT: 3.0, capSpacer: 2.2, dishD: 18, dishDepth: 1.6,
   capTMag: 5.8, magD: 25, magT: 5, magPocketD: 25.6, magPocketDepth: 4.6,
+
+  // centre screw (option screw, v5): an M3 × 12 countersunk screw (ISO 10642 / DIN 7991) from the back,
+  // through the cap and its stem, self-tapping into a blind pilot in the front hub's stem. It clamps the
+  // inner race between the two spacers, so hub and cap can't rock on their stems and touch the body.
+  // The head sits flush in the bottom of the finger divot. Pilot 2.6 self-taps PLA; open it to 4.0 for
+  // an M3 × 4 heat-set insert if it gets taken apart a lot. frontSkin is what's left over the pilot.
+  screwD: 3.4, screwPilot: 2.6, screwHeadD: 6.0, screwHead: 5.5, screwLen: 12, frontSkin: 1.6,   // countersink Ø6.0 at the divot bottom; a real ISO head (Ø5.5) seats 0.25 below it
 
   // bought weights, in the tier metal
   bezelWire: 3.5, bezelProud: 0.6,                            // round craft ring Ø(2·ringOut) × 3.5 wire in a half-round groove (Ø93 is not a stock craft size — buy 3.5" and print to it, or go flat)
   flatOd: 2 * RING_OUT, flatId: 2 * RING_OUT - 7, flatT: 3.18, flatClear: 0.15,  // laser-cut flat ring, 3.5 mm wide section (SendCutSend 0.125")
-  cogTeeth: 22, cogTip: 48.8, cogRoot: 45.4, cogBore: 34.8, cogT: 2.3,  // 22T 3/32" track cog (tip Ø ≈ 97): hidden behind a Ø113 rim now — the cog option only makes sense with a chainring (≥ 46T) or as pure hidden weight
+  cogTeeth: 22, cogTip: 48.8, cogRoot: 45.4, cogBore: 34.8, cogT: 2.3,  // 22T 3/32" track cog (tip Ø ≈ 97): just hidden behind the Ø98 rim — the cog option only makes sense with a chainring (≥ 46T) or as pure hidden weight
   cogBossIn: 12,
 };
 export const PLA_G_PER_MM3 = 1.24e-3;
@@ -100,9 +114,10 @@ export const PARTS = [
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
     generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
-  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub — the grip for the other finger (magnet pocket optional)',
+  { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub — a finger divot in the back, the centre screw through it (magnet pocket optional)',
     generated: true, color: 'cap',   filament: 'any (or anodized aluminium)', print: { flip: false, z: DIM.capSpacer + DIM.capT } },
   { id: 'bearing',    group: 'Bought',         label: '608 bearing',  detail: '8 × 22 × 7 — cleaned, no grease, for spin time', color: 'steel' },
+  { id: 'screw',      group: 'Bought',         label: 'Centre screw', detail: 'M3 × 12 countersunk (ISO 10642), from the back through the cap, self-taps into the hub stem — clamps hub and cap to the inner race', color: 'steel', when: o => hasScrew(o) },
   { id: 'magnet',     group: 'Bought',         label: 'Magnet',       detail: 'Ø25 × 5 adhesive-backed disc in the back cap, 0.4 proud — slows the spin 2–3×, off by default', color: 'magnet', when: o => o.magnet === 'disc' },
   { id: 'weight',     group: 'Bought',         label: 'Metal weight', detail: 'Bezel ring in the rim, or a bike cog behind the body — the tier metal',
     color: 'tier', when: o => o.weight !== 'none' },
@@ -131,18 +146,18 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v4', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v5', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
-  wave:   { label: 'Animation',  type: 'choice', default: 'return', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
+  wave:   { label: 'Animation',  type: 'choice', default: 'ploverleanlines', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
   frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
   art:    { label: 'Artwork',    type: 'choice', default: 'raised', values: ['raised', 'proud', 'inlay', 'none'],
             labels: { raised: 'Raised relief · one solid part, water 0.4 / foam 0.8 (colour by height in the slicer)', proud: 'Separate inlay parts · 0.4 proud', inlay: 'Separate inlay parts · flush', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
-  grip:   { label: 'Rim grip',   type: 'choice', default: 'notches', values: ['notches', 'none'],
-            labels: { notches: 'Finger notches · 2 per frame', none: 'Smooth rim' }, hint: 'scallops in the outer edge, from the back, for flicking; the front face stays a clean circle', when: o => o.weight !== 'bezel' },
+  grip:   { label: 'Rim grip',   type: 'choice', default: 'ridges', values: ['ridges', 'notches', 'none'],
+            labels: { ridges: 'Micro ridges · full thickness (v5)', notches: 'Finger notches · 2 per frame (v4)', none: 'Smooth rim' }, hint: 'fine reeding round the whole edge, front to back, for flicking', when: o => o.weight !== 'bezel' },
   seat:   { label: 'Bearing seat', type: 'choice', default: 'lip', values: ['lip', 'plain'],
             labels: { lip: 'Lip + chamfer · v3, spins best', plain: 'Plain bore · v1/v2' }, hint: 'v3 seat: 0.6 lip behind the bore on the outer race face + entry chamfer' },
   weight: { label: 'Weight',     type: 'choice', default: 'none',   values: ['none', 'bezel', 'cog'],
@@ -151,7 +166,9 @@ export const OPTIONS = {
             labels: { flat: 'Flat laser-cut ring (SendCutSend)', round: 'Round craft wire ring' }, when: o => o.weight === 'bezel' },
   cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
   magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
-            labels: { none: 'None · plain grip cap with a finger dish', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
+            labels: { none: 'None · plain grip cap with a finger divot', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
+  screw:  { label: 'Centre screw', type: 'choice', default: 'm3', values: ['m3', 'none'],
+            labels: { m3: 'M3 × 12 countersunk · clamps hub + cap (v5)', none: 'None · press-fit stems only (v4)' }, hint: 'from the back, through the cap, into the hub stem', when: o => o.magnet !== 'disc' },
   parts:  { label: 'Parts',      type: 'list',   default: null, hint: 'which parts to show / generate; empty = all' },
 };
 export const defaults = () => Object.fromEntries(Object.entries(OPTIONS).map(([k, v]) => [k, v.default]));
@@ -186,8 +203,22 @@ export function serializeOptions(o) {
 }
 // Multi-colour art (separate inlay parts), flush or proud.
 export const isInlay = o => o.art === 'inlay' || o.art === 'proud';
-// Finger notches round the rim: two per animation frame, none with a bezel ring (its groove is there).
+// Rim grip, none with a bezel ring (its groove is there). Notches: two per animation frame.
+// Ridges: about one per ridgePitch round the rim, rounded to a multiple of the frame count.
 export const notchCount = o => (o.grip === 'notches' && o.weight !== 'bezel' ? 2 * frameCount(o) : 0);
+export function ridgeCount(o) {
+  if (o.grip !== 'ridges' || o.weight === 'bezel') return 0;
+  const N = frameCount(o);
+  return N * Math.max(1, Math.round(2 * Math.PI * DIM.ringOut / DIM.ridgePitch / N));
+}
+// The centre screw needs the middle of the cap, so it's off with the magnet pocket.
+export const hasScrew = o => o.screw === 'm3' && o.magnet !== 'disc';
+// Centre screw z (mounted pose): the countersink's top at the divot bottom, the seated head's top face, the tip,
+// and the top of the pilot in the hub (frontSkin under the hub face).
+export function screwZ(o) {
+  const csk = -(DIM.capSpacer + capT(o)) + DIM.dishDepth, head = csk + (DIM.screwHeadD - DIM.screwHead) / 2;
+  return { csk, head, tip: head + DIM.screwLen, pilotTop: DIM.t + DIM.standoff + DIM.hubT - DIM.frontSkin, pilotBottom: DIM.t - DIM.stemLen };
+}
 // Back-cap plate thickness: thin grip plate, or the pocketed magnet cap.
 export const capT = o => (o.magnet === 'disc' ? DIM.capTMag : DIM.capT);
 // Where the back of the assembly touches a surface (the proud magnet face, or the cap's back face).
@@ -207,7 +238,8 @@ export function outputTag(o) {
   return [slug(o.version), who, `${o.arms}arm`, `${o.wave}${frameCount(o)}`]
     .concat(o.weight === 'none' ? [] : [o.weight + (o.weight === 'bezel' ? `-${o.bezel}` : '')])
     .concat(o.art === OPTIONS.art.default ? [] : [o.art])
-    .concat(o.grip === 'notches' || o.weight === 'bezel' ? [] : ['smooth'])
+    .concat(o.grip === 'ridges' || o.weight === 'bezel' ? [] : [o.grip === 'notches' ? 'notches' : 'smooth'])
+    .concat(hasScrew(o) || o.magnet === 'disc' ? [] : ['noscrew'])
     .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
@@ -221,7 +253,8 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.version !== OPTIONS.version.default) args.push(`--version ${o.version}`);
   if (o.frames) args.push(`--frames ${o.frames}`);
   if (o.art !== OPTIONS.art.default) args.push(`--art ${o.art}`);
-  if (o.grip !== 'notches' && o.weight !== 'bezel') args.push(`--grip ${o.grip}`);
+  if (o.grip !== 'ridges' && o.weight !== 'bezel') args.push(`--grip ${o.grip}`);
+  if (o.screw !== 'm3' && o.magnet !== 'disc') args.push(`--screw ${o.screw}`);
   if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
@@ -234,7 +267,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
-  full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, notched rim; hub + cap', options: {} },
+  full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, micro-ridged rim; hub + cap + centre screw', options: {} },
   inlays:    { label: 'Full trophy · inlay parts',    detail: 'Wave and foam as separate proud inlay parts (v4 first try — fiddly)', options: { art: 'proud' } },
   testring:  { label: 'Spinning piece only',          detail: 'Just the body with the wave in relief',          options: { parts: ['body'] } },
   stillset:  { label: 'Still parts only',             detail: 'Front hub, text and back cap for one name',       options: { parts: ['hub', 'hub-text', 'back-cap'] } },

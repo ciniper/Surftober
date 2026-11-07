@@ -14,7 +14,7 @@ cad/bridge.mjs with node), so this always matches the 3D viewer.
 Output, in ./out/ (gitignored):
     <tag>-<part>.stl      one per part, in print orientation
     <tag>.3mf             all parts as multi-part objects per print orientation (Bambu / Prusa)
-    <tag>.step            coloured assembly in the mounted pose, with the bearing and metal weight
+    <tag>.step            coloured assembly in the mounted pose, with the bearing, centre screw and metal weight
     <tag>-all.stl         every part as separate shells in one STL (--combined)
     <tag>.json            manifest: options, parts, volumes, files — the viewer reads this
     metal-ring-flat-*.dxf the flat bezel ring outline for SendCutSend (--weight bezel --bezel flat)
@@ -44,7 +44,8 @@ def list_everything():
     print('parts (generated):')
     for p in cfg['generate']:
         print(f"  {p['id']:<11} {p['group']:<16} {p['filament']}")
-    print('\nquery options: version (file prefix, default v3), name, tier, arms (3|4), wave, frames, art (inlay|raised|none), text (recessed|inlay|raised), weight (none|bezel|cog), bezel (flat|round), parts')
+    print('\nquery options: version (file prefix, default v5), name, tier, arms (3|4), wave, frames, art (raised|proud|inlay|none), text (recessed|inlay|raised), '
+          'seat (lip|plain), grip (ridges|notches|none), magnet (none|disc), screw (m3|none), weight (none|bezel|cog), bezel (flat|round), parts')
     print('presets: full, inlays, testring, stillset, bezel, cog, plain  (defined in spinner-config.js)')
 
 
@@ -98,6 +99,21 @@ def arc_text(text, r, size, depth, z0, top, track):
     return cq.Workplane('XY').add(parts).combine()
 
 
+def ridged_ring(R, n, w, depth, r_in, z0, h):
+    """Ring with n round-bottomed grooves (w wide, depth deep) round its outer edge, full height —
+    true arcs, so the STEP stays light in SolidWorks."""
+    hw, pitch = (w / 2) / R, 2 * math.pi / n
+    P = lambda r, a: (r * math.cos(a), r * math.sin(a))
+    start = P(R, -hw)
+    wp = cq.Workplane('XY').workplane(offset=z0).moveTo(*start)
+    for k in range(n):
+        a = k * pitch
+        wp = wp.threePointArc(P(R - depth, a), P(R, a + hw))                          # groove
+        end = start if k == n - 1 else P(R, a + pitch - hw)
+        wp = wp.threePointArc(P(R, a + pitch / 2), end)                               # land (the ridge)
+    return wp.close().extrude(h).cut(cyl(r_in, z0 - 0.1, h + 0.2))
+
+
 def cog_shape(n, r_tip, r_root, r_bore):
     pts, pitch = [], 2 * math.pi / n
     for i in range(n):
@@ -112,7 +128,7 @@ def cog_shape(n, r_tip, r_root, r_bore):
 # ---------------------------------------------------------------------------
 class Spinner:
     BUILDERS = {'body': 'body', 'wave-water': 'wave_water', 'wave-foam': 'wave_foam', 'hub': 'hub', 'hub-text': 'hub_text',
-                'back-cap': 'back_cap', 'bearing': 'bearing', 'magnet': 'magnet', 'weight': 'weight'}
+                'back-cap': 'back_cap', 'bearing': 'bearing', 'screw': 'screw', 'magnet': 'magnet', 'weight': 'weight'}
 
     def __init__(self, cfg):
         self.cfg, self.o, self.D = cfg, cfg['options'], cfg['dim']
@@ -120,6 +136,15 @@ class Spinner:
         self.shift = self.D['lip'] if self.o['seat'] == 'lip' else 0    # how far the body sits behind the bearing's back face
         self._art = None
         self.notes = {}
+        self.has_screw = self.o.get('screw') == 'm3' and self.o['magnet'] != 'disc'
+
+    # -- centre screw (mirrors screwZ() in spinner-config.js): countersink top at the divot bottom,
+    #    the seated head's top face, the tip
+    def screw_z(self):
+        D = self.D
+        csk = -D['capSpacer'] - self.cap_t() + D['dishDepth']
+        head = csk + (D['screwHeadD'] - D['screwHead']) / 2
+        return csk, head, head + D['screwLen']
 
     def build(self, part_id):
         return getattr(self, self.BUILDERS[part_id])()
@@ -158,8 +183,14 @@ class Spinner:
             arm = (cq.Workplane('XY').box(arm_len, D['armW'], t, centered=(True, True, False))
                    .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), 90 + i * 360 / o['arms']))
             body = body.union(arm)
-        body = body.union(cyl(D['ringOut'], 0, t, D['ringIn']))
-        # finger notches: scallops in the outer edge from the back, the front notchKeep stays a clean circle
+        n_ridge = self.cfg.get('ridges', 0)
+        if n_ridge:     # v5 micro ridges: fine round-bottomed grooves the full thickness of the rim
+            body = body.union(ridged_ring(D['ringOut'], n_ridge, D['ridgeW'], D['ridgeDepth'], D['ringIn'], 0, t))
+            self.notes['grip'] = (f"{n_ridge} micro ridges: grooves {D['ridgeW']} wide × {D['ridgeDepth']} deep, "
+                                  f"pitch {2 * math.pi * D['ringOut'] / n_ridge:.2f} mm, front to back")
+        else:
+            body = body.union(cyl(D['ringOut'], 0, t, D['ringIn']))
+        # v4 finger notches: scallops in the outer edge from the back, the front notchKeep stays a clean circle
         n_notch = 2 * self.cfg['wave']['N'] if o['grip'] == 'notches' and o['weight'] != 'bezel' else 0
         if n_notch:
             Rc = D['ringOut'] + D['notchR'] - D['notchDepth']
@@ -217,6 +248,12 @@ class Spinner:
             hub = hub.cut(self._text(z_disc + D['hubT'] - D['inlay'], D['inlay']))
         elif o['text'] == 'raised':
             hub = hub.union(self._text(z_disc + D['hubT'] - 0.2, D['relief'] + 0.2))
+        if self.has_screw:                          # blind pilot up the stem for the centre screw to self-tap into
+            z0, top = t - D['stemLen'] - 0.1, z_disc + D['hubT'] - D['frontSkin']
+            hub = hub.cut(cyl(D['screwPilot'] / 2, z0, top - z0))
+            tip = self.screw_z()[2]
+            self.notes['hub'] = (f"{D['hubT']} thick, {D['standoff']} stand-off; pilot Ø{D['screwPilot']} × {top - z0 - 0.1:.1f} deep, "
+                                 f"{D['frontSkin']} skin under the face; screw engages {tip - (t - D['stemLen']):.1f} mm, {top - tip:.1f} spare")
         return hub
 
     def hub_text(self):
@@ -237,16 +274,34 @@ class Spinner:
         if self.o['magnet'] == 'disc':
             self.notes['cap'] = f"magnet pocket Ø{D['magPocketD']} × {D['magPocketDepth']} on a {T - D['magPocketDepth']:.1f} floor"
             return cap.cut(cyl(D['magPocketD'] / 2, z_back, D['magPocketDepth']))
-        rd, dd = D['dishD'] / 2, D['dishDepth']                    # spherical finger dish in the back face
+        rd, dd = D['dishD'] / 2, D['dishDepth']                    # spherical finger divot in the back face
         R = (rd * rd + dd * dd) / (2 * dd)
-        self.notes['cap'] = f"grip plate {T} thick, finger dish Ø{D['dishD']} × {dd} (sphere R {R:.0f})"
-        return cap.cut(cq.Workplane('XY').add(cq.Solid.makeSphere(R, cq.Vector(0, 0, z_back + dd - R), angleDegrees1=-90, angleDegrees2=90)))
+        self.notes['cap'] = f"grip plate {T} thick, finger divot Ø{D['dishD']} × {dd} (sphere R {R:.0f})"
+        cap = cap.cut(cq.Workplane('XY').add(cq.Solid.makeSphere(R, cq.Vector(0, 0, z_back + dd - R), angleDegrees1=-90, angleDegrees2=90)))
+        if self.has_screw:      # clearance hole up the middle + a 90° countersink, head flush in the divot bottom
+            csk = self.screw_z()[0]
+            rh, rs = D['screwHeadD'] / 2, D['screwD'] / 2
+            cap = cap.cut(cyl(rs, z_back - 0.1, D['capSpacer'] + T + D['stemLen'] + 0.2))
+            cap = cap.cut(cyl(rh, z_back - 0.1, csk - z_back + 0.1))                     # opens the divot round the head
+            cap = cap.cut(cq.Workplane('XY').add(cq.Solid.makeCone(rh, rs, rh - rs, cq.Vector(0, 0, csk), cq.Vector(0, 0, 1))))
+            self.notes['cap'] += f"; Ø{D['screwD']} hole + 90° countersink Ø{D['screwHeadD']} for an M3 × {D['screwLen']} countersunk screw"
+        return cap
 
     # -- bought parts, for the STEP assembly only
     def bearing(self):
         b, t = self.D['bearing'], self.t
         return (cyl(b['od'] / 2, 0, t, b['outerId'] / 2).union(cyl(b['innerOd'] / 2, 0, t, b['id'] / 2))
                 .union(cyl(b['outerId'] / 2, 0.3, t - 0.6, b['innerOd'] / 2)))
+
+    def screw(self):
+        """M3 countersunk screw, simplified (no thread), for the STEP assembly."""
+        if not self.has_screw:
+            return None
+        D = self.D
+        _, head, tip = self.screw_z()
+        rh, r = D['screwHead'] / 2, 1.5                       # ISO 10642 M3: head Ø5.5 actual, 90°
+        cone = cq.Workplane('XY').add(cq.Solid.makeCone(rh, r, rh - r, cq.Vector(0, 0, head), cq.Vector(0, 0, 1)))
+        return cone.union(cyl(r, head + rh - r - 0.01, tip - head - (rh - r) + 0.01))
 
     def magnet(self):
         D = self.D
@@ -318,7 +373,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -332,7 +387,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -402,7 +457,7 @@ def main():
         asm = cq.Assembly(name='surftober-spinner')
         for pid, (wp, _, meta) in built.items():
             asm.add(wp, name=pid, color=hex_color(meta['color']))
-        for pid, color in (('bearing', '#d0d4d8'), ('magnet', '#333333'), ('weight', cfg['tier']['color'])):
+        for pid, color in (('bearing', '#d0d4d8'), ('screw', '#9aa0a6'), ('magnet', '#333333'), ('weight', cfg['tier']['color'])):
             if pid in cfg['active']:
                 ref = sp.build(pid)
                 if ref is not None:
