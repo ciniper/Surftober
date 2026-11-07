@@ -323,16 +323,43 @@
         <p class="lede">${fmt(b.words)} words · ${fmt(b.entries.length)} entries · <span class="book-pages">${fmt(Math.round(b.words / 130))}</span> pages</p>
         <p class="lede" style="font-size:28px">Title from the three most-said words: ${words}</p>
         <p class="muted" style="font-size:24px;margin-top:40px">Enter or click the book to open · ← → to turn pages · Esc to close</p></div>
-      <div class="cover" role="button" tabindex="0" data-open-book aria-label="Open the book">
+      <div class="cover" role="button" tabindex="0" data-open-book="journal" aria-label="Open the book">
         <span class="cover-spine"></span>
         <span class="cover-face"><span class="cover-kicker">Surftober ${CFG.year}</span><span class="cover-title">${esc(bookTitle(d))}</span>
           <span class="cover-by">Collected journals of the crew</span><img class="cover-logo" src="${LOGO}" alt=""></span>
-      </div>`, opensBook: true };
+      </div>`, opensBook: 'journal' };
+  }
+
+  // Photo album cover: a 2x2 collage of the season's first photos.
+  function albumCoverSlide(d) {
+    const ph = d.photos;
+    if (!ph.length) return null;
+    const people = new Set(ph.map((s) => s.user)).size;
+    const collage = ph.filter((_, i) => i % Math.max(1, Math.floor(ph.length / 4)) === 0).slice(0, 4)
+      .map((s) => `<img src="${esc(s.photo_url)}" alt="" loading="lazy">`).join('');
+    return { title: 'The Photo Album', cls: 'bookslide', html: `
+      <div class="bookslide-copy"><p class="kicker">From the camera rolls</p><h2>The photo album</h2>
+        <p class="lede">${fmt(ph.length)} photos · ${people} photographers · one per page</p>
+        <p class="muted" style="font-size:24px;margin-top:40px">Enter or click to open · ← → to turn pages · Esc to close</p></div>
+      <div class="cover album" role="button" tabindex="0" data-open-book="photos" aria-label="Open the photo album">
+        <span class="cover-spine"></span>
+        <span class="cover-face"><span class="cover-kicker">Surftober ${CFG.year}</span><span class="cover-title">The Photo Album</span>
+          <span class="collage">${collage}</span></span>
+      </div>`, opensBook: 'photos' };
+  }
+
+  // Everyone's book: one tile per surfer; click a tile to open their book.
+  function shelfSlide(d) {
+    const tiles = d.totals.map((t, i) => `<div class="shelf-tile" role="button" tabindex="0" data-open-book="person" data-user-i="${i}" aria-label="Open ${esc(d.name(t.user))}'s book">
+        ${av(d, t.user, 58)}<span class="st-name">${esc(d.name(t.user))}</span><span class="st-h">${t.total_hours.toFixed(1)}h ${dot(t.medal)}</span></div>`).join('');
+    return { title: "Everyone's book", html: `<p class="kicker">Click your name</p><h2>Everyone's book</h2>
+      <div class="shelf">${tiles}</div>` };
   }
 
   // Pages are laid out by measuring real text in an off-screen page of the
   // same size, so long entries split cleanly across pages ("cont.").
-  let BOOK = null; // { pages: [html], spread: 0 }
+  let BOOK = null;          // the open book: { kind, pages: [html], spread }
+  let BOOKS = new Map();    // kind -> bound book (journal / photos / person:<i>)
   const entryHead = (d, e, cont) => `<div class="be-head"><b>${esc(d.name(e.user))}</b> · ${esc(dayLabel(e.date))}${e.location ? ` · ${esc(e.location)}` : ''}${cont ? ' <i>(cont.)</i>' : ''}</div>`;
   async function paginate(d) {
     // Measure with the real serif: a font that isn't on screen yet isn't
@@ -384,24 +411,93 @@
     const total = Math.ceil(pages.length / 2);
     $('#book-meta').textContent = `${spread * 2 + 1}–${Math.min(pages.length, spread * 2 + 2)} of ${pages.length}`;
     $('#book-bar').style.width = `${((spread + 1) / total) * 100}%`;
+    // warm the next spread's photos so flipping never shows a blank frame
+    const tmp = document.createElement('div');
+    tmp.innerHTML = (pages[spread * 2 + 2] || '') + (pages[spread * 2 + 3] || '');
+    tmp.querySelectorAll('img').forEach((im) => { const i = new Image(); i.src = im.getAttribute('src'); });
+  }
+
+  // ----- photo album pages: one photo per page -----
+  function photoPages(d) {
+    const pages = d.photos.map((s) => `<figure class="bphoto"><img src="${esc(s.photo_url)}" alt="" decoding="async">
+      <figcaption>${entryHead(d, { user: s.user, date: String(s.date).slice(0, 10), location: s.location || '' })}${s.notes ? `<p>${esc(s.notes.length > 140 ? s.notes.slice(0, 137) + '…' : s.notes)}</p>` : ''}</figcaption></figure>`);
+    const title = `<div class="b-title"><div class="cover-kicker">Surftober ${CFG.year}</div><h3>The Photo Album</h3>
+      <p>Everything the crew pointed a camera at</p><p class="b-stats">${fmt(d.photos.length)} photos</p><img src="${LOGO}" alt=""></div>`;
+    const all = [title, ...pages, '<div class="b-title"><h3>The End</h3><p>Smile for next year.</p></div>'];
+    if (all.length % 2) all.splice(all.length - 1, 0, '');
+    return all;
+  }
+
+  // ----- personal book: cover page + session tiles, 4 per page -----
+  const TYPE_LABEL = { surf: 'Surf', swim: 'Swim', windsport: 'Wind', other: 'Other', cleanup: 'Cleanup', photography: 'Photo shoot', water: 'Water reading' };
+  const hm = (m) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  function sessionTile(d, s) {
+    const c = d.conditionOf(s._id);
+    const bonus = [s.no_wetsuit && 'No wetsuit', s.costume && 'Costume', s.taught_kook && 'Taught a kook', s.cleanup_items > 0 && `Cleanup ×${s.cleanup_items}`].filter(Boolean);
+    const cond = c ? `<div class="t-cond"><span class="rating" style="--rc:var(--r-${esc(c.rating || 'FLAT')})">${esc(DS.RATING_LABEL[c.rating] || 'No rating')}</span>`
+      + `${c.wind_kts_avg != null ? `<span>${Math.round(c.wind_kts_avg)} kt wind</span>` : ''}`
+      + `${c.tide_start_ft != null ? `<span>tide ${Number(c.tide_start_ft).toFixed(1)}→${Number(c.tide_end_ft ?? c.tide_start_ft).toFixed(1)} ft</span>` : ''}</div>` : '';
+    return `<div class="tile${s.photo_url ? ' has-photo' : ''}">
+      ${s.photo_url ? `<img class="t-photo" src="${esc(s.photo_url)}" alt="" decoding="async">` : ''}
+      <div class="t-head"><b>${esc(dayLabel(String(s.date).slice(0, 10)))}</b>${s.start_time ? ` · ${esc(String(s.start_time).slice(0, 5))}` : ''} · ${hm(s.duration_minutes)} · ${esc(TYPE_LABEL[s.type] || s.type || '')}</div>
+      <div class="t-loc">${esc([s.location, s.board].filter(Boolean).join(' · ') || '—')}</div>
+      ${cond}${bonus.length ? `<div class="t-bonus">${bonus.map((b) => `<span>${esc(b)}</span>`).join('')}</div>` : ''}
+      ${s.notes ? `<p class="t-notes">${esc(s.notes)}</p>` : ''}</div>`;
+  }
+  function awardsOf(d, user) {
+    const all = [...d.awards, ...d.conditionAwards, d.bonusJunkies].filter(Boolean);
+    const won = all.filter((a) => a.winners.some((w) => w.user === user)).map((a) => ({ name: a.name, label: a.winners.find((w) => w.user === user).label }));
+    if (d.rivalry && d.rivalry.pair.includes(user)) won.push({ name: d.rivalry.name, label: d.rivalry.label });
+    const ru = all.filter((a) => a.runnersUp.some((w) => w.user === user)).map((a) => a.name);
+    return { won, ru };
+  }
+  function personPages(d, i) {
+    const t = d.totals[i];
+    const ss = d.sessionsOf(t.user);
+    const { won, ru } = awardsOf(d, t.user);
+    const spots = new Set(ss.map((s) => DS.normLocation(s.location)).filter(Boolean)).size;
+    const title = `<div class="b-title person">${av(d, t.user, 190, 'big')}<h3>${esc(d.name(t.user))}</h3>
+      <p class="b-stats">${t.total_hours.toFixed(1)} hours · ${dot(t.medal)} ${t.medal} · ${ss.length} sessions · ${spots} spots</p>
+      ${won.length ? `<div class="p-awards">${won.map((a) => `<div>🏆 <b>${esc(a.name.replace(/^The /, '').replace(/ Award$/, ''))}</b> — ${esc(a.label)}</div>`).join('')}</div>` : ''}
+      ${ru.length ? `<p class="p-ru">Runner-up: ${esc(ru.map((n) => n.replace(/^The /, '').replace(/ Award$/, '')).join(' · '))}</p>` : ''}</div>`;
+    const pages = [];
+    for (let k = 0; k < ss.length; k += 4) pages.push(`<div class="tiles">${ss.slice(k, k + 4).map((s) => sessionTile(d, s)).join('')}</div>`);
+    const all = [title, ...pages];
+    if (all.length % 2) all.push('');
+    return all;
+  }
+
+  async function bindBook(kind) {
+    const d = window.__deck;
+    if (kind === 'journal') return paginate(d);
+    if (kind === 'photos') return photoPages(d);
+    if (kind.startsWith('person:')) return personPages(d, Number(kind.slice(7)));
+    return [];
   }
   // Bound once per data load (in the background right after render, so the
   // cover can show the real page count); opening just reuses it.
   let binding = null;
-  function ensureBook() {
-    const d = window.__deck;
-    if (BOOK || !d || !$('#book-measure')) return Promise.resolve();
-    if (!binding) binding = paginate(d).then((pages) => { BOOK = { pages, spread: 0 }; binding = null; });
-    return binding;
+  function ensureBook(kind = 'journal') {
+    if (BOOKS.has(kind) || !window.__deck || !$('#book-measure')) return Promise.resolve(BOOKS.get(kind));
+    if (kind === 'journal' && binding) return binding;
+    const p = bindBook(kind).then((pages) => { const b = { kind, pages, spread: 0 }; BOOKS.set(kind, b); if (kind === 'journal') binding = null; return b; });
+    if (kind === 'journal') binding = p;
+    return p;
   }
-  async function openBook() {
+  async function openBook(kind = 'journal') {
     if (!window.__deck) return;
     $('#book').hidden = false;
     stage.classList.add('reading');
-    if (!BOOK) { $('#book-spread').innerHTML = '<div class="b-loading">Binding the book…</div>'; await ensureBook(); }
+    $('#book').dataset.kind = kind.split(':')[0];
+    BOOK = BOOKS.get(kind) || null;
+    if (!BOOK) { $('#book-spread').innerHTML = '<div class="b-loading">Binding the book…</div>'; BOOK = await ensureBook(kind); }
     if (!$('#book').hidden) renderSpread();
   }
-  function closeBook() { $('#book').hidden = true; stage.classList.remove('reading'); }
+  function openFrom(el) {
+    const k = el.dataset.openBook || 'journal';
+    openBook(k === 'person' ? `person:${el.dataset.userI}` : k);
+  }
+  function closeBook() { $('#book').hidden = true; stage.classList.remove('reading'); BOOK = null; }
   const bookOpen = () => !!$('#book') && !$('#book').hidden && !!BOOK;
   function turn(n) {
     if (!BOOK) return;
@@ -519,7 +615,7 @@
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
-    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
+    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
       gallerySlide('T-shirt', 'Merch', 'T-shirt concept', (C.tshirt || {}).images, 'tshirt.images', (C.tshirt || {}).note), outroSlide());
     return slides.filter(Boolean);
   }
@@ -556,8 +652,8 @@
       + `<div class="book" id="book" hidden><div class="book-spread" id="book-spread"></div>`
       + `<div class="book-chrome"><span id="book-meta"></span><span class="book-track"><span id="book-bar"></span></span><button type="button" class="book-close" data-close-book>Close · Esc</button></div>`
       + `</div><div class="bpage measure" aria-hidden="true"><div class="bpage-content" id="book-measure"></div></div>`; // measuring page sits OUTSIDE the (hidden) book: display:none has no size
-    BOOK = null; binding = null; // new data -> re-bind the book
-    setTimeout(ensureBook, 400);
+    BOOK = null; BOOKS = new Map(); binding = null; // new data -> re-bind the books
+    setTimeout(() => ensureBook('journal'), 400);
     // Grid = live thumbnails: each slide's own markup at 1/8 scale, before
     // any reveal (so opening the grid on the projector spoils nothing).
     $('#overview').innerHTML = slides.map((s, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}: ${esc(s.title)}"><span class="thumb" aria-hidden="true"><span class="thumb-inner"><section class="slide ${s.cls || ''}">${s.html}</section></span></span><small>${i + 1}</small>${esc(s.title)}</button>`).join('');
@@ -604,7 +700,8 @@
       }
       return;
     }
-    if (e.key === 'Enter' && slides[cur] && slides[cur].opensBook) { e.preventDefault(); openBook(); return; }
+    if (e.key === 'Enter' && slides[cur] && slides[cur].opensBook) { e.preventDefault(); openBook(slides[cur].opensBook); return; }
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-open-book]')) { e.preventDefault(); openFrom(e.target.closest('[data-open-book]')); return; }
     const gridOpen = $('#overview').classList.contains('open');
     if (gridOpen && e.key !== 'Escape' && e.key !== 'g' && e.key !== 'G') return;
     switch (e.key) {
@@ -622,7 +719,7 @@
     }
   });
   $('#viewport').addEventListener('click', (e) => {
-    if (e.target.closest('[data-open-book]')) { openBook(); return; }
+    if (e.target.closest('[data-open-book]')) { openFrom(e.target.closest('[data-open-book]')); return; }
     if (e.target.closest('[data-close-book]')) { closeBook(); return; }
     if (bookOpen()) { (e.clientX < innerWidth / 2 ? turn(-1) : turn(1)); return; }
     if (e.target.closest('a, button, audio')) return;

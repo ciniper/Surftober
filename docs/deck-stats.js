@@ -555,6 +555,11 @@
       book: { entries: journal, words: journalWordTotal, topWords },
       features: { failed: failedFeature, audioLogs },
       name, RATING_ORDER, RATING_LABEL, profileOf,
+      // per-surfer session list (date order) + conditions by session id, for
+      // the personal books
+      sessionsOf: (u) => [...(byUser.get(u) || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start_time || '').localeCompare(String(b.start_time || ''))),
+      conditionOf: (id) => condBy.get(id) || null,
+      photos: sessions.filter((s) => s.photo_url).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start_time || '').localeCompare(String(b.start_time || ''))),
     };
   }
 
