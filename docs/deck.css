@@ -36,10 +36,12 @@
   --hero-line: rgba(209, 71, 15, .45);
   --shadow: 0 2px 10px rgba(80, 55, 20, .08);
   --title-text: #2d2416;
-  /* Surfline's rating scale — the exact colors app.js SURF_RATING uses, so
-     the deck and the app's session strip agree (they read on both themes). */
-  --r-FLAT: #9aa7b3; --r-VERY_POOR: #c25b5b; --r-POOR: #d98a4e; --r-POOR_TO_FAIR: #e0b23e; --r-FAIR: #c9c94b;
-  --r-FAIR_TO_GOOD: #8fc95f; --r-GOOD: #4bbf7a; --r-VERY_GOOD: #3aa9a0; --r-GOOD_TO_EPIC: #4b96d9; --r-EPIC: #8a6fd9;
+  /* Surfline's rating scale (red → orange → gold → green → deep green → blue
+     → purple). Fair is green so the Poor-fair | Fair divide is obvious; the
+     five steps October used were checked with the dataviz validator (each
+     adjacent pair ΔE ≥ 15). Diverges from app.js SURF_RATING on purpose. */
+  --r-FLAT: #9aa7b3; --r-VERY_POOR: #a8323a; --r-POOR: #e0612e; --r-POOR_TO_FAIR: #d4a017; --r-FAIR: #45a65a;
+  --r-FAIR_TO_GOOD: #12734e; --r-GOOD: #0e6b7d; --r-VERY_GOOD: #2f6fd0; --r-GOOD_TO_EPIC: #6a55d0; --r-EPIC: #a04ac0;
   --platinum: #e5e4e2; --gold: #ffd700; --silver: #c0c0c0; --bronze: #cd7f32; --participant: #48ba74; --observer: #9aa8b3;
   --display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
