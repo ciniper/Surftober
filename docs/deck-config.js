@@ -69,7 +69,10 @@ window.SurftoberDeckConfig = {
   weatherRecap: '',  // water temp, fog, wind
 
   // Fundraising (2025: $1,480 contributed, 2x company match, 5 beach cleanups).
-  charity: { contributed: null, match: '', note: '' },
+  // `contributed` = what people actually gave (leave null to show the pledge
+  // estimate: $/hour × hours). `matchMultiplier` 2 = company match doubles it,
+  // the way the 2025 deck counted $1,480 contributed → $2,960 raised.
+  charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '' },
 
   // Judged awards — the data can't pick these. `winner` is free text.
   judged: {

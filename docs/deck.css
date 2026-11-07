@@ -239,6 +239,15 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .vs .side { display: flex; flex-direction: column; gap: 22px; align-items: flex-start; }
 .cloud.faces-cloud > span { display: inline-flex; align-items: center; gap: 14px; padding: 8px 24px 8px 8px; }
 
+/* ---------- failed feature: audio log cards ---------- */
+.audio-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 30px; }
+.audio-card { display: flex; gap: 20px; align-items: flex-start; background: var(--panel); border: 1.5px solid var(--line); border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow); }
+.ac-body { min-width: 0; flex: 1; }
+.ac-head { font-size: 26px; color: var(--text-2); }
+.ac-head b { color: var(--text); }
+.ac-notes { font-size: 24px; color: var(--text-3); margin: 8px 0 14px; font-style: italic; }
+.audio-card audio { width: 100%; height: 48px; }
+
 /* ---------- chrome: progress bar, status chip, grid overview ---------- */
 .progress { position: absolute; left: 0; bottom: 0; height: 8px; background: linear-gradient(90deg, var(--sun-1), var(--accent)); transition: width .3s; z-index: 5; }
 .footer { position: absolute; left: 120px; right: 120px; bottom: 40px; display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--text-3); z-index: 5; }

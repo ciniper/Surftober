@@ -40,6 +40,7 @@
       water_reading: s.water_reading ? 1 : 0,
       cleanup_items: s.cleanup_items || 0,
       photo_url: s.photo_url || null,
+      audio_url: s.audio_url || null,
       start_time: s.start_time || null,
     });
   }
@@ -378,6 +379,21 @@
       // ties on share go to whoever rounded the most sessions
       r: rank(precUsers.map((u) => ({ user: u, value: roundShare(u, 15) + durs(u).length * 1e-6, label: `${pct(roundShare(u, 15))} of ${durs(u).length} sessions rounded to 15 minutes` }))) });
 
+    // --- The Failed Feature Award: the app feature the crew used least ---
+    const FEATURES = [
+      ['Voice notes', (s) => !!s.audio_url], ['Water readings', (s) => s.type === 'water' || s.water_reading],
+      ['Photo shoots', (s) => s.type === 'photography'], ['Teach a kook', (s) => s.taught_kook],
+      ['Beach cleanups', (s) => s.type === 'cleanup' || s.cleanup_items > 0], ['Costume surfs', (s) => s.costume],
+      ['No-wetsuit sessions', (s) => s.no_wetsuit], ['Session photos', (s) => !!s.photo_url],
+      ['Start times', (s) => !!s.start_time], ['Journal entries', (s) => !!(s.notes && s.notes.trim())],
+    ];
+    const featureUse = FEATURES.map(([feature, f]) => ({ user: feature, value: sessions.filter(f).length }))
+      .map((x) => ({ ...x, label: `${x.value} all season` }));
+    const failedFeature = rank(featureUse, { dir: 'min', n: 2 });
+    const audioLogs = sessions.filter((s) => s.audio_url).map((s) => ({
+      user: s.user, date: String(s.date).slice(0, 10), location: s.location || '', url: s.audio_url, notes: s.notes || '', minutes: s.duration_minutes,
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
     // --- "Tell me where it hurts…" (2025 slide) ---
     // One count per journal entry per complaint. Wave-size phrasing ("head
     // high", "3-4 feet", "overhead") is deliberately not an injury.
@@ -505,6 +521,7 @@
       event, stats, totals, awards, conditionAwards, rivalry, bonusJunkies, costumeSurfers,
       yoy: { ascenders, returning: yoy, rookies, missing },
       hurts: { counts: hurtCounts, wounded },
+      features: { failed: failedFeature, audioLogs },
       name, RATING_ORDER, RATING_LABEL, profileOf,
     };
   }
