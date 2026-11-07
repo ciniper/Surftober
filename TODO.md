@@ -58,8 +58,9 @@
 - [ ] Live games (Chase has ideas) — slides are plain {title, html, steps}
       objects in deck.js buildSlides(), so a game is just another builder.
 - [ ] **Make the deck viewable on the site** (Chase, 2026-11-06) — for now a
-      temporary "🏆 Award Ceremony deck" button sits under the Main heading
-      (index.html .deck-cta, presentation branch only). Still open:
+      temporary "🏆 Award Ceremony" button sits at the top of the
+      landing page (landing.html .btn-ceremony, no sign-in needed) and under
+      the Main heading (index.html .deck-cta) — presentation branch only. Still open:
       deck.html already builds/deploys with the rest of docs/ once merged;
       still to decide: a link from the app (Account → Awards?), and timing —
       winners compute client-side from public data, so a link before the
