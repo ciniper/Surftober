@@ -394,6 +394,37 @@
       user: s.user, date: String(s.date).slice(0, 10), location: s.location || '', url: s.audio_url, notes: s.notes || '', minutes: s.duration_minutes,
     })).sort((a, b) => a.date.localeCompare(b.date));
 
+    // --- The Book: every journal entry, in order, + its 3 most-said words ---
+    const journal = sessions.filter((s) => s.notes && s.notes.trim())
+      .map((s) => ({ user: s.user, date: String(s.date).slice(0, 10), start: s.start_time || '', location: s.location || '', text: s.notes.trim().replace(/\s+/g, ' ') }))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start) || a.user.localeCompare(b.user));
+    const STOP = new Set(('a about above after again against all am an and any are aren as at be because been before being below between both but by can cant could ' +
+      'couldnt did didnt do does doesnt doing dont down during each few for from further had hadnt has hasnt have havent having he hed hes her here heres hers ' +
+      'herself him himself his how hows i id ill im ive if in into is isnt it its itself lets me more most mustnt my myself no nor not of off on once only or ' +
+      'other ought our ours ourselves out over own same shant she shed shell should shouldnt so some such than that thats the their theirs them themselves then ' +
+      'there theres these they theyd theyll theyre theyve this those through to too under until up very was wasnt we wed well were weve werent what whats when ' +
+      'whens where wheres which while who whos whom why whys with wont would wouldnt you youd youll youre youve your yours yourself yourselves also just got get ' +
+      'gets getting one two three really bit lot lots much many still even though back went go going way like little made make day today ones').split(' '));
+    const wordCounts = new Map();
+    let journalWordTotal = 0;
+    for (const e of journal) {
+      for (const raw of e.text.toLowerCase().replace(/[’`]/g, "'").match(/[a-z']+/g) || []) {
+        journalWordTotal++;
+        const w = raw.replace(/'/g, '');
+        if (w.length < 3 || STOP.has(w)) continue;
+        wordCounts.set(w, (wordCounts.get(w) || 0) + 1);
+      }
+    }
+    // "wave" + "waves" are one word for the title (keep the more-used spelling)
+    for (const [w, n] of [...wordCounts]) {
+      if (w.endsWith('s') && wordCounts.has(w.slice(0, -1)) && w.length > 3) {
+        const base = w.slice(0, -1), keep = n >= wordCounts.get(base) ? w : base, drop = keep === w ? base : w;
+        wordCounts.set(keep, n + wordCounts.get(base));
+        wordCounts.delete(drop);
+      }
+    }
+    const topWords = [...wordCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([word, n]) => ({ word, n }));
+
     // --- "Tell me where it hurts…" (2025 slide) ---
     // One count per journal entry per complaint. Wave-size phrasing ("head
     // high", "3-4 feet", "overhead") is deliberately not an injury.
@@ -521,6 +552,7 @@
       event, stats, totals, awards, conditionAwards, rivalry, bonusJunkies, costumeSurfers,
       yoy: { ascenders, returning: yoy, rookies, missing },
       hurts: { counts: hurtCounts, wounded },
+      book: { entries: journal, words: journalWordTotal, topWords },
       features: { failed: failedFeature, audioLogs },
       name, RATING_ORDER, RATING_LABEL, profileOf,
     };

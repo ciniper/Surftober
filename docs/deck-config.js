@@ -99,4 +99,8 @@ window.SurftoberDeckConfig = {
 
   // Hand-picked journal quotes: { text, by }.
   quotes: [],
+
+  // The journal book. Empty title = built from the 3 most-said words
+  // ("The Fun, the Waves & the Good"); set a string to override.
+  bookTitle: '',
 };

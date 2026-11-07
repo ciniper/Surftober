@@ -84,6 +84,12 @@
 - [ ] **Instagram award** (Chase, 2026-11-06 — not started) — best profile:
       profile photo plus the photos posted with sessions (146 session photos
       this year; sessions.photo_url, public_profiles.photo_base64).
+- [x] **The Book** (Chase, 2026-11-07) — cover slide in the journals section;
+      Enter/click opens every journal entry (750, ~18.6k words) as a 2-page
+      book, ←/→/swipe/click to flip, Esc/Enter to close. Title = the 3
+      most-said non-stopwords ("The Fun, the Waves & the Good"; override with
+      bookTitle in deck-config.js). Laid out by measuring real text in the
+      serif, so long entries continue across pages ("cont.").
 - [x] **Failed Feature award** (Chase, 2026-11-06) — least-used app feature,
       computed from sessions; voice notes win (2 all season, both Chase's)
       and the reveal plays both logs. Giving back now shows pledges × the

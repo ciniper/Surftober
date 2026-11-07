@@ -307,6 +307,111 @@
     return out;
   }
 
+  // ---------- The Book: every journal entry as a flip-through book ----------
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+  function bookTitle(d) {
+    if (CFG.bookTitle) return CFG.bookTitle;
+    const w = d.book.topWords.map((x) => cap(x.word));
+    return w.length >= 3 ? `The ${w[0]}, the ${w[1]} & the ${w[2]}` : 'The Collected Journals';
+  }
+  function bookCoverSlide(d) {
+    const b = d.book;
+    if (!b.entries.length) return null;
+    const words = b.topWords.map((x) => `“${esc(x.word)}” ×${x.n}`).join(' · ');
+    return { title: 'The Book', cls: 'bookslide', html: `
+      <div class="bookslide-copy"><p class="kicker">From the journals</p><h2>The whole season, in one book</h2>
+        <p class="lede">${fmt(b.words)} words · ${fmt(b.entries.length)} entries · <span class="book-pages">${fmt(Math.round(b.words / 130))}</span> pages</p>
+        <p class="lede" style="font-size:28px">Title from the three most-said words: ${words}</p>
+        <p class="muted" style="font-size:24px;margin-top:40px">Enter or click the book to open · ← → to turn pages · Esc to close</p></div>
+      <div class="cover" role="button" tabindex="0" data-open-book aria-label="Open the book">
+        <span class="cover-spine"></span>
+        <span class="cover-face"><span class="cover-kicker">Surftober ${CFG.year}</span><span class="cover-title">${esc(bookTitle(d))}</span>
+          <span class="cover-by">Collected journals of the crew</span><img class="cover-logo" src="${LOGO}" alt=""></span>
+      </div>`, opensBook: true };
+  }
+
+  // Pages are laid out by measuring real text in an off-screen page of the
+  // same size, so long entries split cleanly across pages ("cont.").
+  let BOOK = null; // { pages: [html], spread: 0 }
+  const entryHead = (d, e, cont) => `<div class="be-head"><b>${esc(d.name(e.user))}</b> · ${esc(dayLabel(e.date))}${e.location ? ` · ${esc(e.location)}` : ''}${cont ? ' <i>(cont.)</i>' : ''}</div>`;
+  async function paginate(d) {
+    // Measure with the real serif: a font that isn't on screen yet isn't
+    // fetched by fonts.ready, so request the book's faces explicitly first.
+    try { await Promise.all(['400 24px Newsreader', 'italic 400 24px Newsreader', '600 72px Newsreader'].map((f) => document.fonts.load(f))); await document.fonts.ready; } catch { /* layout with fallback font */ }
+    const m = $('#book-measure');
+    const fits = () => m.scrollHeight <= m.clientHeight + 1;
+    const pages = [];
+    let cur = '';
+    m.innerHTML = '';
+    const flush = () => { if (cur) pages.push(cur); cur = ''; m.innerHTML = ''; };
+    for (const e of d.book.entries) {
+      let words = e.text.split(' ');
+      let cont = false;
+      while (words.length) {
+        const el = document.createElement('div');
+        el.className = 'be';
+        const html = (n) => `${entryHead(d, e, cont)}<p>${esc(words.slice(0, n).join(' '))}${n < words.length ? ' …' : ''}</p>`;
+        el.innerHTML = html(words.length);
+        m.appendChild(el);
+        if (fits()) { cur += el.outerHTML; break; }
+        let lo = 0, hi = words.length;
+        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); el.innerHTML = html(mid); if (fits()) lo = mid; else hi = mid - 1; }
+        if (lo < 12 && cur) { m.removeChild(el); flush(); continue; } // too little room: start a fresh page
+        lo = Math.max(lo, 1);
+        el.innerHTML = html(lo);
+        cur += el.outerHTML;
+        words = words.slice(lo);
+        cont = true;
+        flush();
+      }
+    }
+    flush();
+    const title = `<div class="b-title"><div class="cover-kicker">Surftober ${CFG.year}</div><h3>${esc(bookTitle(d))}</h3>
+      <p>Collected journals of the crew</p><p class="b-stats">${fmt(d.book.words)} words · ${fmt(d.book.entries.length)} entries · ${fmt(d.stats.surfers)} authors</p>
+      <img src="${LOGO}" alt=""></div>`;
+    const end = `<div class="b-title"><h3>The End</h3><p>See you in the water.</p><p class="b-stats">Surftober ${CFG.year + 1} — coming soon</p></div>`;
+    const all = [title, ...pages, end];
+    if (all.length % 2) all.splice(all.length - 1, 0, ''); // keep "The End" on a right-hand page
+    document.querySelectorAll('.book-pages').forEach((n) => { n.textContent = fmt(all.length); });
+    return all;
+  }
+  function renderSpread(dir) {
+    const { pages, spread } = BOOK;
+    const L = pages[spread * 2] ?? '', R = pages[spread * 2 + 1] ?? '';
+    const num = (i) => (i > 0 && i < pages.length - 1 && pages[i] ? `<div class="b-num">${i}</div>` : '');
+    $('#book-spread').innerHTML = `<div class="bpage left${dir === 'back' ? ' flip-back' : ''}"><div class="bpage-content">${L}</div>${num(spread * 2)}</div>`
+      + `<div class="bpage right${dir === 'fwd' ? ' flip-fwd' : ''}"><div class="bpage-content">${R}</div>${num(spread * 2 + 1)}</div>`;
+    const total = Math.ceil(pages.length / 2);
+    $('#book-meta').textContent = `${spread * 2 + 1}–${Math.min(pages.length, spread * 2 + 2)} of ${pages.length}`;
+    $('#book-bar').style.width = `${((spread + 1) / total) * 100}%`;
+  }
+  // Bound once per data load (in the background right after render, so the
+  // cover can show the real page count); opening just reuses it.
+  let binding = null;
+  function ensureBook() {
+    const d = window.__deck;
+    if (BOOK || !d || !$('#book-measure')) return Promise.resolve();
+    if (!binding) binding = paginate(d).then((pages) => { BOOK = { pages, spread: 0 }; binding = null; });
+    return binding;
+  }
+  async function openBook() {
+    if (!window.__deck) return;
+    $('#book').hidden = false;
+    stage.classList.add('reading');
+    if (!BOOK) { $('#book-spread').innerHTML = '<div class="b-loading">Binding the book…</div>'; await ensureBook(); }
+    if (!$('#book').hidden) renderSpread();
+  }
+  function closeBook() { $('#book').hidden = true; stage.classList.remove('reading'); }
+  const bookOpen = () => !!$('#book') && !$('#book').hidden && !!BOOK;
+  function turn(n) {
+    if (!BOOK) return;
+    const total = Math.ceil(BOOK.pages.length / 2);
+    const to = Math.max(0, Math.min(total - 1, BOOK.spread + n));
+    if (to === BOOK.spread) return;
+    BOOK.spread = to;
+    renderSpread(n > 0 ? 'fwd' : 'back');
+  }
+
   function outroSlide() {
     return { title: 'Until next time', cls: 'title', html: `<div class="sun" style="top:260px"></div>${wavesSvg()}
       <div class="content"><img class="logo" src="${LOGO}" alt=""><h1>Until next<br>time…</h1><p class="lede">See you in the water. Surftober ${CFG.year + 1}.</p></div>` };
@@ -414,7 +519,7 @@
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
-    slides.push(sectionSlide('From the journals', 'Quotes'), ...quoteSlides(), donateSlide(), filmSlide(),
+    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
       gallerySlide('T-shirt', 'Merch', 'T-shirt concept', (C.tshirt || {}).images, 'tshirt.images', (C.tshirt || {}).note), outroSlide());
     return slides.filter(Boolean);
   }
@@ -447,7 +552,12 @@
   function render(dataInfo) {
     stage.innerHTML = slides.map((s, i) => `<section class="slide ${s.cls || ''}" data-i="${i}" aria-label="${esc(s.title)}">${s.html}</section>`).join('')
       + `<div class="footer"><span><img src="${LOGO}" alt="">Surftober ${CFG.year}</span><span id="pageno"></span></div><div class="progress" id="progress"></div>`
-      + `<div class="status${dataInfo.err ? ' err' : ''}" id="status"><i></i>${esc(dataInfo.text)}</div>`;
+      + `<div class="status${dataInfo.err ? ' err' : ''}" id="status"><i></i>${esc(dataInfo.text)}</div>`
+      + `<div class="book" id="book" hidden><div class="book-spread" id="book-spread"></div>`
+      + `<div class="book-chrome"><span id="book-meta"></span><span class="book-track"><span id="book-bar"></span></span><button type="button" class="book-close" data-close-book>Close · Esc</button></div>`
+      + `</div><div class="bpage measure" aria-hidden="true"><div class="bpage-content" id="book-measure"></div></div>`; // measuring page sits OUTSIDE the (hidden) book: display:none has no size
+    BOOK = null; binding = null; // new data -> re-bind the book
+    setTimeout(ensureBook, 400);
     // Grid = live thumbnails: each slide's own markup at 1/8 scale, before
     // any reveal (so opening the grid on the projector spoils nothing).
     $('#overview').innerHTML = slides.map((s, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}: ${esc(s.title)}"><span class="thumb" aria-hidden="true"><span class="thumb-inner"><section class="slide ${s.cls || ''}">${s.html}</section></span></span><small>${i + 1}</small>${esc(s.title)}</button>`).join('');
@@ -483,6 +593,18 @@
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target.closest && e.target.closest('audio')) return; // Space = play/pause there
+    if (bookOpen()) {
+      switch (e.key) {
+        case 'ArrowRight': case 'PageDown': case ' ': e.preventDefault(); turn(1); break;
+        case 'ArrowLeft': case 'PageUp': case 'Backspace': e.preventDefault(); turn(-1); break;
+        case 'Home': e.preventDefault(); turn(-1e6); break;
+        case 'End': e.preventDefault(); turn(1e6); break;
+        case 'Escape': case 'Enter': e.preventDefault(); closeBook(); break;
+        default:
+      }
+      return;
+    }
+    if (e.key === 'Enter' && slides[cur] && slides[cur].opensBook) { e.preventDefault(); openBook(); return; }
     const gridOpen = $('#overview').classList.contains('open');
     if (gridOpen && e.key !== 'Escape' && e.key !== 'g' && e.key !== 'G') return;
     switch (e.key) {
@@ -500,6 +622,9 @@
     }
   });
   $('#viewport').addEventListener('click', (e) => {
+    if (e.target.closest('[data-open-book]')) { openBook(); return; }
+    if (e.target.closest('[data-close-book]')) { closeBook(); return; }
+    if (bookOpen()) { (e.clientX < innerWidth / 2 ? turn(-1) : turn(1)); return; }
     if (e.target.closest('a, button, audio')) return;
     (e.clientX < innerWidth * 0.3 ? prev : next)();
   });
@@ -509,10 +634,10 @@
     if (touchX == null) return;
     const dx = e.changedTouches[0].clientX - touchX;
     touchX = null;
-    if (Math.abs(dx) > 50) { e.preventDefault(); (dx < 0 ? next : prev)(); }
+    if (Math.abs(dx) > 50) { e.preventDefault(); if (bookOpen()) turn(dx < 0 ? 1 : -1); else (dx < 0 ? next : prev)(); }
   });
   $('#overview').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
+    const b = e.target.closest('button[data-i]');
     if (b) { show(Number(b.dataset.i)); toggleGrid(false); }
   });
   addEventListener('resize', fit);
