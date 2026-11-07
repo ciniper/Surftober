@@ -508,6 +508,115 @@
     renderSpread(n > 0 ? 'fwd' : 'back');
   }
 
+  // ---------- "Who said that?" live game ----------
+  const GCFG = CFG.game || {};
+  const gameSuffix = new URLSearchParams(location.search).get('game');
+  const GAME_ID = `${GCFG.id || `${CFG.team}-ceremony`}${gameSuffix ? `-${gameSuffix}` : ''}`;
+  const PLAY_URL = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}play.html${gameSuffix ? `?g=${encodeURIComponent(GAME_ID)}` : ''}`;
+  let GROUNDS = [];
+  function gameSlides(d) {
+    if (!window.SurftoberGame) return [];
+    GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
+    if (!GROUNDS.length) return [];
+    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
+      <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
+        <p class="lede">${GROUNDS.length} journal quotes. Four suspects each. Vote from your phone.</p>
+        <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
+        <div class="g-status" data-g="host"></div></div>
+        <div class="g-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>` };
+    const rounds = GROUNDS.map((r, i) => ({ title: `Who said that? · ${i + 1}`, cls: 'award game', steps: 1, game: { kind: 'round', r }, html: `
+      <div class="head"><div><p class="kicker">Who said that? · Round ${i + 1} of ${GROUNDS.length}</p></div><div class="num" data-g="count"></div></div>
+      <blockquote class="g-quote">“${esc(r.quote)}”</blockquote>
+      <div class="g-choices">${r.choiceUsers.map((u, k) => `<div class="g-choice" data-choice="${esc(r.choices[k])}">${av(d, u, 92)}<span class="g-name">${esc(r.choices[k])}</span><span class="g-bar"><i></i></span><span class="g-n"></span></div>`).join('')}</div>
+      <div class="g-foot"><span class="g-status" data-g="status"></span><span class="reveal g-ans">It was <b>${esc(r.answer)}</b>${r.date ? ` · ${esc(dayLabel(r.date))}` : ''}${r.location ? ` · ${esc(r.location)}` : ''} <span data-g="got"></span></span></div>` }));
+    const board = { title: 'Who said that? · Leaderboard', cls: 'game', game: { kind: 'board' }, html: `
+      <p class="kicker">Who said that?</p><h2>Leaderboard</h2><div class="g-board" data-g="board"><p class="lede">Scores appear as rounds are revealed.</p></div>` };
+    return [intro, ...rounds, board];
+  }
+
+  // Runtime: poll while a game slide is on screen. The host (admin signed in
+  // on this browser) opens each round on arrival and writes the answer at
+  // the reveal; anyone else sees a live mirror, or a rehearsal if no rows.
+  const GAME = { host: null, rows: new Map(), timer: null, qrDone: false, note: '' };
+  function gameStop() { clearInterval(GAME.timer); GAME.timer = null; }
+  function gameOnShow() {
+    gameStop();
+    const s = slides[cur];
+    if (!s || !s.game || !window.SurftoberGame) return;
+    gameTick();
+    GAME.timer = setInterval(gameTick, 1500);
+  }
+  function gameErr(e) {
+    if (e && e.missingTables) return 'Rehearsal mode — game tables not set up yet (run supabase-upgrade-2026-11-game.sql).';
+    if (e && (e.status === 401 || e.status === 403)) return 'Rehearsal mode — sign in as the admin in this browser to collect votes.';
+    return 'Offline — showing the round without live votes.';
+  }
+  function drawQR(el) {
+    if (!el || el.dataset.done) return;
+    const paint = () => {
+      try { const q = window.qrcode(0, 'M'); q.addData(PLAY_URL); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 10, margin: 2, scalable: true }); el.dataset.done = '1'; }
+      catch { el.innerHTML = `<div class="g-url">${esc(PLAY_URL)}</div>`; }
+    };
+    if (window.qrcode) return paint();
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+    sc.onload = paint;
+    sc.onerror = () => { el.innerHTML = `<div class="g-url">${esc(PLAY_URL)}</div>`; };
+    document.head.appendChild(sc);
+  }
+  async function gameTick() {
+    const G = window.SurftoberGame, s = slides[cur], el = stage.querySelector(`.slide[data-i="${cur}"]`);
+    if (!s || !s.game || !el) return;
+    const set = (k, html) => { const n = el.querySelector(`[data-g="${k}"]`); if (n) n.innerHTML = html; };
+    if (GAME.host === null) { const ses = await G.session(); GAME.host = G.isHost(ses); GAME.email = ses && ses.user && ses.user.email; }
+    try {
+      if (s.game.kind === 'intro') {
+        drawQR(el.querySelector('[data-g="qr"]'));
+        const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
+        const players = new Set(vs.map((v) => v.user_id)).size;
+        set('host', `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
+      } else if (s.game.kind === 'round') {
+        const r = s.game.r;
+        let row = GAME.rows.get(r.round_no);
+        if (!row) {
+          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          if (row) GAME.rows.set(r.round_no, row);
+        }
+        if (row && step >= 1 && row.status !== 'revealed' && GAME.host) {
+          const done = await G.reveal(row.id, r.answer);
+          row = (done && done[0]) || { ...row, status: 'revealed', answer: r.answer };
+          GAME.rows.set(r.round_no, row);
+        }
+        const vs = row ? await G.votesFor([row.id]) : [];
+        const counts = new Map(r.choices.map((c) => [c, 0]));
+        for (const v of vs) counts.set(v.choice, (counts.get(v.choice) || 0) + 1);
+        const total = vs.length, max = Math.max(1, ...counts.values()), shown = step >= 1;
+        el.querySelectorAll('.g-choice').forEach((c) => {
+          const n = counts.get(c.dataset.choice) || 0;
+          c.classList.toggle('right', shown && c.dataset.choice === r.answer);
+          c.classList.toggle('wrong', shown && c.dataset.choice !== r.answer);
+          c.querySelector('.g-bar i').style.width = shown ? `${(n / max) * 100}%` : '0';
+          c.querySelector('.g-n').textContent = shown && row ? String(n) : '';
+        });
+        set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
+        set('status', row ? (shown ? '' : 'Voting open — pick on your phone') : esc(GAME.note || gameErr(null)));
+        set('got', shown && row && total ? `· ${counts.get(r.answer) || 0} of ${total} got it` : '');
+      } else if (s.game.kind === 'board') {
+        const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
+        const rows = G.scoreboard(rs, vs).slice(0, 10);
+        const byId = new Map([...window.__deck.profileOf.entries()].map(([u, p]) => [p.id, u]));
+        const revealed = rs.filter((r) => r.status === 'revealed').length;
+        set('board', rows.length ? `<ol class="g-rank">${rows.map((x, i) => `<li><span class="g-pos">${i + 1}</span>${byId.has(x.user_id) ? av(window.__deck, byId.get(x.user_id), 56) : ''}<span class="g-pname">${esc(byId.has(x.user_id) ? window.__deck.name(byId.get(x.user_id)) : x.name)}</span><span class="g-pts">${x.right} / ${revealed}</span></li>`).join('')}</ol>`
+          : '<p class="lede">No votes yet.</p>');
+      }
+    } catch (e) {
+      GAME.note = gameErr(e);
+      set('status', esc(GAME.note));
+      if (s.game.kind === 'intro') set('host', esc(GAME.note));
+      if (s.game.kind === 'round' && step >= 1) el.querySelectorAll('.g-choice').forEach((c) => { c.classList.toggle('right', c.dataset.choice === s.game.r.answer); c.classList.toggle('wrong', c.dataset.choice !== s.game.r.answer); });
+    }
+  }
+
   function outroSlide() {
     return { title: 'Until next time', cls: 'title', html: `<div class="sun" style="top:260px"></div>${wavesSvg()}
       <div class="content"><img class="logo" src="${LOGO}" alt=""><h1>Until next<br>time…</h1><p class="lede">See you in the water. Surftober ${CFG.year + 1}.</p></div>` };
@@ -615,6 +724,7 @@
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
+    slides.push(...gameSlides(d));
     slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
       gallerySlide('T-shirt', 'Merch', 'T-shirt concept', (C.tshirt || {}).images, 'tshirt.images', (C.tshirt || {}).note), outroSlide());
     return slides.filter(Boolean);
@@ -667,6 +777,7 @@
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
     stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
+    gameOnShow();
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;

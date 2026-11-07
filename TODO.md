@@ -72,11 +72,18 @@
       seasons are already rows in `events` and the app scopes by viewedEvent;
       open questions: per-surfer recap page vs. app event-switcher, and
       whether the deck takes ?team= to show any past season.
-- [ ] **"Who said that?" live game** (Chase, 2026-11-06 — not started) —
-      deck shows a journal quote, people vote on the site from their phones,
-      results show live on the slide. Builds on the Live games item above.
-      Needs somewhere to store votes (new table + realtime) = a DB change,
-      Chase approves and runs any SQL.
+- [ ] **"Who said that?" live game** (Chase, 2026-11-07 — BUILT, needs the SQL)
+      — deck: join slide (QR → /play.html), 6 rounds (seeded quote picks, 4
+      faces each, live vote count, → reveals answer + per-name counts),
+      leaderboard. Phones: play.html, sign in with the normal account, tap a
+      name (changeable until the reveal), see right/wrong + score. Tested
+      end-to-end against a mocked API only. TO GO LIVE: Chase runs
+      supabase-upgrade-2026-11-game.sql (2 new tables, additive), then hosts
+      from a browser signed in as the admin. Rehearse with deck.html?game=
+      rehearsal (separate game id; the QR carries it). Polls every 1.5 s —
+      no realtime publication change. Follow-ups: sign-in on play.html
+      returns to the app, not back to play.html (add a returnTo); a host key
+      to reset a rehearsal game.
 - [ ] **Vote for Best Dressed** (Chase, 2026-11-06 — not started) — let the
       crew vote on the costume-surf winner (candidates = everyone who logged a
       costume session; the deck already lists them on the Best Dressed slide).

@@ -326,6 +326,36 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .t-notes { margin: 2px 0 0; font: 400 17px/1.35 'Newsreader', Georgia, serif; color: #2d2416; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 9; overflow: hidden; }
 .tile.has-photo .t-notes { -webkit-line-clamp: 4; }
 
+/* ---------- "Who said that?" ---------- */
+.g-intro { display: flex; gap: 80px; align-items: center; flex: 1; }
+.g-intro > div:first-child { flex: 1; min-width: 0; }
+.g-steps { font-size: 34px; line-height: 1.5; margin: 30px 0 0; padding-left: 1.2em; color: var(--text-2); }
+.g-steps b { color: var(--text); }
+.g-qr { width: 460px; height: 460px; flex: none; background: #fff; border-radius: 24px; padding: 18px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.g-qr svg { width: 100%; height: 100%; }
+.g-url { font: 700 28px var(--body); color: #2d2416; text-align: center; word-break: break-all; }
+.g-status { font-size: 24px; color: var(--text-3); margin-top: 26px; display: block; }
+.g-status code { font-size: .9em; }
+.g-quote { flex: 1; display: flex; align-items: center; margin: 10px 0 30px; font: 600 60px/1.2 'Newsreader', Georgia, serif; letter-spacing: -0.01em; max-width: 1600px; text-wrap: balance; }
+.g-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: auto; }
+.g-choice { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 10px 18px; align-items: center; padding: 22px; border-radius: 20px; background: var(--panel); border: 2.5px solid var(--line); box-shadow: var(--shadow); transition: opacity .4s, border-color .4s, transform .4s; }
+.g-choice .av { grid-row: span 2; }
+.g-name { font: 800 36px/1.05 var(--display); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-bar { grid-column: 2; height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.g-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun-1), var(--accent)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.g-n { grid-row: 1 / span 2; grid-column: 3; font: 800 44px var(--display); font-variant-numeric: tabular-nums; }
+.g-choice.right { border-color: var(--accent); transform: translateY(-8px); box-shadow: 0 0 0 6px rgba(255,107,53,.18), var(--shadow); }
+.g-choice.wrong { opacity: .45; }
+.g-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 30px; margin-top: 30px; min-height: 48px; }
+.g-foot .g-status { margin: 0; }
+.g-ans { font-size: 32px; color: var(--text-2); }
+.g-ans b { color: var(--highlight-text); }
+.g-rank { list-style: none; padding: 0; margin: 30px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; }
+.g-rank li { display: flex; align-items: center; gap: 18px; padding: 14px 20px; border-radius: 16px; background: var(--panel); border: 1.5px solid var(--line); font-size: 32px; }
+.g-pos { font: 800 30px var(--display); color: var(--text-3); width: 40px; text-align: right; }
+.g-pname { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-pts { font: 800 34px var(--display); font-variant-numeric: tabular-nums; color: var(--highlight-text); }
+
 /* ---------- chrome: progress bar, status chip, grid overview ---------- */
 .progress { position: absolute; left: 0; bottom: 0; height: 8px; background: linear-gradient(90deg, var(--sun-1), var(--accent)); transition: width .3s; z-index: 5; }
 .footer { position: absolute; left: 120px; right: 120px; bottom: 40px; display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--text-3); z-index: 5; }
