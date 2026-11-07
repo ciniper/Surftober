@@ -241,9 +241,11 @@
     const c = CFG.charity || {};
     const s = d.stats;
     // Actual total once it's known (config); until then the pledge estimate.
-    const money = c.contributed != null
-      ? `<div class="stat hero"><div class="v">$${fmt(c.contributed)}</div><div class="k">contributed${c.match ? ` · ${esc(c.match)}` : ''}</div></div>`
-      : `<div class="stat hero"><div class="v">$${fmt(s.pledged)}</div><div class="k">pledged so far: each surfer's $/hour × their hours (estimate until <code style="font-size:.8em">charity.contributed</code> is filled in)</div></div>`;
+    const mult = Number(c.matchMultiplier) > 0 ? Number(c.matchMultiplier) : 1;
+    const base = c.contributed != null ? Number(c.contributed) : s.pledged;
+    const how = `$${fmt(base)} ${c.contributed != null ? 'contributed' : 'pledged'}${mult > 1 ? ` × ${esc(c.match || `${mult}x match`)}` : ''}`;
+    const fine = c.contributed != null ? '' : `<div class="k" style="font-size:20px;color:var(--text-3)">Pledged = each surfer's $/hour × their hours — an estimate until charity.contributed is filled in.</div>`;
+    const money = `<div class="stat hero"><div class="v">$${fmt(base * mult)}</div><div class="k">raised · ${how}</div>${fine}</div>`;
     return { title: 'Giving back', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
       <div class="stats">${money}
         <div class="stat"><div class="v">${s.cleanupSessions}</div><div class="k">beach cleanups logged</div></div>
@@ -351,12 +353,34 @@
       ${f.url ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(f.url)}</p>` : todo('Film title + link', 'shortFilm')}` };
   }
 
+  // The Failed Feature Award: the winner is an app feature, not a surfer —
+  // and the reveal plays the feature's entire output for the season.
+  function failedFeatureSlide(d, i, n) {
+    const f = d.features.failed;
+    if (!f.winners.length) return null;
+    const w = f.winners[0];
+    const logs = w.user === 'Voice notes' ? d.features.audioLogs : [];
+    const cards = logs.map((a) => `<div class="audio-card">${av(d, a.user, 64)}<div class="ac-body">
+        <div class="ac-head"><b>${esc(d.name(a.user))}</b> · ${esc(dayLabel(a.date))}${a.location ? ` · ${esc(a.location)}` : ''}</div>
+        ${a.notes ? `<div class="ac-notes">“${esc(a.notes.length > 110 ? a.notes.slice(0, 107) + '…' : a.notes)}”</div>` : ''}
+        <audio controls preload="none" src="${esc(a.url)}"></audio></div></div>`).join('');
+    const by = [...new Set(logs.map((a) => d.name(a.user)))];
+    const ru = f.runnersUp.length ? `<div class="ru"><b>Also struggling</b>${f.runnersUp.map((r) => `<span><em>${esc(r.user)}</em> · ${r.value}</span>`).join('')}</div>` : '';
+    return { title: 'The Failed Feature Award', cls: 'award', steps: 1, html: `
+      <div class="head"><div><p class="kicker">Award · app edition</p><h2>The Failed Feature Award</h2><div class="desc">The app feature the crew used the least</div></div><div class="num">${i} / ${n}</div></div>
+      <div class="stagefloor"><div class="mystery">?</div><div class="reveal">
+        <div class="winner many">${esc(f.winners.map((x) => x.user).join(' & '))}!</div>
+        <div class="value">${w.value} all season${by.length ? ` — ${by.length === 1 ? `all by ${esc(by[0])}` : `by ${esc(by.join(' & '))}`}` : ''}</div>
+        ${cards ? `<div class="audio-cards">${cards}</div>` : ''}${ru}
+      </div></div>` };
+  }
+
   // 2025 order, with the 2023/2024 superlatives slotted next to their
   // cousins; the conditions awards follow as their own section.
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
     'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'best-dressed', 'board-hoarder', 'fish', 'marathon', 'rivalry',
     'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies'];
+    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature'];
   const JUDGED = {
     'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
     'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
@@ -369,7 +393,7 @@
     byId.set('bonus-junkies', d.bonusJunkies);
     // A computed award wins over its judged fallback (e.g. Aim for the Stars
     // is computed when goals are readable, judged otherwise).
-    const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry));
+    const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length;
     const C = CFG;
     const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), recapSlide(), leaderboardSlide(d),
@@ -381,6 +405,7 @@
     for (const id of order) {
       i++;
       if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
+      else if (id === 'failed-feature') slides.push(failedFeatureSlide(d, i, n));
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
     }
@@ -457,6 +482,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('audio')) return; // Space = play/pause there
     const gridOpen = $('#overview').classList.contains('open');
     if (gridOpen && e.key !== 'Escape' && e.key !== 'g' && e.key !== 'G') return;
     switch (e.key) {
@@ -474,7 +500,7 @@
     }
   });
   $('#viewport').addEventListener('click', (e) => {
-    if (e.target.closest('a, button')) return;
+    if (e.target.closest('a, button, audio')) return;
     (e.clientX < innerWidth * 0.3 ? prev : next)();
   });
   let touchX = null;

@@ -84,10 +84,20 @@
 - [ ] **Instagram award** (Chase, 2026-11-06 — not started) — best profile:
       profile photo plus the photos posted with sessions (146 session photos
       this year; sessions.photo_url, public_profiles.photo_base64).
+- [x] **Failed Feature award** (Chase, 2026-11-06) — least-used app feature,
+      computed from sessions; voice notes win (2 all season, both Chase's)
+      and the reveal plays both logs. Giving back now shows pledges × the
+      company match (charity.matchMultiplier, default 2).
 - [ ] **Talker award** (Chase, 2026-11-06 — not started) — most audio logs
       (sessions.audio_url). Heads-up: only 2 audio logs all season, both
       Chase's, so it needs more voice notes (or a different metric) to be a
       real contest.
+- [ ] **Awards on profile pages** (Chase, 2026-11-06 — not started) — each
+      surfer's Sessions/profile page lists the awards they won (and
+      runner-up spots), per season. The computation already exists in
+      deck-stats.js computeDeck(); the app would load it next to awards.js and
+      look up the viewed user. Pairs with the Surftober archive item. Judged
+      awards come from deck-config.js, so they'd show once filled in.
 - [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — not started) —
       slides on how the money is used, a program overview, the funding lab,
       and data analysis. Related: the BWTF API notes under "Official BWTF
