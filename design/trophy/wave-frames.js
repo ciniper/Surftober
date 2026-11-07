@@ -40,6 +40,15 @@ const SHAPES = {
   reswell1: [[0, S], [.1, .225], [.2, .24], [.28, .25], [.36, .25], [.44, .24], [.52, .235], [.6, .24], [.68, .255], [.76, .27], [.83, .285], [.9, .29], [.95, .26], [1, S]],  // next swell starts behind the whitewater
   reswell2: [[0, S], [.12, .225], [.22, .245], [.3, .265], [.38, .28], [.46, .28], [.53, .27], [.6, .255], [.66, .245], [.72, .24], [.8, .245], [.88, .25], [.95, .24], [1, S]],
   rebuild:  [[0, S], [.12, .22], [.24, .27], [.33, .36], [.41, .47], [.49, .57], [.55, .62], [.6, .61], [.64, .57], [.67, .5], [.69, .42], [.72, .33], [.78, .25], [1, S]],
+  // v5 hollow throw (Chase, 2026-11-04: "extends out further instead of breaks so vertical"): the lip
+  // pitches out almost horizontally and lands far ahead of the wave, leaving a long open tube
+  hpeak:    [[0, S], [.08, .22], [.17, .26], [.25, .34], [.32, .46], [.39, .6], [.46, .7], [.53, .74], [.59, .725], [.63, .68], [.65, .6], [.665, .48], [.7, .3], [1, S]],
+  hthrow:   [[0, S], [.08, .22], [.17, .27], [.25, .37], [.32, .52], [.39, .67], [.47, .78], [.62, .82], [.72, .7], [.67, .68], [.6, .7], [.55, .55], [.6, .28], [1, S]],
+  htube:    [[0, S], [.08, .22], [.17, .27], [.25, .38], [.32, .55], [.39, .71], [.48, .83], [.71, .86], [.85, .63], [.79, .63], [.67, .73], [.52, .59], [.56, .27], [1, S]],
+  hcurtain: [[0, S], [.08, .22], [.17, .27], [.25, .37], [.32, .53], [.4, .68], [.5, .79], [.77, .8], [.93, .44], [.865, .46], [.71, .66], [.53, .55], [.56, .26], [1, S]],
+  hland:    [[0, S], [.08, .22], [.17, .26], [.26, .35], [.34, .48], [.43, .61], [.53, .7], [.71, .71], [.95, .27], [.89, .3], [.74, .56], [.57, .48], [.6, .25], [1, S]],
+  himpact:  [[0, S], [.1, .22], [.2, .25], [.3, .31], [.4, .4], [.5, .48], [.6, .52], [.7, .52], [.78, .49], [.84, .45], [.89, .4], [.93, .34], [.97, .27], [1, S]],
+  hrebuild: [[0, S], [.08, .22], [.17, .25], [.25, .31], [.33, .41], [.4, .51], [.47, .58], [.53, .6], [.58, .57], [.61, .51], [.63, .43], [.65, .35], [.7, .26], [1, S]],
   rebuild2: [[0, S], [.12, .22], [.24, .27], [.33, .37], [.41, .5], [.49, .62], [.555, .68], [.605, .675], [.64, .64], [.66, .58], [.672, .5], [.684, .39], [.74, .25], [1, S]],
 };
 
@@ -95,6 +104,144 @@ export const WAVE_VARIANTS = {
     label: 'Snowy plover · flap + run', N: 10, mode: 'stay', kind: 'sprite',
     layers: { water: '#efe7d2', foam: '#1d3050' }, layerNames: { water: 'body', foam: 'details' },
   },
+  // v5 (Chase, 2026-11-04): the plover getting barreled — a navy silhouette crouched on a cream
+  // surfboard inside an open tube (the ring colour shows through), looking out of its mouth. Only a little moves: the lip breathes, spray flicks off its tip,
+  // the bird bobs, rocks its board and balances on its wing. Drawn by barrelScene().
+  plovertube: {
+    label: 'Plover in the barrel', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'lip, board, eye' },
+    motion: { lip: .4, walk: .06, crest: .01, bob: .008, wing: [0, 6], tilt: 1.5, crouch: .25 },
+  },
+  ploverspit: {
+    label: 'Plover · the barrel spits', N: 8, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'lip, spray, board, eye' },
+    motion: { lip: .4, walk: .06, crest: .008, bob: .006, wing: [3, 8], tilt: 2, crouch: .45, spit: 1 },
+  },
+  plovertuck: {
+    // the lip pitches out and down mid-loop while the bird tucks under it, then both open up again
+    label: 'Plover · tuck and stand', N: 9, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'lip, board, eye' },
+    motion: { lip: .4, walk: .06, crest: .015, bob: .003, wing: [0, 6], tilt: 1, crouch: .8, tuck: true },
+  },
+  // v5 options (Chase, 2026-11-04: "foam a little closer to whitewater return", "legs crossed over each
+  // other"): the lip's foam is the whitewater-return cluster of round bubbles riding its tip, growing as
+  // it throws over (foam: 'ww'); legs: 'cross' = crossed stance (each foot under the other hip),
+  // lead: 'back' = cross-stepping (the back foot crosses over the front one, like walking to the nose).
+  ploverwash: {
+    label: 'Plover · whitewater lip', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .22, reach: 1, walk: .036, lift: .018, crest: .01, bob: .005, tilt: .9, crouch: .15, foam: 'ww', splash: 1 },
+  },
+  plovercross: {
+    label: 'Plover · crossed legs', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .22, reach: 1, walk: .036, lift: .018, crest: .01, bob: .005, tilt: .9, crouch: .15, foam: 'ww', splash: 1, legs: 'cross' },
+  },
+  ploverxstep: {
+    label: 'Plover · cross-steps', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .22, reach: 1, walk: .054, lift: .018, stance: .6, crest: .01, bob: .004, tilt: .9, crouch: .12, foam: 'ww', splash: 1, lead: 'back' },
+  },
+  // Cross-step with a breathing back (Chase, 2026-11-04): "when it's not fully barreling the back of the
+  // wave a little bit wider, and when the whitewater has crashed it should compress and get skinnier".
+  // back = how far the back slope widens / narrows about the crest (± fraction); backLag = how far behind
+  // the lip it moves (loop fraction); rise = how much the back stands up as it narrows. The wave also sits
+  // further right (shift .32) while the plover stays where it was (birdShift .22), clearing its tail.
+  ploverback: {
+    label: 'Plover · cross-steps, breathing back', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .32, birdShift: .22, reach: 1, walk: .054, lift: .018, stance: .6, crest: .01, bob: .004, tilt: .9, crouch: .12, foam: 'ww', splash: 1, lead: 'back', back: .12 },
+  },
+  ploverbacklag: {
+    label: 'Plover · cross-steps, back follows the crash', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .32, birdShift: .22, reach: 1, walk: .054, lift: .018, stance: .6, crest: .01, bob: .004, tilt: .9, crouch: .12, foam: 'ww', splash: 1, lead: 'back', back: .14, backLag: .1 },
+  },
+  ploverbackrise: {
+    label: 'Plover · cross-steps, back stands up', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .32, birdShift: .22, reach: 1, walk: .054, lift: .018, stance: .6, crest: .01, bob: .004, tilt: .9, crouch: .12, foam: 'ww', splash: 1, lead: 'back', back: .12, backLag: .05, rise: .07 },
+  },
+  // Cross-step, round 3 (Chase, 2026-11-04): "plover is moving too far forward and the beak is hitting the
+  // wave", "make the surfboard wobble a little more", the breathing back doesn't look natural — "maybe the
+  // whole wave is moving right to left". The walk is shorter (.04, was .054) and the bird sits in the middle
+  // of the tube (≥ 0.03 clear of the lip ahead and the back wall behind in every frame); the board rocks more
+  // (tilt 2°, plus a quicker wobble twice a loop). Then one whole-wave motion per option (see barrelScene).
+  ploverxstep2: {
+    label: 'Plover · cross-steps, shorter walk, wobblier board', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back' },
+  },
+  ploverfull: {
+    label: 'Plover · cross-steps, back fills and hollows', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', full: .09, fullLag: .05 },
+  },
+  ploverswell: {
+    label: 'Plover · cross-steps, swell rolls up the back', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', swell: .07 },
+  },
+  ploverlean: {
+    label: 'Plover · cross-steps, wave leans into the throw', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07 },
+  },
+  // Texture riffs on the lean (Chase, 2026-11-04: liking the lean, "should we add any texture to the wave
+  // itself?"): see TEX / texture(). Lines sit a fixed depth under the surface, so they lean and throw with it.
+  ploverleanlines: {
+    label: 'Plover · lean + flowing face lines', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 } },
+  },
+  ploverleancarve: {
+    label: 'Plover · lean + carved face lines', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2, carve: 1 } },
+  },
+  ploverleanbarrel: {
+    label: 'Plover · lean + spinning barrel lines', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { barrel: 1, dash: 2 } },
+  },
+  ploverleanbubbles: {
+    label: 'Plover · lean + bubbles up the face', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { bubbles: 1 } },
+  },
+  ploverleancarvecut: {
+    label: 'Plover · lean + carved woodcut', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, face2: 1, carve: 1 } },
+  },
+  ploverleanwoodcut: {
+    label: 'Plover · lean + woodcut strokes', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, face2: 1 } },
+  },
+  ploverslide: {
+    label: 'Plover · cross-steps, whole wave surges left', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .37, birdShift: .32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', slide: .07 },
+  },
+  ploverlive: {
+    label: 'Plover · cross-steps, all of it a little', N: 10, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .35, birdShift: .3, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', full: .05, fullLag: .05, swell: .04, lean: .03, slide: .05 },
+  },
+  plovertuckx: {
+    label: 'Plover · tuck, crossed legs', N: 9, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, board, bird' },
+    motion: { lip: .3, shift: .22, reach: .85, walk: .036, lift: .018, crest: .012, bob: .002, tilt: .6, crouch: .48, tuck: true, foam: 'ww', splash: 1, legs: 'cross' },
+  },
+  hollow: {
+    // like the whitewater return, but the lip throws far out instead of pitching straight down: it lands
+    // near the right edge, explodes, and the foam is drawn back to the left and up into the next lip
+    label: 'Hollow throw', N: 10, mode: 'stay',
+    keys: [[0, 'hpeak'], [.1, 'hthrow'], [.2, 'htube'], [.31, 'hcurtain'], [.41, 'hland'], [.52, 'himpact'], [.72, 'hrebuild'], [1, 'hpeak']],
+    tip: { size: [[0, .05], [.1, .055], [.2, .06], [.31, .065], [.41, .09], [.52, .12], [.62, .1], [.72, .07], [.86, .055], [1, .05]],
+           spray: [[0, 0], [.31, 0], [.41, .5], [.52, .4], [.62, 0], [1, 0]] },
+  },
   barrel: {
     label: 'Barrel loop', N: 8, mode: 'stay',
     keys: [[0, 'peak'], [2 / 8, 'throw'], [3 / 8, 'barrel'], [4 / 8, 'land'], [5 / 8, 'impact'], [6 / 8, 'rebuild'], [7 / 8, 'rebuild2'], [1, 'peak']],
@@ -106,6 +253,8 @@ export const WAVE_DEFAULT = 'classic';
 
 // Circle layout of a whitewater cluster, in units of its size: [dx, dy, r]
 const CLUSTER = [[0, 0, 1], [-.95, -.3, .75], [.95, -.25, .8], [-.5, .62, .68], [.52, .66, .62], [-1.7, -.55, .52], [1.7, -.5, .55], [0, -.75, .7]];
+// Splash droplets thrown off the plover barrel's foam ball, in units of its size (+x = the way the lip throws): [dx, dy, r]
+const SPLASH = [[.6, 1.75, .3], [1.5, 1.35, .26], [2.25, .75, .22], [-.4, 1.95, .22], [2.6, 1.6, .16], [1.05, 2.3, .17]];
 // Spray droplets above the cluster: [du, dv × spray]
 const SPRAY = [[-.06, .1], [.01, .17], [.07, .09], [-.025, .26], [.05, .24]];
 const mix = (a, b, k) => Array.isArray(a) ? a.map((x, i) => mix(x, b[i], k)) : a + (b - a) * k;
@@ -213,6 +362,246 @@ function sprite(V, k, A) {
   return { water: body.map(p => p.map(place)), foam: detail.map(p => p.map(place)) };
 }
 
+// ---- scene styles: the plover in the barrel ------------------------------------------------
+// Drawn in v units: x 0 → DA left to right across the design cell, y 0 → 1 up from the band's inner
+// edge, sea level SEA at both ends. The wave pitches to the RIGHT and stays open: the tube is a real
+// hole in the navy, so the ring's own colour shows through it, and the plover rides inside it as a
+// navy silhouette (cream eye and belly) on a cream board, looking out of the tube's mouth.
+const TAU = 2 * Math.PI;
+const wv = (t, ph = 0) => Math.sin(TAU * t + ph);
+// A stroke of width w(s) (s 0 → 1 along the path) laid on one side of a polyline (side +1 = right of travel).
+function band(path, w, side = 1) {
+  const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+  const inner = path.map((p, i) => {
+    const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+    const k = w(L[i] / L[L.length - 1]) * side; return [p[0] + dy / n * k, p[1] - dx / n * k];
+  });
+  return [...path, ...inner.reverse()];
+}
+// The wave, left → right along its surface: up the back, over the crest, the lip thrown far out to
+// the right and curling down (outer edge, tip, inner edge), back along the tube's ceiling, down the
+// back wall, then out along the trough under the tube's mouth to the right-hand edge.
+const TUBE = [[0, S], [.15, .225], [.32, .3], [.45, .45], [.55, .62], [.66, .78], [.8, .89], [.98, .95], [1.2, .96], [1.42, .93],
+  [1.62, .85], [1.78, .72], [1.86, .58], [1.875, .47], [1.84, .405], [1.785, .44], [1.73, .58], [1.61, .715], [1.43, .8], [1.23, .825],
+  [1.03, .78], [.91, .67], [.85, .53], [.85, .41], [.9, .31], [1.05, .258], [1.3, .24], [1.6, .235], [1.85, .228], [DA, S]];
+const TIP = 14, SEG = 6, LIP_PIVOT = [1.2, .9];
+// Holes cut into a polygon as one simple outline: each hole is joined by a thin slit to the nearest
+// vertex of the ORIGINAL outline (so slits never cross another hole). Holes may be any simple shape.
+const area2 = p => p.reduce((s, [x, y], i) => { const [X, Y] = p[(i + 1) % p.length]; return s + x * Y - X * y; }, 0);
+function withHoles(outer, holes) {
+  const sgn = Math.sign(area2(outer)), bridges = holes.map(h => {
+    h = Math.sign(area2(h)) === sgn ? [...h].reverse() : h;                     // holes run the other way round
+    let i = 0, j = 0, best = Infinity;
+    outer.forEach(([x, y], k) => h.forEach(([X, Y], m) => { const d = Math.hypot(x - X, y - Y); if (d < best) { best = d; i = k; j = m; } }));
+    return { i, ring: [...h.slice(j), ...h.slice(0, j), h[j]] };
+  }).sort((a, b) => b.i - a.i);
+  let out = [...outer];
+  for (const { i, ring } of bridges) {
+    const [ox, oy] = out[i], nx = out[(i + 1) % out.length], L = Math.hypot(nx[0] - ox, nx[1] - oy) || 1, e = Math.min(0.0015 / L, 0.4);
+    const r0 = ring[0], r1 = ring[1], M = Math.hypot(r1[0] - r0[0], r1[1] - r0[1]) || 1, f = Math.min(0.0015 / M, 0.4);
+    ring[ring.length - 1] = [r0[0] + (r1[0] - r0[0]) * f, r0[1] + (r1[1] - r0[1]) * f];           // re-enter just beside the start: a slit, not a seam
+    out = [...out.slice(0, i + 1), ...ring, [ox + (nx[0] - ox) * e, oy + (nx[1] - oy) * e], ...out.slice(i + 1)];
+  }
+  return out;
+}
+// Closed Chaikin smoothing.
+function chaikin(p, n = 3) {
+  for (let k = 0; k < n; k++) p = p.flatMap((a, i) => { const b = p[(i + 1) % p.length]; return [[.75 * a[0] + .25 * b[0], .75 * a[1] + .25 * b[1]], [.25 * a[0] + .75 * b[0], .25 * a[1] + .75 * b[1]]]; });
+  return p;
+}
+// A smooth closed outline pushed out by d along its normals (the navy outline round the bird).
+function grow(p, d) {
+  const s = Math.sign(area2(p));
+  return p.map((q, i) => { const a = p[(i + p.length - 1) % p.length], b = p[(i + 1) % p.length], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1; return [q[0] + s * dy / n * d, q[1] - s * dx / n * d]; });
+}
+// The Surftober plover (the logo bird), facing left, standing on its board; origin = middle of the deck.
+// Traced from the logo in its own pixels (head circle r 65 at 470,480; feet at y 870) and scaled down.
+// Cream bird; navy cap, eye and partial collar show through holes; navy bill and long thin legs; a navy
+// outline round the cream so it reads against the ring colour inside the tube.
+const LOGO = { s: 0.00094, x0: 580, y0: 870 };
+const lp = ([x, y]) => [(x - LOGO.x0) * LOGO.s, (LOGO.y0 - y) * LOGO.s];
+// body + neck, reaching up into the head circle (but clear of the cap and eye) so they join without a seam
+const LOGO_BODY = chaikin([[528, 462], [562, 482], [592, 500], [650, 501], [728, 516], [806, 543], [868, 572], [912, 598], [868, 612], [800, 646],
+  [725, 688], [650, 712], [590, 713], [540, 692], [505, 655], [490, 612], [478, 560], [460, 530]], 3).map(lp);
+const LOGO_COLLAR = [[588, 495], [582, 560], [551, 616], [512, 652], [495, 634], [527, 597], [553, 551], [560, 498]].map(lp);
+// q: where the bird is in its walk, 0 = stepped back (lip thrown over), 1 = stepped forward (lip pulled back).
+// Two steps each way: the front foot then the back foot going forward, the back foot then the front going back.
+function surfer(t, M, q = 0.5) {
+  const navy = [], cream = [], c = M.tuck ? M.crouch * (0.5 - 0.5 * Math.cos(TAU * t)) : M.crouch * (0.5 + 0.5 * wv(t, 2));
+  const tilt = deg(-3 + M.tilt * wv(t, 1.3) + (M.wobble || 0) * Math.sin(2 * TAU * t + 0.4)), drop = 0.05 * c - M.bob * wv(t);   // the knees take the crouch and the bob
+  // board: pointed nose left, squash tail right, nose rocker; navy-rimmed so it reads on the gold
+  const top = [], bot = [];
+  for (let i = 0; i <= 22; i++) {
+    const s = 0.02 + 0.96 * i / 22, x = 0.29 - 0.58 * s, rock = 0.045 * s ** 3, th = Math.sin(Math.PI * s) ** 0.5;
+    top.push([x, rock + 0.022 * th]); bot.push([x, rock - 0.02 * th]);
+  }
+  const board = rot([...top, ...bot.reverse()], tilt);
+  navy.push(grow(board, 0.018)); cream.push(board);
+  const deck = x => rot([[x, 0.022]], tilt)[0];
+  // the bird above its feet, lowered by the crouch, leaning into the ride a touch
+  const A = M.walk || 0, ss = x => (x = Math.min(1, Math.max(0, x)), x * x * (3 - 2 * x));
+  const lift = [A - 2 * A * q, -drop], lean = deg(-4 - 5 * c), P = q => rot([q], lean, [0, 0.2])[0].map((v, i) => v + lift[i]);
+  const body = LOGO_BODY.map(P), head = ell(...lp([470, 480]), 65 * LOGO.s, 65 * LOGO.s, 32).map(P);
+  // legs: from the belly to the feet on the deck, knees flexing forward with the crouch; flat feet, toes left
+  const sw = M.stance ?? 1, feet = (M.legs === 'cross' ? [0.065, -0.055] : [-0.055, 0.065]).map(x => 0.005 + (x - 0.005) * sw);   // crossed: each foot under the other hip
+  [530, 628].forEach((lx, n) => {
+    const fx = feet[n], j = (fx < 0) === (M.lead !== 'back') ? 0 : 1;          // which foot steps first going forward
+    const st = 2 * q - j, up = st > 0 && st < 1 ? (M.lift ?? 0.03) * Math.sin(Math.PI * st) : 0;           // this foot's step: lifted mid-swing
+    const hip = P(lp([lx, 700])), [ax, ay0] = deck(fx + A - 2 * A * ss(st)), ay = ay0 + up, knee = [(hip[0] + ax) / 2 - 0.03 * c - 0.005, (hip[1] + ay) / 2];
+    navy.push(bar(hip, knee, 0.026), bar(knee, [ax, ay], 0.026), [[ax + 0.02, ay - 0.004], [ax - 0.058, ay - 0.004], [ax - 0.058, ay + 0.016], [ax + 0.02, ay + 0.016]]);
+  });
+  navy.push(grow(body, 0.022), grow(head, 0.022), [[408, 512], [312, 546], [416, 541]].map(lp).map(P));    // outline + pointed bill
+  cream.push(withHoles(body, [LOGO_COLLAR.map(P)]));                                                       // partial collar
+  const cap = ell(...lp([488, 452]), 33 * LOGO.s, 15 * LOGO.s, 18).map(q => rot([q], deg(-4), lp([488, 452]))[0]).map(P);
+  cream.push(withHoles(head, [cap, ell(...lp([461, 500]), 14 * LOGO.s, 14 * LOGO.s, 14).map(P)]));      // cap + eye
+  return { navy, cream };
+}
+// ---- texture in the wave (Chase, 2026-11-04: "should we add any texture to the wave itself?") ----
+// Lines laid inside the navy a set depth under the wave's surface, so they follow it as it leans and
+// throws. Cream lines go on the foam layer; carved ones are cut out of the navy so the ring colour shows.
+// Nothing is narrower than 0.045 of the band (~0.55 mm) or a bubble smaller than r 0.034 (~0.8 mm across).
+// Every path is a slice of the surface between two TUBE points (×SEG), travelling so that +depth is into the water.
+const TEX = {
+  face:   { from: 1, to: 7, depth: .095, w: .045 },    // up the back to the crest (the lip is too thin for a line as well as its foam edge)
+  face2:  { from: 1, to: 4, depth: .18, w: .04 },      // a second, shorter one lower on the back
+  barrel: { from: 19, to: 24, depth: .065, w: .045 },  // inside the tube: along the ceiling and down the back wall
+};
+// The back of the wave is only ~0.25 thick and the lip ~0.13, so at most two lines fit side by side with
+// ≥ 0.04 (~0.5 mm) of navy between them and either edge; the depths above keep that in every frame.
+
+function offsetPath(path, d) {
+  return path.map((p, i) => {
+    const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+    return [p[0] + dy / n * (typeof d === 'function' ? d(i / (path.length - 1)) : d), p[1] - dx / n * (typeof d === 'function' ? d(i / (path.length - 1)) : d)];
+  });
+}
+// the part of a path between length fractions a and b (0 → 1), resampled
+function subPath(path, a, b, n = 24) {
+  const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+  const T = L[L.length - 1], pt = s => { const x = s * T; let i = 1; while (i < L.length - 1 && L[i] < x) i++; const k = (x - L[i - 1]) / ((L[i] - L[i - 1]) || 1); return [path[i - 1][0] + (path[i][0] - path[i - 1][0]) * k, path[i - 1][1] + (path[i][1] - path[i - 1][1]) * k]; };
+  return Array.from({ length: n + 1 }, (_, j) => pt(a + (b - a) * j / n));
+}
+// a brush stroke along a path: width w(s), pointed at both ends
+function brush(path, w) {
+  const L = offsetPath(path, s => -w(s) / 2), R = offsetPath(path, s => w(s) / 2);
+  return [...L, ...R.reverse()];
+}
+const env = s => Math.sin(Math.PI * Math.min(1, Math.max(0, s))) ** 0.35;
+function texture(M, t, surface, water, foam) {
+  const geo = key => ({ ...TEX[key], ...((M.tex.geo || {})[key]) });          // geo: per-style overrides of TEX
+  const line = key => { const T = geo(key); return offsetPath(surface.slice(T.from * SEG, T.to * SEG + 1), T.depth).filter(p => p[1] >= S + 0.045); };   // stop above the flat sea
+  const out = [], holes = [];
+  const lines = (keys, dash, dir) => keys.forEach(key => {
+    const P = line(key), W = geo(key).w;
+    if (!dash) { out.push(brush(subPath(P, 0, 1, 40), s => W * env(s))); return; }
+    // flowing dashes: `dash` of them along the line, each moving one gap along per loop (dir +1 = from
+    // the start of the path to its end), drawn full width only in the middle of the line so they grow
+    // in and thin away at its ends
+    for (let j = -1; j <= dash; j++) {
+      const a = (j + dir * t) / dash, b = a + 0.62 / dash, a0 = Math.max(0, a), b0 = Math.min(1, b);
+      if (b0 - a0 < 0.1) continue;                                                  // no specks at the ends
+      const g = (a0 + b0) / 2, wid = W * Math.min(1, 0.35 + env(g));
+      out.push(brush(subPath(P, a0, b0, 16), s => wid * env(s)));
+    }
+  });
+  const tx = M.tex;
+  if (tx.face) lines(['face', ...(tx.face2 ? ['face2'] : [])], tx.dash, 1);
+  if (tx.barrel) lines(['barrel'], tx.dash, -1);          // the water in the tube runs up the back wall, over the ceiling and out to the lip
+  if (tx.bubbles) {
+    // aerated face: bubbles drift up the back and out along the lip, popping in and out where it's thin
+    // (only in the thick back of the wave: in the lip they'd fill it)
+    const P = offsetPath(surface.slice(1 * SEG, 7 * SEG + 1), .11).filter(p => p[1] >= S + 0.06);
+    [[P, 4, 0]].forEach(([path, n, ph]) => {
+      for (let j = 0; j < n; j++) {
+        const s = (j + ph + t) / n % 1, e = env(s);
+        if (e < 0.55) continue;
+        const [x, y] = subPath(path, s, s, 1)[0], r = 0.034 + 0.01 * e;
+        out.push(ell(x, y, r, r, 14));
+      }
+    });
+  }
+  if (tx.carve) holes.push(...out.splice(0)); else foam.push(...out);
+  if (holes.length) water[0] = withHoles(water[0], holes);
+}
+function barrelScene(V, t) {
+  const M = V.motion, k = M.tuck ? 0.5 - 0.5 * Math.cos(TAU * t) : wv(t), k2 = M.tuck ? k : wv(t, 1.0);
+  const pts = TUBE.map(([x, y], i) => {
+    if (i >= 9 && i <= 20) {      // the lip: stretched out from / pulled back towards a pivot under the crest
+      // throwing over, the lip reaches out a little less than it drops, so the tip stays inside the cell
+      const f = i <= TIP ? Math.min(1, (i - 8) / 5) : Math.max(0, (21 - i) / 6), sc = M.lip * k * f, sx = sc > 0 ? (M.reach ?? 0.6) * sc : sc;
+      return [x + (x - LIP_PIVOT[0]) * sx, y + (y - LIP_PIVOT[1]) * sc];
+    }
+    if (i >= 6 && i <= 10) return [x, y + M.crest * k2 * (1 - Math.abs(i - 8) / 3)];                                                         // the crest swells
+    return [x, y];
+  }).map(([x, y], i) => {
+    // the back breathes: the back slope (points 1–7) widens about the crest while the lip is pulled back and
+    // narrows, optionally standing up a little, once it has thrown over and crashed
+    if (!M.back || i < 1 || i > 7) return [x, y];
+    const c = -wv(t, -TAU * (M.backLag || 0)), sc = 1 + M.back * c;
+    return [1.1 + (x - 1.1) * sc, M.rise && i <= 5 ? S + (y - S) * (1 - M.rise * c) : y];     // only the shoulder rises: the crest stays inside the slot
+  }).map(([x, y], i, a) => {
+    // whole-wave motions (here +x = the way the lip throws; k > 0 = throwing over):
+    //  full  — the back slope bulges out, full, while the lip draws back and sucks in, hollow, once it has thrown
+    //  swell — a swell rolls up the back and into the lip once a loop, arriving as it throws
+    //  lean  — the wave leans into the throw (sheared by height, the trough stays put) and rocks back
+    //  slide — the whole wave surges forward (left once mirrored) as it throws and settles back; the plover rides with it
+    if (i === a.length - 1) return [x, y];
+    const h = Math.max(0, (y - S) / (0.96 - S)), kl = wv(t, -TAU * (M.leanLag || 0));
+    let X = x + (M.lean || 0) * kl * h + (M.slide || 0) * k, Y = y;
+    if ((M.full || M.swell) && i >= 1 && i <= 7) {
+      const [px, py] = TUBE[i - 1], [nx, ny] = TUBE[i + 1], L = Math.hypot(nx - px, ny - py), s = i / 8, env = Math.sin(Math.PI * s);
+      const p = ((t + 0.6) % 1) * 1.5 - 0.25;                                         // where the swell is on the back, foot 0 → crest 1
+      const out = (M.full || 0) * -wv(t, -TAU * (M.fullLag || 0)) * env + (M.swell || 0) * env * Math.exp(-(((s - p) / 0.2) ** 2));
+      X += -(ny - py) / L * out; Y += (nx - px) / L * out;                            // along the outward normal (up the back)
+    }
+    return [X, Y];
+  }).map(([x, y], i, a) => {
+    // shift: the whole wave moves toward the back edge by `shift` (left here, right once mirrored) so the
+    // thrown lip and its whitewater stay inside the cell; the back slope is squeezed to keep its foot at the edge
+    const d = M.shift || 0;
+    return i === a.length - 1 ? [x, y] : [x - d * Math.min(1, x / 1.0), y];
+  });
+  const surface = smooth(pts.map(([x, y]) => [x / DA, y]), SEG).map(([u, v]) => [u * DA, v]);
+  const water = [[[0, 0], ...surface, [DA, 0]]], foam = [];
+  const tip = surface[TIP * SEG];
+  if (M.foam === 'ww') {
+    // whitewater-return foam: a thinner feathering edge, and the full round-bubble cluster riding the lip
+    // tip, small while the lip pulls back and boiling up as it throws over; kept whole inside the cell
+    foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, [[0, 0], [.15, .012], [.5, .026], [.85, .03], [1, .03]]), 1));
+    const q = M.tuck ? k : 0.5 + 0.5 * k, ts = 0.05 + 0.035 * q;
+    CLUSTER.forEach(([dx, dy, r]) => {
+      const R = r * ts, x = Math.min(DA - R - 0.01, Math.max(R + 0.01, tip[0] + dx * ts)), y = Math.max(R + 0.01, tip[1] + ts * 0.25 + dy * ts);
+      foam.push(ell(x, y, R, R, 16));
+    });
+    // splash: as the lip crashes over, droplets flick up and out of the foam ball, then fall back in
+    const a = M.splash ? Math.max(0, Math.min(1, (q - 0.6) / 0.35)) : 0;
+    if (a > 0.05) SPLASH.forEach(([dx, dy, r]) => {
+      const R = Math.max(0.034, r * ts * (0.5 + 0.5 * a)), e = 0.7 + 0.6 * a;     // ≥ 0.034 of the band (~0.8 mm): printable
+      const x = Math.min(DA - R - 0.01, Math.max(R + 0.01, tip[0] + dx * ts * e)), y = Math.min(TOP - R - 0.01, tip[1] + ts * 0.25 + dy * ts * e);
+      foam.push(ell(x, y, R, R, 12));
+    });
+  } else {
+    // the feathering lip: a cream edge along the top of the wave from behind the crest out to the tip
+    foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, [[0, 0], [.12, .02], [.45, .04], [.8, .04], [1, .028]]), 1));
+    // the lip tip throws a little spray as it curls over
+    const ts = 0.035 + 0.01 * wv(t, 0.7) + (M.spit ? 0.008 : 0);
+    CLUSTER.slice(0, 5).forEach(([dx, dy, r]) => foam.push(ell(tip[0] + dx * ts * 0.8, tip[1] - 0.01 + dy * ts, r * ts, r * ts, 12)));
+  }
+  if (M.tex) texture(M, t, surface, water, foam);
+  // spit: spray blown out of the tube's mouth, a steady stream that loops
+  if (M.spit) for (let j = 0; j < 7; j++) {
+    const q = (j / 7 + t) % 1, x = 1.55 + 0.55 * q, y = 0.33 + 0.07 * q - 0.12 * q * q, r = 0.028 * (1 - 0.55 * q);
+    foam.push(ell(x, y, r, r, 12));
+  }
+  // mirror it all: the wave pitches LEFT, so the logo plover (which faces left) looks out of the tube's mouth
+  const mirror = p => p.map(([x, y]) => [DA - x, y]);
+  const W2 = water.map(mirror), F2 = foam.map(mirror);
+  // the plover, low in the tube on the trough
+  const s = surfer(t, M, M.tuck ? 1 - k : (1 - k) / 2), place = p => p.map(([x, y]) => [DA - 1.24 + (M.birdShift ?? M.shift ?? 0) - (M.slide || 0) * k - (M.lean || 0) * 0.3 * wv(t, -TAU * (M.leanLag || 0)) + x, 0.262 + y]);
+  W2.push(...s.navy.map(place)); F2.push(...s.cream.map(place));
+  return { water: W2, foam: F2 };
+}
+
 // One frame at loop time t ∈ [0, 1) for a cell of aspect A: water and foam
 // polygons in cell coordinates, already clipped to the cell.
 export function waveFrame(variant, t, A = DA) {
@@ -221,6 +610,12 @@ export function waveFrame(variant, t, A = DA) {
   if (V.kind === 'sprite') {
     const s = sprite(V, t, A);
     return { water: s.water.map(clip).filter(p => p.length > 2), foam: s.foam.map(clip).filter(p => p.length > 2) };
+  }
+  if (V.kind === 'scene') {        // like a wave: shrinks uniformly in narrow cells, flat sea either side in wide ones
+    const fit = Math.min(1, A / DA), P = ([x, y]) => [0.5 + (x / DA - 0.5) * DA / A * fit, SEA + (y - SEA) * fit];
+    const s = barrelScene(V, t);
+    const water = [[[0, 0], [0, SEA], [1, SEA], [1, 0]], ...s.water.map(p => p.map(P))].map(clip).filter(p => p.length > 2);
+    return { water, foam: s.foam.map(p => clip(p.map(P))).filter(p => p.length > 2) };
   }
   const parts = [];
   if (V.mode === 'travel') {
