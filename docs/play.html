@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Who Said That?</title>
+  <link rel="icon" href="./logo.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #f5f0e8; --panel: #fff8f0; --line: #d8c7aa; --text: #2d2416; --text-2: #5e4e38; --text-3: #8a785e;
+      --accent: #ff6b35; --accent-text: #b54a17; --btn: #d1470f; --btn-2: #c2410c; --ok: #1e7a47; --no: #b23d0c;
+      --pick: #fde7d6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0a1628; --panel: #152238; --line: #2d4a62; --text: #e8f4f8; --text-2: #b4c7d3; --text-3: #7f97a8;
+        --accent-text: #ff8b5e; --ok: #4bbf7a; --no: #ff8b5e; --pick: #2a2a3e; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    main { max-width: 520px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); min-height: 100vh; display: flex; flex-direction: column; gap: 18px; }
+    header { display: flex; align-items: center; gap: 12px; }
+    header img { width: 44px; height: 44px; }
+    header h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+    header .who { margin-left: auto; font-size: 13px; color: var(--text-3); text-align: right; }
+    .card { background: var(--panel); border: 1.5px solid var(--line); border-radius: 16px; padding: 18px; }
+    .kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-text); margin: 0 0 8px; }
+    .quote { font: 600 22px/1.35 Georgia, 'Newsreader', serif; margin: 0; }
+    .choices { display: grid; gap: 10px; }
+    .choice { all: unset; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-radius: 14px;
+      background: var(--panel); border: 2px solid var(--line); font-weight: 700; font-size: 19px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .choice:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .choice.picked { border-color: var(--accent); background: var(--pick); }
+    .choice.right { border-color: var(--ok); }
+    .choice.wrong { opacity: .55; }
+    .choice .tag { font-size: 13px; font-weight: 700; color: var(--text-3); }
+    .choice.right .tag { color: var(--ok); }
+    .note { color: var(--text-2); font-size: 15px; text-align: center; margin: 0; }
+    .big { font-size: 26px; font-weight: 800; text-align: center; margin: 4px 0; }
+    .big.ok { color: var(--ok); } .big.no { color: var(--no); }
+    .btn { all: unset; display: block; text-align: center; padding: 15px 18px; border-radius: 12px; font-weight: 800; color: #fff; cursor: pointer;
+      background: linear-gradient(135deg, var(--btn), var(--btn-2)); }
+    .score { text-align: center; font-size: 15px; color: var(--text-2); }
+    .score b { font-size: 20px; color: var(--text); }
+    .spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--accent); margin: 30px auto 0; animation: s 1s linear infinite; }
+    @keyframes s { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="./logo.svg" alt=""><h1>Who said that?</h1><span class="who" id="who"></span></header>
+    <div id="view" aria-live="polite"><div class="spin" aria-label="Loading"></div></div>
+    <p class="score" id="score"></p>
+  </main>
+  <script src="./deck-config.js"></script>
+  <script src="./game.js"></script>
+  <script src="./play.js"></script>
+</body>
+</html>
