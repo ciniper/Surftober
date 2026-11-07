@@ -85,6 +85,13 @@
 - [ ] **Instagram award** (Chase, 2026-11-06 — not started) — best profile:
       profile photo plus the photos posted with sessions (146 session photos
       this year; sessions.photo_url, public_profiles.photo_base64).
+- [x] **Photo album + everyone's book** (Chase, 2026-11-07) — photo-only book
+      (146 session photos, one per page) and an "Everyone's book" slide: one
+      tile per surfer opens their own book — cover page with photo, hours,
+      medal, sessions, spots, awards won + runner-ups, then every session as
+      a tile (photo, time, spot, board, bonuses, journal, and Surfline
+      rating/wind/tide when the session has conditions). Rating colors are
+      now the app's Surfline scale (SURF_RATING) everywhere in the deck.
 - [x] **The Book** (Chase, 2026-11-07) — cover slide in the journals section;
       Enter/click opens every journal entry (750, ~18.6k words) as a 2-page
       book, ←/→/swipe/click to flip, Esc/Enter to close. Title = the 3
@@ -128,6 +135,14 @@
       · crew stat: "we surfed N% of all Fair+ windows this October"
       · per-person hours-vs-conditions scatter for the awards slides
       Also: add the session_conditions view as a tab in the sheets mirror.
+- [ ] **Conditions for non-OB sessions** (Chase, 2026-11-07 — not started) —
+      session_conditions only joins surf_history for ONE Surfline spot
+      (Central OB, 638e32a4…), so Pacifica/Santa Cruz/Bolinas/trip sessions
+      show no rating/wind/tide. Options: map normalized locations to Surfline
+      spot ids (Linda Mar, Pleasure Point, Bolinas, …; a small lookup table)
+      and have refresh_surf_report() also log those spots' hourly forecast;
+      or a one-off backfill from a historical source (Open-Meteo marine /
+      NOAA buoys) for trips. Needs SQL Chase reviews/runs.
 - [ ] **Keep a wave-height history for 2027** (found 2026-11-06 while building
       the deck — DO NOT apply mid-season; Chase reviews and runs the SQL
       by hand) — two gaps in refresh_surf_report():
