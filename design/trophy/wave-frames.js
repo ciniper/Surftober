@@ -213,15 +213,22 @@ export const WAVE_VARIANTS = {
   // rim"), but the bill is the logo's wedge (billWedge):
   // 60 px (0.87 mm) tall at the head, tapering to a round 32 px (0.46 mm) tip at x 330, ~1.3 mm out of the head.
   ploverleanfine: {
-    label: 'Plover · compact, sea to the rim, wedge bill — for a 0.2 nozzle (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93],
+    label: 'Plover · compact, sea to the rim, wedge bill, thicker wave, bigger bird — for a 0.2 nozzle (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .06,
     layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
-    motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
+    motion: { lip: .3, shift: .3, birdShift: .36, birdScale: 1.03, boardScale: 1.08, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
       squeeze: { at: 1.3, crash: .72, splash: .8 } },
   },
   // ---- exploration round (Chase, 2026-11-08: "do you think it's necessary at this point for 0.2mm or is there a
   // way to still have a cool design without .2mm? Should we add details in the water itself? should we make the
   // wave a little thicker since there's room above plover header?"). All beside ploverleanfine, none default.
-  // thick: the tube's roof 0.06 lower (≈ 1 mm more navy over the bird).
+  // sea: ploverleanfine + ripples in the flat sea under the tube's mouth (detail BELOW the wave).
+  ploverleansea: {
+    label: 'Explore · ripples in the sea below the wave (0.2 nozzle, 8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .06,
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .36, birdScale: 1.03, boardScale: 1.08, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2, sea: 2 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
+  // thick: the tube's roof 0.06 lower (≈ 1 mm more navy over the bird). (Promoted into ploverleanfine with `room`, 2026-11-08.)
   ploverleanthick: {
     label: 'Explore · thicker wave over the bird (0.2 nozzle, 8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .06,
     layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
@@ -652,6 +659,8 @@ const TEX = {
   face:   { from: 1, to: 7, depth: .095, w: .045 },    // up the back to the crest (the lip is too thin for a line as well as its foam edge)
   face2:  { from: 1, to: 4, depth: .18, w: .04 },      // a second, shorter one lower on the back
   barrel: { from: 19, to: 24, depth: .065, w: .045 },  // inside the tube: along the ceiling and down the back wall
+  sea1:   { from: 25, to: 29, depth: .06, w: .04 },    // below the wave (Chase, 2026-11-08): ripples in the flat sea under the tube's mouth…
+  sea2:   { from: 25, to: 29, depth: .13, w: .04 },    // …and a second, deeper one
 };
 // The back of the wave is only ~0.25 thick and the lip ~0.13, so at most two lines fit side by side with
 // ≥ 0.04 (~0.5 mm) of navy between them and either edge; the depths above keep that in every frame.
@@ -676,7 +685,7 @@ function brush(path, w) {
 const env = s => Math.sin(Math.PI * Math.min(1, Math.max(0, s))) ** 0.35;
 function texture(M, t, surface, water, foam, S = SEA) {
   const geo = key => ({ ...TEX[key], ...((M.tex.geo || {})[key]) });          // geo: per-style overrides of TEX
-  const line = key => { const T = geo(key); return offsetPath(surface.slice(T.from * SEG, T.to * SEG + 1), T.depth).filter(p => p[1] >= S + (M.big ? 0.2 : 0.045)); };   // stop above the flat sea
+  const line = key => { const T = geo(key), P = offsetPath(surface.slice(T.from * SEG, T.to * SEG + 1), T.depth); return key.startsWith('sea') ? P.filter(p => p[1] >= 0.02) : P.filter(p => p[1] >= S + (M.big ? 0.2 : 0.045)); };   // stop above the flat sea (sea lines: stay inside the band)
   const out = [], holes = [];
   const lines = (keys, dash, dir) => keys.forEach(key => {
     const P = line(key), W = geo(key).w;
@@ -694,6 +703,7 @@ function texture(M, t, surface, water, foam, S = SEA) {
   const tx = M.tex;
   if (tx.face) lines(['face', ...(tx.face2 ? ['face2'] : [])], tx.dash, 1);
   if (tx.barrel) lines(['barrel'], tx.dash, -1);          // the water in the tube runs up the back wall, over the ceiling and out to the lip
+  if (tx.sea) lines(tx.sea > 1 ? ['sea1', 'sea2'] : ['sea1'], tx.dash, -1);   // ripples in the flat sea drifting in towards the wave
   if (tx.bubbles) {
     // aerated face: bubbles drift up the back and out along the lip, popping in and out where it's thin
     // (only in the thick back of the wave: in the lip they'd fill it)
