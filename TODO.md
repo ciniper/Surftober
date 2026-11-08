@@ -6,6 +6,12 @@
       two game tables exist. Review the file, paste it into the Supabase SQL
       editor, run once (additive; safe to re-run). Then rehearse with
       deck.html?game=rehearsal from a browser signed in as the admin.
+- [ ] **⚠️ Chase: add the BWTF visuals to the deck** (reminder, 2026-11-08) —
+      the 4 "Website Overview" pictures from the "bwtf tober" Google Slides
+      (map, 20+ yr analysis, email alerts, educational modules). Upload
+      screenshots/recordings to docs/bwtf/ and set bwtf.features[i].media in
+      deck-config.js (or set bwtf.site to the live site). Until then those
+      slides show a dashed placeholder.
 
 ## Branch: photography-bonus (built here — merge to main when Chase says go)
 
