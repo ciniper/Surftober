@@ -172,6 +172,8 @@ export const OPTIONS = {
   cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
   magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
             labels: { none: 'None · plain grip cap with a finger divot', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
+  nozzle: { label: 'Nozzle',       type: 'choice', default: '0.4', values: ['0.4', '0.2'],
+            labels: { '0.4': '0.4 mm · 0.20 layers (stock X1C)', '0.2': '0.2 mm · 0.10 layers — fine art, ~3.5× the ring time' }, hint: 'the -bambu.3mf project is written for this nozzle (printer, process and filament profiles, Arachne walls), so the slicer does not fall back to the stock classic walls' },
   screw:  { label: 'Centre screw', type: 'choice', default: 'm3', values: ['m3', 'none'],
             labels: { m3: 'M3 × 12 countersunk · clamps hub + cap (v5)', none: 'None · press-fit stems only (v4)' }, hint: 'from the back, through the cap, into the hub stem', when: o => o.magnet !== 'disc' },
   parts:  { label: 'Parts',      type: 'list',   default: null, hint: 'which parts to show / generate; empty = all' },
@@ -247,6 +249,7 @@ export function outputTag(o) {
     .concat(o.art === OPTIONS.art.default ? [] : [o.art])
     .concat(o.grip === 'ridges' || o.weight === 'bezel' ? [] : [o.grip === 'notches' ? 'notches' : 'smooth'])
     .concat(hasScrew(o) || o.magnet === 'disc' ? [] : ['noscrew'])
+    .concat(o.nozzle === '0.4' ? [] : [`n${o.nozzle.replace('.', '')}`])
     .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
@@ -263,6 +266,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.grip !== 'ridges' && o.weight !== 'bezel') args.push(`--grip ${o.grip}`);
   if (o.screw !== 'm3' && o.magnet !== 'disc') args.push(`--screw ${o.screw}`);
   if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
+  if (o.nozzle !== '0.4') args.push(`--nozzle ${o.nozzle}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
