@@ -154,6 +154,25 @@ brown is only the filament in the project file. Palette board: `learnings/`-styl
 session. Verdict offered to Chase: 0.2 is the price of this bird; the alternatives at 0.4 are a
 different, chunkier bird.
 
+## 5c. Glue-in art insert (2026-11-08, built for Chase to look at)
+
+Chase: "make the animation ring itself like 1–2 mm and I glue it onto the base spinner… leave a recess".
+Option `ring=insert`: the body gets a 1.0 mm pocket in its face from the ring's inner edge out to the
+ridged rim (the rim is the outer wall and centres the insert; the inner edge is open so the sea still
+runs to the rim); the insert is a 1.0 mm annulus r 29.7–48.05 (0.15 clearance) with the relief on top,
+printed flat face-up. Two project files: body / hub / cap at 0.4, inserts at `nozzle` with `copies`
+rings per plate (4 fit). Sliced with the Bambu CLI, ploverleanfine:
+
+| plate | nozzle | time |
+|---|---|---|
+| one-piece body (for comparison) | 0.2 | 3 h 53 |
+| body with pocket, single colour | 0.4 | 48 min |
+| 2 inserts on one plate | 0.2 | 2 h 46 (≈ 1 h 23 each) |
+
+So ≈ 2 h 10 per trophy instead of 3 h 53, with the fine nozzle only ever on a thin flat part, and
+a failed art print costing an insert, not a body. Untested in the real world: fit of the 0.15 mm
+clearance, curl of the 1 mm ring, CA glue. Body 42 g, insert 7 g.
+
 ## 6. Where things are
 
 - **Art:** `wave-frames.js`. Every animation option lives in `WAVE_VARIANTS`; new ones go beside

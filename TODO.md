@@ -284,6 +284,15 @@
       `magnet=none|disc`, disc = the old pocket) — magnet out of the
       equation until the holding method is decided.
 
+- [ ] Trophy, 2026-11-08 follow-ups: (a) sea ripples below the wave
+      (`wave=ploverleansea`, tex.sea) — Chase: "looks bad" as two lines;
+      park it, maybe revisit as one subtler line. (b) 4th colour (orange board
+      or black bird details) — pinned. (c) Glue-in art insert (`ring=insert`)
+      built 2026-11-08 for Chase to look at: 1 mm pocket in the body face,
+      1 mm insert ring with the relief, body at 0.4 single colour (~45 min),
+      inserts 4-up at 0.2. Needs a test print: fit of the 0.15 clearance,
+      curl of the thin ring, CA glue.
+
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
       live 2026-09-30 after Chase tested the branch preview; Rohan's report

@@ -46,6 +46,10 @@ export const DIM = {
   lip: 0.6, lipIn: 9.9, chamfer: 0.6,
   inlay: 0.6,                   // flush artwork / text pocket depth (multi-colour)
   proud: 0.4, proudFoam: 0.7,   // art=proud: the inlays stand this far above the face (water / foam), from the same 0.6 pocket
+  // art insert (option ring=insert, 2026-11-08): the relief rides a thin ring printed flat on its own plate (fine
+  // nozzle) and glued into a pocket in the body's front face; the body prints single-colour at 0.4. Pocket r
+  // ringIn → waveOut (the ridged rim is the outer wall and centres it; the inner edge is open), insertT deep.
+  insertT: 1.0, insertClear: 0.15,
   relief: 0.4, reliefFoam: 0.8, // art=raised: one solid part, water 0.4 and foam 0.8 above the face — two 0.2 mm layers each, so the slicer can colour them by height
   // rim grip (option grip). v5 default: micro ridges — fine reeding like a coin edge, the full
   // thickness of the ring, front to back. Round-bottomed grooves ridgeW wide and ridgeDepth deep,
@@ -112,9 +116,11 @@ export const PARTS = [
   { id: 'body',       group: 'Spinning piece', label: 'Body',        detail: 'Hub on the 608 outer race, arms, wave ring — one print',
     generated: true, color: 'bone',  filament: 'bone / tier colour', print: { flip: false, z: 0 } },
   { id: 'wave-water', group: 'Spinning piece', label: 'Art · bottom layer', detail: 'First inlay colour, flush in the ring face (water, or the plover’s body)',
-    generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) },
+    generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) && !isInsert(o) },
   { id: 'wave-foam',  group: 'Spinning piece', label: 'Art · top layer',    detail: 'Second inlay colour on top of the first (foam, or the plover’s details)',
-    generated: true, color: 'layer-foam', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) },
+    generated: true, color: 'layer-foam', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) && !isInsert(o) },
+  { id: 'insert',     group: 'Spinning piece', label: 'Art insert ring', detail: 'Thin ring carrying the wave in relief — printed flat on its own plate (fine nozzle, several per plate), glued into the body’s pocket',
+    generated: true, color: 'tier',  filament: 'tier colour + navy + cream (its own plate)', print: { flip: false, z: 0 }, when: o => isInsert(o) },
   { id: 'hub',        group: 'Still parts',    label: 'Front hub',    detail: 'Rides the inner race; hides the arms; carries the text',
     generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
   { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
@@ -172,8 +178,11 @@ export const OPTIONS = {
   cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
   magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
             labels: { none: 'None · plain grip cap with a finger divot', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
+  ring:   { label: 'Art ring',     type: 'choice', default: 'solid', values: ['solid', 'insert'],
+            labels: { solid: 'One piece · relief on the body', insert: 'Glue-in insert · 1 mm ring with the relief, pocket in the body' }, hint: 'insert: the body prints single-colour at 0.4 in ~45 min; the inserts print flat at the fine nozzle, up to 4 per plate, and glue in' },
+  copies: { label: 'Inserts per plate', type: 'int', default: 1, min: 1, max: 4, when: o => o.ring === 'insert', hint: 'how many insert rings the insert project file puts on one plate (Ø98: 4 fit the X1C bed)' },
   nozzle: { label: 'Nozzle',       type: 'choice', default: '0.4', values: ['0.4', '0.2'],
-            labels: { '0.4': '0.4 mm · 0.20 layers (stock X1C)', '0.2': '0.2 mm · 0.10 layers — fine art, ~3.5× the ring time' }, hint: 'the -bambu.3mf project is written for this nozzle (printer, process and filament profiles, Arachne walls), so the slicer does not fall back to the stock classic walls' },
+            labels: { '0.4': '0.4 mm · 0.20 layers (stock X1C)', '0.2': '0.2 mm · 0.10 layers — fine art, ~3.5× the ring time' }, hint: 'the -bambu.3mf project is written for this nozzle (with an insert: only the insert plate; the body plate is always 0.4) (printer, process and filament profiles, Arachne walls), so the slicer does not fall back to the stock classic walls' },
   screw:  { label: 'Centre screw', type: 'choice', default: 'm3', values: ['m3', 'none'],
             labels: { m3: 'M3 × 12 countersunk · clamps hub + cap (v5)', none: 'None · press-fit stems only (v4)' }, hint: 'from the back, through the cap, into the hub stem', when: o => o.magnet !== 'disc' },
   parts:  { label: 'Parts',      type: 'list',   default: null, hint: 'which parts to show / generate; empty = all' },
@@ -210,6 +219,8 @@ export function serializeOptions(o) {
 }
 // Multi-colour art (separate inlay parts), flush or proud.
 export const isInlay = o => o.art === 'inlay' || o.art === 'proud';
+// The relief rides a separate glue-in ring (the body then has a pocket and no art of its own).
+export const isInsert = o => o.ring === 'insert';
 // Rim grip, none with a bezel ring (its groove is there). Notches: two per animation frame.
 // Ridges: about one per ridgePitch round the rim, rounded to a multiple of the frame count.
 export const notchCount = o => (o.grip === 'notches' && o.weight !== 'bezel' ? 2 * frameCount(o) : 0);
@@ -250,6 +261,7 @@ export function outputTag(o) {
     .concat(o.grip === 'ridges' || o.weight === 'bezel' ? [] : [o.grip === 'notches' ? 'notches' : 'smooth'])
     .concat(hasScrew(o) || o.magnet === 'disc' ? [] : ['noscrew'])
     .concat(o.nozzle === '0.4' ? [] : [`n${o.nozzle.replace('.', '')}`])
+    .concat(o.ring === 'insert' ? ['insert'] : [])
     .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
@@ -267,6 +279,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.screw !== 'm3' && o.magnet !== 'disc') args.push(`--screw ${o.screw}`);
   if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
   if (o.nozzle !== '0.4') args.push(`--nozzle ${o.nozzle}`);
+  if (o.ring === 'insert') args.push('--ring insert' + (o.copies > 1 ? ` --copies ${o.copies}` : ''));
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));

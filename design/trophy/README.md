@@ -93,6 +93,8 @@ URL, the generator (`--url` or flags) and the manifest.
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
 | `magnet` | none · disc | none | back cap: plain grip plate with a finger divot · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests; no centre screw then) |
+| `ring` | solid · insert | solid | **glue-in art insert** (2026-11-08): the wave relief rides a 1 mm ring printed flat on its own plate at the fine nozzle (`copies` per plate, 4 fit) and glued into a 1 mm pocket in the body's face; the body then prints single-colour at 0.4. Two project files: `<tag>-bambu.3mf` (body / hub / cap, 0.4) and `<tag>-insert-bambu.3mf` (inserts, `nozzle`) |
+| `copies` | 1…4 | 1 | insert rings per plate in the insert project |
 | `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
@@ -103,6 +105,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | id | group | what | generated as | printed in |
 |---|---|---|---|---|
 | `body` | spinning | hub on the 608 outer race (Ø21.9 bore + seat lip), arms, Ø98 wave ring with micro-ridged rim; inlay pockets or relief | STL, back face down | bone / tier colour |
+| `insert` | spinning | the glue-in art ring: r 29.7–48.05 × 1.0 + relief, prints flat face up on its own plate (`ring=insert`) | STL, Bambu project | tier colour + navy + cream |
 | `wave-water` | spinning | bottom art layer (water, or the plover body), proud or flush (multi-colour art only) | STL | layer colour |
 | `wave-foam` | spinning | top art layer (foam, or the plover details), proud or flush | STL | layer colour |
 | `hub` | still | Ø51 × 3.0 disc, Ø8.1 stem into the inner race, 1.0 stand-off; text pockets; Ø2.6 blind pilot up the stem for the screw (1.6 skin under the face) | STL, text face down | navy |
