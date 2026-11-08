@@ -206,7 +206,7 @@ let artCache = { key: null, art: null };
 export function waveArt(o) {
   const key = `${o.wave}/${frameCount(o)}`;
   if (artCache.key !== key) {
-    const a = ringArt({ variant: o.wave, N: frameCount(o), rIn: D.waveIn, rOut: D.waveOut });
+    const a = ringArt({ variant: o.wave, N: frameCount(o), rIn: D.waveIn, rOut: D.waveOut, ringIn: D.ringIn });
     artCache = { key, art: { water: a.slots.flatMap(s => s.water), foam: a.slots.flatMap(s => s.foam) } };
   }
   return artCache.art;

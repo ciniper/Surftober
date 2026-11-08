@@ -64,10 +64,13 @@ cd design/trophy/cad
 | `wave-demo.html` · `wave-frames.js` | wave animation: frame shapes, variants, ring layout, phone-camera simulation, SVG export |
 | `index.html` | landing page: links + presets |
 | `cad/spinner.py` | CadQuery generator → STL per part, multi-part 3MF, STEP assembly, manifest JSON, bezel DXF |
+| `cad/bambu-x1c-project.json` · `cad/bambu_template.py` | the Bambu Studio project settings baked into `<tag>-bambu.3mf`, and the script that rebuilds them |
 | `cad/bridge.mjs` | node: hands the config + wave polygons to Python as JSON |
 | `cad/serve.py` | local server: static files + `GET /api/outputs` + `POST /api/generate` |
 | `cad/setup.sh` | venv + CadQuery |
 | `cad/out/` | generated files (gitignored — regenerate, don't commit) |
+| `LEARNINGS.md` · `learnings/` | **read first when changing the ring art**: what prints on a 0.4 nozzle (≥ 0.9 mm per colour, gaps included), today's attempts and verdicts, untried levers (2026-11-07) |
+| `cad/tools/printcheck.py` · `cad/tools/toolpaths.py` | the 0.9 mm print check on the real ring geometry, and a renderer for a sliced Bambu G-code's top-layer toolpaths |
 
 ## Options
 
@@ -76,11 +79,11 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v5 | prefix on every output file (`v5-nahla-3arm-ploverleanlines10-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v6 | prefix on every output file (`v6-nahla-3arm-ploverleanbold8-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
-| `wave` | **ploverleanlines** · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanlines | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
+| `wave` | **ploverleanbold** · ploverbig · ploverleanedge · ploverleanlines · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanbold | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots, up to the style's own count, whose cells don't shrink the art (10 fit on the v5 band); fewer = faster loop, bigger art |
 | `art` | raised · proud · inlay · none | raised | wave: **one solid part**, water 0.4 and foam 0.8 above the face (colour the two steps by height in the slicer) · separate inlay parts standing 0.4 / 0.7 proud · the same inlay parts flush · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
@@ -108,18 +111,52 @@ URL, the generator (`--url` or flags) and the manifest.
 
 The **3MF** holds one multi-part object per print unit — spinning piece
 (body + inlays), front hub (+ text), back cap — laid out side by side in print
-orientation. Open it in Bambu Studio and assign a filament per part; or load
+orientation. Open it in any slicer and assign a filament per part; or load
 the per-part STLs together and answer *yes* to "single object with multiple
-parts". The **STEP** is the mounted assembly with the bearing, magnet and
+parts".
+
+The **Bambu 3MF** (`<tag>-bambu.3mf`, 2026-11-07) is a ready, pre-coloured Bambu Studio
+project for Chase's X1C + 4-slot AMS: X1C 0.4 · 0.20 mm Standard · 4 × Bambu PLA Basic
+(`cad/bambu-x1c-project.json`), filaments **1 brown** (the spinner's base — its own colour)
+· **2 navy** · **3 cream** · **4 orange**, one print unit per plate:
+
+| plate | object | parts → filament | sliced (Bambu Studio CLI, 2026-11-07) |
+|---|---|---|---|
+| 1 | spinning piece | body → 1 brown, wave relief 0.4 → 2 navy, foam relief 0.8 → 3 cream | 4 swaps, only in the top layers; ~64 min, ~6 min of purge |
+| 2 | front hub | hub → 2 navy (text engraved) | no swaps, ~18 min, 5.7 g |
+| 3 | back cap | cap → 4 orange | no swaps, ~17 min, 5.6 g |
+
+With `art=raised` the body is split for this file into the plain body and the two relief
+layers as touching parts of one object (their volumes add up to the one-piece body). Remap
+the slots to whatever is loaded in the AMS in the Prepare tab. All three on one plate would
+swap colour on almost every layer (76 swaps, 3 h 16 min, about half the filament purged), so
+keep them on separate plates. `cad/bambu_template.py` rebuilds the project settings from
+the presets shipped with Bambu Studio (other printer / process / filament: pass their names).
+
+**Arachne walls (2026-11-07).** The art's finest lines are 0.2–0.35 mm wide: the plover's
+navy outline, legs, collar and eye, the board's navy rim, and the cream lip line. That is
+under a 0.4 nozzle's 0.42 mm line. Bambu's stock X1C process uses the *classic* wall
+generator, which silently drops anything that thin (Chase's first slice: the plover came out
+as loose cream pieces with no outline or legs, and the lip line was gone). The project now sets
+`wall_generator = arachne` (`BAMBU_PROCESS` in `spinner.py`), which prints them as narrower
+lines. That costs ~4 min on plate 1. Set **Wall generator → Arachne** under Quality if you
+slice the STLs with your own profile. The ~0.3 mm eye and cap still come out as blobs on a
+0.4 nozzle; a 0.2 nozzle would hold them. A blunt "widen everything to 0.45 mm" pass in the
+CAD was tried and rejected: it swallowed the plover's head.
+
+The **STEP** is the mounted assembly with the bearing, magnet and
 metal weight, for CAD. Each run also writes `<tag>.json`: options, parts,
 volumes, grams, files.
 
 ## Dimensions
 
 Key numbers (all in `DIM`): body 7 mm thick (= bearing width), bore Ø21.9,
-hub r 16, arms 9 wide, **ring r 33 → 49** (Ø98, v5), wave band r 36.1 → 48.2
-(12.1 mm — 10 frames still fit at full size, cell aspect 2.19 vs the 2.06
-design cell). Artwork by default is **relief on
+hub r 16, arms 9 wide, **ring r 29.7 → 49** (Ø98, v6; v5 was r 33), wave band
+r 32.8 → 48.2 (15.4 mm — the tallest band 8 frames fill at the 2.06 design
+cell; v5's 12.1 mm band held 10). The default `ploverleanedge` packs its scene
+into a 1.76-wide frame, so it fills r 30.6 → 48.2 (17.6 mm) and runs its sea
+on down to the ring's inner edge (`sea: 'edge'`, `artBand()` in
+wave-frames.js, `waveBand(o)` in the config). Artwork by default is **relief on
 the one solid body**: water 0.4 and foam 0.8 above the face, i.e. two
 0.2 mm layers each. To print it multi-colour, slice the body alone and add
 height-range modifiers to it: face → +0.4 in the water colour, +0.4 → +0.8
@@ -236,6 +273,134 @@ v5 (Chase, 2026-11-04), after handling the v4 prints:
 - New animations, 8–10 frames: the plover getting barreled, and a break whose
   lip "extends out further instead of breaks so vertical" (below).
 
+v6 (Chase, 2026-11-07), after the first Bambu slice of v5 dropped the
+plover's outline and legs and the cream lip line ("are the features too
+fine?"). They were: 0.2–0.35 mm, under a 0.4 nozzle's 0.42 line (see the
+Arachne note under the Bambu 3MF). Chase: "if we made the inner diameter of
+the ring go further in we would have more space to enlarge features,
+especially if we did 8 or 9 frames too".
+
+- The art's size is the smaller of the band height and the frame's arc ÷ 2.06,
+  so moving the ring in only pays with fewer frames. The best inner radius for
+  each frame count (outer edge fixed by the rim ridges):
+
+  | frames | ring in | band | art size |
+  |---|---|---|---|
+  | 10 | r 32.3 | 12.8 mm | +5 % |
+  | 9 | r 31.1 | 14.0 mm | +15 % |
+  | **8 (v6)** | **r 29.7** | **15.4 mm** | **+28 %** |
+  | 7 | r 27.9 | 17.2 mm | +43 % |
+
+  v6 takes 8, so **ring r 29.7 → 49**. Arms now show 4.2 mm past the Ø51 hub,
+  where they showed 7.5. Every animation gets 8 frames on this band by default;
+  `frames=` still overrides that.
+- Size alone takes the plover's 0.28 mm outline only to 0.36, so a new
+  animation **`ploverleanbold`** (the default; `ploverleanlines` is unchanged
+  beside it) lifts every plover stroke to at least 0.03 of the band (0.46 mm):
+  - outline, legs, feet and the board's rim;
+  - the collar and eye;
+  - the cream lip line along the crest.
+  
+  The cap runs out to the outline as a navy crown, because the cream above it
+  was 0.23 mm. To keep its clearance with the bolder outline, the bird is
+  92 % size, slightly further back, with a shorter bill. It now stays ≥ 0.43 mm
+  from the wave and ≥ 0.47 mm from the foam ball in every frame. v5 had 0.37
+  and 0.06; with 8 frames its frame at t 0.75 touched.
+- Measured on the CAD outlines: art under 0.42 mm wide is down from 7 % of the
+  navy and 20 % of the cream to under 1 % of each. What's left is the bill's
+  point and one small sliver at the neck.
+
+v6, second pass (Chase, 2026-11-07). He asked why the water line couldn't go
+closer to the ring's inner edge too: 3.1 mm of plain ring sat under the sea. At
+8 frames the frame's width, not its height, sets the art's size, so dropping
+the band's edge alone only adds sky. Chase: "let's do [the sea to the edge] but
+we need to also make more use of the frame — there's some unused space on the
+right, the plover tail could go into the wave for part of animation and left
+part of wave crash maybe can be partly compressed".
+
+- New default **`ploverleanedge`**; `ploverleanbold` is unchanged beside it.
+  - The lip's throw, the foam ball and the splash are pressed back toward the
+    tube: `squeeze`, ×0.72 past the tube's mouth, splash spread ×0.8.
+  - The plover sits 0.065 further in (`birdShift .34`). Its tail dips into
+    the back wall in frames 1–5, as it steps back, and is ≥ 0.45 mm clear in
+    frames 6–8. Head, bill and feet stay ≥ 0.47 mm from the wave, and the bird
+    stays ≥ 0.95 mm from the foam.
+  - The scene now fits a 1.76-wide frame (`frame: [0.17, 1.93]`) instead of
+    2.06.
+- Eight slots of a 1.76 frame fill a band from r 30.6 (17.6 mm), so the art is
+  14 % bigger again: 45 % over v5. `artBand()` picks that band for any slot
+  count, and the sea runs on from it to the ring's inner edge (r 29.72, 0.02
+  inside so the polygons' chords stay on the ring). The ring now carries one
+  unbroken band of water about 4.8 mm deep under the animation.
+- Still under 1 % of either colour below 0.42 mm on the CAD outlines.
+
+v6, third pass (Chase, 2026-11-07, on `ploverleanedge`): "it still looks
+awful sliced, most of plover features don't come out, and there's way more
+room in frame that you left just sitting there", and "if the plover design
+doesn't work it doesn't work. But don't design a beak for example if it's
+going to disappear in the slice."
+
+- **The print rule.** Nothing in any colour may be narrower than two nozzle
+  lines, 0.9 mm. That includes the gaps of ring colour between shapes.
+  - Clearing one 0.42 mm line, the bar the last two passes used, wasn't
+    enough: a one-line outline, leg or collar prints as a single wobbly bead,
+    or not at all.
+  - It's checked on the real ring, where the bend squeezes art near the inner
+    edge by 10–20 %. Each colour region is opened by a 0.45 mm radius
+    (shapely), and whatever doesn't survive is flagged.
+  - It's confirmed against the Bambu Studio toolpaths of the sliced 3MF.
+- **`ploverbig`** (`ploverleanedge` and `ploverleanbold` are unchanged beside
+  it). Chase rejected it on sight; the default went back to `ploverleanbold`
+  while the composition is rethought (the barrel eats the room). The barrel is redrawn round a bird at 1.25× (`tube`,
+  `level .08`): the trough drops to the band's foot, and the ceiling and back
+  wall wrap the bird. Every stroke is 0.06 of the band, about 1 mm. The bird
+  (`chunky()` in wave-frames.js, `big: 1`) changes as follows:
+  - **Kept:** the logo's body outline, with the tail's point blunted.
+  - **Head:** 1.6× bigger, so a navy cap, an eye hole Ø 1 mm and the cream
+    between them all fit.
+  - **Beak:** a blunt stub.
+  - **Board:** thick, with round ends.
+  - **Legs, cross-step and the logo's collar: gone.** At this size they could
+    only print as hairlines. The bird sits on its board and rides its tilt and
+    wobble.
+  - **Clearance:** ≥ 1.1 mm of ring colour to the wave in every frame, from a
+    search over size and position.
+- The lip line, the face dashes and the foam bubbles are never thinner than
+  1 mm, with no tapered ends. Dash stubs are dropped, and the splash
+  droplets are gone. The scene fits a 1.85-wide `frame`, so the band runs
+  r 31.3 → 48.2 and the sea runs on to the ring's edge.
+- **Measured.** Art under 0.9 mm wide on the whole ring:
+
+  | | cream | navy | ring-colour gaps |
+  |---|---|---|---|
+  | first try | 34 mm² per frame | 33 mm² per frame | — |
+  | `ploverbig` | 0.5 mm² per frame | 0.8 mm² per frame | 0.6 mm² per frame |
+
+  What's left is corner tips where shapes meet, not features. Ring plate
+  sliced: 66 min, no warnings.
+
+v6, fourth pass (Chase, 2026-11-07, after rejecting `ploverbig`): "maybe the
+barrel is our problem. Is there a non-barrel wave that would afford us more
+room?" A barrel wraps the bird on three sides: the water under it, the back
+wall, and the lip overhead. Each side costs navy plus a ≥ 0.9 mm gap, which
+leaves the bird about 7 mm of the 17 mm band. Of three non-barrel layouts,
+Chase picked the open face.
+
+- **New `ploverface`** (not the default until Chase signs it off):
+  - The plover rides the open face. The wave rises behind it and curls over
+    behind its tail, not over its head.
+  - The bird is the logo plover at 1.6×, with its cap, eye, collar, both legs
+    and beak. Each is thickened only as far as the 0.9 mm rule needs.
+  - The head is 1.2× so the cap, the eye and the cream between them all fit.
+  - The beak is a wedge with a round tip, and the tail's point is blunted.
+- **Checks:**
+  - The rule check comes out about 0.6 mm² per frame per colour, all
+    corner tips.
+  - Bird to foam ≥ 1.1 mm in every frame.
+  - The ring plate sliced in 66 min with no warnings.
+  - The toolpaths show every bird detail as a solid shape:
+    `cad/out/sliced-v6-vs-face-zoom.png`.
+
 ## Animations — the plover in the barrel, the hollow throw (v5)
 
 First v5 try (a filled navy wave with a cream bird, streaks and a bubbly
@@ -283,7 +448,11 @@ logo plover at ±24 %; v4 this — "swing the wave 40 %", and the walk.)
 | `ploverlean` — wave leans into the throw | 10 | `ploverxstep2` + the whole wave shears with height, leaning into the throw and rocking back (`lean: .07`); the plover rides with it |
 | `ploverslide` — whole wave surges left | 10 | `ploverxstep2` + the whole wave and the plover surge ±0.07 left as the lip throws and back right as it draws up (`slide: .07`, `shift: .37`) |
 | `ploverlive` — all of it a little | 10 | `full .05`, `swell .04`, `lean .03`, `slide .05` together |
-| `ploverleanlines` — lean + flowing face lines (**default**, Chase's pick 2026-11-07) | 10 | `ploverlean` + one cream line inside the back (`TEX.face`), broken into two dashes flowing up towards the crest once a loop (`tex: { face, dash: 2 }`) |
+| `ploverleanlines` — lean + flowing face lines (Chase's pick 2026-11-07; default until v6) | 10 | `ploverlean` + one cream line inside the back (`TEX.face`), broken into two dashes flowing up towards the crest once a loop (`tex: { face, dash: 2 }`) |
+| `ploverface` — open face, no barrel (v6 fourth pass, 2026-11-07) | 8 | the logo plover at 1.6× (`print`: strokes ≥ `bold .062`, head 1.2× so cap, eye and cream each ≥ 0.9 mm, wedge beak with a round tip, blunt tail, thick round-ended board) cross-stepping on a board on the open face; the wave (`face`, `faceScene()`) rises behind it and pitches a small lip behind its tail with the foam ball on the tip; flowing face line; sea to the ring's edge |
+| `ploverbig` — big bird, barrel wrapped round it (v6 third pass; rejected by Chase 2026-11-07) | 8 | the chunky print plover (`big`, `chunky()`) at 1.25× in its own `tube`, every part and gap ≥ 0.9 mm on the ring (strokes `bold .06`); no legs, collar or splash; sea to the ring's edge; see v6 third pass above |
+| `ploverleanedge` — bold, compact frame, sea to the edge (v6 second pass) | 8 | `ploverleanbold` with the crash pressed back towards the tube (`squeeze: { at 1.3, crash .72, splash .8 }`), the bird 0.065 further in (`birdShift .34`, its tail dips into the back wall in frames 1–5), drawn in a 1.76-wide `frame`, and the sea run down to the ring's inner edge (`sea: 'edge'`); see v6 second pass above |
+| `ploverleanbold` — lean + lines, bold for print (default for v6's first pass) | 8 | `ploverleanlines` with every plover stroke ≥ 0.03 (`bold`), a crown cap, the bird at 92 % (`birdScale`), `birdShift .275`, bill tip at 350 px (`bill`); see v6 above |
 | `ploverleancarve` — lean + carved face lines | 10 | the same, cut out of the navy so the ring colour shows (`carve`) |
 | `ploverleanbarrel` — lean + spinning barrel lines | 10 | cream dashes running up the back wall and along the tube's ceiling towards the lip (`TEX.barrel`) |
 | `ploverleanbubbles` — lean + bubbles up the face | 10 | four cream bubbles (r ≥ 0.034) drifting up the back and popping near the crest |

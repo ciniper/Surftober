@@ -170,8 +170,8 @@ function setRpm(v) { flick = false; $('flick').classList.remove('on'); rpm = v; 
 
 function rebuildArt() {
   LC = layerColors(variant);
-  art = ringArt({ variant, N, rIn: RING.waveIn, rOut: RING.waveOut });
-  A = cellAspect(N, RING.waveIn, RING.waveOut);
+  art = ringArt({ variant, N, rIn: RING.waveIn, rOut: RING.waveOut, ringIn: RING.in });
+  A = art.band.A;                                   // a sea: 'edge' style picks its own band
   $('variant').value = variant; $('frames').value = String(N);
   resize(); syncText();
 }
