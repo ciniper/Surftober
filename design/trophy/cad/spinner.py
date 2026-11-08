@@ -433,12 +433,55 @@ BAMBU_APP = 'BambuStudio-02.08.02.61'
 # collar and eye, the board's rim, the cream lip line) are 0.2–0.35 mm, under a 0.4 nozzle's 0.42 line:
 # the stock 'classic' wall generator drops them without a warning, Arachne prints them as narrower lines.
 BAMBU_PROCESS = {'wall_generator': 'arachne'}
+# Stock Bambu profiles (installed with Bambu Studio) for a nozzle other than the 0.4 the project file was saved
+# with. The 0.2 round (2026-11-07): switching the printer to the 0.2 nozzle in the slicer resets the process to
+# its stock profile — classic walls — and the plover's fine strokes vanish again. Writing the 0.2 profiles into
+# the project (plus Arachne) means the file opens ready to slice. 0.10 mm layers so the 0.4 / 0.8 relief steps
+# land on layer lines.
+BAMBU_PROFILES = os.environ.get('BAMBU_PROFILES', '/Applications/BambuStudio.app/Contents/Resources/profiles/BBL')
+BAMBU_NOZZLE = {'0.2': {'machine': 'Bambu Lab X1 Carbon 0.2 nozzle', 'process': '0.10mm Standard @BBL X1C 0.2 nozzle', 'filament': 'Bambu PLA Basic @BBL X1C 0.2 nozzle'}}
+BAMBU_META_KEYS = {'type', 'name', 'from', 'setting_id', 'instantiation', 'inherits', 'include', 'description', 'is_custom_defined', 'upward_compatible_machine', 'compatible_printers', 'compatible_printers_condition', 'compatible_prints', 'compatible_prints_condition'}
 
 
-BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
+def bambu_profile(kind, name):
+    """A stock profile with its `inherits` / `include` chain flattened (child keys win), meta keys dropped."""
+    d = json.load(open(os.path.join(BAMBU_PROFILES, kind, name + '.json')))
+    out = {}
+    for inc in d.get('include', []):
+        out.update(bambu_profile(kind, inc))
+    if d.get('inherits'):
+        out.update(bambu_profile(kind, d['inherits']))
+    out.update({k: v for k, v in d.items() if k not in BAMBU_META_KEYS})
+    return out
 
 
-def write_bambu_3mf(path, groups):
+def bambu_nozzle_settings(ps, nozzle):
+    """Project settings `ps` (saved for the 0.4) rewritten for `nozzle`: printer + process + filament profiles
+    swapped for the stock ones. Only keys the saved project already has are touched, and every list is tiled to
+    the project's own length for that key (Bambu stores process lists per extruder variant and filament lists
+    per filament × variant), so the loader sees the schema it saved."""
+    names = BAMBU_NOZZLE[nozzle]
+    prof = bambu_profile('machine', names['machine'])
+    proc = bambu_profile('process', names['process'])
+    fil = bambu_profile('filament', names['filament'])
+    for src in (prof, proc, fil):
+        for k, v in src.items():
+            if k not in ps:
+                continue
+            cur = ps[k]
+            if isinstance(v, list) and isinstance(cur, list) and cur:
+                ps[k] = (v * (len(cur) // len(v)))[:len(cur)] if len(v) and len(cur) % len(v) == 0 else cur if len(v) != 1 else v * len(cur)
+            elif not isinstance(v, list) and not isinstance(cur, list):
+                ps[k] = v
+    n_fil = len(ps.get('filament_settings_id', [1, 1, 1, 1]))
+    ps['printer_settings_id'], ps['print_settings_id'] = names['machine'], names['process']
+    ps['filament_settings_id'] = [names['filament']] * n_fil
+    ps['wipe_tower_y'] = ['200']       # the saved project parks the prime tower at y 220 (+35 wide +3 brim = past the 256 bed); the taller 0.1 mm tower trips the CLI's bounds check there
+    ps['print_compatible_printers'] = proc.get('compatible_printers') or json.load(open(os.path.join(BAMBU_PROFILES, 'process', names['process'] + '.json'))).get('compatible_printers', [names['machine']])
+    return ps
+
+
+def write_bambu_3mf(path, groups, nozzle='0.4'):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
@@ -498,6 +541,8 @@ def write_bambu_3mf(path, groups):
             z.writestr(name, body)
         z.writestr('Metadata/model_settings.config', cfg)
         ps = json.load(open(os.path.join(HERE, 'bambu-x1c-project.json')))
+        if nozzle in BAMBU_NOZZLE:
+            ps = bambu_nozzle_settings(ps, nozzle)
         ps['filament_colour'] = [c for _, c in BAMBU_FILAMENTS]
         ps.update(BAMBU_PROCESS)
         diff = ps.get('different_settings_to_system') or ['']     # [process, filament 1…n, printer]: shows the process as edited
@@ -512,7 +557,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -526,7 +571,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -600,7 +645,7 @@ def main():
                     plist.append((pid, mesh(posed)))
             n_bam += len(plist)
             bam.append((g, plist, bed[g]))
-        write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam)
+        write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle=o.get('nozzle', '0.4'))
         manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
         used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
         print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +

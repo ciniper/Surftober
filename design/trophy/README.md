@@ -83,7 +83,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
-| `wave` | **ploverleanbold** · ploverbig · ploverleanedge · ploverleanlines · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanbold | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
+| `wave` | **ploverleanbold** · ploverleanfine · ploverbig · ploverleanedge · ploverleanlines · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanbold | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots, up to the style's own count, whose cells don't shrink the art (10 fit on the v5 band); fewer = faster loop, bigger art |
 | `art` | raised · proud · inlay · none | raised | wave: **one solid part**, water 0.4 and foam 0.8 above the face (colour the two steps by height in the slicer) · separate inlay parts standing 0.4 / 0.7 proud · the same inlay parts flush · plain |
 | `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
@@ -93,6 +93,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
 | `cap` | orange · navy · teal | orange | back-cap colour |
 | `magnet` | none · disc | none | back cap: plain grip plate with a finger divot · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests; no centre screw then) |
+| `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
 | `preset` | full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |

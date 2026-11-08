@@ -96,6 +96,21 @@ the other.**
 
 ## 5. Levers not tried yet (worth weighing)
 
+**Update (2026-11-07, later):** the 0.2 mm nozzle lever was tried. Chase swapped to a 0.2 and the beak
+*still* didn't print. Two reasons, both now handled:
+
+1. Switching the printer to the 0.2 nozzle in Bambu Studio resets the process to its stock profile, which
+   uses **classic** walls again. Option `nozzle=0.2` now writes the stock 0.2 printer / process / filament
+   profiles plus Arachne into the `-bambu.3mf`, so the file opens ready to slice (0.10 mm layers).
+2. The logo bill as drawn is a **1.1 mm triangle only 0.38 mm tall at its base** — under two 0.22 mm lines
+   even on a 0.2, so any slicer keeps a stub at best. `ploverleanfine` is `ploverleanbold` with the bill as
+   the logo's wedge (`billWedge`: 0.87 mm at the head, round 0.46 mm tip, 1.4 mm long). Print check at
+   0.45 mm: 4 % of the cream flagged, nothing on the bird.
+
+Sliced side by side (0.4 stock · 0.2 classic · 0.2 Arachne), the 0.2 Arachne slice of the *original*
+`ploverleanlines` keeps eye, collar, legs, outline and lip line; only the bill was lost. On the 0.4 the
+same slot has no eye, a broken outline and chewed legs — that was never a drawing problem.
+
 - **A 0.2 mm nozzle for the ring.** This roughly halves every minimum: two lines ≈ 0.45 mm.
   The v5/v6 barrel art would then mostly print as drawn. The cost is ring print time (the plate
   is about 66 min at 0.4) and a nozzle swap. It's probably the biggest single lever, and it was
