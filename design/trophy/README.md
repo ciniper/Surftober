@@ -81,6 +81,7 @@ URL, the generator (`--url` or flags) and the manifest.
 |---|---|---|---|
 | `version` | text, ≤ 12 | v6 | prefix on every output file (`v6-nahla-3arm-ploverleanbold8-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
+| `body` | tier · brown · bone | tier | the spinning body's filament; with `ring=insert` the insert is always the tier colour, so `brown`/`bone` make the gold ring the medal on a plain wheel (preset `insert`) |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
 | `arms` | 3 · 4 | 3 | arms carrying the ring |
 | `wave` | **ploverleanbold** · ploverleanfine (the 0.2-nozzle pick: compact frame, sea to the inner rim, wedge bill) · ploverbig · ploverleanedge · ploverleanlines · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanbold | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
@@ -98,7 +99,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | **insert** (★ current build: ploverleanfine, glue-in insert, brown body, 0.2, 2/plate) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 

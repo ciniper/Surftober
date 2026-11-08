@@ -173,6 +173,14 @@ So ≈ 2 h 10 per trophy instead of 3 h 53, with the fine nozzle only ever on a 
 a failed art print costing an insert, not a body. Untested in the real world: fit of the 0.15 mm
 clearance, curl of the 1 mm ring, CA glue. Body 42 g, insert 7 g.
 
+## 5d. The current build (2026-11-08, evening)
+
+Chase printed `ploverleanfine` on the glue-in insert: "worked well". Asked for a gold insert on a
+light-brown body → option `body` (tier · brown · bone; the insert is always the tier colour) and
+preset **`insert`**, first in the configurator's list ("★ Current build · gold insert on a brown body"):
+`wave=ploverleanfine ring=insert body=brown nozzle=0.2 copies=2`. The two project files come out with
+slot 1 pre-assigned: the body colour on the body / hub / cap plate, the tier colour on the insert plate.
+
 ## 6. Where things are
 
 - **Art:** `wave-frames.js`. Every animation option lives in `WAVE_VARIANTS`; new ones go beside
