@@ -481,6 +481,9 @@ def bambu_nozzle_settings(ps, nozzle):
     return ps
 
 
+BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
+
+
 def write_bambu_3mf(path, groups, nozzle='0.4'):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts

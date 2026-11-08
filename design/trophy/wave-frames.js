@@ -207,13 +207,16 @@ export const WAVE_VARIANTS = {
   },
   // 0.2 mm nozzle round (Chase, 2026-11-07: "I tried .2 and the beak still didn't come out"). Measured on the
   // ring: the logo bill as drawn is a 1.1 mm triangle only 0.38 mm tall at its base — under two 0.22 mm lines
-  // even on a 0.2 nozzle, so the slicer keeps a stub at best. Same scene and bird as ploverleanbold (every
-  // stroke ≥ 0.03 of the band ≈ 0.46 mm = two 0.2-nozzle lines), but the bill is the logo's wedge (billWedge):
+  // even on a 0.2 nozzle, so the slicer keeps a stub at best. Same scene and bird as ploverleanedge (the compact
+  // frame, sea down to the ring's inner rim, every stroke ≥ 0.03 of the band ≈ 0.46 mm = two 0.2-nozzle
+  // lines; Chase, 2026-11-07: "is this the compacted bold iteration as well? I'd like the blue to go to the
+  // rim"), but the bill is the logo's wedge (billWedge):
   // 60 px (0.87 mm) tall at the head, tapering to a round 32 px (0.46 mm) tip at x 330, ~1.3 mm out of the head.
   ploverleanfine: {
-    label: 'Plover · lean + lines, for a 0.2 nozzle (8 frames)', N: 8, mode: 'stay', kind: 'scene',
+    label: 'Plover · compact, sea to the rim, wedge bill — for a 0.2 nozzle (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93],
     layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
-    motion: { lip: .3, shift: .3, birdShift: .275, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03 },
+    motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
   },
   // Compact frame, sea to the edge (Chase, 2026-11-07: "let's [run the sea to the ring's edge] but we need to also
   // make more use of the frame — there's some unused space on the right, the plover tail could go into the wave

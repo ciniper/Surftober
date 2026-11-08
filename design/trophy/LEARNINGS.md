@@ -103,9 +103,11 @@ the other.**
    uses **classic** walls again. Option `nozzle=0.2` now writes the stock 0.2 printer / process / filament
    profiles plus Arachne into the `-bambu.3mf`, so the file opens ready to slice (0.10 mm layers).
 2. The logo bill as drawn is a **1.1 mm triangle only 0.38 mm tall at its base** — under two 0.22 mm lines
-   even on a 0.2, so any slicer keeps a stub at best. `ploverleanfine` is `ploverleanbold` with the bill as
+   even on a 0.2, so any slicer keeps a stub at best. `ploverleanfine` is `ploverleanedge` (the compact
+   frame, sea down to the ring's inner rim — Chase: "I'd like the blue to go to the rim") with the bill as
    the logo's wedge (`billWedge`: 0.87 mm at the head, round 0.46 mm tip, 1.4 mm long). Print check at
-   0.45 mm: 4 % of the cream flagged, nothing on the bird.
+   0.45 mm: 3 % of the cream flagged (board tips, lip-line ends), nothing on the bird. Chase approved the
+   bird with the bill on sight.
 
 Sliced side by side (0.4 stock · 0.2 classic · 0.2 Arachne), the 0.2 Arachne slice of the *original*
 `ploverleanlines` keeps eye, collar, legs, outline and lip line; only the bill was lost. On the 0.4 the
