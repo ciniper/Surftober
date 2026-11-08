@@ -1,7 +1,11 @@
 # Surftober TODO
 
 ## Next up
-(Nothing queued — everything left before Oct 1 is under Event prep.)
+- [ ] **⚠️ Chase: run supabase-upgrade-2026-11-game.sql** (reminder, 2026-11-08)
+      — the "Who said that?" game is built but can't collect votes until the
+      two game tables exist. Review the file, paste it into the Supabase SQL
+      editor, run once (additive; safe to re-run). Then rehearse with
+      deck.html?game=rehearsal from a browser signed in as the admin.
 
 ## Branch: photography-bonus (built here — merge to main when Chase says go)
 
