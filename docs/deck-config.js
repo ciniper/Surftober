@@ -104,6 +104,27 @@ window.SurftoberDeckConfig = {
   // ("The Fun, the Waves & the Good"); set a string to override.
   bookTitle: '',
 
+  // Blue Water Task Force — from the "bwtf tober" Google Slides (2026-11-08).
+  // Each feature's `media` is the visual from that deck: an image or video
+  // path under docs/ (e.g. 'bwtf/map.png', 'bwtf/alerts.mp4') or an https URL.
+  // `site` (optional) is the live website; it shows as a link on each slide.
+  bwtf: {
+    group: 'Data & Technology Group',
+    mission: 'Empower beachgoers and the Blue Water Task Force by making available data more useful.',
+    stats: [
+      { v: '27', k: 'years of beach postings' },
+      { v: '82,000+', k: 'city lab results since 2000' },
+      { v: '1,474', k: 'sewer discharge records since 2011' },
+    ],
+    features: [
+      { title: 'Unified Water Quality Map', media: '' },
+      { title: 'Data Analysis Spanning 20+ Years', media: '' },
+      { title: 'Targeted Email Alerts', media: '' },
+      { title: 'Educational Modules', media: '' },
+    ],
+    site: '',
+  },
+
   // "Who said that?" live game. Needs supabase-upgrade-2026-11-game.sql run.
   // Players join at /play.html (QR on the intro slide). For a rehearsal that
   // doesn't touch the real game, open the deck with ?game=rehearsal.

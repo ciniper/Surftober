@@ -123,7 +123,14 @@
       deck-stats.js computeDeck(); the app would load it next to awards.js and
       look up the viewed user. Pairs with the Surftober archive item. Judged
       awards come from deck-config.js, so they'd show once filled in.
-- [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — not started) —
+- [ ] **Blue Water Task Force section** (Chase, 2026-11-06 — STARTED 2026-11-08:
+      5 slides after Giving back from the "bwtf tober" Google Slides — mission
+      + 27 yrs / 82,000+ / 1,474 stats, then Unified Water Quality Map, Data
+      Analysis 20+ yrs, Targeted Email Alerts, Educational Modules. Visuals
+      still missing: that deck is 35 MB, too big to pull through the Drive
+      connector — drop the images/recordings in docs/bwtf/ and set
+      bwtf.features[i].media in deck-config.js, or set bwtf.site to the live
+      site.) Original scope —
       slides on how the money is used, a program overview, the funding lab,
       and data analysis. Related: the BWTF API notes under "Official BWTF
       logo" (lab 76; OB sites 9172 Lincoln Way + 9005 Vicente) for real

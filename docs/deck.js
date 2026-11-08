@@ -617,6 +617,25 @@
     }
   }
 
+  // ---------- Blue Water Task Force (from the "bwtf tober" deck) ----------
+  function bwtfSlides() {
+    const B = CFG.bwtf;
+    if (!B) return [];
+    const site = B.site ? `<p class="bw-site">${esc(B.site.replace(/^https?:\/\//, ''))}</p>` : '';
+    const intro = { title: 'Blue Water Task Force', html: `
+      <p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2 style="max-width:1500px">${esc(B.mission)}</h2>
+      <div class="stats bw-stats">${B.stats.map((s) => `<div class="stat"><div class="v">${esc(s.v)}</div><div class="k">${esc(s.k)}</div></div>`).join('')}</div>${site}` };
+    const media = (m, field) => {
+      if (!m) return todo('Add this slide’s visual from the “bwtf tober” deck', field);
+      if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="bw-media" src="${esc(m)}" autoplay muted loop playsinline></video>`;
+      return `<img class="bw-media" src="${esc(m)}" alt="">`;
+    };
+    const feats = (B.features || []).map((f, i) => ({ title: f.title, html: `
+      <p class="kicker">${esc(B.group)} · Website overview</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
+      <div class="bw-frame">${media(f.media, `bwtf.features[${i}].media`)}</div>${site}` }));
+    return [intro, ...feats];
+  }
+
   function outroSlide() {
     return { title: 'Until next time', cls: 'title', html: `<div class="sun" style="top:260px"></div>${wavesSvg()}
       <div class="content"><img class="logo" src="${LOGO}" alt=""><h1>Until next<br>time…</h1><p class="lede">See you in the water. Surftober ${CFG.year + 1}.</p></div>` };
@@ -710,7 +729,7 @@
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast'),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow'),
-      charitySlide(d), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
+      charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
     let i = 0;
     for (const id of order) {
       i++;
