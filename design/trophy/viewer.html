@@ -102,7 +102,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { DIM, TIERS, PARTS, PART, OPTIONS, PRESETS, partLabel, partColor, activeParts, generatedParts, partsToGenerate, parseOptions, serializeOptions,
-         frameCount, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT } from './spinner-config.js';
+         frameCount, waveBand, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT } from './spinner-config.js';
 import { buildSpinner, POSE, WEIGHT_DZ } from './spinner-parts.js';
 
 const $ = id => document.getElementById(id);
@@ -250,12 +250,12 @@ function select(id) {
   renderParts(); updateInfo();
 }
 function partInfo(id) {
-  const D = DIM, p = PART[id], n = frameCount(o);
+  const D = DIM, p = PART[id], n = frameCount(o), wb = waveBand(o), band = `band r ${wb.rIn.toFixed(1)}–${wb.rOut}${wb.seaIn < wb.rIn ? `, sea from r ${wb.seaIn.toFixed(1)}` : ''}`;
   const dims = {
     body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${o.seat === 'lip' ? `${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer (v3)` : 'plain bore (v1/v2)'} · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : isInlay(o) ? ` · ${D.inlay} mm inlay pockets` : '') + (ridgeCount(o) ? ` · ${ridgeCount(o)} micro ridges round the rim, front to back (grooves ${D.ridgeW} wide × ${D.ridgeDepth} deep, ${(2 * Math.PI * D.ringOut / ridgeCount(o)).toFixed(2)} mm pitch)` : '')
       + (notchCount(o) ? ` · ${notchCount(o)} finger notches r${D.notchR} × ${D.notchDepth} deep in the rim, from the back, front ${D.notchKeep} mm intact` : ''),
-    'wave-water': `band r ${D.waveIn}–${D.waveOut} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm pocket${o.art === 'proud' ? `, stands ${D.proud} proud of the face` : ', flush'} · colour ${partColor('wave-water', o)}`,
-    'wave-foam': `band r ${D.waveIn}–${D.waveOut} · ${n} frames · ${D.inlay} mm pocket through the bottom layer${o.art === 'proud' ? `, stands ${D.proudFoam} proud (${(D.proudFoam - D.proud).toFixed(1)} above the water)` : ', flush'} · colour ${partColor('wave-foam', o)}`,
+    'wave-water': `${band} · ${WAVE_VARIANTS[o.wave].label}, ${n} frames · ${D.inlay} mm pocket${o.art === 'proud' ? `, stands ${D.proud} proud of the face` : ', flush'} · colour ${partColor('wave-water', o)}`,
+    'wave-foam': `${band} · ${n} frames · ${D.inlay} mm pocket through the bottom layer${o.art === 'proud' ? `, stands ${D.proudFoam} proud (${(D.proudFoam - D.proud).toFixed(1)} above the water)` : ', flush'} · colour ${partColor('wave-foam', o)}`,
     hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off = ${D.standoff} over the bearing's outer race, ${(D.standoff + D.lip).toFixed(1)} over the body · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`
       + (hasScrew(o) ? ` · Ø${D.screwPilot} pilot up the stem for the centre screw, ${D.frontSkin} mm under the face` : ''),
     'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${D.inlay} mm flush inlay`,
@@ -308,7 +308,7 @@ $('generate').addEventListener('click', async () => {
 function showManifest(m) {
   if (!m) { $('genout').innerHTML = ''; return; }
   const rows = m.parts.map(p => `<tr><td>${p.valid ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'} ${p.label}</td><td>${p.filament}</td><td>${p.grams_pla} g</td></tr>`).join('');
-  const files = Object.entries(m.files).map(([k, f]) => `<a href="./cad/out/${f}" download>${k === 'all_stl' ? 'all-in-one STL' : k.toUpperCase()}</a>`).join('')
+  const files = Object.entries(m.files).map(([k, f]) => `<a href="./cad/out/${f}" download>${k === 'all_stl' ? 'all-in-one STL' : k === 'bambu_3mf' ? 'Bambu 3MF (coloured)' : k.toUpperCase()}</a>`).join('')
     + m.parts.filter(p => p.file).map(p => `<a href="./cad/out/${p.file}" download>${p.id}.stl</a>`).join('');
   $('genout').innerHTML = `<table class="man">${rows}<tr><td><b>total</b></td><td></td><td><b>${m.parts.reduce((s, p) => s + p.grams_pla, 0).toFixed(1)} g</b></td></tr></table>
     <div class="files">${files}</div><div class="hint">${m.tag} · ${m.generated} · ${m.seconds}s · files in design/trophy/cad/out/</div>`;

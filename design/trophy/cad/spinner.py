@@ -13,7 +13,8 @@ cad/bridge.mjs with node), so this always matches the 3D viewer.
 
 Output, in ./out/ (gitignored):
     <tag>-<part>.stl      one per part, in print orientation
-    <tag>.3mf             all parts as multi-part objects per print orientation (Bambu / Prusa)
+    <tag>.3mf             all parts as multi-part objects per print orientation (any slicer)
+    <tag>-bambu.3mf       pre-coloured Bambu Studio project: X1C, 4 AMS slots (brown / navy / cream / orange), one plate per print unit
     <tag>.step            coloured assembly in the mounted pose, with the bearing, centre screw and metal weight
     <tag>-all.stl         every part as separate shells in one STL (--combined)
     <tag>.json            manifest: options, parts, volumes, files — the viewer reads this
@@ -198,8 +199,9 @@ class Spinner:
             self._art = (water, foam)
         return self._art
 
-    def body(self):
-        """Built with the bearing at z 0…t, then (seat=lip) shifted back by the lip: the body spans -lip … t-lip."""
+    def body(self, relief=True):
+        """Built with the bearing at z 0…t, then (seat=lip) shifted back by the lip: the body spans -lip … t-lip.
+        relief=False leaves the raised art off (the multi-colour 3MF carries it as separate parts)."""
         D, t, o = self.D, self.t, self.o
         if o['seat'] == 'lip':
             body = cyl(D['hubOut'], 0, t, D['lipIn'])                   # hub with the small hole of the seat lip…
@@ -231,7 +233,7 @@ class Spinner:
             self.notes['grip'] = f"{n_notch} rim notches r{D['notchR']} × {D['notchDepth']} deep, {t - D['notchKeep']} mm tall from the back"
         water, foam = self.art()
         for w in (water, foam):
-            if w is None:
+            if w is None or (o['art'] == 'raised' and not relief):
                 continue
             body = body.union(w) if o['art'] == 'raised' else body.cut(w)
         # bought weight
@@ -252,6 +254,19 @@ class Spinner:
         self.notes['seat'] = (f"lip {D['lip']} mm behind the bore (r {D['lipIn']}–{D['bore'] / 2:.2f}) seats the outer race; {D['chamfer']} mm entry chamfer"
                               if o['seat'] == 'lip' else 'plain bore (v1/v2 seat)')
         return body.translate((0, 0, -self.shift))
+
+    def relief_parts(self):
+        """art=raised, split for a multi-colour print: the two relief layers as their own solids standing on the
+        ring face, water 0.4 minus the foam's footprint and foam 0.8, so they touch the plain body() and each
+        other without overlapping. Mounted pose, like body()."""
+        if self.o['art'] != 'raised':
+            return []
+        D, t, w = self.D, self.t, self.cfg['wave']
+        water = polys_to_solid(w['water'], t, D['relief'], 'water')
+        foam = polys_to_solid(w['foam'], t, D['reliefFoam'], 'foam')
+        if water is not None and foam is not None:
+            water = water.cut(foam)
+        return [(pid, x.translate((0, 0, -self.shift))) for pid, x in (('wave-water', water), ('wave-foam', foam)) if x is not None]
 
     def wave_water(self):
         water, foam = self.art()
@@ -365,8 +380,18 @@ def to_print_pose(wp, print_meta):
 
 
 def mesh(wp, tol=0.02, ang=0.1):
+    """Tessellate to one welded mesh: OpenCascade meshes each face on its own, so the vertices along shared
+    edges are duplicated; merging them (to 0.1 µm) makes a closed, connected shell instead of thousands of
+    loose patches with open edges, which is what slicers expect in a 3MF."""
     verts, tris = wp.val().tessellate(tol, ang)
-    return [(v.x, v.y, v.z) for v in verts], tris
+    index, out, remap = {}, [], []
+    for v in verts:
+        k = (round(v.x, 4), round(v.y, 4), round(v.z, 4))
+        if k not in index:
+            index[k] = len(out); out.append((v.x, v.y, v.z))
+        remap.append(index[k])
+    faces = [(remap[a], remap[b], remap[c]) for a, b, c in tris]
+    return out, [f for f in faces if len(set(f)) == 3]
 
 
 def write_3mf(path, groups):
@@ -396,6 +421,89 @@ def write_3mf(path, groups):
         z.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
                    '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
         z.writestr('3D/3dmodel.model', model)
+
+
+# Multi-colour project for Bambu Studio (Chase prints on an X1C with a 4-slot AMS): which filament slot each
+# part goes on, and the colour shown for it. The spinner's base is its own brown; the slots can be remapped
+# in the slicer.
+BAMBU_FILAMENTS = [('brown', '#7B4A2A'), ('navy', '#1D3050'), ('cream', '#EFE7D2'), ('orange', '#FF6B35')]
+BAMBU_SLOT = {'body': 1, 'wave-water': 2, 'wave-foam': 3, 'hub': 2, 'hub-text': 3, 'back-cap': 4}
+BAMBU_APP = 'BambuStudio-02.08.02.61'
+# Changes to the stock X1C · 0.20 Standard process. The art's finest lines (the plover's navy outline, legs,
+# collar and eye, the board's rim, the cream lip line) are 0.2–0.35 mm, under a 0.4 nozzle's 0.42 line:
+# the stock 'classic' wall generator drops them without a warning, Arachne prints them as narrower lines.
+BAMBU_PROCESS = {'wall_generator': 'arachne'}
+
+
+BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
+
+
+def write_bambu_3mf(path, groups):
+    """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
+    laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
+    (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
+    single-colour part never shares layers with another colour and the AMS only swaps where it must), plus the
+    project settings
+    from bambu-x1c-project.json (X1C 0.4, 0.20 mm Standard, 4 × Bambu PLA Basic; Bambu Studio's loader
+    crashes on a project without them) with the four filament colours filled in and BAMBU_PROCESS applied."""
+    import uuid
+    U = lambda: str(uuid.uuid4())
+    NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
+          'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"')
+    files, root_objs, items, settings, plate, rels = {}, [], [], [], [], []
+    mid = 0
+    root_ids = list(range(sum(len(p) for _, p, _ in groups) + 1, sum(len(p) for _, p, _ in groups) + 1 + len(groups)))
+    for gi, (gname, parts, (tx, ty)) in enumerate(groups):
+        fname = f'/3D/Objects/object_{gi + 1}.model'
+        meshes, comps, parts_cfg = [], [], []
+        for pid, (verts, tris) in parts:
+            mid += 1
+            v = ''.join(f'<vertex x="{x:.4f}" y="{y:.4f}" z="{z:.4f}"/>' for x, y, z in verts)
+            t = ''.join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in tris)
+            meshes.append(f'<object id="{mid}" p:UUID="{U()}" type="model"><mesh><vertices>{v}</vertices><triangles>{t}</triangles></mesh></object>')
+            comps.append(f'<component p:path="{fname}" objectid="{mid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>')
+            slot = BAMBU_SLOT.get(pid, 1)
+            parts_cfg.append(f'<part id="{mid}" subtype="normal_part"><metadata key="name" value="{escape(pid)} · {BAMBU_FILAMENTS[slot - 1][0]}"/>'
+                             f'<metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="{slot}"/>'
+                             f'<mesh_stat face_count="{len(tris)}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>')
+        files[fname[1:]] = f'<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" {NS}><metadata name="BambuStudio:3mfVersion">1</metadata><resources>{"".join(meshes)}</resources><build/></model>'
+        rels.append(f'<Relationship Target="{fname}" Id="rel-{gi + 1}" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>')
+        rid = root_ids[gi]
+        root_objs.append(f'<object id="{rid}" p:UUID="{U()}" type="model"><components>{"".join(comps)}</components></object>')
+        cols = math.ceil(math.sqrt(len(groups)) - 1e-9)                        # Bambu's plate grid: plate i at column i % cols, row i // cols
+        step = BAMBU_BED * (1 + BAMBU_PLATE_GAP)
+        ox, oy = (gi % cols) * step, -(gi // cols) * step
+        items.append(f'<item objectid="{rid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 {ox + tx:.3f} {oy + ty:.3f} 0" printable="1"/>')
+        first = BAMBU_SLOT.get(parts[0][0], 1)
+        settings.append(f'<object id="{rid}"><metadata key="name" value="{escape(gname)}"/><metadata key="extruder" value="{first}"/>'
+                        f'<metadata face_count="{sum(len(tr) for _, (_, tr) in parts)}"/>{"".join(parts_cfg)}</object>')
+        plate.append(f'<plate><metadata key="plater_id" value="{gi + 1}"/><metadata key="plater_name" value="{escape(gname)}"/><metadata key="locked" value="false"/>'
+                     f'<model_instance><metadata key="object_id" value="{rid}"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="{100 + gi}"/></model_instance></plate>')
+    root = (f'<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" {NS}>'
+            f'<metadata name="Application">{BAMBU_APP}</metadata><metadata name="BambuStudio:3mfVersion">1</metadata>'
+            f'<metadata name="Title">Surftober 2026 spinner</metadata><metadata name="CreationDate">{time.strftime("%Y-%m-%d")}</metadata>'
+            f'<resources>{"".join(root_objs)}</resources><build p:UUID="{U()}">{"".join(items)}</build></model>')
+    cfg = ('<?xml version="1.0" encoding="UTF-8"?>\n<config>' + ''.join(settings) +
+           ''.join(plate) + '</config>')
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                   '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+                   '<Default Extension="png" ContentType="image/png"/></Types>')
+        z.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+        z.writestr('3D/3dmodel.model', root)
+        z.writestr('3D/_rels/3dmodel.model.rels', '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + ''.join(rels) + '</Relationships>')
+        for name, body in files.items():
+            z.writestr(name, body)
+        z.writestr('Metadata/model_settings.config', cfg)
+        ps = json.load(open(os.path.join(HERE, 'bambu-x1c-project.json')))
+        ps['filament_colour'] = [c for _, c in BAMBU_FILAMENTS]
+        ps.update(BAMBU_PROCESS)
+        diff = ps.get('different_settings_to_system') or ['']     # [process, filament 1…n, printer]: shows the process as edited
+        diff[0] = ';'.join(sorted(set(filter(None, diff[0].split(';'))) | set(BAMBU_PROCESS)))
+        ps['different_settings_to_system'] = diff
+        z.writestr('Metadata/project_settings.config', json.dumps(ps, indent=4, ensure_ascii=False))
 
 
 def hex_color(h):
@@ -474,6 +582,31 @@ def main():
         write_3mf(os.path.join(a.out, f'{tag}.3mf'), [(g, [(pid, color, mesh(posed)) for pid, color, posed in parts], spots[g]) for g, parts in groups.items()])
         manifest['files']['3mf'] = f'{tag}.3mf'
         print(f'3mf       → {tag}.3mf ({len(groups)} object(s), {len(built)} part(s))')
+
+        # Bambu Studio project, pre-coloured: the same print units, one per X1C plate, each part on its own
+        # filament slot (BAMBU_SLOT). art=raised splits the body into the plain body + its two relief layers.
+        bed = {g: (BAMBU_BED / 2, BAMBU_BED / 2) for g in groups}             # each print unit centred on its own plate
+        bam, n_bam, vol = [], 0, {}
+        for g, parts in groups.items():
+            plist = []
+            for pid, color, posed in parts:
+                if pid == 'body' and o['art'] == 'raised':
+                    base = sp.body(relief=False)
+                    dz = -base.val().BoundingBox().zmin                    # the body prints as mounted (no flip)
+                    for qid, x in [('body', base)] + sp.relief_parts():
+                        x = x.translate((0, 0, dz)); vol[qid] = x.val().Volume()
+                        plist.append((qid, mesh(x)))
+                else:
+                    plist.append((pid, mesh(posed)))
+            n_bam += len(plist)
+            bam.append((g, plist, bed[g]))
+        write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam)
+        manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
+        used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
+        print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
+              ', '.join(f'{k} {BAMBU_FILAMENTS[k - 1][0]}' for k in used) + ')')
+        if vol:
+            print('  split   ' + ', '.join(f'{k} {v:.0f}' for k, v in vol.items()) + f' mm³ = {sum(vol.values()):.0f} (body {built["body"][0].val().Volume():.0f})')
 
     if o['weight'] == 'bezel' and o['bezel'] == 'flat':
         D = cfg['dim']

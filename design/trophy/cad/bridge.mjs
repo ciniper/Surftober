@@ -7,7 +7,7 @@ import { DIM, TIERS, PART, parseOptions, serializeOptions, outputTag, partsToGen
 import { ringArt } from '../wave-frames.js';
 
 const o = parseOptions(process.argv[2] || '');
-const art = ringArt({ variant: o.wave, N: frameCount(o), rIn: DIM.waveIn, rOut: DIM.waveOut });
+const art = ringArt({ variant: o.wave, N: frameCount(o), rIn: DIM.waveIn, rOut: DIM.waveOut, ringIn: DIM.ringIn });
 const clean = poly => {                       // drop repeated points and degenerate polygons
   const out = [];
   for (const p of poly) { const q = out[out.length - 1]; if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-4) out.push(p); }
@@ -20,5 +20,5 @@ process.stdout.write(JSON.stringify({
   options: o, query: serializeOptions(o), tag: outputTag(o),
   dim: DIM, tier: { key: o.tier, ...TIERS[o.tier] },
   generate: partsToGenerate(o).map(meta), active: activeParts(o), ridges: ridgeCount(o),
-  wave: { variant: o.wave, label: WAVE_VARIANTS[o.wave].label, N: art.N, water: gather('water'), foam: gather('foam') },
+  wave: { variant: o.wave, label: WAVE_VARIANTS[o.wave].label, N: art.N, band: art.band, water: gather('water'), foam: gather('foam') },
 }));

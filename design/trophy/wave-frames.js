@@ -194,6 +194,58 @@ export const WAVE_VARIANTS = {
     layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
     motion: { lip: .3, shift: .3, birdShift: .25, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 } },
   },
+  // Print round (Chase, 2026-11-07: the slice dropped the plover's outline and legs and the lip line — "if we
+  // made the inner diameter go further in we would have more space to enlarge features, especially with 8 or
+  // 9 frames"): lean + lines on 8 frames (the v6 band is 28% taller) with every plover stroke at least 0.03.
+  // The bolder outline ate the bird's clearance, and frame 7 (t .75) lands on the foam ball's closest pass
+  // (10 frames straddled it at 0.06 mm): the bird is 92%, a touch further back, with a shorter bill (tip at
+  // 350 px, was 312) — ≥ 0.43 mm from the wave and ≥ 0.47 mm from the foam in every frame.
+  ploverleanbold: {
+    label: 'Plover · lean + lines, bold for print (8 frames)', N: 8, mode: 'stay', kind: 'scene',
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .275, birdScale: .92, bill: 350, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03 },
+  },
+  // Compact frame, sea to the edge (Chase, 2026-11-07: "let's [run the sea to the ring's edge] but we need to also
+  // make more use of the frame — there's some unused space on the right, the plover tail could go into the wave
+  // for part of the animation and the left part of the wave crash maybe can be partly compressed"): the bold
+  // print round with the lip's throw, foam ball and splash pressed back towards the tube (squeeze) and the
+  // plover 0.065 further into it, so its tail dips into the back wall for frames 1–5 (as it steps back) and is
+  // ≥ 0.45 mm clear of it in 6–8; head, bill and feet stay ≥ 0.47 mm from the wave, ≥ 0.95 from the foam. The
+  // scene then fills a 1.76-wide frame instead of 2.06, and 8 slots of that fill a band from r 30.6: the art is
+  // 14% bigger again, and the sea runs on down to the ring's inner edge (sea: 'edge', see artBand).
+  ploverleanedge: {
+    label: 'Plover · bold, compact frame, sea to the edge (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93],
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 350, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
+  // The plover as the hero (Chase, 2026-11-07, after ploverleanedge: "it still looks awful sliced, most of the
+  // plover features don't come out, and there's way more room in the frame"; "don't design a beak if it's going
+  // to disappear in the slice"). The rule: no part and no gap of ring colour narrower than two nozzle lines
+  // (0.9 mm) anywhere on the ring. The barrel (`tube`) is redrawn round the chunky print bird (`big`, see
+  // chunky()) at 1.25×: the trough drops to the band's foot (level .08; the sea carries on to the ring's edge),
+  // the ceiling and back wall wrap the bird with ≥ 1.1 mm of ring colour all round, and every stroke is 0.06 of
+  // the band (~1 mm). No splash droplets; the foam ball's bubbles, the lip line and the face dashes never taper
+  // below the stroke. The scene fits a 1.85-wide frame, so 8 slots fill r 31.3–48.2.
+  ploverbig: {
+    label: 'Plover · big bird, barrel wrapped round it (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.1, 1.95], level: .08,
+    tube: [[0, .08], [.1, .09], [.15, .2], [.19, .4], [.25, .6], [.34, .77], [.46, .89], [.64, .95], [.9, .97], [1.12, .965],
+      [1.34, .92], [1.53, .82], [1.66, .66], [1.71, .5], [1.68, .4], [1.6, .45], [1.55, .56], [1.45, .67], [1.33, .765], [1.18, .82],
+      [.98, .83], [.8, .76], [.68, .62], [.63, .46], [.63, .3], [.7, .15], [.95, .1], [1.3, .095], [1.7, .09], [DA, .08]],
+    lipPivot: [1.2, .9],
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .2, reach: .7, ball: .85, spread: .8, shift: 0, birdShift: .06, birdY: .09, birdScale: 1.25, boardScale: 1.2, big: 1, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 0, lean: .05, tex: { face: 1, dash: 2, geo: { face: { w: .06, depth: .16 } } }, bold: .06 },
+  },
+  // Open face, no barrel (Chase, 2026-11-07, option 1 of the rethink). The logo plover keeps its collar, legs,
+  // beak and cap at ~1.75× (every stroke lifted to ≥ 0.055 of the band, ~0.95 mm); the wave rises behind it.
+  ploverface: {
+    label: 'Plover · open face, no barrel (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.08, 1.95], level: .08,
+    face: [[0, [[0, .08], [.3, .11], [.7, .155], [1.0, .2], [1.2, .26], [1.34, .36], [1.44, .48], [1.5, .58], [1.5, .64], [1.46, .68], [1.42, .69],
+               [1.38, .68], [1.35, .7], [1.35, .77], [1.37, .86], [1.48, .94], [1.6, .97], [1.73, .93], [1.82, .8], [1.87, .58], [1.9, .33], [1.92, .15], [1.94, .09], [DA, .08]]]],
+    lipLine: [12, 18], tip: 12, faceLine: [4, 8, .1], lip: [9, 16, 12], lipPivot: [1.62, .82],
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lip, board, bird' },
+    motion: { print: 1, birdScale: 1.6, boardScale: 1.2, boardThick: 1.45, tiltBase: 5, birdX: .58, birdY: .155, bill: 296, billBase: 64, billTip: 36, walk: .02, lift: .02, lead: 'back', stance: 1, headScale: 1.2, crouch: .03, bob: .004, tilt: 1.5, wobble: .5, bold: .062, ball: .065, lip: .15, reach: 1, lean: .04, dash: 2 },
+  },
   ploverleancarve: {
     label: 'Plover · lean + carved face lines', N: 10, mode: 'stay', kind: 'scene',
     layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
@@ -281,12 +333,12 @@ function smooth(pts, seg = 5) {
   }
   return out;
 }
-// Sutherland–Hodgman clip to the cell [0,1] × [0,TOP].
-function clip(poly) {
+// Sutherland–Hodgman clip to the cell [0,1] × [lo,TOP] (lo < 0: a sea that runs on below the band).
+function clip(poly, lo = 0) {
   const cutX = (a, b, x) => [x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])];
   const cutY = (a, b, y) => [a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]), y];
   const planes = [[p => p[0] >= 0, (a, b) => cutX(a, b, 0)], [p => p[0] <= 1, (a, b) => cutX(a, b, 1)],
-                  [p => p[1] >= 0, (a, b) => cutY(a, b, 0)], [p => p[1] <= TOP, (a, b) => cutY(a, b, TOP)]];
+                  [p => p[1] >= lo, (a, b) => cutY(a, b, lo)], [p => p[1] <= TOP, (a, b) => cutY(a, b, TOP)]];
   for (const [inside, cut] of planes) {
     const out = [];
     poly.forEach((b, i) => {
@@ -423,37 +475,125 @@ const lp = ([x, y]) => [(x - LOGO.x0) * LOGO.s, (LOGO.y0 - y) * LOGO.s];
 // body + neck, reaching up into the head circle (but clear of the cap and eye) so they join without a seam
 const LOGO_BODY = chaikin([[528, 462], [562, 482], [592, 500], [650, 501], [728, 516], [806, 543], [868, 572], [912, 598], [868, 612], [800, 646],
   [725, 688], [650, 712], [590, 713], [540, 692], [505, 655], [490, 612], [478, 560], [460, 530]], 3).map(lp);
+// the same body with the tail's point blunted (the chunky print bird: a point can't print)
+const LOGO_BODY_BLUNT = chaikin([[528, 462], [562, 482], [592, 500], [650, 501], [728, 516], [806, 543], [860, 568], [892, 585], [902, 600], [888, 613], [850, 622], [800, 646],
+  [725, 688], [650, 712], [590, 713], [540, 692], [505, 655], [490, 612], [478, 560], [460, 530]], 3).map(lp);
 const LOGO_COLLAR = [[588, 495], [582, 560], [551, 616], [512, 652], [495, 634], [527, 597], [553, 551], [560, 498]].map(lp);
 // q: where the bird is in its walk, 0 = stepped back (lip thrown over), 1 = stepped forward (lip pulled back).
 // Two steps each way: the front foot then the back foot going forward, the back foot then the front going back.
-function surfer(t, M, q = 0.5) {
-  const navy = [], cream = [], c = M.tuck ? M.crouch * (0.5 - 0.5 * Math.cos(TAU * t)) : M.crouch * (0.5 + 0.5 * wv(t, 2));
-  const tilt = deg(-3 + M.tilt * wv(t, 1.3) + (M.wobble || 0) * Math.sin(2 * TAU * t + 0.4)), drop = 0.05 * c - M.bob * wv(t);   // the knees take the crouch and the bob
-  // board: pointed nose left, squash tail right, nose rocker; navy-rimmed so it reads on the gold
-  const top = [], bot = [];
+// M.bold (print, 2026-11-07): the thinnest stroke, in cell heights. The logo's outline (0.022), legs (0.026),
+// board rim (0.018), eye (Ø0.026) and cap (0.028 tall) are under a 0.4 nozzle's line at any ring size that
+// fits; bold lifts each of them to at least this (0.03 ≈ 0.46 mm on the 8-frame v6 band).
+// The chunky print plover (M.big, 2026-11-07, Chase: "don't design a beak if it's going to disappear in the
+// slice"): the logo plover rebuilt so every part, in every colour, is at least M.bold wide (~0.95 mm, two
+// nozzle lines) — the ring-colour gaps between parts too. The logo's body outline stays; the head is 1.6× so a
+// navy cap (≥ B thick), a round eye hole (Ø ≥ B) and the cream between them all fit; the bill is a blunt stub;
+// two straight legs ≥ B wide with ≥ B between them, standing still (the 0.7 mm cross-step can't print); a thick
+// board with blunt ends. The partial collar is left out: at this size it and the cream either side of it can't
+// all be ≥ B.
+function chunky(t, M) {
+  const B = M.bold, navy = [], cream = [], c = M.crouch * (0.5 + 0.5 * wv(t, 2));
+  const tilt = deg(-3 + M.tilt * wv(t, 1.3) + (M.wobble || 0) * Math.sin(2 * TAU * t + 0.4)), drop = 0.05 * c - M.bob * wv(t);
+  // board: blunt nose left, squash tail right; never thinner than B (cream) inside a B navy rim
+  const top = [], bot = [], kb = M.boardScale || 1, kt = M.boardThick || 1.5;
   for (let i = 0; i <= 22; i++) {
-    const s = 0.02 + 0.96 * i / 22, x = 0.29 - 0.58 * s, rock = 0.045 * s ** 3, th = Math.sin(Math.PI * s) ** 0.5;
-    top.push([x, rock + 0.022 * th]); bot.push([x, rock - 0.02 * th]);
+    const s = 0.02 + 0.96 * i / 22, x = 0.29 - 0.58 * s, rock = 0.045 * s ** 3, th = 0.65 + 0.35 * Math.sin(Math.PI * s) ** 0.5;
+    top.push([x * kb, rock * kb + 0.022 * th * kb * kt]); bot.push([x * kb, rock * kb - 0.02 * th * kb * kt]);
   }
-  const board = rot([...top, ...bot.reverse()], tilt);
-  navy.push(grow(board, 0.018)); cream.push(board);
-  const deck = x => rot([[x, 0.022]], tilt)[0];
+  const cap = (a, b, dir) => { const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], h = Math.hypot(a[0] - b[0], a[1] - b[1]) / 2;   // round end from a to b
+    return Array.from({ length: 7 }, (_, i) => { const th = Math.PI * (i + 1) / 8; return [m[0] + dir * Math.sin(th) * h, m[1] + (a[1] > b[1] ? 1 : -1) * Math.cos(th) * h]; }); };
+  const nose = cap(top[22], bot[22], -1), tail = cap(bot[0], top[0], 1);
+  const board = rot([...top, ...nose, ...[...bot].reverse(), ...tail], tilt);
+  navy.push(grow(board, B)); cream.push(board);
+  // the bird sits tucked down on its board (no legs: the 1 mm between belly and deck left slivers of ring colour
+  // either side) and rides it — tilting with it and leaning into the ride with the crouch
+  const lean = deg(-4 - 5 * c), bs = M.birdScale || 1, hs = M.headScale || 1.6, deckY = 0.022 * kb * kt;
+  const P0 = q => rot([[q[0] * bs, q[1] * bs]], lean, [0, 0.2])[0];
+  const sit = deckY + B - Math.min(...LOGO_BODY_BLUNT.map(q => P0(q)[1]));          // belly outline on the board's rim
+  const P = q => rot([P0(q).map((v, i) => v + [0, sit][i])], tilt)[0];
+  const body = LOGO_BODY_BLUNT.map(P), hc = P(lp([470, 480])), rh = 65 * LOGO.s * bs * hs;
+  const head = ell(...hc, rh, rh, 48);
+  // bill: a blunt stub at eye height, out of the head's outline to the left and a little down
+  const ba = deg(188) + lean, bd = [Math.cos(ba), Math.sin(ba)], bn = [-bd[1], bd[0]], b0 = rh * 0.75, b1 = rh + B + B * 1.2, bw0 = B * 1.5, bw1 = B * 1.05;
+  const by = [hc[0] + bd[0] * 0 + bn[0] * -0.1 * rh, hc[1] + bn[1] * -0.1 * rh];
+  const bp = (d, w) => [[by[0] + bd[0] * d + bn[0] * w / 2, by[1] + bd[1] * d + bn[1] * w / 2], [by[0] + bd[0] * d - bn[0] * w / 2, by[1] + bd[1] * d - bn[1] * w / 2]];
+  const [p0, p1] = bp(b0, bw0), [p2, p3] = bp(b1, bw1);
+  navy.push([p0, p2, p3, p1]);
+  navy.push(grow(body, B), grow(head, B));
+  // fill the thin wedges of ring colour where the belly curves away from the board (under 1 mm deep)
+  const ob = grow(body, B), dy = x => Math.tan(tilt) * x + deckY / Math.cos(tilt);
+  const low = ob.filter(([x, y]) => y < dy(x) + B + 0.06).sort((a, b) => a[0] - b[0]);
+  if (low.length > 2) navy.push([...low, ...[...low].reverse().map(([x]) => [x, dy(x) - 0.005])]);
+  const capY = hc[1] + rh * 0.6;
+  cream.push(body.map(([x, y]) => [x, Math.min(y, capY)]));               // the neck stops at the cap too, so no cream spike pokes up into it
+  // head: cream below a cap chord (cap ≥ B thick, navy, joined to the outline), with a round eye hole
+  const er = Math.max(B * 0.55, 0.03), eye = ell(hc[0] - rh * 0.12, hc[1] - rh * 0.05, er, er, 18);
+  const face = ell(...hc, rh, rh, 48).map(([x, y]) => [x, Math.min(y, capY)]);
+  cream.push(withHoles(face, [eye]));
+  return { navy, cream };
+}
+// print: the logo's bill as a wedge billBase px tall at the head, tapering to a round tip billTip px across at M.bill
+function billWedge(M) {
+  const b0 = [418, 536], b1 = [M.bill, 550], dx = b1[0] - b0[0], dy = b1[1] - b0[1], L = Math.hypot(dx, dy), n = [-dy / L, dx / L], h0 = M.billBase / 2, h1 = M.billTip / 2;
+  const arc = Array.from({ length: 9 }, (_, i) => { const a = Math.PI / 2 - Math.PI * i / 8; return [b1[0] + (n[0] * Math.sin(a) + dx / L * Math.cos(a)) * h1, b1[1] + (n[1] * Math.sin(a) + dy / L * Math.cos(a)) * h1]; });
+  return [[b0[0] + n[0] * h0, b0[1] + n[1] * h0], ...arc, [b0[0] - n[0] * h0, b0[1] - n[1] * h0]];
+}
+function surfer(t, M, q = 0.5) {
+  if (M.big) return chunky(t, M);
+  const B = M.bold || 0, W = w => Math.max(w, B);
+  const navy = [], cream = [], c = M.tuck ? M.crouch * (0.5 - 0.5 * Math.cos(TAU * t)) : M.crouch * (0.5 + 0.5 * wv(t, 2));
+  const tilt = deg((M.tiltBase ?? -3) + M.tilt * wv(t, 1.3) + (M.wobble || 0) * Math.sin(2 * TAU * t + 0.4)), drop = 0.05 * c - M.bob * wv(t);   // the knees take the crouch and the bob; tiltBase: the board's angle on the face
+  // board: pointed nose left, squash tail right, nose rocker; navy-rimmed so it reads on the gold
+  const top = [], bot = [], kb = M.boardScale || 1, kt = M.boardThick || 1;      // boardScale: a bigger board under a bigger bird
+  for (let i = 0; i <= 22; i++) {
+    const s = 0.02 + 0.96 * i / 22, x = 0.29 - 0.58 * s, rock = 0.045 * s ** 3, th = M.print ? 0.8 + 0.2 * Math.sin(Math.PI * s) ** 0.5 : Math.sin(Math.PI * s) ** 0.5;
+    top.push([x * kb, rock * kb + 0.022 * th * kb * kt]); bot.push([x * kb, rock * kb - 0.02 * th * kb * kt]);
+  }
+  // print: round ends instead of points (a point can't print)
+  const endCap = (a, b, dir) => { const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], h = Math.hypot(a[0] - b[0], a[1] - b[1]) / 2;
+    return Array.from({ length: 7 }, (_, i) => { const th = Math.PI * (i + 1) / 8; return [m[0] + dir * Math.sin(th) * h, m[1] + (a[1] > b[1] ? 1 : -1) * Math.cos(th) * h]; }); };
+  const board = rot(M.print ? [...top, ...endCap(top[22], bot[22], -1), ...[...bot].reverse(), ...endCap(bot[0], top[0], 1)] : [...top, ...bot.reverse()], tilt);
+  navy.push(grow(board, W(0.018))); cream.push(board);
+  const deck = x => rot([[x, 0.022 * kb * kt]], tilt)[0];
   // the bird above its feet, lowered by the crouch, leaning into the ride a touch
   const A = M.walk || 0, ss = x => (x = Math.min(1, Math.max(0, x)), x * x * (3 - 2 * x));
-  const lift = [A - 2 * A * q, -drop], lean = deg(-4 - 5 * c), P = q => rot([q], lean, [0, 0.2])[0].map((v, i) => v + lift[i]);
-  const body = LOGO_BODY.map(P), head = ell(...lp([470, 480]), 65 * LOGO.s, 65 * LOGO.s, 32).map(P);
+  const lift = [A - 2 * A * q, -drop], lean = deg(-4 - 5 * c), bs = M.birdScale || 1, P = q => rot([[q[0] * bs, q[1] * bs]], lean, [0, 0.2])[0].map((v, i) => v + lift[i]);   // birdScale: about the middle of the deck
+  const hr = 65 * (M.print ? M.headScale || 1 : 1);                          // print: the head a little bigger, so cap, cream and eye are each ≥ B
+  const body = (M.print ? LOGO_BODY_BLUNT : LOGO_BODY).map(P), head = ell(...lp([470, 480]), hr * LOGO.s, hr * LOGO.s, 48).map(P);
   // legs: from the belly to the feet on the deck, knees flexing forward with the crouch; flat feet, toes left
-  const sw = M.stance ?? 1, feet = (M.legs === 'cross' ? [0.065, -0.055] : [-0.055, 0.065]).map(x => 0.005 + (x - 0.005) * sw);   // crossed: each foot under the other hip
+  const sw = M.stance ?? 1, fs = M.birdScale || 1, feet = (M.legs === 'cross' ? [0.065, -0.055] : [-0.055, 0.065]).map(x => (0.005 + (x - 0.005) * sw) * (M.big || M.print ? fs : 1));   // crossed: each foot under the other hip
+ const ff = M.big || M.print ? fs : 1;                                                 // big: the feet grow with the bird
   [530, 628].forEach((lx, n) => {
     const fx = feet[n], j = (fx < 0) === (M.lead !== 'back') ? 0 : 1;          // which foot steps first going forward
     const st = 2 * q - j, up = st > 0 && st < 1 ? (M.lift ?? 0.03) * Math.sin(Math.PI * st) : 0;           // this foot's step: lifted mid-swing
     const hip = P(lp([lx, 700])), [ax, ay0] = deck(fx + A - 2 * A * ss(st)), ay = ay0 + up, knee = [(hip[0] + ax) / 2 - 0.03 * c - 0.005, (hip[1] + ay) / 2];
-    navy.push(bar(hip, knee, 0.026), bar(knee, [ax, ay], 0.026), [[ax + 0.02, ay - 0.004], [ax - 0.058, ay - 0.004], [ax - 0.058, ay + 0.016], [ax + 0.02, ay + 0.016]]);
+    navy.push(bar(hip, knee, W(0.026)), bar(knee, [ax, ay], W(0.026)), [[ax + 0.02 * ff, ay - 0.004], [ax - 0.058 * ff, ay - 0.004], [ax - 0.058 * ff, ay + W(0.02) - 0.004], [ax + 0.02 * ff, ay + W(0.02) - 0.004]]);
   });
-  navy.push(grow(body, 0.022), grow(head, 0.022), [[408, 512], [312, 546], [416, 541]].map(lp).map(P));    // outline + pointed bill
-  cream.push(withHoles(body, [LOGO_COLLAR.map(P)]));                                                       // partial collar
-  const cap = ell(...lp([488, 452]), 33 * LOGO.s, 15 * LOGO.s, 18).map(q => rot([q], deg(-4), lp([488, 452]))[0]).map(P);
-  cream.push(withHoles(head, [cap, ell(...lp([461, 500]), 14 * LOGO.s, 14 * LOGO.s, 14).map(P)]));      // cap + eye
+  navy.push(grow(body, W(0.022)), grow(head, W(0.022)), (M.billBase ? billWedge(M) : [[408, 512], [M.bill || 312, 546], [416, 541]]).map(lp).map(P));    // outline + bill (M.bill: its tip, logo px; print: a blunt wedge billBase → billTip px tall)
+  cream.push(withHoles(body, [(B ? grow(LOGO_COLLAR, Math.max(0.004, (B / (M.birdScale || 1) - 0.028) / 2)) : LOGO_COLLAR).map(P)]));    // bold: collar band ~0.028 → 0.036 before birdScale                                                       // partial collar
+  const er = Math.max(14 * LOGO.s, B / 2 / bs), eye = ell(...lp(M.print ? [462, 480 + hr * 0.24] : [461, 500]), er, er, 18).map(P);       // ≥ B across after birdScale (print: nudged in from the outline)
+  if (B && M.print) {
+    // print: the cap is the top of the head above a chord at logo y 452 (≥ 0.9 mm of navy, joined to the
+    // outline), with ≥ 0.9 mm of cream between it and the eye
+    const capY = (LOGO.y0 - (480 - hr + 0.5 * hr)) * LOGO.s, hc = lp([470, 480]);
+    cream.push(withHoles(ell(...hc, hr * LOGO.s, hr * LOGO.s, 64).map(([x, y]) => [x, Math.min(y, capY)]).map(P), [eye]));
+  } else if (B) {
+    // bold: the cream left above the cap is ~0.015 thick, so the cap runs out to the outline instead and
+    // reads as a navy crown — the head is cut back to the cap ellipse (moved up and out a little) along
+    // rays from its centre
+    const hc = lp([470, 480]), cc = lp([496, 440]), rx = 36 * LOGO.s, ry = 22 * LOGO.s, a = deg(-4);
+    const inCap = ([x, y]) => { const dx = x - cc[0], dy = y - cc[1], u = dx * Math.cos(a) + dy * Math.sin(a), v = -dx * Math.sin(a) + dy * Math.cos(a); return (u / rx) ** 2 + (v / ry) ** 2 < 1; };
+    const crowned = ell(...hc, 65 * LOGO.s, 65 * LOGO.s, 64).map(p => {
+      if (!inCap(p)) return p;
+      let lo = 0, hi = 1;                                   // fraction of the way out from the centre: lo outside the cap, hi inside
+      for (let k = 0; k < 24; k++) { const m = (lo + hi) / 2; inCap([hc[0] + (p[0] - hc[0]) * m, hc[1] + (p[1] - hc[1]) * m]) ? hi = m : lo = m; }
+      return [hc[0] + (p[0] - hc[0]) * lo, hc[1] + (p[1] - hc[1]) * lo];
+    }).map(P);
+    cream.push(withHoles(crowned, [eye]));                                                                 // crown + eye
+  } else {
+    const cap = ell(...lp([488, 452]), 33 * LOGO.s, 15 * LOGO.s, 18).map(q => rot([q], deg(-4), lp([488, 452]))[0]).map(P);
+    cream.push(withHoles(head, [cap, eye]));                                                                // cap + eye
+  }
   return { navy, cream };
 }
 // ---- texture in the wave (Chase, 2026-11-04: "should we add any texture to the wave itself?") ----
@@ -487,21 +627,21 @@ function brush(path, w) {
   return [...L, ...R.reverse()];
 }
 const env = s => Math.sin(Math.PI * Math.min(1, Math.max(0, s))) ** 0.35;
-function texture(M, t, surface, water, foam) {
+function texture(M, t, surface, water, foam, S = SEA) {
   const geo = key => ({ ...TEX[key], ...((M.tex.geo || {})[key]) });          // geo: per-style overrides of TEX
-  const line = key => { const T = geo(key); return offsetPath(surface.slice(T.from * SEG, T.to * SEG + 1), T.depth).filter(p => p[1] >= S + 0.045); };   // stop above the flat sea
+  const line = key => { const T = geo(key); return offsetPath(surface.slice(T.from * SEG, T.to * SEG + 1), T.depth).filter(p => p[1] >= S + (M.big ? 0.2 : 0.045)); };   // stop above the flat sea
   const out = [], holes = [];
   const lines = (keys, dash, dir) => keys.forEach(key => {
     const P = line(key), W = geo(key).w;
-    if (!dash) { out.push(brush(subPath(P, 0, 1, 40), s => W * env(s))); return; }
+    if (!dash) { out.push(brush(subPath(P, 0, 1, 40), s => Math.max(M.big ? M.bold : 0, W * env(s)))); return; }
     // flowing dashes: `dash` of them along the line, each moving one gap along per loop (dir +1 = from
     // the start of the path to its end), drawn full width only in the middle of the line so they grow
     // in and thin away at its ends
     for (let j = -1; j <= dash; j++) {
       const a = (j + dir * t) / dash, b = a + 0.62 / dash, a0 = Math.max(0, a), b0 = Math.min(1, b);
-      if (b0 - a0 < 0.1) continue;                                                  // no specks at the ends
+      if (b0 - a0 < (M.big ? 0.25 : 0.1)) continue;                                // no specks at the ends
       const g = (a0 + b0) / 2, wid = W * Math.min(1, 0.35 + env(g));
-      out.push(brush(subPath(P, a0, b0, 16), s => wid * env(s)));
+      out.push(brush(subPath(P, a0, b0, 16), s => Math.max(M.big ? M.bold : 0, wid * env(s))));
     }
   });
   const tx = M.tex;
@@ -523,13 +663,53 @@ function texture(M, t, surface, water, foam) {
   if (tx.carve) holes.push(...out.splice(0)); else foam.push(...out);
   if (holes.length) water[0] = withHoles(water[0], holes);
 }
+// ---- scene styles: the plover on the open face (2026-11-07) -----------------------------------
+// Chase: the barrel was the problem — it wraps the bird on three sides (water under it, the back wall, the lip
+// overhead, each with its gap of ring colour), leaving the bird ~7 mm of a 17 mm band. Here nothing is over the
+// bird: it rides low on the face in front of the peak, the wave rises behind its tail and pitches a small lip
+// down behind it. Drawn left → right in its final orientation (the bird faces left, down the line). The surface
+// is V.face: keyed point lists [[t, points]…] (same count each), mixed over the loop like the classic shapes.
+function faceScene(V, t) {
+  const M = V.motion, B = M.bold || 0;
+  let pts = V.face.length > 1 ? at(V.face, t) : V.face[0][1];
+  // the lip pitches out (k > 0) and draws back once a loop: lip points stretched from a pivot under the crest,
+  // most at the tip; and the wave leans into the throw (sheared by height, the trough stays put)
+  const k = wv(t), [l0, l1, lt] = V.lip || [0, -1, 0], PV = V.lipPivot || [1.6, .8], L0 = V.level ?? SEA;
+  pts = pts.map(([x, y], i) => {
+    if (i >= l0 && i <= l1) { const f = i <= lt ? (i - l0 + 1) / (lt - l0 + 1) : (l1 - i + 1) / (l1 - lt + 1), sc = (M.lip || 0) * k * f; x += (x - PV[0]) * sc * (M.reach ?? 1); y += (y - PV[1]) * sc; }
+    return [x + (M.lean || 0) * wv(t, -TAU * (M.leanLag || 0)) * Math.max(0, (y - L0) / (0.97 - L0)), y];
+  });
+  const surface = smooth(pts.map(([x, y]) => [x / DA, y]), SEG).map(([u, v]) => [u * DA, v]);
+  const water = [[[0, 0], ...surface, [DA, 0]]], foam = [];
+  // the cream lip line: along the top of the lip, from its tip over the crest (V.lipLine: surface point indices)
+  if (V.lipLine) foam.push(band(surface.slice(V.lipLine[0] * SEG, V.lipLine[1] * SEG + 1), () => B, 1));
+  // a cream line inside the face, a set depth under the surface (V.faceLine: [from, to, depth]); never thinner than B
+  if (V.faceLine) {
+    // flowing dashes (M.dash of them) moving up the line once a loop, like ploverleanlines; full B width, round-free square ends
+    const [i0, i1, dep] = V.faceLine, path = offsetPath(surface.slice(i0 * SEG, i1 * SEG + 1), dep), n = M.dash || 0;
+    if (!n) foam.push(brush(subPath(path, 0, 1, 40), () => B));
+    else for (let j = -1; j <= n; j++) {
+      const a = Math.max(0, (j + t) / n), b = Math.min(1, (j + t) / n + (M.dashLen || 0.6) / n);
+      if (b - a >= (M.dashMin || 0.25)) foam.push(brush(subPath(path, a, b, 16), () => B));
+    }
+  }
+  // the foam ball on the lip's tip, boiling up as it pitches
+  if (V.tip != null) {
+    const tp = surface[V.tip * SEG], q = 0.5 + 0.5 * k, ts = (M.ball || 0.06) * (0.7 + 0.3 * q);
+    CLUSTER.forEach(([dx, dy, r]) => { const R = Math.max(r * ts, B / 2); foam.push(ell(tp[0] - dx * ts, tp[1] + dy * ts, R, R, 16)); });
+  }
+  const s = surfer(t, M, (1 - k) / 2), place = p => p.map(([x, y]) => [M.birdX + x + (M.lean || 0) * 0.3 * wv(t, -TAU * (M.leanLag || 0)), M.birdY + y]);   // steps back as the lip throws, as in the barrel
+  water.push(...s.navy.map(place)); foam.push(...s.cream.map(place));
+  return { water, foam };
+}
 function barrelScene(V, t) {
   const M = V.motion, k = M.tuck ? 0.5 - 0.5 * Math.cos(TAU * t) : wv(t), k2 = M.tuck ? k : wv(t, 1.0);
-  const pts = TUBE.map(([x, y], i) => {
+  const T = V.tube || TUBE, PIV = V.lipPivot || LIP_PIVOT, S = V.level ?? SEA, CR = V.tube ? .97 : .96;   // a style may bring its own tube
+  const pts = T.map(([x, y], i) => {
     if (i >= 9 && i <= 20) {      // the lip: stretched out from / pulled back towards a pivot under the crest
       // throwing over, the lip reaches out a little less than it drops, so the tip stays inside the cell
       const f = i <= TIP ? Math.min(1, (i - 8) / 5) : Math.max(0, (21 - i) / 6), sc = M.lip * k * f, sx = sc > 0 ? (M.reach ?? 0.6) * sc : sc;
-      return [x + (x - LIP_PIVOT[0]) * sx, y + (y - LIP_PIVOT[1]) * sc];
+      return [x + (x - PIV[0]) * sx, y + (y - PIV[1]) * sc];
     }
     if (i >= 6 && i <= 10) return [x, y + M.crest * k2 * (1 - Math.abs(i - 8) / 3)];                                                         // the crest swells
     return [x, y];
@@ -546,10 +726,10 @@ function barrelScene(V, t) {
     //  lean  — the wave leans into the throw (sheared by height, the trough stays put) and rocks back
     //  slide — the whole wave surges forward (left once mirrored) as it throws and settles back; the plover rides with it
     if (i === a.length - 1) return [x, y];
-    const h = Math.max(0, (y - S) / (0.96 - S)), kl = wv(t, -TAU * (M.leanLag || 0));
+    const h = Math.max(0, (y - S) / (CR - S)), kl = wv(t, -TAU * (M.leanLag || 0));
     let X = x + (M.lean || 0) * kl * h + (M.slide || 0) * k, Y = y;
     if ((M.full || M.swell) && i >= 1 && i <= 7) {
-      const [px, py] = TUBE[i - 1], [nx, ny] = TUBE[i + 1], L = Math.hypot(nx - px, ny - py), s = i / 8, env = Math.sin(Math.PI * s);
+      const [px, py] = T[i - 1], [nx, ny] = T[i + 1], L = Math.hypot(nx - px, ny - py), s = i / 8, env = Math.sin(Math.PI * s);
       const p = ((t + 0.6) % 1) * 1.5 - 0.25;                                         // where the swell is on the back, foot 0 → crest 1
       const out = (M.full || 0) * -wv(t, -TAU * (M.fullLag || 0)) * env + (M.swell || 0) * env * Math.exp(-(((s - p) / 0.2) ** 2));
       X += -(ny - py) / L * out; Y += (nx - px) / L * out;                            // along the outward normal (up the back)
@@ -560,6 +740,11 @@ function barrelScene(V, t) {
     // thrown lip and its whitewater stay inside the cell; the back slope is squeezed to keep its foot at the edge
     const d = M.shift || 0;
     return i === a.length - 1 ? [x, y] : [x - d * Math.min(1, x / 1.0), y];
+  }).map(([x, y], i, a) => {
+    // squeeze (compact frame, 2026-11-07): everything past `at` — the lip, its throw and the crash — is pressed
+    // back towards the tube by `crash`, so the scene needs a narrower slot (see V.frame); the flat sea takes the rest
+    const Q = M.squeeze;
+    return !Q || i === a.length - 1 || x <= Q.at ? [x, y] : [Q.at + (x - Q.at) * Q.crash, y];
   });
   const surface = smooth(pts.map(([x, y]) => [x / DA, y]), SEG).map(([u, v]) => [u * DA, v]);
   const water = [[[0, 0], ...surface, [DA, 0]]], foam = [];
@@ -567,17 +752,19 @@ function barrelScene(V, t) {
   if (M.foam === 'ww') {
     // whitewater-return foam: a thinner feathering edge, and the full round-bubble cluster riding the lip
     // tip, small while the lip pulls back and boiling up as it throws over; kept whole inside the cell
-    foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, [[0, 0], [.15, .012], [.5, .026], [.85, .03], [1, .03]]), 1));
-    const q = M.tuck ? k : 0.5 + 0.5 * k, ts = 0.05 + 0.035 * q;
+    const lw = w => Math.max(w, M.bold || 0);
+    const [fL, fR] = V.frame || [0, DA], xMax = DA - fL, xMin = DA - fR;            // keep the foam inside the style's frame (mirrored below)                                   // bold: no thinner than M.bold past the taper
+    foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, M.big ? [[0, M.bold], [1, M.bold]] : [[0, 0], [.15, lw(.012)], [.5, lw(.026)], [.85, lw(.03)], [1, lw(.03)]]), 1));
+    const q = M.tuck ? k : 0.5 + 0.5 * k, ts = (0.05 + 0.035 * q) * (M.ball || 1);   // ball: the foam ball's size
     CLUSTER.forEach(([dx, dy, r]) => {
-      const R = r * ts, x = Math.min(DA - R - 0.01, Math.max(R + 0.01, tip[0] + dx * ts)), y = Math.max(R + 0.01, tip[1] + ts * 0.25 + dy * ts);
+      const R = Math.max(r * ts, M.big ? M.bold / 2 : 0), x = Math.min(xMax - R - (M.big ? M.bold : 0.01), Math.max(xMin + R + (M.big ? M.bold : 0.01), tip[0] + dx * ts)), y = Math.max(R + 0.01, tip[1] + ts * 0.25 + dy * ts);
       foam.push(ell(x, y, R, R, 16));
     });
     // splash: as the lip crashes over, droplets flick up and out of the foam ball, then fall back in
     const a = M.splash ? Math.max(0, Math.min(1, (q - 0.6) / 0.35)) : 0;
     if (a > 0.05) SPLASH.forEach(([dx, dy, r]) => {
       const R = Math.max(0.034, r * ts * (0.5 + 0.5 * a)), e = 0.7 + 0.6 * a;     // ≥ 0.034 of the band (~0.8 mm): printable
-      const x = Math.min(DA - R - 0.01, Math.max(R + 0.01, tip[0] + dx * ts * e)), y = Math.min(TOP - R - 0.01, tip[1] + ts * 0.25 + dy * ts * e);
+      const x = Math.min(xMax - R - 0.01, Math.max(xMin + R + 0.01, tip[0] + dx * ts * e * (M.spread ?? M.squeeze?.splash ?? 1))), y = Math.min(TOP - R - 0.01, tip[1] + ts * 0.25 + dy * ts * e);
       foam.push(ell(x, y, R, R, 12));
     });
   } else {
@@ -587,7 +774,7 @@ function barrelScene(V, t) {
     const ts = 0.035 + 0.01 * wv(t, 0.7) + (M.spit ? 0.008 : 0);
     CLUSTER.slice(0, 5).forEach(([dx, dy, r]) => foam.push(ell(tip[0] + dx * ts * 0.8, tip[1] - 0.01 + dy * ts, r * ts, r * ts, 12)));
   }
-  if (M.tex) texture(M, t, surface, water, foam);
+  if (M.tex) texture(M, t, surface, water, foam, S);
   // spit: spray blown out of the tube's mouth, a steady stream that loops
   if (M.spit) for (let j = 0; j < 7; j++) {
     const q = (j / 7 + t) % 1, x = 1.55 + 0.55 * q, y = 0.33 + 0.07 * q - 0.12 * q * q, r = 0.028 * (1 - 0.55 * q);
@@ -597,24 +784,28 @@ function barrelScene(V, t) {
   const mirror = p => p.map(([x, y]) => [DA - x, y]);
   const W2 = water.map(mirror), F2 = foam.map(mirror);
   // the plover, low in the tube on the trough
-  const s = surfer(t, M, M.tuck ? 1 - k : (1 - k) / 2), place = p => p.map(([x, y]) => [DA - 1.24 + (M.birdShift ?? M.shift ?? 0) - (M.slide || 0) * k - (M.lean || 0) * 0.3 * wv(t, -TAU * (M.leanLag || 0)) + x, 0.262 + y]);
+  const s = surfer(t, M, M.tuck ? 1 - k : (1 - k) / 2), place = p => p.map(([x, y]) => [DA - 1.24 + (M.birdShift ?? M.shift ?? 0) - (M.slide || 0) * k - (M.lean || 0) * 0.3 * wv(t, -TAU * (M.leanLag || 0)) + x, (M.birdY ?? 0.262) + y]);
   W2.push(...s.navy.map(place)); F2.push(...s.cream.map(place));
   return { water: W2, foam: F2 };
 }
 
+// How wide a style's artwork is, in band heights: the design cell, or a scene's own `frame` [left, right].
+const span = V => (V.frame ? V.frame[1] - V.frame[0] : DA);
 // One frame at loop time t ∈ [0, 1) for a cell of aspect A: water and foam
-// polygons in cell coordinates, already clipped to the cell.
-export function waveFrame(variant, t, A = DA) {
+// polygons in cell coordinates, already clipped to the cell. `floor` (v ≤ 0) is where the sea starts:
+// 0 at the band's inner edge, below it for a style whose sea runs down to the ring's edge (see artBand).
+export function waveFrame(variant, t, A = DA, floor = 0) {
   const V = WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT];
   t = ((t % 1) + 1) % 1;
+  const L = V.level ?? SEA, sea = [[0, floor], [0, L], [1, L], [1, floor]];
   if (V.kind === 'sprite') {
     const s = sprite(V, t, A);
-    return { water: s.water.map(clip).filter(p => p.length > 2), foam: s.foam.map(clip).filter(p => p.length > 2) };
+    return { water: [sea, ...s.water].map(p => clip(p, floor)).filter(p => p.length > 2), foam: s.foam.map(p => clip(p)).filter(p => p.length > 2) };
   }
   if (V.kind === 'scene') {        // like a wave: shrinks uniformly in narrow cells, flat sea either side in wide ones
-    const fit = Math.min(1, A / DA), P = ([x, y]) => [0.5 + (x / DA - 0.5) * DA / A * fit, SEA + (y - SEA) * fit];
-    const s = barrelScene(V, t);
-    const water = [[[0, 0], [0, SEA], [1, SEA], [1, 0]], ...s.water.map(p => p.map(P))].map(clip).filter(p => p.length > 2);
+    const [xL, xR] = V.frame || [0, DA], fit = Math.min(1, A / (xR - xL)), P = ([x, y]) => [0.5 + (x - (xL + xR) / 2) / A * fit, L + (y - L) * fit];
+    const s = (V.face ? faceScene : barrelScene)(V, t);
+    const water = [sea, ...s.water.map(p => p.map(P))].map(p => clip(p, floor)).filter(p => p.length > 2);
     return { water, foam: s.foam.map(p => clip(p.map(P))).filter(p => p.length > 2) };
   }
   const parts = [];
@@ -622,8 +813,8 @@ export function waveFrame(variant, t, A = DA) {
     // every wave still alive: ages t, t+1, t+2… each one `travel` further along
     for (let age = t; age <= V.life; age++) parts.push(wave(V, age, A, .55, age * V.travel - V.lead, false));
   } else parts.push(wave(V, t, A, .5, .5, true));
-  const water = [[[0, 0], [0, SEA], [1, SEA], [1, 0]], ...parts.map(p => p.water)].map(clip).filter(p => p.length > 2);
-  const foam = parts.flatMap(p => p.foam).map(clip).filter(p => p.length > 2);
+  const water = [sea, ...parts.map(p => p.water)].map(p => clip(p, floor)).filter(p => p.length > 2);
+  const foam = parts.flatMap(p => p.foam).map(p => clip(p)).filter(p => p.length > 2);
   return { water, foam };
 }
 
@@ -633,15 +824,33 @@ export const cellAspect = (N, rIn, rOut) => (Math.PI * (rIn + rOut) / N) / (rOut
 // still at least as wide as the design cell, so the wave fills its slot without being shrunk.
 export function autoFrames(variant, rIn, rOut, min = 6, max = 16) {
   const V = WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT];
-  for (let N = Math.min(V.N, max); N > min; N--) if (cellAspect(N, rIn, rOut) >= DA * 0.95) return N;
+  if (V.sea === 'edge') return Math.min(V.N, max);         // picks its own band to fit its slot count (artBand)
+  for (let N = Math.min(V.N, max); N > min; N--) if (cellAspect(N, rIn, rOut) >= span(V) * 0.95) return N;
   return min;
+}
+// The band a style's frames fill on a ring whose art may span rIn–rOut, inside a ring that starts at ringIn.
+// Most styles take the band as given. A `sea: 'edge'` style (2026-11-07, Chase: "why can't the whole water line
+// go inward closer to the edge?") takes the tallest band its frame fills at N slots — the art is
+// min(height, arc ÷ frame width), so a taller band than that only adds sky — and runs its sea on down to the
+// ring's inner edge (seaIn), so the ring carries one unbroken band of water under the animation.
+export function artBand(variant, N, rIn, rOut, ringIn) {
+  const V = WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT];
+  let seaIn = rIn;
+  if (V.sea === 'edge' && ringIn != null) {
+    const k = Math.PI / N, w = span(V);
+    seaIn = ringIn + 0.02;                                 // 0.02: the polygons' chords stay on the ring (sag ≤ 0.004)
+    rIn = Math.max(seaIn, rOut * (w - k) / (w + k));       // cellAspect(N, rIn, rOut) = w
+  }
+  return { rIn, rOut, seaIn, A: cellAspect(N, rIn, rOut), floor: (seaIn - rIn) / (rOut - rIn) };
 }
 
 // All N frames bent onto the ring band, in mm around the spinner axis (y up).
 // Slot 0 is at the top; slots and frames advance clockwise.
-export function ringArt({ variant = WAVE_DEFAULT, N, rIn, rOut }) {
+// ringIn: the ring's inner edge, for a style whose sea runs down to it (artBand); `band` in the result is the one used.
+export function ringArt({ variant = WAVE_DEFAULT, N, rIn, rOut, ringIn }) {
   N = N || (WAVE_VARIANTS[variant] || WAVE_VARIANTS[WAVE_DEFAULT]).N;
-  const H = rOut - rIn, D = 2 * Math.PI / N, A = cellAspect(N, rIn, rOut), slots = [];
+  const band = artBand(variant, N, rIn, rOut, ringIn); ({ rIn, rOut } = band);
+  const H = rOut - rIn, D = 2 * Math.PI / N, A = band.A, slots = [];
   for (let j = 0; j < N; j++) {
     const th0 = Math.PI / 2 - j * D + D / 2;             // the cell's u = 0 edge
     const P = (u, v) => { const th = th0 - u * D, r = rIn + v * H; return [r * Math.cos(th), r * Math.sin(th)]; };
@@ -649,15 +858,15 @@ export function ringArt({ variant = WAVE_DEFAULT, N, rIn, rOut }) {
       const q = poly[(i + 1) % poly.length], n = Math.max(1, Math.ceil(Math.abs(q[0] - p[0]) / 0.04));
       return Array.from({ length: n }, (_, k) => P(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n));
     });
-    const { water, foam } = waveFrame(variant, j / N, A);
+    const { water, foam } = waveFrame(variant, j / N, A, band.floor);
     slots.push({ frame: j, water: water.map(bend), foam: foam.map(bend) });
   }
-  return { N, slots };
+  return { N, slots, band };
 }
 
 // Front-face artwork as an SVG in mm, one group per print colour.
 export function ringSVG({ variant = WAVE_DEFAULT, N, rIn, rOut, ringIn, ringOut, ringColor = '#d4af37' }) {
-  const art = ringArt({ variant, N, rIn, rOut }), f = n => n.toFixed(3), half = Math.ceil(ringOut + 2), LC = layerColors(variant);
+  const art = ringArt({ variant, N, rIn, rOut, ringIn }), f = n => n.toFixed(3), half = Math.ceil(ringOut + 2), LC = layerColors(variant);
   const circ = r => `M ${f(r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(-r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(r)} 0 Z`;
   const polys = key => art.slots.flatMap(s => s[key].map(p => `<polygon points="${p.map(([x, y]) => `${f(x)},${f(y)}`).join(' ')}"/>`)).join('\n      ');
   return `<?xml version="1.0" encoding="UTF-8"?>

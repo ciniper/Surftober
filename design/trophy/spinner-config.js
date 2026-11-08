@@ -10,7 +10,7 @@
 // Coordinates: the spinner axis is z, the 608 bearing sits at z 0…7 with its
 // front face at z = 7 (the face you look at), the fridge is behind z = 0.
 
-import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, layerColors, layerNames } from './wave-frames.js';
+import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, artBand, layerColors, layerNames } from './wave-frames.js';
 
 // ---------------------------------------------------------------------------
 // Dimensions (mm)
@@ -20,7 +20,11 @@ import { WAVE_VARIANTS, WAVE_DEFAULT, autoFrames, layerColors, layerNames } from
 // v5 (2026-11-04): 5 mm smaller again, Ø98, r 33–49 — the ring keeps its 16 mm
 // width (it moves in 2 mm at both edges), so the band is still 12 mm and 10 frames
 // stay full size (cell aspect 2.20 vs the 2.06 design cell). Arms show for 7.5 mm.
-const RING_IN = 33, RING_OUT = 49;
+// v6 (2026-11-07, after the first Bambu slice dropped the plover's thinnest lines): the ring comes in to
+// r 29.7 for 8 frames — the art band grows to 15.4 (r 32.8–48.2), the tallest band 8 frames fill at the
+// 2.06 cell, so the art is 28% bigger. (9 frames would want r 31.1 / band 14.0, +15%; 10 only r 32.3, +5%.)
+// Same Ø98 outside; arms show for 4.2 mm past the Ø51 hub.
+const RING_IN = 29.7, RING_OUT = 49;
 const HUB_R = 25.5;           // the two still discs (front hub, back cap) share this radius
 
 export const DIM = {
@@ -33,7 +37,8 @@ export const DIM = {
   hubOut: 16,                   // printed hub radius around the bearing
   armW: 9,
   ringIn: RING_IN, ringOut: RING_OUT,            // the wave ring, Ø98 overall
-  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.8, // artwork band on the ring's front face (12.1 wide), clear of the rim ridges
+  waveIn: RING_IN + 3.1, waveOut: RING_OUT - 0.8, // artwork band on the ring's front face (15.4 wide; v5 12.1), clear of the rim ridges
+                                                  // (a sea: 'edge' style picks its own inner edge and runs its sea to ringIn: see waveBand)
   // bearing seat (v3, after the wobble on print 1 — option `seat`, default lip): the body is still t
   // thick but sits 0.6 further back — a lip behind the bore that only the OUTER race face touches
   // (r 9.9–10.95; the shield starts at r 9.6) squares the ring to the bearing, and a 45° chamfer
@@ -146,11 +151,11 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v5', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v6', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
-  wave:   { label: 'Animation',  type: 'choice', default: 'ploverleanlines', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
+  wave:   { label: 'Animation',  type: 'choice', default: 'ploverleanbold', values: Object.keys(WAVE_VARIANTS), labels: Object.fromEntries(Object.entries(WAVE_VARIANTS).map(([k, v]) => [k, `${v.label} (${v.N})`])) },
   frames: { label: 'Frames',     type: 'int',    default: 0, min: 6, max: 16, hint: '0 = auto: as many slots as the band allows without shrinking the wave' },
   art:    { label: 'Artwork',    type: 'choice', default: 'raised', values: ['raised', 'proud', 'inlay', 'none'],
             labels: { raised: 'Raised relief · one solid part, water 0.4 / foam 0.8 (colour by height in the slicer)', proud: 'Separate inlay parts · 0.4 proud', inlay: 'Separate inlay parts · flush', none: 'Plain ring' } },
@@ -226,6 +231,8 @@ export const backFace = o => -(DIM.capSpacer + capT(o)) - (o.magnet === 'disc' ?
 // How far the spinning body sits behind the bearing's back face (the seat lip) — 0 for a plain bore.
 export const bodyShift = o => (o.seat === 'lip' ? DIM.lip : 0);
 export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
+// The band the art actually fills for these options: { rIn, rOut, seaIn, A } (see artBand in wave-frames.js).
+export const waveBand = o => artBand(o.wave, frameCount(o), DIM.waveIn, DIM.waveOut, DIM.ringIn);
 
 // The parts the generator will actually write for these options.
 export const partsToGenerate = o => generatedParts(o).filter(id => !o.parts || o.parts.includes(id));
