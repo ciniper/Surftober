@@ -144,6 +144,11 @@ background? wave thicker since there's room above the plover's head?" Four optio
 | `ploverleansilhouette` | no navy outline (`noOutline`), details at 0.9 mm, wedge bill 1.0 → 0.9 mm, no cap (`noCap`), bird raised (`raise`) | **0.9 mm: still 15 % of the cream flagged, the head is a blob.** Confirms §3: the logo bird in a barrel does not survive a 0.4 nozzle. |
 
 New knobs in `barrelScene` / `surfer`: `ceiling` (roof offset), `noOutline`, `noCap`, `raise`.
+
+Chase (same day): "when I said more detail I meant below the wave not in the wave. Thicker wave isn't bad.
+we can promote B and C." → `ploverleanfine` now carries `ceiling: .06` and the 1.12× bird; `ploverleansea`
+beside it adds two cream ripple lines in the flat sea under the tube's mouth (`tex.sea`, TEX `sea1`/`sea2`,
+dashes drifting in towards the wave). Both pass the 0.45 mm check like before.
 Background: the ring colour on the real print is the **tier** colour (gold / silver / bronze / teal);
 brown is only the filament in the project file. Palette board: `learnings/`-style still, see the
 session. Verdict offered to Chase: 0.2 is the price of this bird; the alternatives at 0.4 are a
