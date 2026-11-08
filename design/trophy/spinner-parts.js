@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, partColor, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -14,7 +14,8 @@ export function materials(o) {
   // polygonOffset pushes the body faces back a hair so flush inlays drawn on the same plane win the depth test
   const flush = o.art === 'inlay' ? { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 } : {};
   return {
-    body:   std(o.weight === 'none' ? tier.color : COLORS.bone, { roughness: o.weight === 'none' ? tier.rough + 0.2 : 0.75, metalness: o.weight === 'none' ? tier.metal * 0.3 : 0, ...flush }),
+    body:   std(partColor('body', o), { roughness: o.weight === 'none' && o.body === 'tier' ? tier.rough + 0.2 : 0.75, metalness: o.weight === 'none' && o.body === 'tier' ? tier.metal * 0.3 : 0, ...flush }),
+    insert: std(tier.color, { roughness: tier.rough + 0.2, metalness: tier.metal * 0.3 }),   // the art insert is always the tier colour
     water:  std(layerColors(o.wave).water, { roughness: 0.55 }),
     foam:   std(layerColors(o.wave).foam, { roughness: 0.6 }),
     hub:    std(COLORS.navy, { roughness: 0.5, ...flush }),
@@ -130,7 +131,7 @@ const builders = {
   },
   insert(o, M) {              // the glue-in art ring: a thin annulus in the pocket with the relief on top, shown in its print colours
     const g = new THREE.Group(), t = D.t;
-    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - D.insertT, D.insertT, M.body, 0.3));
+    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - D.insertT, D.insertT, M.insert, 0.3));
     const art = waveArt(o);
     art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.water)));
     art.foam.forEach(p => g.add(polySlab(p, t + 0.01, D.reliefFoam, M.foam)));

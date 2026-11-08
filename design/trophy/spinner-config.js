@@ -95,6 +95,7 @@ export const PLA_G_PER_MM3 = 1.24e-3;
 // ---------------------------------------------------------------------------
 export const COLORS = {
   bone: '#e9e1cf', navy: '#1d3050', cream: '#efe7d2', ink: '#16273d', orange: '#ff6b35', teal: '#3aa9a3',
+  brown: '#a9825a',             // light brown body behind a tier-colour insert (Chase, 2026-11-08)
   sand: '#b89b70', steel: '#d0d4d8', shield: '#1a1a1a', magnet: '#333333', fridge: '#c9ccd0',
 };
 export const TIERS = {
@@ -114,7 +115,7 @@ export const CAP_COLORS = { orange: '#ff6b35', navy: '#1d3050', teal: '#3aa9a3' 
 //              (the viewer uses the same table to put generated STLs back in place)
 export const PARTS = [
   { id: 'body',       group: 'Spinning piece', label: 'Body',        detail: 'Hub on the 608 outer race, arms, wave ring — one print',
-    generated: true, color: 'bone',  filament: 'bone / tier colour', print: { flip: false, z: 0 } },
+    generated: true, color: 'body',  filament: 'body colour (option)', print: { flip: false, z: 0 } },
   { id: 'wave-water', group: 'Spinning piece', label: 'Art · bottom layer', detail: 'First inlay colour, flush in the ring face (water, or the plover’s body)',
     generated: true, color: 'layer-water', filament: 'layer colour', print: { flip: false, z: 0 }, when: o => isInlay(o) && !isInsert(o) },
   { id: 'wave-foam',  group: 'Spinning piece', label: 'Art · top layer',    detail: 'Second inlay colour on top of the first (foam, or the plover’s details)',
@@ -144,12 +145,13 @@ export function partLabel(id, o) {
 export function partColor(id, o) {
   const c = PART[id].color;
   if (c === 'tier') return TIERS[o.tier].color;
+  if (c === 'body') return o.weight !== 'none' ? COLORS.bone : o.body === 'tier' ? TIERS[o.tier].color : COLORS[o.body];   // bone under a metal weight; else the body colour option
   if (c === 'cap') return CAP_COLORS[o.cap];
   if (c === 'layer-water') return layerColors(o.wave).water;
   if (c === 'layer-foam') return layerColors(o.wave).foam;
   return COLORS[c] || '#999999';
 }
-export const partFilament = (id, o) => PART[id].color === 'layer-water' || PART[id].color === 'layer-foam' ? partColor(id, o) : PART[id].filament;
+export const partFilament = (id, o) => PART[id].color === 'layer-water' || PART[id].color === 'layer-foam' ? partColor(id, o) : PART[id].color === 'body' ? (o.weight !== 'none' ? 'bone (the metal carries the tier)' : o.body === 'tier' ? 'tier colour' : o.body) : PART[id].filament;
 export const activeParts = o => PARTS.filter(p => !p.when || p.when(o)).map(p => p.id);
 export const generatedParts = o => activeParts(o).filter(id => PART[id].generated);
 
@@ -178,6 +180,8 @@ export const OPTIONS = {
   cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
   magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
             labels: { none: 'None · plain grip cap with a finger divot', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
+  body:   { label: 'Body colour',  type: 'choice', default: 'tier', values: ['tier', 'brown', 'bone'],
+            labels: { tier: 'Tier colour (gold / silver / bronze / teal)', brown: 'Light brown — the tier colour on the insert only', bone: 'Bone — the tier colour on the insert only' }, hint: 'the spinning body’s filament; the art insert is always in the tier colour, so a brown or bone body makes the gold ring the medal' },
   ring:   { label: 'Art ring',     type: 'choice', default: 'solid', values: ['solid', 'insert'],
             labels: { solid: 'One piece · relief on the body', insert: 'Glue-in insert · 1 mm ring with the relief, pocket in the body' }, hint: 'insert: the body prints single-colour at 0.4 in ~45 min; the inserts print flat at the fine nozzle, up to 4 per plate, and glue in' },
   copies: { label: 'Inserts per plate', type: 'int', default: 1, min: 1, max: 4, when: o => o.ring === 'insert', hint: 'how many insert rings the insert project file puts on one plate (Ø98: 4 fit the X1C bed)' },
@@ -262,6 +266,7 @@ export function outputTag(o) {
     .concat(hasScrew(o) || o.magnet === 'disc' ? [] : ['noscrew'])
     .concat(o.nozzle === '0.4' ? [] : [`n${o.nozzle.replace('.', '')}`])
     .concat(o.ring === 'insert' ? ['insert'] : [])
+    .concat(o.body === 'tier' ? [] : [`${o.body}-body`])
     .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
@@ -280,6 +285,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
   if (o.nozzle !== '0.4') args.push(`--nozzle ${o.nozzle}`);
   if (o.ring === 'insert') args.push('--ring insert' + (o.copies > 1 ? ` --copies ${o.copies}` : ''));
+  if (o.body !== 'tier') args.push(`--body ${o.body}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
@@ -291,6 +297,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
+  insert:    { label: '★ Current build · gold insert on a brown body', detail: 'ploverleanfine on a 1 mm glue-in insert in the tier colour (0.2 nozzle, 2 per plate) · light-brown body, hub and cap at 0.4', options: { wave: 'ploverleanfine', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2 } },
   full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, micro-ridged rim; hub + cap + centre screw', options: {} },
   inlays:    { label: 'Full trophy · inlay parts',    detail: 'Wave and foam as separate proud inlay parts (v4 first try — fiddly)', options: { art: 'proud' } },
   testring:  { label: 'Spinning piece only',          detail: 'Just the body with the wave in relief',          options: { parts: ['body'] } },

@@ -443,7 +443,7 @@ def write_3mf(path, groups):
 # Multi-colour project for Bambu Studio (Chase prints on an X1C with a 4-slot AMS): which filament slot each
 # part goes on, and the colour shown for it. The spinner's base is its own brown; the slots can be remapped
 # in the slicer.
-BAMBU_FILAMENTS = [('brown', '#7B4A2A'), ('navy', '#1D3050'), ('cream', '#EFE7D2'), ('orange', '#FF6B35')]
+BAMBU_FILAMENTS = [('body', '#A9825A'), ('navy', '#1D3050'), ('cream', '#EFE7D2'), ('orange', '#FF6B35')]   # slot 1 is renamed/recoloured per project: the body colour, or the tier colour on the insert plate
 BAMBU_SLOT = {'body': 1, 'insert': 1, 'wave-water': 2, 'wave-foam': 3, 'hub': 2, 'hub-text': 3, 'back-cap': 4}
 BAMBU_APP = 'BambuStudio-02.08.02.61'
 # Changes to the stock X1C · 0.20 Standard process. The art's finest lines (the plover's navy outline, legs,
@@ -501,7 +501,7 @@ def bambu_nozzle_settings(ps, nozzle):
 BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
 
 
-def write_bambu_3mf(path, groups, nozzle='0.4'):
+def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
@@ -511,6 +511,7 @@ def write_bambu_3mf(path, groups, nozzle='0.4'):
     crashes on a project without them) with the four filament colours filled in and BAMBU_PROCESS applied."""
     import uuid
     U = lambda: str(uuid.uuid4())
+    FIL = [slot1 or BAMBU_FILAMENTS[0]] + BAMBU_FILAMENTS[1:]      # slot1: (name, hex) for the first AMS slot
     NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
           'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"')
     files, root_objs, items, settings, plate, rels = {}, [], [], [], [], []
@@ -526,7 +527,7 @@ def write_bambu_3mf(path, groups, nozzle='0.4'):
             meshes.append(f'<object id="{mid}" p:UUID="{U()}" type="model"><mesh><vertices>{v}</vertices><triangles>{t}</triangles></mesh></object>')
             comps.append(f'<component p:path="{fname}" objectid="{mid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>')
             slot = BAMBU_SLOT.get(pid, 1)
-            parts_cfg.append(f'<part id="{mid}" subtype="normal_part"><metadata key="name" value="{escape(pid)} · {BAMBU_FILAMENTS[slot - 1][0]}"/>'
+            parts_cfg.append(f'<part id="{mid}" subtype="normal_part"><metadata key="name" value="{escape(pid)} · {FIL[slot - 1][0]}"/>'
                              f'<metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="{slot}"/>'
                              f'<mesh_stat face_count="{len(tris)}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>')
         files[fname[1:]] = f'<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" {NS}><metadata name="BambuStudio:3mfVersion">1</metadata><resources>{"".join(meshes)}</resources><build/></model>'
@@ -563,7 +564,7 @@ def write_bambu_3mf(path, groups, nozzle='0.4'):
         ps = json.load(open(os.path.join(HERE, 'bambu-x1c-project.json')))
         if nozzle in BAMBU_NOZZLE:
             ps = bambu_nozzle_settings(ps, nozzle)
-        ps['filament_colour'] = [c for _, c in BAMBU_FILAMENTS]
+        ps['filament_colour'] = [c for _, c in FIL]
         ps.update(BAMBU_PROCESS)
         diff = ps.get('different_settings_to_system') or ['']     # [process, filament 1…n, printer]: shows the process as edited
         diff[0] = ';'.join(sorted(set(filter(None, diff[0].split(';'))) | set(BAMBU_PROCESS)))
@@ -577,7 +578,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'body', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int); ap.add_argument('--copies', type=int, help='insert rings per plate in the insert project (ring=insert)')
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -591,7 +592,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -666,7 +667,8 @@ def main():
                     x = x.translate((ox, oy, dz)); vol[f'{qid}{ci + 1 if n_cop > 1 else ""}'] = x.val().Volume()
                     plist.append((qid, mesh(x)))
             fn = f'{tag}-insert-bambu.3mf'
-            write_bambu_3mf(os.path.join(a.out, fn), [(f'art insert ×{n_cop}', plist, (BAMBU_BED / 2, BAMBU_BED / 2))], nozzle=o.get('nozzle', '0.4'))
+            write_bambu_3mf(os.path.join(a.out, fn), [(f'art insert ×{n_cop}', plist, (BAMBU_BED / 2, BAMBU_BED / 2))], nozzle=o.get('nozzle', '0.4'),
+                            slot1=(f"{cfg['tier']['key']} (tier)", cfg['tier']['color']))
             manifest['files']['insert_bambu_3mf'] = fn
             print(f'bambu 3mf → {fn} ({n_cop} insert(s) on one plate, nozzle {o.get("nozzle", "0.4")}; slots 1 ring colour, 2 navy, 3 cream)')
             groups = {g: p for g, p in groups.items() if g != 'art insert'}
@@ -684,7 +686,9 @@ def main():
             n_bam += len(plist)
             bam.append((g, plist, bed[g]))
         if bam:
-            write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle='0.4' if o['ring'] == 'insert' else o.get('nozzle', '0.4'))
+            body_meta = next((m for m in cfg['generate'] if m['id'] == 'body'), None)
+            write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle='0.4' if o['ring'] == 'insert' else o.get('nozzle', '0.4'),
+                            slot1=(body_meta['filament'], body_meta['color']) if body_meta else None)
             manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
             used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
             print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
