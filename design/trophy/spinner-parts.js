@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -47,7 +47,7 @@ export function annulus(rOut, rIn, z0, depth, mat, bevel = 0) {
 }
 // The wave ring with `n` round cuts of radius rho, `depth` deep, in its outer edge
 // (r(θ) = the nearer of the rim and the cut circle): v4 notches or v5 micro ridges.
-function notchedRing(n, rho, depth, z0, h, mat) {
+function notchedRing(n, rho, depth, z0, h, mat, rIn = D.ringIn) {
   const Rc = D.ringOut + rho - depth, pts = [], M = Math.max(1440, n * 16);
   for (let i = 0; i < M; i++) {
     const th = i * 2 * Math.PI / M;
@@ -58,7 +58,7 @@ function notchedRing(n, rho, depth, z0, h, mat) {
     pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th)));
   }
   const shape = new THREE.Shape(pts), hole = new THREE.Path();
-  hole.absarc(0, 0, D.ringIn, 0, 2 * Math.PI, true); shape.holes.push(hole);
+  hole.absarc(0, 0, rIn, 0, 2 * Math.PI, true); shape.holes.push(hole);
   const m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 96 }), mat);
   m.position.z = z0; return shadow(m);
 }
@@ -105,26 +105,36 @@ const builders = {
       const ch = shadow(new THREE.Mesh(new THREE.CylinderGeometry(D.bore / 2 + D.chamfer, D.bore / 2, D.chamfer, 64, 1, true), M.body));
       ch.rotation.x = Math.PI / 2; ch.position.z = t - D.chamfer / 2; ch.material = M.body.clone(); ch.material.side = THREE.DoubleSide; g.add(ch);   // entry chamfer
     } else g.add(annulus(D.hubOut, D.bore / 2, 0, t, M.body, 0.4));                         // plain v1/v2 bore
-    const len = D.ringIn - D.hubOut + 1.5, mid = (D.hubOut + D.ringIn) / 2;
+    const ins = isInsert(o), len = D.ringIn - D.hubOut + (ins ? 0.75 : 1.5), mid = (D.hubOut + D.ringIn) / 2 - (ins ? 0.375 : 0);   // insert: the arms stop at the pocket's inner edge
     for (let i = 0; i < o.arms; i++) {
       const a = Math.PI / 2 + i * 2 * Math.PI / o.arms, arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(len, D.armW, t), M.body));
       arm.position.set(mid * Math.cos(a), mid * Math.sin(a), t / 2); arm.rotation.z = a; g.add(arm);
     }
     const nn = notchCount(o), nr = ridgeCount(o);
-    if (nr) {                   // v5 micro ridges, front to back: grooves ridgeW wide, ridgeDepth deep
-      const rho = ((D.ridgeW / 2) ** 2 + D.ridgeDepth ** 2) / (2 * D.ridgeDepth);
-      g.add(notchedRing(nr, rho, D.ridgeDepth, 0, t, M.body));
-    } else if (nn) {            // v4 notched rim from the back, a plain band over the front notchKeep
-      g.add(notchedRing(nn, D.notchR, D.notchDepth, 0, t - D.notchKeep, M.body));
-      g.add(annulus(D.ringOut, D.ringIn, t - D.notchKeep, D.notchKeep, M.body, 0.4));
-    } else g.add(annulus(D.ringOut, D.ringIn, 0, t, M.body, 0.4));
-    if (o.art === 'raised') {   // one-colour relief, same material as the body
+    // the wave ring: full height, or (insert) full height only outside the pocket — the pocket floor is t - insertT
+    const ringPiece = (z0, h, rIn) => {
+      if (nr) { const rho = ((D.ridgeW / 2) ** 2 + D.ridgeDepth ** 2) / (2 * D.ridgeDepth); g.add(notchedRing(nr, rho, D.ridgeDepth, z0, h, M.body, rIn)); }   // v5 micro ridges, front to back
+      else if (nn && z0 === 0) { g.add(notchedRing(nn, D.notchR, D.notchDepth, 0, Math.min(h, t - D.notchKeep), M.body, rIn)); if (h > t - D.notchKeep) g.add(annulus(D.ringOut, rIn, t - D.notchKeep, h - (t - D.notchKeep), M.body, 0.4)); }   // v4 notches from the back
+      else g.add(annulus(D.ringOut, rIn, z0, h, M.body, 0.4));
+    };
+    if (ins) { ringPiece(0, t - D.insertT, D.ringIn); ringPiece(t - D.insertT, D.insertT, D.waveOut); }
+    else ringPiece(0, t, D.ringIn);
+    if (o.art === 'raised' && !ins) {   // one-colour relief, same material as the body
       const art = waveArt(o);
       art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.body)));
       art.foam.forEach(p => g.add(polySlab(p, t, D.reliefFoam, M.body)));
     }
     if (o.weight === 'cog') g.add(annulus(D.cogBore / 2 - 0.1, D.cogBossIn, -D.cogT, D.cogT, M.body));
     g.position.z = -bodyShift(o);      // with the lip the bearing sits 0.6 proud of the body's front face, under the hub
+    return g;
+  },
+  insert(o, M) {              // the glue-in art ring: a thin annulus in the pocket with the relief on top, shown in its print colours
+    const g = new THREE.Group(), t = D.t;
+    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - D.insertT, D.insertT, M.body, 0.3));
+    const art = waveArt(o);
+    art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.water)));
+    art.foam.forEach(p => g.add(polySlab(p, t + 0.01, D.reliefFoam, M.foam)));
+    g.position.z = -bodyShift(o);
     return g;
   },
   'wave-water'(o, M) { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proud : 0); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, h, M.water))); g.position.z = -bodyShift(o); return g; },
@@ -214,7 +224,7 @@ export function waveArt(o) {
 
 // Which group a part rides in and how far it moves in the exploded view
 export const POSE = {
-  body: { spins: true, dz: 0 }, 'wave-water': { spins: true, dz: 10 }, 'wave-foam': { spins: true, dz: 14 },
+  body: { spins: true, dz: 0 }, insert: { spins: true, dz: 12 }, 'wave-water': { spins: true, dz: 10 }, 'wave-foam': { spins: true, dz: 14 },
   hub: { spins: false, dz: 30 }, 'hub-text': { spins: false, dz: 36 }, 'back-cap': { spins: false, dz: -20 },
   bearing: { spins: false, dz: 0 }, screw: { spins: false, dz: -38 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
 };

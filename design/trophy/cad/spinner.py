@@ -159,7 +159,7 @@ def cog_shape(n, r_tip, r_root, r_bore):
 # Part builders — each returns the solid in the MOUNTED pose (bearing z 0…t)
 # ---------------------------------------------------------------------------
 class Spinner:
-    BUILDERS = {'body': 'body', 'wave-water': 'wave_water', 'wave-foam': 'wave_foam', 'hub': 'hub', 'hub-text': 'hub_text',
+    BUILDERS = {'body': 'body', 'insert': 'insert', 'wave-water': 'wave_water', 'wave-foam': 'wave_foam', 'hub': 'hub', 'hub-text': 'hub_text',
                 'back-cap': 'back_cap', 'bearing': 'bearing', 'screw': 'screw', 'magnet': 'magnet', 'weight': 'weight'}
 
     def __init__(self, cfg):
@@ -210,8 +210,9 @@ class Spinner:
                                                                      cq.Vector(0, 0, t - D['chamfer']), cq.Vector(0, 0, 1))))   # 45° entry chamfer
         else:
             body = cyl(D['hubOut'], 0, t, D['bore'] / 2)                 # plain v1/v2 bore
-        arm_len = D['ringIn'] - D['hubOut'] + 1.5
-        mid = (D['hubOut'] + D['ringIn']) / 2
+        ins = o['ring'] == 'insert'
+        arm_len = D['ringIn'] - D['hubOut'] + (0.75 if ins else 1.5)       # insert: the arms stop at the pocket's inner edge
+        mid = (D['hubOut'] + D['ringIn']) / 2 - (0.375 if ins else 0)
         for i in range(o['arms']):
             arm = (cq.Workplane('XY').box(arm_len, D['armW'], t, centered=(True, True, False))
                    .translate((mid, 0, 0)).rotate((0, 0, 0), (0, 0, 1), 90 + i * 360 / o['arms']))
@@ -231,9 +232,12 @@ class Spinner:
                 a = 2 * math.pi * k / n_notch
                 body = body.cut(cyl(D['notchR'], -0.1, t - D['notchKeep'] + 0.1).translate((Rc * math.cos(a), Rc * math.sin(a), 0)))
             self.notes['grip'] = f"{n_notch} rim notches r{D['notchR']} × {D['notchDepth']} deep, {t - D['notchKeep']} mm tall from the back"
+        if ins:         # pocket for the glue-in art ring: ringIn → waveOut (the ridged rim stays as the outer wall), insertT deep
+            body = body.cut(cyl(D['waveOut'], t - D['insertT'], D['insertT'] + 0.01, D['ringIn'] - 0.01))
+            self.notes['insert'] = f"pocket r {D['ringIn']}–{D['waveOut']} × {D['insertT']} deep; insert ring r {D['ringIn']}–{D['waveOut'] - D['insertClear']:.2f} × {D['insertT']} + relief"
         water, foam = self.art()
         for w in (water, foam):
-            if w is None or (o['art'] == 'raised' and not relief):
+            if w is None or ins or (o['art'] == 'raised' and not relief):
                 continue
             body = body.union(w) if o['art'] == 'raised' else body.cut(w)
         # bought weight
@@ -255,11 +259,24 @@ class Spinner:
                               if o['seat'] == 'lip' else 'plain bore (v1/v2 seat)')
         return body.translate((0, 0, -self.shift))
 
+    def insert(self, relief=True):
+        """The glue-in art ring (ring=insert): a thin annulus sitting in the body's pocket, insertClear inside its
+        outer wall, with the wave in relief on top (relief=False: the bare ring, for the colour split). Mounted pose."""
+        D, t = self.D, self.t
+        ring = cyl(D['waveOut'] - D['insertClear'], t - D['insertT'], D['insertT'], D['ringIn'])
+        if relief:
+            w = self.cfg['wave']
+            for polys, h in ((w['water'], D['relief']), (w['foam'], D['reliefFoam'])):
+                x = polys_to_solid(polys, t - 0.2, h + 0.2, 'insert art')      # 0.2 into the ring so the fuse is clean
+                if x is not None:
+                    ring = ring.union(x)
+        return ring.translate((0, 0, -self.shift))
+
     def relief_parts(self):
-        """art=raised, split for a multi-colour print: the two relief layers as their own solids standing on the
-        ring face, water 0.4 minus the foam's footprint and foam 0.8, so they touch the plain body() and each
-        other without overlapping. Mounted pose, like body()."""
-        if self.o['art'] != 'raised':
+        """art=raised (or the insert), split for a multi-colour print: the two relief layers as their own solids
+        standing on the ring face, water 0.4 minus the foam's footprint and foam 0.8, so they touch the plain
+        body() / insert() and each other without overlapping. Mounted pose, like body()."""
+        if self.o['art'] != 'raised' and self.o['ring'] != 'insert':
             return []
         D, t, w = self.D, self.t, self.cfg['wave']
         water = polys_to_solid(w['water'], t, D['relief'], 'water')
@@ -270,12 +287,12 @@ class Spinner:
 
     def wave_water(self):
         water, foam = self.art()
-        if water is None or self.o['art'] not in ('inlay', 'proud'):
+        if water is None or self.o['art'] not in ('inlay', 'proud') or self.o['ring'] == 'insert':
             return None
         return (water.cut(foam) if foam is not None else water).translate((0, 0, -self.shift))
 
     def wave_foam(self):
-        foam = self.art()[1] if self.o['art'] in ('inlay', 'proud') else None
+        foam = self.art()[1] if self.o['art'] in ('inlay', 'proud') and self.o['ring'] != 'insert' else None
         return foam.translate((0, 0, -self.shift)) if foam is not None else None
 
     def _text(self, z0, depth):
@@ -427,7 +444,7 @@ def write_3mf(path, groups):
 # part goes on, and the colour shown for it. The spinner's base is its own brown; the slots can be remapped
 # in the slicer.
 BAMBU_FILAMENTS = [('brown', '#7B4A2A'), ('navy', '#1D3050'), ('cream', '#EFE7D2'), ('orange', '#FF6B35')]
-BAMBU_SLOT = {'body': 1, 'wave-water': 2, 'wave-foam': 3, 'hub': 2, 'hub-text': 3, 'back-cap': 4}
+BAMBU_SLOT = {'body': 1, 'insert': 1, 'wave-water': 2, 'wave-foam': 3, 'hub': 2, 'hub-text': 3, 'back-cap': 4}
 BAMBU_APP = 'BambuStudio-02.08.02.61'
 # Changes to the stock X1C · 0.20 Standard process. The art's finest lines (the plover's navy outline, legs,
 # collar and eye, the board's rim, the cream lip line) are 0.2–0.35 mm, under a 0.4 nozzle's 0.42 line:
@@ -560,9 +577,9 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
-    ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int)
+    ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int); ap.add_argument('--copies', type=int, help='insert rings per plate in the insert project (ring=insert)')
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
     ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl (every part, separate shells)')
     ap.add_argument('--no-stl', action='store_true'); ap.add_argument('--no-step', action='store_true'); ap.add_argument('--no-3mf', action='store_true')
@@ -574,7 +591,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -608,7 +625,7 @@ def main():
         manifest['parts'].append(entry)
         built[pid] = (wp, posed, meta)
         # 3MF print units: parts that are meant to nest (same pose, concentric) share an object; the rest get their own
-        unit = 'back cap' if pid == 'back-cap' else 'front hub' if pid in ('hub', 'hub-text') else 'spinning piece'
+        unit = 'back cap' if pid == 'back-cap' else 'front hub' if pid in ('hub', 'hub-text') else 'art insert' if pid == 'insert' else 'spinning piece'
         groups.setdefault(unit, []).append((pid, meta['color'], posed))
     for k, v in sp.notes.items():
         print(f'  {k}: {v}')
@@ -624,9 +641,9 @@ def main():
     if not a.no_3mf:
         # one multi-part object per print unit, laid out side by side on the bed
         D = cfg['dim']
-        spots = {'spinning piece': (0, 0), 'front hub': (D['ringOut'] + D['hubR'] + 8, 0), 'back cap': (D['ringOut'] + D['hubR'] + 8, D['hubR'] + D['capR'] + 8)}
+        spots = {'spinning piece': (0, 0), 'front hub': (D['ringOut'] + D['hubR'] + 8, 0), 'back cap': (D['ringOut'] + D['hubR'] + 8, D['hubR'] + D['capR'] + 8), 'art insert': (0, -(2 * D['ringOut'] + 8))}
         if 'spinning piece' not in groups:
-            spots = {'front hub': (0, 0), 'back cap': (0, D['hubR'] + D['capR'] + 8)}
+            spots = {'front hub': (0, 0), 'back cap': (0, D['hubR'] + D['capR'] + 8), 'art insert': (D['hubR'] + D['ringOut'] + 8, 0)}
         write_3mf(os.path.join(a.out, f'{tag}.3mf'), [(g, [(pid, color, mesh(posed)) for pid, color, posed in parts], spots[g]) for g, parts in groups.items()])
         manifest['files']['3mf'] = f'{tag}.3mf'
         print(f'3mf       → {tag}.3mf ({len(groups)} object(s), {len(built)} part(s))')
@@ -635,10 +652,28 @@ def main():
         # filament slot (BAMBU_SLOT). art=raised splits the body into the plain body + its two relief layers.
         bed = {g: (BAMBU_BED / 2, BAMBU_BED / 2) for g in groups}             # each print unit centred on its own plate
         bam, n_bam, vol = [], 0, {}
+        if 'art insert' in groups:
+            # the insert: its own project file at the chosen nozzle, `copies` rings on one plate, each split
+            # into bare ring + water + foam for the AMS; the body / hub / cap project below stays at 0.4
+            n_cop = int(o.get('copies') or 1)
+            R = D['ringOut'] + 4
+            offs = [(0, 0)] if n_cop == 1 else [(-R, 0), (R, 0)] if n_cop == 2 else [(-R, R), (R, R), (-R, -R), (R, -R)][:n_cop]
+            base = sp.insert(relief=False)
+            dz = -base.val().BoundingBox().zmin
+            plist = []
+            for ci, (ox, oy) in enumerate(offs):
+                for qid, x in [('insert', base)] + sp.relief_parts():
+                    x = x.translate((ox, oy, dz)); vol[f'{qid}{ci + 1 if n_cop > 1 else ""}'] = x.val().Volume()
+                    plist.append((qid, mesh(x)))
+            fn = f'{tag}-insert-bambu.3mf'
+            write_bambu_3mf(os.path.join(a.out, fn), [(f'art insert ×{n_cop}', plist, (BAMBU_BED / 2, BAMBU_BED / 2))], nozzle=o.get('nozzle', '0.4'))
+            manifest['files']['insert_bambu_3mf'] = fn
+            print(f'bambu 3mf → {fn} ({n_cop} insert(s) on one plate, nozzle {o.get("nozzle", "0.4")}; slots 1 ring colour, 2 navy, 3 cream)')
+            groups = {g: p for g, p in groups.items() if g != 'art insert'}
         for g, parts in groups.items():
             plist = []
             for pid, color, posed in parts:
-                if pid == 'body' and o['art'] == 'raised':
+                if pid == 'body' and o['art'] == 'raised' and o['ring'] != 'insert':
                     base = sp.body(relief=False)
                     dz = -base.val().BoundingBox().zmin                    # the body prints as mounted (no flip)
                     for qid, x in [('body', base)] + sp.relief_parts():
@@ -648,11 +683,12 @@ def main():
                     plist.append((pid, mesh(posed)))
             n_bam += len(plist)
             bam.append((g, plist, bed[g]))
-        write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle=o.get('nozzle', '0.4'))
-        manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
-        used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
-        print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
-              ', '.join(f'{k} {BAMBU_FILAMENTS[k - 1][0]}' for k in used) + ')')
+        if bam:
+            write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle='0.4' if o['ring'] == 'insert' else o.get('nozzle', '0.4'))
+            manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
+            used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
+            print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
+                  ', '.join(f'{k} {BAMBU_FILAMENTS[k - 1][0]}' for k in used) + (' — 0.4 nozzle' if o['ring'] == 'insert' else '') + ')')
         if vol:
             print('  split   ' + ', '.join(f'{k} {v:.0f}' for k, v in vol.items()) + f' mm³ = {sum(vol.values()):.0f} (body {built["body"][0].val().Volume():.0f})')
 
