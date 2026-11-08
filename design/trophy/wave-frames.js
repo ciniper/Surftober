@@ -218,6 +218,39 @@ export const WAVE_VARIANTS = {
     motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
       squeeze: { at: 1.3, crash: .72, splash: .8 } },
   },
+  // ---- exploration round (Chase, 2026-11-08: "do you think it's necessary at this point for 0.2mm or is there a
+  // way to still have a cool design without .2mm? Should we add details in the water itself? should we make the
+  // wave a little thicker since there's room above plover header?"). All beside ploverleanfine, none default.
+  // thick: the tube's roof 0.06 lower (≈ 1 mm more navy over the bird).
+  ploverleanthick: {
+    label: 'Explore · thicker wave over the bird (0.2 nozzle, 8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .06,
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
+  // room: the bird grown 1.12× to fill the tube instead, roof 0.03 lower.
+  ploverleanroom: {
+    label: 'Explore · bigger bird fills the tube (0.2 nozzle, 8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .03,
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .36, birdScale: 1.03, boardScale: 1.08, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
+  // water: more going on in the navy — a second face line, the lines inside the tube, bubbles up the back.
+  ploverleanwater: {
+    label: 'Explore · more detail in the water (0.2 nozzle, 8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93],
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .34, birdScale: .92, bill: 330, billBase: 60, billTip: 32, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, face2: 1, barrel: 1, dash: 2, bubbles: 1 }, bold: .03,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
+  // silhouette: the 0.4-nozzle candidate. No navy outline — the cream bird sits straight on the ring colour, its
+  // edge drawn by the colour change — and every navy detail (cap, collar, eye, legs, bill) and every cream line
+  // ≥ 0.052 of the band ≈ 0.9 mm = two 0.4-nozzle lines. Bird 1.08× and the roof 0.03 lower to make room.
+  ploverleansilhouette: {
+    label: 'Explore · silhouette bird, no outline — for a 0.4 nozzle (8 frames)', N: 8, mode: 'stay', kind: 'scene', sea: 'edge', frame: [0.17, 1.93], ceiling: .03,
+    layerNames: { water: 'wave + plover', foam: 'whitewater, lines, board, bird' },
+    motion: { lip: .3, shift: .3, birdShift: .355, birdScale: .99, boardScale: 1.05, boardThick: 1.3, noOutline: 1, noCap: 1, bill: 322, billBase: 70, billTip: 62, raise: .035, reach: 1, walk: .04, lift: .018, stance: .6, crest: .01, bob: .006, tilt: 2, wobble: .8, crouch: .12, foam: 'ww', splash: 1, lead: 'back', lean: .07, tex: { face: 1, dash: 2, geo: { face: { w: .052 } } }, bold: .052,
+      squeeze: { at: 1.3, crash: .72, splash: .8 } },
+  },
   // Compact frame, sea to the edge (Chase, 2026-11-07: "let's [run the sea to the ring's edge] but we need to also
   // make more use of the frame — there's some unused space on the right, the plover tail could go into the wave
   // for part of the animation and the left part of the wave crash maybe can be partly compressed"): the bold
@@ -570,7 +603,7 @@ function surfer(t, M, q = 0.5) {
   const deck = x => rot([[x, 0.022 * kb * kt]], tilt)[0];
   // the bird above its feet, lowered by the crouch, leaning into the ride a touch
   const A = M.walk || 0, ss = x => (x = Math.min(1, Math.max(0, x)), x * x * (3 - 2 * x));
-  const lift = [A - 2 * A * q, -drop], lean = deg(-4 - 5 * c), bs = M.birdScale || 1, P = q => rot([[q[0] * bs, q[1] * bs]], lean, [0, 0.2])[0].map((v, i) => v + lift[i]);   // birdScale: about the middle of the deck
+  const lift = [A - 2 * A * q, -drop + (M.raise || 0)], lean = deg(-4 - 5 * c), bs = M.birdScale || 1, P = q => rot([[q[0] * bs, q[1] * bs]], lean, [0, 0.2])[0].map((v, i) => v + lift[i]);   // birdScale: about the middle of the deck
   const hr = 65 * (M.print ? M.headScale || 1 : 1);                          // print: the head a little bigger, so cap, cream and eye are each ≥ B
   const body = (M.print ? LOGO_BODY_BLUNT : LOGO_BODY).map(P), head = ell(...lp([470, 480]), hr * LOGO.s, hr * LOGO.s, 48).map(P);
   // legs: from the belly to the feet on the deck, knees flexing forward with the crouch; flat feet, toes left
@@ -582,7 +615,8 @@ function surfer(t, M, q = 0.5) {
     const hip = P(lp([lx, 700])), [ax, ay0] = deck(fx + A - 2 * A * ss(st)), ay = ay0 + up, knee = [(hip[0] + ax) / 2 - 0.03 * c - 0.005, (hip[1] + ay) / 2];
     navy.push(bar(hip, knee, W(0.026)), bar(knee, [ax, ay], W(0.026)), [[ax + 0.02 * ff, ay - 0.004], [ax - 0.058 * ff, ay - 0.004], [ax - 0.058 * ff, ay + W(0.02) - 0.004], [ax + 0.02 * ff, ay + W(0.02) - 0.004]]);
   });
-  navy.push(grow(body, W(0.022)), grow(head, W(0.022)), (M.billBase ? billWedge(M) : [[408, 512], [M.bill || 312, 546], [416, 541]]).map(lp).map(P));    // outline + bill (M.bill: its tip, logo px; print: a blunt wedge billBase → billTip px tall)
+  if (!M.noOutline) navy.push(grow(body, W(0.022)), grow(head, W(0.022)));                // outline (noOutline: the cream bird sits straight on the ring colour — a silhouette, for a 0.4 nozzle)
+  navy.push((M.billBase ? billWedge(M) : [[408, 512], [M.bill || 312, 546], [416, 541]]).map(lp).map(P));    // bill (M.bill: its tip, logo px; print: a blunt wedge billBase → billTip px tall)
   cream.push(withHoles(body, [(B ? grow(LOGO_COLLAR, Math.max(0.004, (B / (M.birdScale || 1) - 0.028) / 2)) : LOGO_COLLAR).map(P)]));    // bold: collar band ~0.028 → 0.036 before birdScale                                                       // partial collar
   const er = Math.max(14 * LOGO.s, B / 2 / bs), eye = ell(...lp(M.print ? [462, 480 + hr * 0.24] : [461, 500]), er, er, 18).map(P);       // ≥ B across after birdScale (print: nudged in from the outline)
   if (B && M.print) {
@@ -590,7 +624,7 @@ function surfer(t, M, q = 0.5) {
     // outline), with ≥ 0.9 mm of cream between it and the eye
     const capY = (LOGO.y0 - (480 - hr + 0.5 * hr)) * LOGO.s, hc = lp([470, 480]);
     cream.push(withHoles(ell(...hc, hr * LOGO.s, hr * LOGO.s, 64).map(([x, y]) => [x, Math.min(y, capY)]).map(P), [eye]));
-  } else if (B) {
+  } else if (B && !M.noCap) {
     // bold: the cream left above the cap is ~0.015 thick, so the cap runs out to the outline instead and
     // reads as a navy crown — the head is cut back to the cap ellipse (moved up and out a little) along
     // rays from its centre
@@ -717,7 +751,9 @@ function faceScene(V, t) {
 }
 function barrelScene(V, t) {
   const M = V.motion, k = M.tuck ? 0.5 - 0.5 * Math.cos(TAU * t) : wv(t), k2 = M.tuck ? k : wv(t, 1.0);
-  const T = V.tube || TUBE, PIV = V.lipPivot || LIP_PIVOT, S = V.level ?? SEA, CR = V.tube ? .97 : .96;   // a style may bring its own tube
+  const T0 = V.tube || TUBE, PIV = V.lipPivot || LIP_PIVOT, S = V.level ?? SEA, CR = V.tube ? .97 : .96;   // a style may bring its own tube
+  // ceiling: the tube's roof (points 19–24) brought down by this much — a thicker wave over the bird (exploration, 2026-11-08)
+  const T = V.ceiling ? T0.map(([x, y], i) => i >= 19 && i <= 24 ? [x, y - V.ceiling * (i === 19 || i === 24 ? 0.5 : 1)] : [x, y]) : T0;
   const pts = T.map(([x, y], i) => {
     if (i >= 9 && i <= 20) {      // the lip: stretched out from / pulled back towards a pivot under the crest
       // throwing over, the lip reaches out a little less than it drops, so the tip stays inside the cell

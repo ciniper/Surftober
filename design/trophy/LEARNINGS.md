@@ -130,6 +130,25 @@ same slot has no eye, a broken outline and chewed legs — that was never a draw
 - **Simplify the wave, not the bird.** Give the bird room by making the wave quieter: thinner
   lip, no foam ball, fewer lines. The opposite of today's last attempt.
 
+## 5b. Exploration round (2026-11-08)
+
+Chase: "is 0.2 necessary, or is there a cool design without it? details in the water? is brown the best
+background? wave thicker since there's room above the plover's head?" Four options drawn beside
+`ploverleanfine`, stills + print checks only, nothing printed:
+
+| option | what | check |
+|---|---|---|
+| `ploverleanthick` | tube roof 0.06 lower (`ceiling`), ≈ 1 mm more navy over the bird | 0.45 mm: same as leanfine |
+| `ploverleanroom` | bird 1.12× (`birdScale` .92 → 1.03), roof 0.03 lower | 0.45 mm: same as leanfine |
+| `ploverleanwater` | second face line, lines inside the tube, bubbles up the back | 0.45 mm: fine, but the tube gets cluttered |
+| `ploverleansilhouette` | no navy outline (`noOutline`), details at 0.9 mm, wedge bill 1.0 → 0.9 mm, no cap (`noCap`), bird raised (`raise`) | **0.9 mm: still 15 % of the cream flagged, the head is a blob.** Confirms §3: the logo bird in a barrel does not survive a 0.4 nozzle. |
+
+New knobs in `barrelScene` / `surfer`: `ceiling` (roof offset), `noOutline`, `noCap`, `raise`.
+Background: the ring colour on the real print is the **tier** colour (gold / silver / bronze / teal);
+brown is only the filament in the project file. Palette board: `learnings/`-style still, see the
+session. Verdict offered to Chase: 0.2 is the price of this bird; the alternatives at 0.4 are a
+different, chunkier bird.
+
 ## 6. Where things are
 
 - **Art:** `wave-frames.js`. Every animation option lives in `WAVE_VARIANTS`; new ones go beside
