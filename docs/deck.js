@@ -625,15 +625,18 @@
     const intro = { title: 'Blue Water Task Force', html: `
       <p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2 style="max-width:1500px">${esc(B.mission)}</h2>
       <div class="stats bw-stats">${B.stats.map((s) => `<div class="stat"><div class="v">${esc(s.v)}</div><div class="k">${esc(s.k)}</div></div>`).join('')}</div>${site}` };
-    const media = (m, field) => {
+    const media = (m, field, cls = 'bw-media', alt = '') => {
       if (!m) return todo('Add this slide’s visual from the “bwtf tober” deck', field);
-      if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="bw-media" src="${esc(m)}" autoplay muted loop playsinline></video>`;
-      return `<img class="bw-media" src="${esc(m)}" alt="">`;
+      if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="${cls}" src="${esc(m)}" autoplay muted loop playsinline></video>`;
+      return `<img class="${cls}" src="${esc(m)}" alt="${esc(alt)}">`;
     };
-    const feats = (B.features || []).map((f, i) => ({ title: f.title, html: `
-      <p class="kicker">${esc(B.group)} · Website overview</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
+    const feats = (B.features || []).map((f, i) => ({ title: f.title, cls: 'bw-feature', html: `
+      <p class="kicker">${esc(B.group)} · ${esc(f.kicker || 'Website overview')}</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
       <div class="bw-frame">${media(f.media, `bwtf.features[${i}].media`)}</div>${site}` }));
-    return [intro, ...feats];
+    // Whole slides from the BWTF deck, edge to edge.
+    const full = (key) => (B[key] || []).map((x, i) => ({ title: x.title, cls: 'bw-full',
+      html: media(x.media, `bwtf.${key}[${i}].media`, 'bw-fullimg', x.title) }));
+    return [...full('before'), intro, ...feats, ...full('after')];
   }
 
   function outroSlide() {
@@ -796,6 +799,7 @@
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
     stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
+    stage.classList.toggle('bare', (slides[cur].cls || '') === 'bw-full'); // edge-to-edge picture: no footer over it
     gameOnShow();
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
@@ -815,6 +819,18 @@
     o.classList.toggle('open', open);
     if (open) (o.querySelector('.cur') || o.querySelector('button'))?.focus();
   }
+
+  // BWTF feature media are sized from their aspect ratio (see .bw-feature in
+  // deck.css) so a small GIF still fills the slide. load events don't bubble,
+  // hence capture.
+  const setAr = (e) => {
+    const t = e.target;
+    if (!t.classList || !t.classList.contains('bw-media')) return;
+    const w = t.naturalWidth || t.videoWidth, h = t.naturalHeight || t.videoHeight;
+    if (w && h) t.style.setProperty('--ar', w / h);
+  };
+  document.addEventListener('load', setAr, true);
+  document.addEventListener('loadedmetadata', setAr, true);
 
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
