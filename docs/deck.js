@@ -518,7 +518,7 @@
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
     if (!GROUNDS.length) return [];
-    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
+    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `${gameSuffix ? '<button type="button" class="g-reset" data-g-reset hidden>Reset rehearsal</button>' : ''}
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
         <p class="lede">${GROUNDS.length} journal quotes. Four suspects each. Vote from your phone.</p>
         <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
@@ -551,6 +551,16 @@
     if (e && (e.status === 401 || e.status === 403)) return 'Rehearsal mode — sign in as the admin in this browser to collect votes.';
     return 'Offline — showing the round without live votes.';
   }
+  // Rehearsal only (?game=…): wipe its rounds (votes cascade) to start over.
+  async function resetRehearsal(btn) {
+    if (!gameSuffix || !GAME.host || !window.SurftoberGame) return;
+    if (!confirm(`Clear every round and vote in ${GAME_ID}?`)) return;
+    btn.disabled = true;
+    try { await window.SurftoberGame.resetGame(GAME_ID); GAME.rows.clear(); btn.textContent = 'Cleared ✓'; }
+    catch (e) { btn.textContent = 'Reset failed'; console.error(e); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Reset rehearsal'; }, 2500);
+    gameTick();
+  }
   function drawQR(el) {
     if (!el || el.dataset.done) return;
     const paint = () => {
@@ -574,6 +584,8 @@
         drawQR(el.querySelector('[data-g="qr"]'));
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const players = new Set(vs.map((v) => v.user_id)).size;
+        const rb = el.querySelector('[data-g-reset]');
+        if (rb) rb.hidden = !GAME.host;
         set('host', `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
       } else if (s.game.kind === 'round') {
         const r = s.game.r;
@@ -834,6 +846,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!slides.length && e.key !== 'l' && e.key !== 'L') return; // locked / still loading
     if (e.target.closest && e.target.closest('audio')) return; // Space = play/pause there
     if (bookOpen()) {
       switch (e.key) {
@@ -865,6 +878,9 @@
     }
   });
   $('#viewport').addEventListener('click', (e) => {
+    if (e.target.closest('[data-signin]')) { window.SurftoberGame.signIn(); return; }
+    if (e.target.closest('[data-g-reset]')) { resetRehearsal(e.target.closest('[data-g-reset]')); return; }
+    if (!slides.length) return;
     if (e.target.closest('[data-open-book]')) { openFrom(e.target.closest('[data-open-book]')); return; }
     if (e.target.closest('[data-close-book]')) { closeBook(); return; }
     if (bookOpen()) { (e.clientX < innerWidth / 2 ? turn(-1) : turn(1)); return; }
@@ -885,8 +901,22 @@
   });
   addEventListener('resize', fit);
 
+  // On surftober.com the deck opens only for the host (see game.js locked()).
+  async function hostGate() {
+    const G = window.SurftoberGame;
+    const prod = /(^|\.)surftober\.com$/.test(location.hostname);
+    if (G ? !G.locked() : !prod) return true;
+    const s = G ? await G.session() : null;
+    if (G && G.isHost(s)) return true;
+    stage.innerHTML = `<div class="loading"><img src="${LOGO}" alt=""><div>The ceremony deck is for the host.</div>
+      <div class="muted" style="font-size:24px">${s ? `Signed in as ${esc(s.user.email)} — that's not the host account.` : 'Sign in as the host to open it.'}</div>
+      ${G ? `<button type="button" class="lock-btn" data-signin>${s ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
+    return false;
+  }
+
   async function boot() {
     fit();
+    if (!(await hostGate())) return;
     const m = /^#(\d+)(?:\.(\d+))?$/.exec(location.hash);
     if (m && !slides.length) { cur = Number(m[1]) - 1; step = Number(m[2] || 0); }
     try {
@@ -895,6 +925,10 @@
       window.__deck = d; // console poking during rehearsal
       await buildAvatars(d);
       slides = buildSlides(d);
+      if (location.hash === '#game') { // Admin Tools → "Rehearse the game"
+        const g = slides.findIndex((s) => s.game && s.game.kind === 'intro');
+        if (g >= 0) { cur = g; step = 0; }
+      }
       const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       render({ text: `${raw.source === 'live' ? 'Live' : 'Fixture'} · ${fmt(d.stats.sessions)} sessions · ${when}${raw.event.logging_frozen ? '' : ' · logging still open'}` });
     } catch (err) {

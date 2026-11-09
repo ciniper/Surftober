@@ -3,8 +3,17 @@
 ## Next up
 - [x] **Run supabase-upgrade-2026-11-game.sql** — applied to Surftober2
       2026-11-08 (game_rounds + game_votes, RLS on, 7 policies).
-- [ ] **⚠️ Chase: rehearse the game** — deck.html?game=rehearsal from a
-      browser signed in as the admin, plus a phone on play.html.
+- [x] **Deck on main, host-only** (2026-11-09) — on surftober.com the deck
+      opens only for the admin (game.js locked(); ?lock forces it elsewhere)
+      and is linked from Account → Admin Tools (Ceremony deck · Rehearse the
+      game → deck.html?game=rehearsal#game). Previews/localhost stay open and
+      keep the landing + main-page buttons. Sign-in from the deck or
+      play.html comes back to that page (sessionStorage surftober_next, read
+      in app.js). The lock hides the deck; deck-config.js is still a public
+      file — fill judged winners on the day.
+- [ ] **⚠️ Chase: rehearse the game** — on surftober.com: Account → Admin
+      Tools → Rehearse the game, plus a phone on the QR's play link. "Reset
+      rehearsal" (top right of the intro slide) clears the practice rounds.
 - [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
       "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
       and wired via bwtf.features[i].media (2026-11-08).

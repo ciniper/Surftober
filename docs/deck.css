@@ -406,3 +406,8 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .keys { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--chrome-bg); border: 1px solid var(--line); color: var(--text-2); border-radius: 12px; padding: 12px 18px; font-size: 14px; z-index: 21; display: none; }
 .keys.open { display: block; }
 .keys kbd { font: 600 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--text); }
+
+/* Host lock (surftober.com) and the rehearsal reset button */
+.lock-btn { font: 700 28px var(--body); padding: 18px 44px; border-radius: 999px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--sun-1), var(--accent)); box-shadow: var(--shadow); }
+.g-reset { position: absolute; top: 40px; right: 120px; z-index: 3; font: 600 22px var(--body); padding: 10px 22px; border-radius: 999px; cursor: pointer; color: var(--text-2); background: var(--panel); border: 1.5px solid var(--line); }
+.g-reset[hidden] { display: none; }
