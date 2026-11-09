@@ -150,7 +150,15 @@ async function initSupabase(){
     data: { user }
   } = await sb.auth.getUser();
   currentUser = user || null;
-  
+
+  // Signed in from the ceremony deck or the game's play page (game.js
+  // signIn()): go back there. Only those two pages, same origin.
+  if (currentUser) {
+    let back = null;
+    try { back = sessionStorage.getItem('surftober_next'); sessionStorage.removeItem('surftober_next'); } catch { /* ignore */ }
+    if (back && /^(deck|play)\.html(\?[^#\s]*)?(#[\w.-]*)?$/.test(back)) { location.replace('./' + back); return; }
+  }
+
   // Check if user clicked "Sign In" from landing page
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('mode') === 'signin' && !currentUser) {

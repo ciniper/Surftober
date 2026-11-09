@@ -34,6 +34,23 @@
   }
   const isHost = (s) => !!(s && s.user && s.user.email && HOSTS.includes(String(s.user.email).toLowerCase()));
 
+  // The deck is host-only on the real site (surftober.com). Previews are
+  // behind Vercel's own login and Google sign-in can't return to them, so
+  // they (and localhost) stay open. ?lock forces the lock for testing.
+  // NOTE: this hides the deck, it doesn't protect it — the static files and
+  // the anon-readable data are still fetchable by anyone who looks.
+  const locked = () => /(^|\.)surftober\.com$/.test(location.hostname) || new URLSearchParams(location.search).has('lock');
+
+  // Sign in through the app's normal flow, then come back to this page:
+  // app.js (index.html) sends a signed-in visitor to surftober_next.
+  function signIn() {
+    try {
+      sessionStorage.setItem('surftober_next', location.pathname.split('/').pop() + location.search + location.hash);
+      sessionStorage.setItem('surftober_authenticated', '1');
+    } catch { /* private mode: they'll land in the app and come back by hand */ }
+    location.href = './index.html?mode=signin';
+  }
+
   async function req(path, { method = 'GET', body, prefer } = {}) {
     const s = await session();
     const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${s ? s.access_token : SUPABASE_ANON}` };
@@ -118,5 +135,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds };
 })();
