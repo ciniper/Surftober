@@ -354,6 +354,30 @@ export const WAVE_VARIANTS = {
            [5 / 8, [.82, .48, .16, 1]], [6 / 8, [.88, .4, .13, .3]], [7 / 8, [.94, .32, .08, 0]], [1, [.98, .27, 0, 0]]],
   },
 };
+// ---- v8 candidates: sea life in the water below the wave (Chase, 2026-11-09: "make some options for a fish, whale or
+// dolphin in the water below the wave. Basically I want to fill in some of the empty space with something cool").
+// All are ploverleanfine (v7, 0.2 nozzle) plus `life`: creatures drawn in cream in the navy sea under the board, see
+// SEA_LIFE / seaLife(). The open gold beside the wave is too narrow (≈ 1.5 mm at r 36) or taken by the foam ball, so
+// they stay under water: r 30.15 → 33.85 (3.7 mm) between the ring's inner edge and the board.
+const FINE = WAVE_VARIANTS.ploverleanfine;
+const v8 = (label, life) => ({ ...FINE, label: `v8 · ${label} (0.2 nozzle, 8 frames)`, life });
+Object.assign(WAVE_VARIANTS, {
+  // three small fish milling under the board, each on its own little loop, tails beating twice a loop
+  ploverfish: v8('three fish under the board', [
+    { kind: 'fish', at: [-10.2, 31.6], dx: .7, dr: .25, ph: 0, beats: 2 },
+    { kind: 'fish', at: [-4.4, 32.25], dx: .6, dr: .2, ph: .35, beats: 2 },
+    { kind: 'fish', at: [1.6, 31.45], dx: .7, dr: .25, ph: .7, beats: 2 }]),
+  // a school swimming through: fish every 7.6 mm moving one spacing left per loop, so in the video they stream
+  // continuously under the wave; they slide in and out at the slot's edges
+  ploverschool: v8('a school of fish swimming through', [
+    { kind: 'fish', at: [-8, 31.55], run: 7.6, copies: 4, alt: .55, beats: 2 }]),
+  // one dolphin porpoising under the board: the body undulates, the flukes beat once a loop
+  ploverdolphin: v8('a dolphin under the board', [
+    { kind: 'dolphin', at: [-6.8, 31.55], dx: .6, dr: .2, ph: .15, beats: 1, scale: 1.15 }]),
+  // a humpback gliding under the whole wave: long pectoral fin, slow fluke beat
+  ploverwhale: v8('a humpback whale under the wave', [
+    { kind: 'whale', at: [-9.6, 32.4], dx: .45, dr: .14, ph: .1, beats: 1 }]),
+});
 export const WAVE_DEFAULT = 'classic';
 
 // Circle layout of a whitewater cluster, in units of its size: [dx, dy, r]
@@ -759,6 +783,63 @@ function faceScene(V, t) {
   water.push(...s.navy.map(place)); foam.push(...s.cream.map(place));
   return { water, foam };
 }
+// ---- sea life (v8 candidates, 2026-11-09) --------------------------------------------------------------------
+// Each creature is drawn in mm, nose at x 0 and tail towards +x (so it swims left, like the plover), around a spine
+// that undulates as it swims; top / bot are the half-heights along it (fractions of the length → mm). Fins are
+// polygons in the spine's local frame (u along it, v outward from the body at that side). Every cream part is
+// ≥ 0.45 mm across (two 0.2-nozzle lines) and every navy gap ≥ 0.45 mm, tips blunted.
+const SEA_LIFE = {
+  fish: { len: 3.3, amp: .3, k: 2.5,
+    top: [[0, 0], [.03, .42], [.08, .62], [.15, .8], [.25, .95], [.4, 1.0], [.6, .82], [.8, .52], [1, .27]],
+    bot: [[0, 0], [.03, .38], [.08, .56], [.15, .72], [.25, .85], [.4, .9], [.6, .75], [.8, .48], [1, .25]],
+    eye: { at: .23, v: .12, r: .26 },
+    fins: [{ at: 1, side: 0, pts: [[-.15, .24], [.95, .85], [1.15, .62], [1.0, 0], [1.15, -.62], [.95, -.85], [-.15, -.24]] },
+           { at: .42, side: 1, pts: [[-.55, -.1], [-.1, .45], [.3, .5], [.45, -.1]] }] },
+  dolphin: { len: 8.0, amp: .45, k: 2.5,
+    top: [[0, 0], [.02, .22], [.06, .3], [.1, .36], [.13, .6], [.18, .88], [.25, 1.0], [.4, 1.02], [.6, .85], [.8, .55], [1, .25]],
+    bot: [[0, 0], [.02, .2], [.06, .25], [.1, .3], [.14, .45], [.22, .72], [.35, .9], [.5, .88], [.7, .65], [.85, .42], [1, .25]],
+    eye: { at: .2, v: .2, r: .26 },
+    fins: [{ at: 1, side: 0, pts: [[-.2, .22], [.75, 1.0], [1.05, .85], [.7, 0], [1.05, -.85], [.75, -1.0], [-.2, -.22]] },
+           { at: .45, side: 1, pts: [[-1.0, -.15], [-.2, .55], [.3, 1.0], [.65, .95], [.45, .5], [.55, -.15]] },
+           { at: .3, side: -1, pts: [[-.45, -.1], [.3, .8], [.75, .74], [.75, -.1]] }] },
+  whale: { len: 12.5, amp: .6, k: 2.2,
+    top: [[0, 0], [.015, .35], [.04, .55], [.1, .8], [.2, 1.0], [.35, 1.1], [.55, 1.05], [.62, 1.15], [.67, 1.1], [.75, .85], [.9, .5], [1, .32]],
+    bot: [[0, 0], [.015, .4], [.04, .7], [.1, 1.0], [.2, 1.2], [.3, 1.25], [.45, 1.1], [.6, .9], [.8, .6], [1, .32]],
+    eye: { at: .2, v: .0, r: .25 },
+    fins: [{ at: 1, side: 0, pts: [[-.25, .3], [1.0, 1.25], [1.4, 1.1], [.95, 0], [1.4, -1.1], [1.0, -1.25], [-.25, -.3]] },
+           { at: .3, side: -1, pts: [[-.4, -.2], [1.1, .68], [2.4, .9], [2.8, .58], [1.6, -.05], [.6, -.2]] }] },
+};
+function swimmer(S, t, beats = 1, ph = 0) {
+  const n = 48, sp = Array.from({ length: n + 1 }, (_, i) => { const s = i / n; return [s * S.len, S.amp * s * s * Math.sin(TAU * (beats * t + ph) - S.k * s)]; });
+  const nrm = i => { const a = sp[Math.max(0, i - 1)], b = sp[Math.min(n, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); return [-dy / L, dx / L]; };
+  const side = (tab, sg) => sp.map((p, i) => { const [nx, ny] = nrm(i), h = at(tab, i / n) * sg; return [p[0] + nx * h, p[1] + ny * h]; });
+  const top = side(S.top, 1), bot = side(S.bot, -1), body = [...bot, ...[...top].reverse()];
+  const frameAt = (s, sg) => { const i = Math.round(s * n), [nx, ny] = nrm(i), base = sg > 0 ? top[i] : sg < 0 ? bot[i] : sp[i], o = sg || 1; return { base, tu: [ny, -nx], nv: [nx * o, ny * o] }; };
+  const fins = S.fins.map(F => { const { base, tu, nv } = frameAt(F.at, F.side); return F.pts.map(([u, v]) => [base[0] + tu[0] * u + nv[0] * v, base[1] + tu[1] * u + nv[1] * v]); });
+  const E = frameAt(S.eye.at, 0), eye = ell(E.base[0] + E.nv[0] * S.eye.v, E.base[1] + E.nv[1] * S.eye.v, S.eye.r, S.eye.r, 16);
+  return [withHoles(body, [eye]), ...fins];
+}
+// Creatures sit on the ring in true mm: x along the arc at radius r0, y radial. Mapped back into the scene for the
+// v7 band (artBand of ploverleanfine: r 30.61 → 48.2, 8 slots, cell aspect 1.76, frame centred on x 1.05, fit 1).
+const LIFE_RING = { rIn: 30.6145, H: 17.5855, N: 8, A: 1.76, mid: 1.05 };
+function seaLife(life, t) {
+  const R = LIFE_RING, out = [];
+  const toScene = (x0, r0) => ([x, y]) => [R.mid + R.A * ((x0 + x) / r0) / (TAU / R.N), (r0 + y - R.rIn) / R.H];
+  for (const L of life) {
+    const S = SEA_LIFE[L.kind];
+    if (L.run) {        // a school streaming through: copies every `run` mm, one spacing left per loop, alternating heights
+      for (let j = 0; j < L.copies; j++) {
+        const x0 = L.at[0] + j * L.run - L.run * t, r0 = L.at[1] + (j % 2 ? L.alt : 0) + 0.15 * Math.sin(TAU * (t + j * .3));
+        out.push(...swimmer(S, t, L.beats, j * .25).map(p => p.map(toScene(x0, r0))));
+      }
+      continue;
+    }
+    const x0 = L.at[0] + L.dx * Math.sin(TAU * (t + L.ph)), r0 = L.at[1] + L.dr * Math.sin(TAU * (t + L.ph) + 1.3);
+    const k = L.scale || 1;
+    out.push(...swimmer(S, t, L.beats, L.ph).map(p => p.map(([x, y]) => [x * k, y * k]).map(toScene(x0, r0))));
+  }
+  return out;
+}
 function barrelScene(V, t) {
   const M = V.motion, k = M.tuck ? 0.5 - 0.5 * Math.cos(TAU * t) : wv(t), k2 = M.tuck ? k : wv(t, 1.0);
   const T0 = V.tube || TUBE, PIV = V.lipPivot || LIP_PIVOT, S = V.level ?? SEA, CR = V.tube ? .97 : .96;   // a style may bring its own tube
@@ -845,6 +926,7 @@ function barrelScene(V, t) {
   // the plover, low in the tube on the trough
   const s = surfer(t, M, M.tuck ? 1 - k : (1 - k) / 2), place = p => p.map(([x, y]) => [DA - 1.24 + (M.birdShift ?? M.shift ?? 0) - (M.slide || 0) * k - (M.lean || 0) * 0.3 * wv(t, -TAU * (M.leanLag || 0)) + x, (M.birdY ?? 0.262) + y]);
   W2.push(...s.navy.map(place)); F2.push(...s.cream.map(place));
+  if (V.life) F2.push(...seaLife(V.life, t));        // v8 candidates: fish, dolphin, whale in the sea below the wave
   return { water: W2, foam: F2 };
 }
 
@@ -865,7 +947,7 @@ export function waveFrame(variant, t, A = DA, floor = 0) {
     const [xL, xR] = V.frame || [0, DA], fit = Math.min(1, A / (xR - xL)), P = ([x, y]) => [0.5 + (x - (xL + xR) / 2) / A * fit, L + (y - L) * fit];
     const s = (V.face ? faceScene : barrelScene)(V, t);
     const water = [sea, ...s.water.map(p => p.map(P))].map(p => clip(p, floor)).filter(p => p.length > 2);
-    return { water, foam: s.foam.map(p => clip(p.map(P))).filter(p => p.length > 2) };
+    return { water, foam: s.foam.map(p => clip(p.map(P), floor)).filter(p => p.length > 2) };   // floor: sea life can swim below the band
   }
   const parts = [];
   if (V.mode === 'travel') {
