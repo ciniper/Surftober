@@ -104,9 +104,13 @@ window.SurftoberDeckConfig = {
   // ("The Fun, the Waves & the Good"); set a string to override.
   bookTitle: '',
 
-  // Blue Water Task Force — from the "bwtf tober" Google Slides (2026-11-08).
-  // Each feature's `media` is the visual from that deck: an image or video
-  // path under docs/ (e.g. 'bwtf/map.png', 'bwtf/alerts.mp4') or an https URL.
+  // Blue Water Task Force — from the "bwtf tober" deck (2026-11-08), in its
+  // order: the `before` pictures, the intro (mission + stats), the
+  // `features`, then the `after` pictures. `before`/`after` are whole slides
+  // from that deck, shown edge to edge (title = grid label only). Each
+  // feature's `media` is shown big under its title (`kicker` overrides the
+  // "Website overview" label). `media` is an image or video path under docs/
+  // (e.g. 'bwtf/map.gif', 'bwtf/alerts.mp4') or an https URL.
   // `site` (optional) is the live website; it shows as a link on each slide.
   bwtf: {
     group: 'Data & Technology Group',
@@ -116,11 +120,24 @@ window.SurftoberDeckConfig = {
       { v: '82,000+', k: 'city lab results since 2000' },
       { v: '1,474', k: 'sewer discharge records since 2011' },
     ],
+    before: [
+      { title: 'Water Quality Monitoring Program', media: 'bwtf/program.jpg' },
+      { title: 'Lab Testing', media: 'bwtf/lab.jpg' },
+      { title: 'Sampling at the beach', media: 'bwtf/sampling.jpg' },
+      { title: 'Six Sites Monitored', media: 'bwtf/sites.jpg' },
+      { title: 'In the sewer', media: 'bwtf/sewer-1.jpg' },
+      { title: 'In the transport box', media: 'bwtf/sewer-2.jpg' },
+    ],
     features: [
+      { title: 'How the data flows', kicker: 'How it works', media: 'bwtf/flow.gif' },
       { title: 'Unified Water Quality Map', media: 'bwtf/map.gif' },
       { title: 'Data Analysis Spanning 20+ Years', media: 'bwtf/analysis.gif' },
       { title: 'Targeted Email Alerts', media: 'bwtf/alerts.gif' },
       { title: 'Educational Modules', media: 'bwtf/education.gif' },
+    ],
+    after: [
+      { title: 'Do you know of a space we could use to home our lab?', media: 'bwtf/lab-space.jpg' },
+      { title: 'Westside transport box: decanting', media: 'bwtf/decanting.jpg' },
     ],
     site: '',
   },
