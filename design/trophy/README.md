@@ -79,7 +79,7 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v6 | prefix on every output file (`v6-nahla-3arm-ploverleanbold8-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v7 | prefix on every output file (`v7-nahla-3arm-ploverleanfine8-insert-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `body` | tier · brown · bone | tier | the spinning body's filament; with `ring=insert` the insert is always the tier colour, so `brown`/`bone` make the gold ring the medal on a plain wheel (preset `insert`) |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
@@ -405,6 +405,22 @@ Chase picked the open face.
   - The ring plate sliced in 66 min with no warnings.
   - The toolpaths show every bird detail as a solid shape:
     `cad/out/sliced-v6-vs-face-zoom.png`.
+
+**v7 (2026-11-08): the current build.** Chase printed `ploverleanfine` on the glue-in insert at a 0.2
+nozzle ("worked well"; see LEARNINGS §5–5d for how it got there), so the print round is v7 (the
+`version` default). Build it with preset `insert`:
+`.venv/bin/python spinner.py --preset insert`, which writes
+`v7-nahla-3arm-ploverleanfine8-n02-insert-brown-body-*`:
+
+| project file | plates | nozzle | sliced |
+|---|---|---|---|
+| `…-insert-bambu.3mf` | 2 gold inserts (slot 1 tier colour, 2 navy, 3 cream) | 0.2 | 2 h 46, 11.7 + 3.2 + 2.1 g |
+| `…-bambu.3mf` | brown body (slot 1) · navy hub · orange cap | 0.4 | 48 + 18 + 17 min |
+
+The insert's toolpaths keep the eye, collar, both legs and the wedge bill in all 8 frames:
+`learnings/7-v7-insert-0.2-toolpaths.png`. Hardware: one 608 bearing and one M3 × 12 countersunk
+socket screw (ISO 10642 / DIN 7991). The animation default is still `ploverleanbold`; the preset
+carries the build.
 
 ## Animations — the plover in the barrel, the hollow throw (v5)
 

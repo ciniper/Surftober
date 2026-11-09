@@ -159,7 +159,7 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v6', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v7', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
