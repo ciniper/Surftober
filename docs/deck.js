@@ -255,21 +255,23 @@
 
   // Award slide: step 0 = the award and its criterion; step 1 = the reveal.
   function awardSlide(a, i, n, d) {
-    const names = a.winners.map((w) => d.name(w.user));
-    const sizeCls = names.length > 3 ? ' lots' : names.length > 1 ? ' many' : '';
+    const entryName = (w) => w.pair ? w.pair.map(d.name).join(' & ') : d.name(w.user);
+    const entryFaces = (w, size, cls = '') => (w.pair || [w.user]).map((u) => av(d, u, size, cls)).join('');
+    const names = a.winners.map(entryName);
+    const sizeCls = names.length > 3 ? ' lots' : names.length > 1 || a.winners.some((w) => w.pair) ? ' many' : '';
     const w0 = a.winners[0];
-    const value = w0 ? (a.winners.every((w) => w.label === w0.label) ? w0.label : a.winners.map((w) => `${d.name(w.user)}: ${w.label}`).join(' · ')) : '';
+    const value = w0 ? (a.winners.every((w) => w.label === w0.label) ? w0.label : a.winners.map((w) => `${entryName(w)}: ${w.label}`).join(' · ')) : '';
     const extra = a.winners.length === 1 && w0 && w0.extra ? w0.extra : '';
     const ruShown = a.runnersUp.slice(0, 4);
     const ruMore = a.runnersUp.length - ruShown.length;
     const ru = ruShown.length
-      ? `<div class="ru"><b>Runners-up</b>${ruShown.map((r) => `<span>${av(d, r.user, 44)}<em>${esc(d.name(r.user))}</em> · ${esc(r.label)}</span>`).join('')}${ruMore > 0 ? `<span>+${ruMore} more</span>` : ''}</div>` : '';
+      ? `<div class="ru"><b>Runners-up</b>${ruShown.map((r) => `<span>${entryFaces(r, 44)}<em>${esc(entryName(r))}</em> · ${esc(r.label)}${r.extra ? ` · ${esc(r.extra)}` : ''}</span>`).join('')}${ruMore > 0 ? `<span>+${ruMore} more</span>` : ''}</div>` : '';
     const faceSize = a.winners.length > 4 ? 96 : a.winners.length > 1 ? 130 : 170;
-    const faces = `<div class="faces">${a.winners.slice(0, 8).map((w) => av(d, w.user, faceSize, 'big')).join('')}</div>`;
+    const faces = `<div class="faces">${a.winners.slice(0, 8).map((w) => entryFaces(w, w.pair ? 130 : faceSize, 'big')).join('')}</div>`;
     const body = names.length
       ? `<div class="reveal">${faces}<div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
-      : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
-    return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
+      : `<div class="lede">No qualifying data for this award yet. Check the required session times, OB locations, and conditions coverage.</div>`;
+    return { title: a.name, cls: `award${['surf-buddies', 'glutton-for-punishment', 'headwind-hero'].includes(a.id) ? ' compact-award' : ''}`, steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
       <div class="stagefloor"><div class="mystery">?</div>${body}</div>` };
   }
@@ -707,7 +709,7 @@
   // 2025 order, with the 2023/2024 superlatives slotted next to their
   // cousins; the conditions awards follow as their own section.
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
-    'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'best-dressed', 'board-hoarder', 'fish', 'marathon', 'rivalry',
+    'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'best-dressed', 'board-hoarder', 'fish', 'marathon', 'rivalry',
     'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
     'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature'];
   const JUDGED = {
@@ -720,6 +722,7 @@
   function buildSlides(d) {
     const byId = new Map(d.awards.map((a) => [a.id, a]));
     byId.set('bonus-junkies', d.bonusJunkies);
+    byId.set('surf-buddies', d.buddies);
     // A computed award wins over its judged fallback (e.g. Aim for the Stars
     // is computed when goals are readable, judged otherwise).
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
