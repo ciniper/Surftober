@@ -452,6 +452,52 @@
       winners: bonusRank.winners, runnersUp: bonusRank.runnersUp, r: bonusRank };
     const costumeSurfers = users.filter((u) => byUser.get(u).some((s) => s.costume));
 
+    // OB-only surf awards. Unknown locations and bonus entries never qualify.
+    const obSurf = (u) => byUser.get(u).filter((s) => s.type === 'surf' && spotArea(normLocation(s.location)) === 'ob' && s.duration_minutes > 0);
+    // Merge a person's overlapping logs before intersecting pairs, so duplicate
+    // or split logs cannot multiply their shared sessions or shared minutes.
+    const mergeIntervals = (xs) => {
+      const out = [];
+      for (const x of xs.sort((a, b) => a[0] - b[0])) {
+        const last = out[out.length - 1];
+        if (last && x[0] <= last[1]) last[1] = Math.max(last[1], x[1]);
+        else out.push([...x]);
+      }
+      return out;
+    };
+    const intervals = new Map(users.map((u) => {
+      const days = new Map();
+      for (const s of obSurf(u)) {
+        if (!/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(s.start_time || '')) continue;
+        const start = Date.parse(`${String(s.date).slice(0, 10)}T00:00:00Z`) / 60000 + timeToMin(s.start_time);
+        if (!Number.isFinite(start)) continue;
+        const day = Math.floor(start / 1440);
+        if (!days.has(day)) days.set(day, []);
+        days.get(day).push([start, start + s.duration_minutes]);
+      }
+      // Absolute calendar minutes allow sessions crossing midnight to overlap.
+      return [u, mergeIntervals([...days.values()].flat())];
+    }));
+    const pairs = [];
+    for (let a = 0; a < users.length; a++) for (let b = a + 1; b < users.length; b++) {
+      const overlaps = [];
+      for (const x of intervals.get(users[a])) for (const y of intervals.get(users[b])) {
+        const start = Math.max(x[0], y[0]), end = Math.min(x[1], y[1]);
+        if (end > start) overlaps.push([start, end]);
+      }
+      const qualifying = mergeIntervals(overlaps).filter(([start, end]) => end - start >= 30);
+      const minutes = qualifying.reduce((sum, [start, end]) => sum + end - start, 0);
+      if (qualifying.length) pairs.push({ user: [users[a], users[b]].join(' & '), pair: [users[a], users[b]],
+        value: qualifying.length, minutes,
+        label: `${qualifying.length} shared sessions · ${(minutes / 60).toFixed(1)} overlapping hours` });
+    }
+    pairs.sort((a, b) => b.value - a.value || b.minutes - a.minutes || a.user.localeCompare(b.user));
+    const bestPair = pairs[0];
+    const pairWinners = bestPair ? pairs.filter((p) => p.value === bestPair.value && p.minutes === bestPair.minutes) : [];
+    const buddies = { id: 'surf-buddies', name: 'The Surf Buddies Award',
+      desc: 'Pair with the most OB surf overlaps of 30+ minutes; overlapping hours break ties. All OB peaks count together — likely company, not confirmed buddies.',
+      winners: pairWinners, runnersUp: pairs.filter((p) => !pairWinners.includes(p)).slice(0, 2) };
+
     // --- conditions (Ocean Beach forecast, sessions with a start time) ---
     const condBy = new Map(conditions.map((c) => [c.id, c]));
     const condOf = (u) => water(u).map((s) => condBy.get(s._id)).filter(Boolean);
@@ -482,6 +528,38 @@
       pushC({ id: 'golden-hour', name: 'The Golden Hour Award', desc: 'Most sessions when the forecast was Fair or better',
         r: rank(items(users, (u) => condOf(u).filter((c) => FAIR_PLUS.has(c.rating)).length, (v) => `${v} Fair+ sessions`).filter((x) => x.value > 0)) });
     }
+
+    // The view supplies a modal rating and average wind per session, not
+    // minute-by-minute conditions. Duration-weighted estimates say so on slides.
+    const metricRows = (u, valid) => obSurf(u).map((s) => ({ s, c: condBy.get(s._id) }))
+      .filter(({ c }) => c && valid(c));
+    const coverage = (u, matched) => {
+      const total = obSurf(u).reduce((sum, s) => sum + s.duration_minutes, 0);
+      const minutes = matched.reduce((sum, { s }) => sum + s.duration_minutes, 0);
+      return `${matched.length} matched sessions · ${pct(minutes / total)} of logged OB surf time matched`;
+    };
+    const poor = [], headwind = [];
+    for (const u of users) {
+      const rated = metricRows(u, (c) => RATING_ORDER.includes(c.rating));
+      if (rated.length >= MIN_SESSIONS) {
+        const minutes = rated.reduce((sum, { s }) => sum + s.duration_minutes, 0);
+        const bad = rated.filter(({ c }) => c.rating === 'POOR' || c.rating === 'VERY_POOR')
+          .reduce((sum, { s }) => sum + s.duration_minutes, 0);
+        if (bad > 0) poor.push({ user: u, value: bad / minutes, label: `${pct(bad / minutes)} Poor or Very poor · ${(bad / 60).toFixed(1)} estimated hours`, extra: coverage(u, rated) });
+      }
+      const windy = metricRows(u, (c) => c.wind_kts_avg != null && c.wind_dir_avg != null &&
+        Number.isFinite(Number(c.wind_kts_avg)) && Number.isFinite(Number(c.wind_dir_avg)) &&
+        Number(c.wind_kts_avg) >= 0 && Number(c.wind_dir_avg) >= 0 && Number(c.wind_dir_avg) <= 360);
+      if (windy.length >= MIN_SESSIONS) {
+        const minutes = windy.filter(({ c }) => Number(c.wind_kts_avg) >= 12 && Number(c.wind_dir_avg) >= 202.5 && Number(c.wind_dir_avg) <= 337.5)
+          .reduce((sum, { s }) => sum + s.duration_minutes, 0);
+        if (minutes > 0) headwind.push({ user: u, value: minutes, label: `${(minutes / 60).toFixed(1)} estimated onshore hours`, extra: coverage(u, windy) });
+      }
+    }
+    pushC({ id: 'glutton-for-punishment', name: 'The Glutton for Punishment Award',
+      desc: 'Highest share of matched OB surf time rated Poor or Very poor. Minimum 5 rated sessions; estimated from each session’s modal rating.', r: rank(poor) });
+    pushC({ id: 'headwind-hero', name: 'The Headwind Hero Award',
+      desc: 'Most estimated OB surf hours with average onshore wind ≥12 kt, from 202.5–337.5°. Minimum 5 wind-matched sessions; session averages, not exact exposure.', r: rank(headwind) });
 
     // --- crew-level stats ---
     const scoredMinutes = totals.reduce((a, t) => a + t.total_minutes, 0);
@@ -549,7 +627,7 @@
     };
 
     return {
-      event, stats, totals, awards, conditionAwards, rivalry, bonusJunkies, costumeSurfers,
+      event, stats, totals, awards, conditionAwards, rivalry, buddies, bonusJunkies, costumeSurfers,
       yoy: { ascenders, returning: yoy, rookies, missing },
       hurts: { counts: hurtCounts, wounded },
       book: { entries: journal, words: journalWordTotal, topWords },
