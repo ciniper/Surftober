@@ -271,7 +271,7 @@
     const body = names.length
       ? `<div class="reveal">${faces}<div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
       : `<div class="lede">No qualifying data for this award yet. Check the required session times, OB locations, and conditions coverage.</div>`;
-    return { title: a.name, cls: `award${['surf-buddies', 'glutton-for-punishment', 'headwind-hero'].includes(a.id) ? ' compact-award' : ''}`, steps: names.length ? 1 : 0, html: `
+    return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
       <div class="stagefloor"><div class="mystery">?</div>${body}</div>` };
   }
