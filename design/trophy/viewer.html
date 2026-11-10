@@ -102,7 +102,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { DIM, TIERS, PARTS, PART, OPTIONS, PRESETS, partLabel, partColor, activeParts, generatedParts, partsToGenerate, parseOptions, serializeOptions,
-         frameCount, waveBand, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT } from './spinner-config.js';
+         frameCount, waveBand, outputTag, cadCommand, applyPreset, defaults, WAVE_VARIANTS, isInlay, notchCount, ridgeCount, hasScrew, screwZ, capT, dimFor, centreLabel } from './spinner-config.js';
 import { buildSpinner, POSE, WEIGHT_DZ } from './spinner-parts.js';
 
 const $ = id => document.getElementById(id);
@@ -208,6 +208,7 @@ function renderOptions() {
     const row = document.createElement('label'); row.className = 'row'; row.innerHTML = `<span>${spec.label}</span>`;
     let ctl;
     if (spec.type === 'choice') { ctl = document.createElement('select'); spec.values.forEach(v => ctl.add(new Option(spec.labels?.[v] ?? v, v))); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
+    else if (spec.type === 'int' && spec.max - spec.min > 40) { ctl = document.createElement('input'); ctl.type = 'number'; ctl.min = 0; ctl.max = spec.max; ctl.value = o[k]; ctl.title = spec.hint || ''; ctl.addEventListener('change', () => setOptions({ [k]: ctl.value || 0 })); }
     else if (spec.type === 'int') { ctl = document.createElement('select'); if (k === 'frames') ctl.add(new Option(`auto (${frameCount({ ...o, frames: 0 })})`, 0)); for (let n = spec.min; n <= spec.max; n++) ctl.add(new Option(k === 'frames' ? `${n} frames` : String(n), n)); ctl.value = String(o[k]); ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
     else { ctl = document.createElement('input'); ctl.type = 'text'; ctl.maxLength = spec.max; ctl.value = o[k]; ctl.addEventListener('change', () => setOptions({ [k]: ctl.value })); }
     row.appendChild(ctl); box.appendChild(row);
@@ -250,7 +251,7 @@ function select(id) {
   renderParts(); updateInfo();
 }
 function partInfo(id) {
-  const D = DIM, p = PART[id], n = frameCount(o), wb = waveBand(o), band = `band r ${wb.rIn.toFixed(1)}–${wb.rOut}${wb.seaIn < wb.rIn ? `, sea from r ${wb.seaIn.toFixed(1)}` : ''}`;
+  const D = dimFor(o), p = PART[id], n = frameCount(o), wb = waveBand(o), band = `band r ${wb.rIn.toFixed(1)}–${wb.rOut}${wb.seaIn < wb.rIn ? `, sea from r ${wb.seaIn.toFixed(1)}` : ''}`;
   const dims = {
     body: `Ø${2 * D.ringOut} × ${D.t} mm · bore Ø${D.bore} on the 608, ${o.seat === 'lip' ? `${D.lip} mm seat lip behind the outer race + ${D.chamfer} mm entry chamfer (v3)` : 'plain bore (v1/v2)'} · ring r ${D.ringIn}–${D.ringOut} · ${o.arms} arms × ${D.armW} wide · hub r ${D.hubOut}` + (o.art === 'raised' ? ` · wave in relief ${D.relief}/${D.reliefFoam} mm` : isInlay(o) ? ` · ${D.inlay} mm inlay pockets` : '') + (ridgeCount(o) ? ` · ${ridgeCount(o)} micro ridges round the rim, front to back (grooves ${D.ridgeW} wide × ${D.ridgeDepth} deep, ${(2 * Math.PI * D.ringOut / ridgeCount(o)).toFixed(2)} mm pitch)` : '')
       + (o.ring === 'insert' ? ` · ${D.insertT} mm pocket r ${D.ringIn}–${D.waveOut} in the face for the art insert, no art of its own` : '') + (notchCount(o) ? ` · ${notchCount(o)} finger notches r${D.notchR} × ${D.notchDepth} deep in the rim, from the back, front ${D.notchKeep} mm intact` : ''),
@@ -259,8 +260,8 @@ function partInfo(id) {
     'wave-foam': `${band} · ${n} frames · ${D.inlay} mm pocket through the bottom layer${o.art === 'proud' ? `, stands ${D.proudFoam} proud (${(D.proudFoam - D.proud).toFixed(1)} above the water)` : ', flush'} · colour ${partColor('wave-foam', o)}`,
     hub: `Ø${2 * D.hubR} × ${D.hubT} mm · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.standoff} mm stand-off = ${D.standoff} over the bearing's outer race, ${(D.standoff + D.lip).toFixed(1)} over the body · ${((D.ringIn - D.hubR)).toFixed(1)} mm reveal to the ring · text ${OPTIONS.text.labels[o.text].toLowerCase()}`
       + (hasScrew(o) ? ` · Ø${D.screwPilot} pilot up the stem for the centre screw, ${D.frontSkin} mm under the face` : ''),
-    'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}" · ${D.textSize} mm caps · r ${D.hubR - D.textInset} · ${D.inlay} mm flush inlay`,
-    'back-cap': `Ø${2 * D.capR} × ${capT(o)} mm, same disc as the hub · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.capSpacer} mm spacer = ${(D.capSpacer - D.lip).toFixed(1)} clearance over the body · ` + (o.magnet === 'disc' ? `magnet pocket Ø${D.magPocketD} × ${D.magPocketDepth} on a ${(capT(o) - D.magPocketDepth).toFixed(1)} floor` : `finger divot Ø${D.dishD} × ${D.dishDepth} in the back face` + (hasScrew(o) ? `, Ø${D.screwD} hole + Ø${D.screwHeadD} countersink in its bottom for the centre screw` : '')),
+    'hub-text': `"SURFTOBER 2026" / "${o.name.toUpperCase()}"${centreLabel(o) ? ` / "${centreLabel(o).join(' ')}" in the middle${o.centre === 'hours' ? ` (digits ${(D.textSize * D.hoursScale).toFixed(1)} mm)` : ''}` : ''} · ${D.textSize} mm caps · r ${(D.hubR - D.textInset).toFixed(1)} · ${D.textDepth} mm flush inlay (${Math.round(D.textDepth / 0.2)} layers)`,
+    'back-cap': `Ø${2 * D.capR} × ${capT(o)} mm, same disc as the hub · stem Ø${D.stemD} × ${D.stemLen} into the inner race · ${D.capSpacer} mm spacer = ${(D.capSpacer - D.lip).toFixed(1)} clearance over the body · ` + (o.magnet === 'disc' ? `magnet pocket Ø${D.magPocketD} × ${D.magPocketDepth} on a ${(capT(o) - D.magPocketDepth).toFixed(1)} floor` : (D.dishDepth ? `finger divot Ø${D.dishD} × ${D.dishDepth} in the back face` : 'flat back, no divot') + (hasScrew(o) ? `, Ø${D.screwD} hole + Ø${D.screwHeadD} countersink ${D.dishDepth ? 'in its bottom' : 'in the back face'} for the centre screw` : '')),
     screw: (() => { const z = screwZ(o); return `M3 × ${D.screwLen} countersunk (ISO 10642 / DIN 7991), A2 stainless · head flush in the divot · engages ${(z.tip - z.pilotBottom).toFixed(1)} mm of the hub stem, ${(z.pilotTop - z.tip).toFixed(1)} mm short of the pilot's end · snug, don't crank it: it clamps the inner race between the two spacers`; })(),
     bearing: `608: ${D.bearing.id} × ${D.bearing.od} × ${D.bearing.w} mm · outer race spins with the body, inner race carries hub + cap`,
     magnet: `Ø${D.magD} × ${D.magT} neodymium disc · in the back cap pocket, ${(D.magT - D.magPocketDepth).toFixed(1)} mm proud · 1.2 mm behind a steel bearing it slowed the spin 2–3× (v4 tests)`,

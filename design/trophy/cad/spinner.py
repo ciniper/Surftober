@@ -108,6 +108,27 @@ def polys_to_solid(polys, z0, h, label):
     return cq.Workplane('XY').add(solids).combine() if solids else None
 
 
+def line_text(text, size, depth, z0, cy, track):
+    """One straight line of glyphs, centred on x = 0 with its cap band centred on y = cy (centreText() in the viewer)."""
+    glyphs = []
+    for ch in text:
+        if ch == ' ':
+            glyphs.append((None, size * 0.5))
+            continue
+        g = cq.Workplane('XY').text(ch, size, depth, fontPath=FONT, halign='center', valign='center')
+        bb = g.val().BoundingBox()
+        glyphs.append((g.translate((-(bb.xmin + bb.xmax) / 2, 0, 0)), bb, bb.xlen + size * track))
+    total = sum(x[-1] for x in glyphs) - size * track
+    y0 = cy - (min(x[1].ymin for x in glyphs if x[0] is not None) + max(x[1].ymax for x in glyphs if x[0] is not None)) / 2
+    s, parts = -total / 2, []
+    for x in glyphs:
+        w = x[-1]
+        if x[0] is not None:
+            parts.append(x[0].translate((s + w / 2 - size * track / 2, y0, z0)).val())
+        s += w
+    return cq.Workplane('XY').add(parts).combine()
+
+
 def arc_text(text, r, size, depth, z0, top, track):
     """Glyphs around a circle like arcText() in the viewer — upright, reading left to right."""
     glyphs = []
@@ -299,7 +320,21 @@ class Spinner:
         D, o = self.D, self.o
         r = D['hubR'] - D['textInset']
         txt = arc_text('SURFTOBER 2026', r, D['textSize'], depth, z0, True, D['textTrack'])
-        return txt.union(arc_text(o['name'].upper(), r, D['textSize'], depth, z0, False, D['textTrack']))
+        txt = txt.union(arc_text(o['name'].upper(), r, D['textSize'], depth, z0, False, D['textTrack']))
+        if self.cfg.get('centre'):                  # centre=hours: big digits over "HOURS!", the stack centred on the hub
+            S = D['textSize']
+            if len(self.cfg['centre']) == 1:        # centre=hoursline: one line across the middle, the ring text's size
+                txt = txt.union(line_text(self.cfg['centre'][0], S, depth, z0, 0, D['textTrack']))
+                self.notes['hub-text'] = f"centre \"{self.cfg['centre'][0]}\": one line, {S:.2f} mm"
+                return txt
+            num, word = self.cfg['centre']
+            Sn = S * D['hoursScale']
+            hn, hw, gap = 0.73 * Sn, 0.73 * S, D['hoursGap'] * S
+            H = hn + gap + hw
+            txt = txt.union(line_text(num, Sn, depth, z0, H / 2 - hn / 2, D['textTrack']))
+            txt = txt.union(line_text(word, S, depth, z0, -H / 2 + hw / 2, D['textTrack']))
+            self.notes['hub-text'] = f"centre \"{num} {word}\": digits {Sn:.1f} mm, word {S:.1f} mm, stack {H:.1f} tall"
+        return txt
 
     def hub(self):
         D, t, o = self.D, self.t, self.o
@@ -308,7 +343,7 @@ class Spinner:
                .union(cyl(D['spacerR'], t, D['standoff']))
                .union(cyl(D['hubR'], z_disc, D['hubT'])))
         if o['text'] in ('recessed', 'inlay'):      # engraved pocket; the inlay part fills it when text=inlay
-            hub = hub.cut(self._text(z_disc + D['hubT'] - D['inlay'], D['inlay']))
+            hub = hub.cut(self._text(z_disc + D['hubT'] - D['textDepth'], D['textDepth']))
         elif o['text'] == 'raised':
             hub = hub.union(self._text(z_disc + D['hubT'] - 0.2, D['relief'] + 0.2))
         if self.has_screw:                          # blind pilot up the stem for the centre screw to self-tap into
@@ -323,7 +358,7 @@ class Spinner:
         D, t, o = self.D, self.t, self.o
         if o['text'] != 'inlay':
             return None     # recessed text is a pocket in the hub, raised text is fused into it
-        return self._text(t + D['standoff'] + D['hubT'] - D['inlay'], D['inlay'])
+        return self._text(t + D['standoff'] + D['hubT'] - D['textDepth'], D['textDepth'])
 
     def cap_t(self):
         return self.D['capTMag'] if self.o['magnet'] == 'disc' else self.D['capT']
@@ -337,15 +372,19 @@ class Spinner:
         if self.o['magnet'] == 'disc':
             self.notes['cap'] = f"magnet pocket Ø{D['magPocketD']} × {D['magPocketDepth']} on a {T - D['magPocketDepth']:.1f} floor"
             return cap.cut(cyl(D['magPocketD'] / 2, z_back, D['magPocketDepth']))
-        rd, dd = D['dishD'] / 2, D['dishDepth']                    # spherical finger divot in the back face
-        R = (rd * rd + dd * dd) / (2 * dd)
-        self.notes['cap'] = f"grip plate {T} thick, finger divot Ø{D['dishD']} × {dd} (sphere R {R:.0f})"
-        cap = cap.cut(cq.Workplane('XY').add(cq.Solid.makeSphere(R, cq.Vector(0, 0, z_back + dd - R), angleDegrees1=-90, angleDegrees2=90)))
+        rd, dd = D['dishD'] / 2, D['dishDepth']                    # spherical finger divot in the back face (back=flat: none)
+        if dd > 0:
+            R = (rd * rd + dd * dd) / (2 * dd)
+            self.notes['cap'] = f"grip plate {T} thick on a {D['capSpacer']} spacer ({D['capSpacer'] - D['lip']:.1f} clear of the body), finger divot Ø{D['dishD']} × {dd} (sphere R {R:.0f})"
+            cap = cap.cut(cq.Workplane('XY').add(cq.Solid.makeSphere(R, cq.Vector(0, 0, z_back + dd - R), angleDegrees1=-90, angleDegrees2=90)))
+        else:
+            self.notes['cap'] = f"flat grip plate {T} thick on a {D['capSpacer']} spacer ({D['capSpacer'] - D['lip']:.1f} clear of the body), no divot"
         if self.has_screw:      # clearance hole up the middle + a 90° countersink, head flush in the divot bottom
             csk = self.screw_z()[0]
             rh, rs = D['screwHeadD'] / 2, D['screwD'] / 2
             cap = cap.cut(cyl(rs, z_back - 0.1, D['capSpacer'] + T + D['stemLen'] + 0.2))
-            cap = cap.cut(cyl(rh, z_back - 0.1, csk - z_back + 0.1))                     # opens the divot round the head
+            if csk > z_back:
+                cap = cap.cut(cyl(rh, z_back - 0.1, csk - z_back + 0.1))                 # opens the divot round the head
             cap = cap.cut(cq.Workplane('XY').add(cq.Solid.makeCone(rh, rs, rh - rs, cq.Vector(0, 0, csk), cq.Vector(0, 0, 1))))
             self.notes['cap'] += f"; Ø{D['screwD']} hole + 90° countersink Ø{D['screwHeadD']} for an M3 × {D['screwLen']} countersunk screw"
         return cap
@@ -501,7 +540,7 @@ def bambu_nozzle_settings(ps, nozzle):
 BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
 
 
-def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None):
+def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
@@ -511,7 +550,8 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None):
     crashes on a project without them) with the four filament colours filled in and BAMBU_PROCESS applied."""
     import uuid
     U = lambda: str(uuid.uuid4())
-    FIL = [slot1 or BAMBU_FILAMENTS[0]] + BAMBU_FILAMENTS[1:]      # slot1: (name, hex) for the first AMS slot
+    FIL = [slot1 or BAMBU_FILAMENTS[0]] + BAMBU_FILAMENTS[1:3] + [slot4 or BAMBU_FILAMENTS[3]]   # slot1 / slot4: (name, hex) for those AMS slots
+    SLOT = slots or BAMBU_SLOT
     NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
           'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"')
     files, root_objs, items, settings, plate, rels = {}, [], [], [], [], []
@@ -526,7 +566,7 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None):
             t = ''.join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in tris)
             meshes.append(f'<object id="{mid}" p:UUID="{U()}" type="model"><mesh><vertices>{v}</vertices><triangles>{t}</triangles></mesh></object>')
             comps.append(f'<component p:path="{fname}" objectid="{mid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>')
-            slot = BAMBU_SLOT.get(pid, 1)
+            slot = SLOT.get(pid, 1)
             parts_cfg.append(f'<part id="{mid}" subtype="normal_part"><metadata key="name" value="{escape(pid)} · {FIL[slot - 1][0]}"/>'
                              f'<metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="{slot}"/>'
                              f'<mesh_stat face_count="{len(tris)}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>')
@@ -538,7 +578,7 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None):
         step = BAMBU_BED * (1 + BAMBU_PLATE_GAP)
         ox, oy = (gi % cols) * step, -(gi // cols) * step
         items.append(f'<item objectid="{rid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 {ox + tx:.3f} {oy + ty:.3f} 0" printable="1"/>')
-        first = BAMBU_SLOT.get(parts[0][0], 1)
+        first = SLOT.get(parts[0][0], 1)
         settings.append(f'<object id="{rid}"><metadata key="name" value="{escape(gname)}"/><metadata key="extruder" value="{first}"/>'
                         f'<metadata face_count="{sum(len(tr) for _, (_, tr) in parts)}"/>{"".join(parts_cfg)}</object>')
         plate.append(f'<plate><metadata key="plater_id" value="{gi + 1}"/><metadata key="plater_name" value="{escape(gname)}"/><metadata key="locked" value="false"/>'
@@ -578,9 +618,9 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'body', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'weight', 'bezel', 'parts', 'preset'):
         ap.add_argument(f'--{k}')
-    ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int); ap.add_argument('--copies', type=int, help='insert rings per plate in the insert project (ring=insert)')
+    ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int); ap.add_argument('--copies', type=int, help='insert rings per plate in the insert project (ring=insert)'); ap.add_argument('--hours', type=int, help='centre=hours: the number (0 = the tier’s hours)')
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
     ap.add_argument('--combined', action='store_true', help='also write <tag>-all.stl (every part, separate shells)')
     ap.add_argument('--no-stl', action='store_true'); ap.add_argument('--no-step', action='store_true'); ap.add_argument('--no-3mf', action='store_true')
@@ -592,7 +632,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'hours', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -687,12 +727,17 @@ def main():
             bam.append((g, plist, bed[g]))
         if bam:
             body_meta = next((m for m in cfg['generate'] if m['id'] == 'body'), None)
+            # still=tier: the front hub and back cap both go on slot 4, loaded with the tier colour; else slot 4 is the cap colour
+            tier_still = o.get('still') == 'tier'
+            slots = {**BAMBU_SLOT, 'hub': 4, 'hub-text': 2} if tier_still else BAMBU_SLOT    # tier hub → navy text
+            slot4 = (f"{cfg['tier']['key']} (tier)", cfg['tier']['color']) if tier_still else (o.get('cap', 'orange'), next((m['color'] for m in cfg['generate'] if m['id'] == 'back-cap'), '#FF6B35'))
             write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle='0.4' if o['ring'] == 'insert' else o.get('nozzle', '0.4'),
-                            slot1=(body_meta['filament'], body_meta['color']) if body_meta else None)
+                            slot1=(body_meta['filament'], body_meta['color']) if body_meta else None, slot4=slot4, slots=slots)
             manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
-            used = sorted({BAMBU_SLOT.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
+            used = sorted({slots.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
+            names = {1: body_meta['filament'] if body_meta else 'body', 2: 'navy', 3: 'cream', 4: slot4[0]}
             print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
-                  ', '.join(f'{k} {BAMBU_FILAMENTS[k - 1][0]}' for k in used) + (' — 0.4 nozzle' if o['ring'] == 'insert' else '') + ')')
+                  ', '.join(f'{k} {names[k]}' for k in used) + (' — 0.4 nozzle' if o['ring'] == 'insert' else '') + ')')
         if vol:
             print('  split   ' + ', '.join(f'{k} {v:.0f}' for k, v in vol.items()) + f' mm³ = {sum(vol.values()):.0f} (body {built["body"][0].val().Volume():.0f})')
 

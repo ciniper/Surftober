@@ -368,7 +368,7 @@ Object.assign(WAVE_VARIANTS, {
     { kind: 'fish', at: [-4.4, 32.25], dx: .6, dr: .2, ph: .35, beats: 2 },
     { kind: 'fish', at: [1.6, 31.45], dx: .7, dr: .25, ph: .7, beats: 2 }]),
   // a school swimming through: fish every 7.6 mm moving one spacing left per loop, so in the video they stream
-  // continuously under the wave; they slide in and out at the slot's edges
+  // continuously under the wave; only whole fish are drawn, so one appears at the right edge and is gone at the left
   ploverschool: v8('a school of fish swimming through', [
     { kind: 'fish', at: [-8, 31.55], run: 7.6, copies: 4, alt: .55, beats: 2 }]),
   // one dolphin porpoising under the board: the body undulates, the flukes beat once a loop
@@ -830,6 +830,10 @@ function seaLife(life, t) {
     if (L.run) {        // a school streaming through: copies every `run` mm, one spacing left per loop, alternating heights
       for (let j = 0; j < L.copies; j++) {
         const x0 = L.at[0] + j * L.run - L.run * t, r0 = L.at[1] + (j % 2 ? L.alt : 0) + 0.15 * Math.sin(TAU * (t + j * .3));
+        // only whole fish: one cut by the slot's edge would print fused to the half-fish in the next slot (v8 slice,
+        // 2026-11-10), so a fish appears at the right edge and is gone at the left
+        const half = Math.PI * r0 / R.N - 0.4, long = S.len + 1.25;
+        if (x0 < -half || x0 + long > half) continue;
         out.push(...swimmer(S, t, L.beats, j * .25).map(p => p.map(toScene(x0, r0))));
       }
       continue;

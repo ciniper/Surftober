@@ -54,6 +54,17 @@ cd design/trophy/cad
 .venv/bin/python spinner.py --list
 ```
 
+### Print notes (Chase's X1C)
+
+- **Textured PEI plate for every part:** body, art insert, front hub and back cap. The smooth plate didn't
+  work well (2026-11-10). The Bambu projects don't set a plate type yet, so pick Textured PEI in the slicer.
+- **Front hub — fewer wall loops round the text** (to try, 2026-11-10). The hub prints face down, so the
+  flush text is its first layers, and the walls traced round every letter (on the text and on the hub's
+  cut-outs) make the lettering look odd. Either drop the hub's wall loops (e.g. 1–2), or keep the hub's
+  default and use a low count only round the text. In Bambu Studio: a height-range modifier over the text
+  layers (z 0–0.4) with wall loops 1, or right-click the hub-text part → *Add settings* → wall loops 1.
+- **Back cap divot: no supports.** It prints better bare (see *Back cap* under Dimensions).
+
 ## Files
 
 | file | role |
@@ -79,7 +90,7 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v7 | prefix on every output file (`v7-nahla-3arm-ploverleanfine8-insert-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v8 | prefix on every output file (`v8-nahla-3arm-ploverschool8-n02-insert-brown-body-cap-slim-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `body` | tier · brown · bone | tier | the spinning body's filament; with `ring=insert` the insert is always the tier colour, so `brown`/`bone` make the gold ring the medal on a plain wheel (preset `insert`) |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
@@ -87,19 +98,24 @@ URL, the generator (`--url` or flags) and the manifest.
 | `wave` | **ploverleanbold** · ploverleanfine (the 0.2-nozzle pick: compact frame, sea to the inner rim, wedge bill) · ploverbig · ploverleanedge · ploverleanlines · plovertube · ploverspit · plovertuck · hollow · classic · rolling · return · barrel · returntip · classictip · plover (and the other `plover…` options in *Animations*) | ploverleanbold | animation style (see wave demo and *Animations* below); the `plover…` scenes (v5) put the logo's snowy plover on a surfboard inside an open barrel; `hollow` (v5) = a break whose lip throws far out instead of pitching straight down; `plover` = the plover alone, wings flapping + legs striding (cream body + navy details instead of navy water + cream foam) |
 | `frames` | 0 · 6…16 | 0 = auto | slots around the band; auto = the most slots, up to the style's own count, whose cells don't shrink the art (10 fit on the v5 band); fewer = faster loop, bigger art |
 | `art` | raised · proud · inlay · none | raised | wave: **one solid part**, water 0.4 and foam 0.8 above the face (colour the two steps by height in the slicer) · separate inlay parts standing 0.4 / 0.7 proud · the same inlay parts flush · plain |
-| `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part · raised |
+| `text` | recessed · inlay · raised | recessed | hub text: engraved pocket · pocket + separate inlay part (flush, second colour; navy on a tier hub, 0.4 deep = 2 layers; 0.6 otherwise) · raised |
+| `textsize` | std · med · big | std | hub text size: 4.6 mm caps (v5–v8) · med = 30% larger, 5.98 mm on r 21.6 · big = 60% larger, 7.36 mm on r 21.8 (too big) |
+| `centre` | none · hoursline · hours | none | the middle of the hub: plain · "40 HOURS!" on one line in the ring text's size · the digits (1.2 × the text size) stacked over "HOURS!" |
+| `hours` | 0 · 1–999 | 0 | `centre=hoursline`/`hours`: the number; 0 = the tier's hours (gold 40, silver 30, bronze 20, participant 10) |
 | `grip` | ridges · notches · none | ridges | rim grip, not with a bezel (its groove is there). **ridges** (v5): micro ridges the full thickness of the rim, front to back — round-bottomed grooves 0.9 wide × 0.35 deep, ~1.5 mm pitch (210 on Ø98, a multiple of the frame count so they freeze with the art under a strobe) · notches (v4): 2 per frame, r 3.5 × 1.2 scallops from the back, stopping 1.5 mm short of the front · smooth |
 | `seat` | lip · plain | lip | bearing seat: the v3 lip + entry chamfer (print 2: spins much better) · the plain v1/v2 bore, for comparison |
 | `weight` | none · bezel · cog | none | bought metal for spin weight (and the tier colour) |
 | `bezel` | flat · round | flat | laser-cut flat ring (+ DXF for SendCutSend) · round craft wire ring |
-| `cap` | orange · navy · teal | orange | back-cap colour |
+| `still` | tier · classic | tier | **hub + cap colour** (v8): tier = the front hub and back cap in the tier colour (gold makes them gold), both on AMS slot 4 loaded with it · classic = navy hub, `cap` colour (v5–v7) |
+| `cap` | orange · navy · teal | orange | back-cap colour with `still=classic` |
+| `back` | divot · slim · flat | slim | **back cap** (v8): divot = 3.0 plate on a 2.2 spacer, Ø18 × 1.6 finger divot (v5–v7) · slim = 2.5 plate on a 1.7 spacer (0.5 closer to the body, 1.1 clear), Ø18 × 1.1 divot · flat = slim's spacing and plate, no divot, the screw head countersunk flush in the back |
 | `magnet` | none · disc | none | back cap: plain grip plate with a finger divot · the Ø25 × 5 neodymium pocket (slows the spin 2–3×, see v4 tests; no centre screw then) |
 | `ring` | solid · insert | solid | **glue-in art insert** (2026-11-08): the wave relief rides a 1 mm ring printed flat on its own plate at the fine nozzle (`copies` per plate, 4 fit) and glued into a 1 mm pocket in the body's face; the body then prints single-colour at 0.4. Two project files: `<tag>-bambu.3mf` (body / hub / cap, 0.4) and `<tag>-insert-bambu.3mf` (inserts, `nozzle`) |
 | `copies` | 1…4 | 1 | insert rings per plate in the insert project |
 | `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | **insert** (★ current build: ploverleanfine, glue-in insert, brown body, 0.2, 2/plate) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | **v8** (★ ploverschool, glue-in insert, brown body, 0.2, 2/plate, tier hub + slim cap) · v8flat (the same, flat cap) · v8text (the same, hub text 30% larger, flush, + "40 HOURS!") · insert (the v7 build as printed: ploverleanfine, navy hub, orange divot cap) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 
@@ -200,9 +216,10 @@ hub's clearance in front. Since the v4 tests (2026-10-31) the default is a
 spherical finger divot** in the back (v5; v4 had a shallow Ø22 × 1 dish) and
 the centre screw's head flush in its bottom — the magnet is out of the
 equation for now. Print note: the cap prints back face down, so the divot
-faces the bed and its middle is an overhang — paint a support enforcer into
-the divot (1.6 mm of support, pops out) or print it bare and sand the
-middle smooth. With
+faces the bed and its middle is an overhang. **Print it without supports**
+(Chase, 2026-11-10: the divot comes out better bare than with a support
+enforcer painted in); the v8 slim cap's shallower 1.1 mm divot bridges even
+more easily, and `back=flat` has no overhang at all. With
 `magnet=disc` you get the 2026-10-29 cap instead: 5.8 thick, a loose
 Ø25.6 × 4.6 pocket on a 1.2 floor for the Ø25 × 5 adhesive-backed disc,
 standing 0.4 proud. Both print back face down, stem up.
@@ -421,6 +438,44 @@ The insert's toolpaths keep the eye, collar, both legs and the wedge bill in all
 `learnings/7-v7-insert-0.2-toolpaths.png`. Hardware: one 608 bearing and one M3 × 12 countersunk
 socket screw (ISO 10642 / DIN 7991). The animation default is still `ploverleanbold`; the preset
 carries the build.
+
+**v8 (2026-11-10).** Chase liked the sea-life candidates and picked the school of fish. Build with preset
+`v8`: `ploverschool` on the gold glue-in insert (0.2, 2 per plate), light-brown body, and new:
+
+- **Hub and cap in the tier colour** (option `still`, default `tier`; gold makes them gold). Both print
+  from AMS slot 4, which the project loads with the tier colour.
+- **Slimmer back cap** (option `back`, default `slim`): 0.5 mm closer to the body (1.7 spacer, 1.1 clear)
+  and 0.5 mm thinner (2.5 plate) with a shallower Ø18 × 1.1 divot. `back=flat` (preset `v8flat`) drops
+  the divot and countersinks the screw head flush in the flat back. The floor under the countersink
+  stays 1.4. `back=divot` is the v5–v7 cap; preset `insert` rebuilds v7 as printed.
+- **Screw:** the cap 1 mm closer pushed the M3 × 12 to 0.2 mm from the end of its pilot hole, so the
+  pilot goes 0.4 deeper (`frontSkin` 1.6 → 1.2 under the hub face). It now engages 5.5 mm with
+  0.7 spare (flat cap: 4.4 mm). Same screw.
+- **Whole fish only:** the first slice showed a fish cut by a slot's edge fusing with the half-fish in
+  the next slot, so `ploverschool` now draws only fish wholly inside the slot.
+
+Sliced with the Bambu CLI: inserts 2 h 59 for two (0.2), body 48 min, gold hub 18, slim cap 17, flat cap
+16 (0.4). Insert toolpaths: `learnings/8-v8-school-insert-0.2-toolpaths.png`.
+
+**v8 hub text test (2026-11-10).** Chase: "test out the front hub with 60% larger text, and instead of a
+recess, the colored text is flush; also add the number of hours at the centre (X HOURS!)". Preset `v8text`
+= v8 + `text=inlay textsize=big centre=hours`. The ring text goes to 7.36 mm caps on r 21.8 (1.0 mm from
+the hub's edge); "SURFTOBER 2026" then spans 178° over the top, so names up to ~11 letters fit along the
+bottom. The middle holds "40" (13.2 mm digits) over "HOURS!" (the ring text's size), a 17.3 mm stack
+with ≥ 2.6 mm to the ring text. All of it is one 0.6 mm navy inlay part (AMS slot 2) flush in the gold hub
+(slot 4); the hub prints face down, so the text is the first three layers, and there's still 0.6 mm
+between the inlay and the screw pilot. Bambu Studio: 27 min 44 s, 6.1 g gold + 1.5 g navy (4 swaps), no
+warnings. Front views, now vs the test: `learnings/9-v8-hub-big-text-hours.png`.
+Chase: "60% was too much, let's look at 30%; the hours text looks much larger than the ring text". So
+`textsize=med` (5.98 mm caps on r 21.6, "SURFTOBER 2026" over 145°, names to ~13 letters), and the hours
+come two ways: `centre=hoursline`, "40 HOURS!" on one line in the ring text's size, or
+`centre=hours`, the stack with its digits cut from 1.8× to 1.3× the text size. `learnings/10-v8-hub-text-30pct.png`: v8 now · one line · stacked
+(1.3×). Chase picked the stack with the digits at **1.2×** — preset `v8text` = `textsize=med centre=hours`.
+Sliced: 27 min 13 s, 6.2 g gold + 1.4 g navy, no warnings. Front view: `learnings/11-v8-hub-stack-1.2.png`.
+Then 2 layers, not 3: on a tier-colour hub the flush navy text is **0.4 mm** deep (2 × 0.2), since dark navy
+hides the gold in two layers; light text on the classic navy hub, and a recess, stay 0.6 (`textDepth(o)`).
+Re-sliced: navy only in the first two layers, 2 filament swaps (was 4), **22 min 21 s** (was 27 min 13 s),
+5.85 g gold + 0.71 g navy (was 6.23 + 1.39), no warnings.
 
 ## Animations — the plover in the barrel, the hollow throw (v5)
 

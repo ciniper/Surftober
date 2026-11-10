@@ -66,6 +66,7 @@ export const DIM = {
   stemD: 8.1, stemLen: 3.3,               // into the Ø8 inner-race bore (8.0 … 8.2)
   spacerR: 5.5,                           // lands on the inner race only (r 4 … 6.05)
   textSize: 4.6, textTrack: 0.12, textInset: 4.6,
+  hoursScale: 1.2, hoursGap: 0.3,          // centre=hours: digits 1.2 × the text size (1.8 → 1.3 → 1.2, Chase), gap 0.3 × it to "HOURS!" below
 
   // back cap on the inner race, same Ø51 disc as the front hub. v5: capSpacer 2.2 = 1.6 clearance over
   // the body's back face (which is 0.6 proud of the bearing, the lip), matching the front. Default
@@ -79,8 +80,9 @@ export const DIM = {
   // through the cap and its stem, self-tapping into a blind pilot in the front hub's stem. It clamps the
   // inner race between the two spacers, so hub and cap can't rock on their stems and touch the body.
   // The head sits flush in the bottom of the finger divot. Pilot 2.6 self-taps PLA; open it to 4.0 for
-  // an M3 × 4 heat-set insert if it gets taken apart a lot. frontSkin is what's left over the pilot.
-  screwD: 3.4, screwPilot: 2.6, screwHeadD: 6.0, screwHead: 5.5, screwLen: 12, frontSkin: 1.6,   // countersink Ø6.0 at the divot bottom; a real ISO head (Ø5.5) seats 0.25 below it
+  // an M3 × 4 heat-set insert if it gets taken apart a lot. frontSkin is what's left over the pilot: 1.2 since v8 (was
+  // 1.6), so the M3 × 12 keeps 0.7 mm spare with the slim back cap 1 mm closer.
+  screwD: 3.4, screwPilot: 2.6, screwHeadD: 6.0, screwHead: 5.5, screwLen: 12, frontSkin: 1.2,   // countersink Ø6.0 at the divot bottom; a real ISO head (Ø5.5) seats 0.25 below it
 
   // bought weights, in the tier metal
   bezelWire: 3.5, bezelProud: 0.6,                            // round craft ring Ø(2·ringOut) × 3.5 wire in a half-round groove (Ø93 is not a stock craft size — buy 3.5" and print to it, or go flat)
@@ -99,12 +101,33 @@ export const COLORS = {
   sand: '#b89b70', steel: '#d0d4d8', shield: '#1a1a1a', magnet: '#333333', fridge: '#c9ccd0',
 };
 export const TIERS = {
-  gold:        { label: 'Gold (40 h)',        color: '#d4af37', metal: 0.8,  rough: 0.3,  metalName: 'brass' },
-  silver:      { label: 'Silver (30 h)',      color: '#c8ccd2', metal: 0.85, rough: 0.25, metalName: 'stainless' },
-  bronze:      { label: 'Bronze (20 h)',      color: '#b87333', metal: 0.8,  rough: 0.35, metalName: 'copper' },
-  participant: { label: 'Participant (10 h)', color: '#3fa98f', metal: 0.2,  rough: 0.6,  metalName: 'black-oxide steel' },
+  gold:        { label: 'Gold (40 h)', hours: 40,        color: '#d4af37', metal: 0.8,  rough: 0.3,  metalName: 'brass' },
+  silver:      { label: 'Silver (30 h)', hours: 30,      color: '#c8ccd2', metal: 0.85, rough: 0.25, metalName: 'stainless' },
+  bronze:      { label: 'Bronze (20 h)', hours: 20,      color: '#b87333', metal: 0.8,  rough: 0.35, metalName: 'copper' },
+  participant: { label: 'Participant (10 h)', hours: 10, color: '#3fa98f', metal: 0.2,  rough: 0.6,  metalName: 'black-oxide steel' },
 };
 export const CAP_COLORS = { orange: '#ff6b35', navy: '#1d3050', teal: '#3aa9a3' };
+// Back cap (option back, v8 2026-11-10, Chase: "the back cap can be 0.5 closer to the body (less gap) and 0.5 less
+// thick (divot depth less pronounced). Also give an option without the divot but still the screw hole"). Each sets
+// the spacer (cap ↔ inner race; minus the 0.6 lip = clearance over the body), the plate and the divot depth. The
+// floor under the divot stays 1.4 for the 1.3 deep countersink. dimFor(o) folds the chosen one into DIM.
+export const CAP_BACKS = {
+  divot: { capSpacer: 2.2, capT: 3.0, dishDepth: 1.6 },   // v5–v7: 1.6 clearance, Ø18 × 1.6 finger divot
+  slim:  { capSpacer: 1.7, capT: 2.5, dishDepth: 1.1 },   // v8: 0.5 closer, 0.5 thinner, shallower divot
+  flat:  { capSpacer: 1.7, capT: 2.5, dishDepth: 0 },     // v8 spacing, no divot: the screw head countersunk flush in the flat back
+};
+// Hub text size (option textsize, 2026-11-10, Chase: "test out the front hub with 60% larger text"). big = 1.6 × the
+// 4.6 caps, pulled out to 1.0 mm from the hub's edge (inset 3.7) so the inner edge clears a centre label.
+export const TEXT_SIZES = {
+  std: { textSize: 4.6,  textInset: 4.6 },    // v5–v8
+  med: { textSize: 5.98, textInset: 3.9 },    // +30% (Chase: "60% was too much"): caps 4.4 tall on r 21.6; "SURFTOBER 2026" spans 145°
+  big: { textSize: 7.36, textInset: 3.7 },    // +60%: caps 5.45 tall on r 21.8; "SURFTOBER 2026" spans 178° over the top
+};
+// Centre label: centre=hoursline is one line "40 HOURS!" in the ring text's size; centre=hours stacks the digits
+// (hoursScale × the text size; 1.8 at first, then 1.3, 1.2 since 2026-11-10 — Chase's pick) over
+// "HOURS!" — `hours` or, at 0, the tier's threshold (gold 40 …).
+export const hoursOf = o => o.hours || TIERS[o.tier].hours;
+export const centreLabel = o => (o.centre === 'hours' ? [String(hoursOf(o)), 'HOURS!'] : o.centre === 'hoursline' ? [`${hoursOf(o)} HOURS!`] : null);
 
 // ---------------------------------------------------------------------------
 // Parts
@@ -123,9 +146,9 @@ export const PARTS = [
   { id: 'insert',     group: 'Spinning piece', label: 'Art insert ring', detail: 'Thin ring carrying the wave in relief — printed flat on its own plate (fine nozzle, several per plate), glued into the body’s pocket',
     generated: true, color: 'tier',  filament: 'tier colour + navy + cream (its own plate)', print: { flip: false, z: 0 }, when: o => isInsert(o) },
   { id: 'hub',        group: 'Still parts',    label: 'Front hub',    detail: 'Rides the inner race; hides the arms; carries the text',
-    generated: true, color: 'navy',  filament: 'navy', print: { flip: true, z: DIM.standoff + DIM.hubT } },
-  { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom — a separate inlay part',
-    generated: true, color: 'tier',  filament: 'tier colour', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
+    generated: true, color: 'still', filament: 'still colour (option)', print: { flip: true, z: DIM.standoff + DIM.hubT } },
+  { id: 'hub-text',   group: 'Still parts',    label: 'Hub text',     detail: '"SURFTOBER 2026" over the top, the name along the bottom (and "X HOURS!" in the middle) — a separate inlay part',
+    generated: true, color: 'hubtext', filament: 'tier colour (navy on a tier-colour hub)', print: { flip: true, z: DIM.standoff + DIM.hubT }, when: o => o.text === 'inlay' },
   { id: 'back-cap',   group: 'Still parts',    label: 'Back cap',     detail: 'Ø51 disc on the inner race, matching the hub — a finger divot in the back, the centre screw through it (magnet pocket optional)',
     generated: true, color: 'cap',   filament: 'any (or anodized aluminium)', print: { flip: false, z: DIM.capSpacer + DIM.capT } },
   { id: 'bearing',    group: 'Bought',         label: '608 bearing',  detail: '8 × 22 × 7 — cleaned, no grease, for spin time', color: 'steel' },
@@ -146,12 +169,14 @@ export function partColor(id, o) {
   const c = PART[id].color;
   if (c === 'tier') return TIERS[o.tier].color;
   if (c === 'body') return o.weight !== 'none' ? COLORS.bone : o.body === 'tier' ? TIERS[o.tier].color : COLORS[o.body];   // bone under a metal weight; else the body colour option
-  if (c === 'cap') return CAP_COLORS[o.cap];
+  if (c === 'cap') return o.still === 'tier' ? TIERS[o.tier].color : CAP_COLORS[o.cap];
+  if (c === 'still') return o.still === 'tier' ? TIERS[o.tier].color : COLORS.navy;          // the front hub
+  if (c === 'hubtext') return o.still === 'tier' ? COLORS.navy : TIERS[o.tier].color;
   if (c === 'layer-water') return layerColors(o.wave).water;
   if (c === 'layer-foam') return layerColors(o.wave).foam;
   return COLORS[c] || '#999999';
 }
-export const partFilament = (id, o) => PART[id].color === 'layer-water' || PART[id].color === 'layer-foam' ? partColor(id, o) : PART[id].color === 'body' ? (o.weight !== 'none' ? 'bone (the metal carries the tier)' : o.body === 'tier' ? 'tier colour' : o.body) : PART[id].filament;
+export const partFilament = (id, o) => PART[id].color === 'still' || PART[id].color === 'cap' ? (o.still === 'tier' ? 'tier colour' : PART[id].color === 'cap' ? o.cap : 'navy') : PART[id].color === 'layer-water' || PART[id].color === 'layer-foam' ? partColor(id, o) : PART[id].color === 'body' ? (o.weight !== 'none' ? 'bone (the metal carries the tier)' : o.body === 'tier' ? 'tier colour' : o.body) : PART[id].filament;
 export const activeParts = o => PARTS.filter(p => !p.when || p.when(o)).map(p => p.id);
 export const generatedParts = o => activeParts(o).filter(id => PART[id].generated);
 
@@ -159,7 +184,7 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v7', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v8', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
@@ -169,6 +194,11 @@ export const OPTIONS = {
             labels: { raised: 'Raised relief · one solid part, water 0.4 / foam 0.8 (colour by height in the slicer)', proud: 'Separate inlay parts · 0.4 proud', inlay: 'Separate inlay parts · flush', none: 'Plain ring' } },
   text:   { label: 'Hub text',   type: 'choice', default: 'recessed', values: ['recessed', 'inlay', 'raised'],
             labels: { recessed: 'Recessed · engraved into the hub', inlay: 'Flush inlay · second colour', raised: 'Raised' } },
+  textsize: { label: 'Hub text size', type: 'choice', default: 'std', values: Object.keys(TEXT_SIZES),
+            labels: { std: 'Standard · 4.6 mm caps (v5–v8)', med: '30% larger · 6.0 mm', big: '60% larger · 7.4 mm (too big)' } },
+  centre: { label: 'Hub centre', type: 'choice', default: 'none', values: ['none', 'hoursline', 'hours'],
+            labels: { none: 'Plain', hoursline: '"40 HOURS!" · one line, the ring text size', hours: '"40" over "HOURS!" · stacked, digits 1.2×' } },
+  hours:  { label: 'Hours',      type: 'int',    default: 0, min: 1, max: 999, when: o => o.centre !== 'none', hint: '0 = the tier’s hours (gold 40, silver 30, bronze 20, participant 10)' },
   grip:   { label: 'Rim grip',   type: 'choice', default: 'ridges', values: ['ridges', 'notches', 'none'],
             labels: { ridges: 'Micro ridges · full thickness (v5)', notches: 'Finger notches · 2 per frame (v4)', none: 'Smooth rim' }, hint: 'fine reeding round the whole edge, front to back, for flicking', when: o => o.weight !== 'bezel' },
   seat:   { label: 'Bearing seat', type: 'choice', default: 'lip', values: ['lip', 'plain'],
@@ -177,7 +207,12 @@ export const OPTIONS = {
             labels: { none: 'None — solid print', bezel: 'Metal bezel ring in the rim', cog: 'Bike cog behind the ring' } },
   bezel:  { label: 'Bezel ring', type: 'choice', default: 'flat',   values: ['flat', 'round'],
             labels: { flat: 'Flat laser-cut ring (SendCutSend)', round: 'Round craft wire ring' }, when: o => o.weight === 'bezel' },
-  cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS) },
+  still:  { label: 'Hub + cap colour', type: 'choice', default: 'tier', values: ['tier', 'classic'],
+            labels: { tier: 'Tier colour · gold makes them gold (v8)', classic: 'Classic · navy hub, cap colour below (v5–v7)' }, hint: 'the still front hub and back cap; tier puts both on AMS slot 4 loaded with the tier colour' },
+  cap:    { label: 'Cap colour', type: 'choice', default: 'orange', values: Object.keys(CAP_COLORS), when: o => o.still !== 'tier' },
+  back:   { label: 'Back cap',   type: 'choice', default: 'slim', values: Object.keys(CAP_BACKS),
+            labels: { divot: 'Divot · 3.0 plate, 1.6 divot, 1.6 clear of the body (v5–v7)', slim: 'Slim divot · 2.5 plate, 1.1 divot, 1.1 clear (v8)', flat: 'Flat · 2.5 plate, no divot, screw head flush in the back (v8)' },
+            hint: 'with the magnet pocket the cap is the 5.8 magnet plate instead', when: o => o.magnet !== 'disc' },
   magnet: { label: 'Magnet',     type: 'choice', default: 'none',   values: ['none', 'disc'],
             labels: { none: 'None · plain grip cap with a finger divot', disc: 'Ø25 × 5 neodymium disc in the cap (slows the spin 2–3×)' } },
   body:   { label: 'Body colour',  type: 'choice', default: 'tier', values: ['tier', 'brown', 'bone'],
@@ -238,13 +273,19 @@ export const hasScrew = o => o.screw === 'm3' && o.magnet !== 'disc';
 // Centre screw z (mounted pose): the countersink's top at the divot bottom, the seated head's top face, the tip,
 // and the top of the pilot in the hub (frontSkin under the hub face).
 export function screwZ(o) {
-  const csk = -(DIM.capSpacer + capT(o)) + DIM.dishDepth, head = csk + (DIM.screwHeadD - DIM.screwHead) / 2;
+  const csk = -(capSpacer(o) + capT(o)) + capDims(o).dishDepth, head = csk + (DIM.screwHeadD - DIM.screwHead) / 2;
   return { csk, head, tip: head + DIM.screwLen, pilotTop: DIM.t + DIM.standoff + DIM.hubT - DIM.frontSkin, pilotBottom: DIM.t - DIM.stemLen };
 }
 // Back-cap plate thickness: thin grip plate, or the pocketed magnet cap.
-export const capT = o => (o.magnet === 'disc' ? DIM.capTMag : DIM.capT);
+export const capDims = o => CAP_BACKS[o.magnet === 'disc' ? 'divot' : o.back];
+// Hub text depth (2026-11-10, Chase: 2 layers, not 3): dark navy text on a tier-colour hub hides the hub in 0.4 mm
+// (2 × 0.2 layers, one swap fewer); light tier-colour text on the classic navy hub keeps 0.6, and a recess stays 0.6.
+export const textDepth = o => (o.text === 'inlay' && o.still === 'tier' ? 0.4 : DIM.inlay);
+export const dimFor = o => ({ ...DIM, ...capDims(o), ...TEXT_SIZES[o.textsize || 'std'], textDepth: textDepth(o) });   // DIM with the chosen back cap + text size folded in (bridge → spinner.py)
+export const capT = o => (o.magnet === 'disc' ? DIM.capTMag : capDims(o).capT);
+export const capSpacer = o => capDims(o).capSpacer;
 // Where the back of the assembly touches a surface (the proud magnet face, or the cap's back face).
-export const backFace = o => -(DIM.capSpacer + capT(o)) - (o.magnet === 'disc' ? Math.max(0, DIM.magT - DIM.magPocketDepth) : 0);
+export const backFace = o => -(capSpacer(o) + capT(o)) - (o.magnet === 'disc' ? Math.max(0, DIM.magT - DIM.magPocketDepth) : 0);
 // How far the spinning body sits behind the bearing's back face (the seat lip) — 0 for a plain bore.
 export const bodyShift = o => (o.seat === 'lip' ? DIM.lip : 0);
 export const frameCount = o => o.frames || autoFrames(o.wave, DIM.waveIn, DIM.waveOut);
@@ -267,8 +308,12 @@ export function outputTag(o) {
     .concat(o.nozzle === '0.4' ? [] : [`n${o.nozzle.replace('.', '')}`])
     .concat(o.ring === 'insert' ? ['insert'] : [])
     .concat(o.body === 'tier' ? [] : [`${o.body}-body`])
+    .concat(o.still === 'tier' ? [] : ['classic-hub'])
+    .concat(o.back === 'divot' || o.magnet === 'disc' ? [] : [`cap-${o.back}`])
     .concat(o.magnet === 'none' ? [] : ['magnet'])
     .concat(o.text === 'recessed' ? [] : [`text-${o.text}`])
+    .concat(o.textsize === 'std' ? [] : [`text-${o.textsize}`])
+    .concat(o.centre === 'none' ? [] : [`${hoursOf(o)}h${o.centre === 'hours' ? '-stack' : ''}`])
     .concat(o.seat === 'lip' ? [] : ['plain-seat'])
     .join('-');
 }
@@ -286,7 +331,11 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.nozzle !== '0.4') args.push(`--nozzle ${o.nozzle}`);
   if (o.ring === 'insert') args.push('--ring insert' + (o.copies > 1 ? ` --copies ${o.copies}` : ''));
   if (o.body !== 'tier') args.push(`--body ${o.body}`);
+  if (o.still !== 'tier') args.push(`--still ${o.still}` + (o.cap !== OPTIONS.cap.default ? ` --cap ${o.cap}` : ''));
+  if (o.back !== OPTIONS.back.default && o.magnet !== 'disc') args.push(`--back ${o.back}`);
   if (o.text !== 'recessed') args.push(`--text ${o.text}`);
+  if (o.textsize !== 'std') args.push(`--textsize ${o.textsize}`);
+  if (o.centre !== 'none') args.push(`--centre ${o.centre}` + (o.hours ? ` --hours ${o.hours}` : ''));
   if (o.seat !== 'lip') args.push(`--seat ${o.seat}`);
   if (o.weight !== 'none') args.push(`--weight ${o.weight}` + (o.weight === 'bezel' ? ` --bezel ${o.bezel}` : ''));
   if (o.parts) args.push(`--parts ${partsToGenerate(o).join(',')}`);
@@ -297,7 +346,10 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
-  insert:    { label: '★ Current build · gold insert on a brown body', detail: 'ploverleanfine on a 1 mm glue-in insert in the tier colour (0.2 nozzle, 2 per plate) · light-brown body, hub and cap at 0.4', options: { wave: 'ploverleanfine', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2 } },
+  v8:        { label: '★ v8 · school of fish, tier hub + cap', detail: 'ploverschool on the gold glue-in insert (0.2, 2 per plate) · light-brown body · hub and slim back cap in the tier colour, cap 0.5 closer and 0.5 thinner', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim' } },
+  v8flat:    { label: 'v8 · flat back cap (no divot)', detail: 'The v8 build with a flat 2.5 mm back cap: no finger divot, the screw head countersunk flush in the back', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'flat' } },
+  v8text:    { label: 'v8 · bigger flush hub text + hours', detail: 'The v8 build with the hub text 30% larger, flush navy inlay instead of a recess, and "40" (the tier’s hours, digits 1.2×) over "HOURS!" in the middle', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim', text: 'inlay', textsize: 'med', centre: 'hours' } },
+  insert:    { label: 'v7 build · gold insert on a brown body', detail: 'As printed in v7: ploverleanfine on the glue-in insert (0.2, 2 per plate) · light-brown body · navy hub, orange divot cap', options: { version: 'v7', wave: 'ploverleanfine', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'classic', back: 'divot' } },
   full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, micro-ridged rim; hub + cap + centre screw', options: {} },
   inlays:    { label: 'Full trophy · inlay parts',    detail: 'Wave and foam as separate proud inlay parts (v4 first try — fiddly)', options: { art: 'proud' } },
   testring:  { label: 'Spinning piece only',          detail: 'Just the body with the wave in relief',          options: { parts: ['body'] } },
