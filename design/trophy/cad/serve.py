@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(HERE, 'out')
 PY = sys.executable
-ALLOWED = {'preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'weight', 'bezel', 'parts'}
+ALLOWED = {'preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'hours', 'weight', 'bezel', 'parts'}
 lock = threading.Lock()
 
 
@@ -41,7 +41,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*a, directory=ROOT, **kw)
 
     def log_message(self, fmt, *args):
-        if '/api/' in (args[0] if args else ''):
+        if '/api/' in (str(args[0]) if args else ''):
             super().log_message(fmt, *args)
 
     def send_json(self, code, obj):

@@ -4,7 +4,7 @@
 // generator makes the real solids.
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { DIM, TIERS, COLORS, CAP_COLORS, PART, partColor, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace } from './spinner-config.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, partColor, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace, dimFor, centreLabel } from './spinner-config.js';
 import { ringArt, layerColors } from './wave-frames.js';
 
 // ---- materials --------------------------------------------------------------
@@ -18,10 +18,10 @@ export function materials(o) {
     insert: std(tier.color, { roughness: tier.rough + 0.2, metalness: tier.metal * 0.3 }),   // the art insert is always the tier colour
     water:  std(layerColors(o.wave).water, { roughness: 0.55 }),
     foam:   std(layerColors(o.wave).foam, { roughness: 0.6 }),
-    hub:    std(COLORS.navy, { roughness: 0.5, ...flush }),
-    text:   std(tier.color, { metalness: tier.metal, roughness: tier.rough }),
+    hub:    std(partColor('hub', o), o.still === 'tier' ? { metalness: tier.metal * 0.3, roughness: tier.rough + 0.2, ...flush } : { roughness: 0.5, ...flush }),
+    text:   std(partColor('hub-text', o), { metalness: o.still === 'tier' ? 0 : tier.metal, roughness: o.still === 'tier' ? 0.5 : tier.rough }),
     engraved: std(0x0e1829, { roughness: 0.9 }),   // the floor of a recess, drawn flush on the hub face
-    cap:    std(CAP_COLORS[o.cap], { metalness: 0.65, roughness: 0.32 }),
+    cap:    std(partColor('back-cap', o), { metalness: 0.65, roughness: 0.32 }),
     steel:  std(COLORS.steel, { metalness: 0.9, roughness: 0.2 }),
     shield: std(COLORS.shield, { roughness: 0.55 }),
     magnet: std(COLORS.magnet, { metalness: 0.6, roughness: 0.4 }),
@@ -150,9 +150,9 @@ const builders = {
     if (font && o.text === 'recessed') g.add(hubText(o, font, M.engraved, zDisc + D.hubT - 0.02, 0.02));   // preview of the engraving; the STL has the real pocket
     return g;
   },
-  'hub-text'(o, M, font) { return font ? hubText(o, font, M.text, D.t + D.standoff + D.hubT - D.inlay, D.inlay) : new THREE.Group(); },
+  'hub-text'(o, M, font) { const d = dimFor(o).textDepth; return font ? hubText(o, font, M.text, D.t + D.standoff + D.hubT - d, d) : new THREE.Group(); },
   'back-cap'(o, M) {
-    const g = new THREE.Group(), screw = hasScrew(o), rs = D.screwD / 2;
+    const D = dimFor(o), g = new THREE.Group(), screw = hasScrew(o), rs = D.screwD / 2;
     g.add(screw ? annulus(D.stemD / 2, rs, 0, D.stemLen, M.cap) : zcyl(D.stemD / 2, 0, D.stemLen, M.cap, 32));
     g.add(screw ? annulus(D.spacerR, rs, -D.capSpacer, D.capSpacer, M.cap) : zcyl(D.spacerR, -D.capSpacer, D.capSpacer, M.cap));
     const T = capT(o), zBack = -D.capSpacer - T;
@@ -160,8 +160,8 @@ const builders = {
       g.add(annulus(D.capR, D.magPocketD / 2, zBack, T, M.cap, 0.5));                      // disc with the pocket through…
       g.add(zcyl(D.magPocketD / 2, zBack + D.magPocketDepth, T - D.magPocketDepth, M.cap)); // …and its floor
     } else {                                                                                // grip plate with a spherical finger divot in the back face
-      const rd = D.dishD / 2, dd = D.dishDepth, R = (rd * rd + dd * dd) / (2 * dd), pts = [];
-      const zd = r => zBack + dd - (R - Math.sqrt(R * R - r * r));
+      const rd = D.dishD / 2, dd = D.dishDepth, R = dd ? (rd * rd + dd * dd) / (2 * dd) : 0, pts = [];   // dd 0: back=flat, no divot
+      const zd = r => dd ? zBack + dd - (R - Math.sqrt(R * R - r * r)) : zBack;
       let r0 = 0;
       if (screw) {              // countersink from the divot bottom, then the clearance hole up through the plate
         const rh = D.screwHeadD / 2, csk = screwZ(o).csk, top = zBack + T;
@@ -190,7 +190,7 @@ const builders = {
     slot.rotation.x = Math.PI / 2; slot.position.z = z.head + 0.14; g.add(slot);
     return g;
   },
-  magnet(o, M) { return zcyl(D.magD / 2, -D.capSpacer - capT(o) + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
+  magnet(o, M) { return zcyl(D.magD / 2, -dimFor(o).capSpacer - capT(o) + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
   weight(o, M) {
     if (o.weight === 'bezel' && o.bezel === 'round') {
       const wr = D.bezelWire / 2, m = shadow(new THREE.Mesh(new THREE.TorusGeometry(D.ringOut - wr + D.bezelProud, wr, 20, 180), M.metal));
@@ -208,9 +208,30 @@ const builders = {
   },
 };
 function hubText(o, font, mat, z0, depth) {
-  const g = new THREE.Group(), r = D.hubR - D.textInset;
-  g.add(arcText(font, 'SURFTOBER 2026', r, D.textSize, z0, depth, mat, true));
-  g.add(arcText(font, o.name.toUpperCase(), r, D.textSize, z0, depth, mat, false));
+  const T = dimFor(o), g = new THREE.Group(), r = T.hubR - T.textInset;
+  g.add(arcText(font, 'SURFTOBER 2026', r, T.textSize, z0, depth, mat, true));
+  g.add(arcText(font, o.name.toUpperCase(), r, T.textSize, z0, depth, mat, false));
+  const c = centreLabel(o);
+  if (c && c.length === 1) g.add(lineText(font, c[0], T.textSize, 0, z0, depth, mat));   // one line across the middle
+  else if (c) {   // big digits over "HOURS!", the stack centred on the hub (mirrors _text() in cad/spinner.py)
+    const S = T.textSize, Sn = S * T.hoursScale, hn = 0.73 * Sn, hw = 0.73 * S, H = hn + T.hoursGap * S + hw;
+    g.add(lineText(font, c[0], Sn, H / 2 - hn / 2, z0, depth, mat));
+    g.add(lineText(font, c[1], S, -H / 2 + hw / 2, z0, depth, mat));
+  }
+  return g;
+}
+// One straight line of text centred on x = 0, its caps centred on y = cy
+function lineText(font, str, size, cy, z0, depth, mat) {
+  const g = new THREE.Group(), scale = size / font.data.resolution, track = size * DIM.textTrack, chars = [...str];
+  const adv = chars.map(ch => (ch === ' ' ? size * 0.5 : (font.data.glyphs[ch] ? font.data.glyphs[ch].ha * scale : size * 0.6)) + track);
+  let s = -(adv.reduce((a, b) => a + b, 0) - track) / 2;
+  chars.forEach((ch, i) => {
+    const mid = s + adv[i] / 2; s += adv[i];
+    if (ch === ' ') return;
+    const geo = new TextGeometry(ch, { font, size, height: depth, curveSegments: 4, bevelEnabled: false });
+    geo.computeBoundingBox(); geo.translate(mid - (geo.boundingBox.min.x + geo.boundingBox.max.x) / 2, cy - size * 0.36, z0);
+    g.add(shadow(new THREE.Mesh(geo, mat)));
+  });
   return g;
 }
 let artCache = { key: null, art: null };
