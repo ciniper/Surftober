@@ -411,12 +411,3 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .lock-btn { font: 700 28px var(--body); padding: 18px 44px; border-radius: 999px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--sun-1), var(--accent)); box-shadow: var(--shadow); }
 .g-reset { position: absolute; top: 40px; right: 120px; z-index: 3; font: 600 22px var(--body); padding: 10px 22px; border-radius: 999px; cursor: pointer; color: var(--text-2); background: var(--panel); border: 1.5px solid var(--line); }
 .g-reset[hidden] { display: none; }
-
-/* Criteria-heavy OB awards leave room for pair faces and coverage labels. */
-.compact-award.award h2 { font-size: 82px; }
-.compact-award.award .desc { font-size: 30px; margin-top: 16px; }
-.compact-award.award .winner { font-size: 130px; }
-.compact-award.award .winner.lots { font-size: 82px; }
-.compact-award.award .value { font-size: 42px; }
-.compact-award.award .extra { font-size: 24px; }
-.compact-award.award .ru { margin-top: 24px; font-size: 22px; gap: 12px; }
