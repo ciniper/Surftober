@@ -488,7 +488,8 @@ BAMBU_APP = 'BambuStudio-02.08.02.61'
 # Changes to the stock X1C · 0.20 Standard process. The art's finest lines (the plover's navy outline, legs,
 # collar and eye, the board's rim, the cream lip line) are 0.2–0.35 mm, under a 0.4 nozzle's 0.42 line:
 # the stock 'classic' wall generator drops them without a warning, Arachne prints them as narrower lines.
-BAMBU_PROCESS = {'wall_generator': 'arachne'}
+# v9 (Chase prints everything solid): 100% infill, rectilinear (Bambu's 'zig-zag'; the stock grid would cross itself at 100%).
+BAMBU_PROCESS = {'wall_generator': 'arachne', 'sparse_infill_density': '100%', 'sparse_infill_pattern': 'zig-zag'}
 # Stock Bambu profiles (installed with Bambu Studio) for a nozzle other than the 0.4 the project file was saved
 # with. The 0.2 round (2026-11-07): switching the printer to the 0.2 nozzle in the slicer resets the process to
 # its stock profile — classic walls — and the plover's fine strokes vanish again. Writing the 0.2 profiles into
@@ -540,13 +541,22 @@ def bambu_nozzle_settings(ps, nozzle):
 BAMBU_BED, BAMBU_PLATE_GAP = 256.0, 1 / 5     # X1C bed; Bambu Studio lays plates out bed × (1 + gap) apart
 
 
-def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None):
+# Plate + per-object settings baked into every project (Chase, 2026-11-10): the textured PEI plate for every part (the
+# smooth plate didn't work well); the front hub and back cap on 6 walls (Chase: loops round the screw take its hoop
+# load along the filament), but 1 wall in the hub's face-down text layers so the flush text isn't ringed by echoes of
+# every letter (see write_bambu_3mf's obj_cfg / ranges).
+BAMBU_BED_TYPE = 'Textured PEI Plate'
+BAMBU_STILL_WALLS, BAMBU_TEXT_WALLS = 6, 1
+
+
+def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None, obj_cfg=None, ranges=None):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
     single-colour part never shares layers with another colour and the AMS only swaps where it must), plus the
     project settings
-    from bambu-x1c-project.json (X1C 0.4, 0.20 mm Standard, 4 × Bambu PLA Basic; Bambu Studio's loader
+    (obj_cfg: {object name: {setting: value}} per-object settings; ranges: {object name: [(z0, z1, {setting: value})]}
+    height-range modifiers, Metadata/layer_config_ranges.xml) from bambu-x1c-project.json (X1C 0.4, 0.20 mm Standard, 4 × Bambu PLA Basic; Bambu Studio's loader
     crashes on a project without them) with the four filament colours filled in and BAMBU_PROCESS applied."""
     import uuid
     U = lambda: str(uuid.uuid4())
@@ -579,7 +589,8 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=No
         ox, oy = (gi % cols) * step, -(gi // cols) * step
         items.append(f'<item objectid="{rid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 {ox + tx:.3f} {oy + ty:.3f} 0" printable="1"/>')
         first = SLOT.get(parts[0][0], 1)
-        settings.append(f'<object id="{rid}"><metadata key="name" value="{escape(gname)}"/><metadata key="extruder" value="{first}"/>'
+        extra = ''.join(f'<metadata key="{k}" value="{escape(str(v))}"/>' for k, v in (obj_cfg or {}).get(gname, {}).items())
+        settings.append(f'<object id="{rid}"><metadata key="name" value="{escape(gname)}"/><metadata key="extruder" value="{first}"/>{extra}'
                         f'<metadata face_count="{sum(len(tr) for _, (_, tr) in parts)}"/>{"".join(parts_cfg)}</object>')
         plate.append(f'<plate><metadata key="plater_id" value="{gi + 1}"/><metadata key="plater_name" value="{escape(gname)}"/><metadata key="locked" value="false"/>'
                      f'<model_instance><metadata key="object_id" value="{rid}"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="{100 + gi}"/></model_instance></plate>')
@@ -601,11 +612,18 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=No
         for name, body in files.items():
             z.writestr(name, body)
         z.writestr('Metadata/model_settings.config', cfg)
+        rng = [(gi, r) for gi, (gname, _, _) in enumerate(groups) for r in (ranges or {}).get(gname, [])]
+        if rng:     # objects are numbered 1… in load order (= groups order)
+            z.writestr('Metadata/layer_config_ranges.xml', '<?xml version="1.0" encoding="utf-8"?>\n<objects>\n' + ''.join(
+                f' <object id="{gi + 1}">\n  <range min_z="{z0:g}" max_z="{z1:g}">\n   <option opt_key="extruder">0</option>\n'
+                + ''.join(f'   <option opt_key="{k}">{v}</option>\n' for k, v in opts.items()) + '  </range>\n </object>\n'
+                for gi, (z0, z1, opts) in rng) + '</objects>\n')
         ps = json.load(open(os.path.join(HERE, 'bambu-x1c-project.json')))
         if nozzle in BAMBU_NOZZLE:
             ps = bambu_nozzle_settings(ps, nozzle)
         ps['filament_colour'] = [c for _, c in FIL]
         ps.update(BAMBU_PROCESS)
+        ps['curr_bed_type'] = BAMBU_BED_TYPE
         diff = ps.get('different_settings_to_system') or ['']     # [process, filament 1…n, printer]: shows the process as edited
         diff[0] = ';'.join(sorted(set(filter(None, diff[0].split(';'))) | set(BAMBU_PROCESS)))
         ps['different_settings_to_system'] = diff
@@ -731,8 +749,11 @@ def main():
             tier_still = o.get('still') == 'tier'
             slots = {**BAMBU_SLOT, 'hub': 4, 'hub-text': 2} if tier_still else BAMBU_SLOT    # tier hub → navy text
             slot4 = (f"{cfg['tier']['key']} (tier)", cfg['tier']['color']) if tier_still else (o.get('cap', 'orange'), next((m['color'] for m in cfg['generate'] if m['id'] == 'back-cap'), '#FF6B35'))
+            # front hub + back cap: 6 walls; the hub has 1 wall over its face-down text layers (its first textDepth mm on the plate)
+            hub_cfg = {g: {'wall_loops': BAMBU_STILL_WALLS} for g in ('front hub', 'back cap') if g in groups}
+            hub_rng = {'front hub': [(0, D['textDepth'], {'layer_height': 0.2, 'wall_loops': BAMBU_TEXT_WALLS})]} if 'front hub' in groups and o['text'] != 'raised' else {}
             write_bambu_3mf(os.path.join(a.out, f'{tag}-bambu.3mf'), bam, nozzle='0.4' if o['ring'] == 'insert' else o.get('nozzle', '0.4'),
-                            slot1=(body_meta['filament'], body_meta['color']) if body_meta else None, slot4=slot4, slots=slots)
+                            slot1=(body_meta['filament'], body_meta['color']) if body_meta else None, slot4=slot4, slots=slots, obj_cfg=hub_cfg, ranges=hub_rng)
             manifest['files']['bambu_3mf'] = f'{tag}-bambu.3mf'
             used = sorted({slots.get(pid, 1) for _, pl, _ in bam for pid, _ in pl})
             names = {1: body_meta['filament'] if body_meta else 'body', 2: 'navy', 3: 'cream', 4: slot4[0]}
