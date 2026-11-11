@@ -17,6 +17,9 @@
 - [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
       "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
       and wired via bwtf.features[i].media (2026-11-08).
+- [ ] **Trophy slides in the deck** (Chase, 2026-11-11) — add slides for:
+      the trophy's total print time; the trophy animation; and the apps you
+      can download to see them.
 
 ## Branch: photography-bonus (built here — merge to main when Chase says go)
 
