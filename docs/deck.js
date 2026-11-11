@@ -270,7 +270,7 @@
     const faces = `<div class="faces">${a.winners.slice(0, 8).map((w) => entryFaces(w, w.pair ? 130 : faceSize, 'big')).join('')}</div>`;
     const body = names.length
       ? `<div class="reveal">${faces}<div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
-      : `<div class="lede">No qualifying data for this award yet. Check the required session times, OB locations, and conditions coverage.</div>`;
+      : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
     return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
       <div class="stagefloor"><div class="mystery">?</div>${body}</div>` };
