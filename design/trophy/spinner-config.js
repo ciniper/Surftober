@@ -184,7 +184,7 @@ export const generatedParts = o => activeParts(o).filter(id => PART[id].generate
 // Options
 // ---------------------------------------------------------------------------
 export const OPTIONS = {
-  version:{ label: 'Version',    type: 'text',   default: 'v8', max: 12, hint: 'prefix on every output file; bump it per print round' },
+  version:{ label: 'Version',    type: 'text',   default: 'v9', max: 12, hint: 'prefix on every output file; bump it per print round' },
   name:   { label: 'Name',       type: 'text',   default: 'NAHLA', max: 16 },
   tier:   { label: 'Tier',       type: 'choice', default: 'gold',   values: Object.keys(TIERS), labels: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.label])) },
   arms:   { label: 'Arms',       type: 'choice', default: 3,        values: [3, 4], labels: { 3: '3 arms', 4: '4 arms' } },
@@ -346,9 +346,9 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // Presets — one click to a sensible configuration
 // ---------------------------------------------------------------------------
 export const PRESETS = {
-  v8:        { label: '★ v8 · school of fish, tier hub + cap', detail: 'ploverschool on the gold glue-in insert (0.2, 2 per plate) · light-brown body · hub and slim back cap in the tier colour, cap 0.5 closer and 0.5 thinner', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim' } },
-  v8flat:    { label: 'v8 · flat back cap (no divot)', detail: 'The v8 build with a flat 2.5 mm back cap: no finger divot, the screw head countersunk flush in the back', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'flat' } },
-  v8text:    { label: 'v8 · bigger flush hub text + hours', detail: 'The v8 build with the hub text 30% larger, flush navy inlay instead of a recess, and "40" (the tier’s hours, digits 1.2×) over "HOURS!" in the middle', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim', text: 'inlay', textsize: 'med', centre: 'hours' } },
+  v9:        { label: '★ v9 · v8 + bigger flush hub text + hours', detail: 'The v8 build with the hub text 30% larger as a flush 2-layer navy inlay (no recess) and "40" (the tier’s hours, digits 1.2×) over "HOURS!" in the middle · Bambu projects on the textured PEI plate, hub 4 walls / 1 round the text', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim', text: 'inlay', textsize: 'med', centre: 'hours' } },
+  v8:        { label: 'v8 · school of fish, tier hub + cap', detail: 'ploverschool on the gold glue-in insert (0.2, 2 per plate) · light-brown body · hub and slim back cap in the tier colour, cap 0.5 closer and 0.5 thinner', options: { version: 'v8', wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim' } },
+  v8flat:    { label: 'v8 · flat back cap (no divot)', detail: 'The v8 build with a flat 2.5 mm back cap: no finger divot, the screw head countersunk flush in the back', options: { version: 'v8', wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'flat' } },
   insert:    { label: 'v7 build · gold insert on a brown body', detail: 'As printed in v7: ploverleanfine on the glue-in insert (0.2, 2 per plate) · light-brown body · navy hub, orange divot cap', options: { version: 'v7', wave: 'ploverleanfine', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'classic', back: 'divot' } },
   full:      { label: 'Full trophy',                  detail: 'One solid spinning piece, wave in two-level relief, micro-ridged rim; hub + cap + centre screw', options: {} },
   inlays:    { label: 'Full trophy · inlay parts',    detail: 'Wave and foam as separate proud inlay parts (v4 first try — fiddly)', options: { art: 'proud' } },

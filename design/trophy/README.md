@@ -57,12 +57,20 @@ cd design/trophy/cad
 ### Print notes (Chase's X1C)
 
 - **Textured PEI plate for every part:** body, art insert, front hub and back cap. The smooth plate didn't
-  work well (2026-11-10). The Bambu projects don't set a plate type yet, so pick Textured PEI in the slicer.
-- **Front hub — fewer wall loops round the text** (to try, 2026-11-10). The hub prints face down, so the
-  flush text is its first layers, and the walls traced round every letter (on the text and on the hub's
-  cut-outs) make the lettering look odd. Either drop the hub's wall loops (e.g. 1–2), or keep the hub's
-  default and use a low count only round the text. In Bambu Studio: a height-range modifier over the text
-  layers (z 0–0.4) with wall loops 1, or right-click the hub-text part → *Add settings* → wall loops 1.
+  work well (2026-11-10). Baked into every Bambu project since v9 (`curr_bed_type`, `BAMBU_BED_TYPE`).
+- **100% infill, rectilinear, on everything** (Chase prints solid). Baked in since v9:
+  `sparse_infill_density` 100%, `sparse_infill_pattern` zig-zag (Bambu's rectilinear; the stock grid would
+  cross itself at 100%), in `BAMBU_PROCESS`.
+- **Hub and cap — 6 walls, 1 round the text** (v9, to confirm in print). Per-object 6 wall loops on the
+  front hub and back cap (`BAMBU_STILL_WALLS`). Even at 100% the line direction matters: a print is
+  strongest along its lines, weaker across neighbouring lines, weakest between layers. Loops round the
+  screw hole carry its outward (hoop) push along the filament, where straight infill would load the bonds
+  between lines; crossed infill is stiffer in the disc's bending, so more walls trade a little of that
+  for a stiffer rim. The weakest direction, between layers, is the stem's axis: snug the screw, don't
+  crank it. The hub prints face down, so the flush text is its first layers, and walls traced round every
+  letter made the lettering look odd: a height-range modifier over the text layers (z 0 – textDepth,
+  0.4) sets 1 wall (`Metadata/layer_config_ranges.xml`, `BAMBU_TEXT_WALLS`), one crisp outline on each side
+  of every letter edge, then the same straight bottom-surface lines as the rest of the face.
 - **Back cap divot: no supports.** It prints better bare (see *Back cap* under Dimensions).
 
 ## Files
@@ -90,7 +98,7 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v8 | prefix on every output file (`v8-nahla-3arm-ploverschool8-n02-insert-brown-body-cap-slim-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v9 | prefix on every output file (`v9-nahla-3arm-ploverschool8-n02-insert-brown-body-cap-slim-…-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `body` | tier · brown · bone | tier | the spinning body's filament; with `ring=insert` the insert is always the tier colour, so `brown`/`bone` make the gold ring the medal on a plain wheel (preset `insert`) |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
@@ -115,7 +123,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | **v8** (★ ploverschool, glue-in insert, brown body, 0.2, 2/plate, tier hub + slim cap) · v8flat (the same, flat cap) · v8text (the same, hub text 30% larger, flush, + "40 HOURS!") · insert (the v7 build as printed: ploverleanfine, navy hub, orange divot cap) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | **v9** (★ v8 + hub text 30% larger as a flush 2-layer navy inlay, "40" over "HOURS!") · v8 (ploverschool, glue-in insert, brown body, 0.2, 2/plate, tier hub + slim cap) · v8flat (the same, flat cap) · insert (the v7 build as printed: ploverleanfine, navy hub, orange divot cap) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 
@@ -457,7 +465,7 @@ carries the build.
 Sliced with the Bambu CLI: inserts 2 h 59 for two (0.2), body 48 min, gold hub 18, slim cap 17, flat cap
 16 (0.4). Insert toolpaths: `learnings/8-v8-school-insert-0.2-toolpaths.png`.
 
-**v8 hub text test (2026-11-10).** Chase: "test out the front hub with 60% larger text, and instead of a
+**v9 — the hub text (2026-11-10; tested as v8text, then named v9).** Chase: "test out the front hub with 60% larger text, and instead of a
 recess, the colored text is flush; also add the number of hours at the centre (X HOURS!)". Preset `v8text`
 = v8 + `text=inlay textsize=big centre=hours`. The ring text goes to 7.36 mm caps on r 21.8 (1.0 mm from
 the hub's edge); "SURFTOBER 2026" then spans 178° over the top, so names up to ~11 letters fit along the
@@ -470,12 +478,17 @@ Chase: "60% was too much, let's look at 30%; the hours text looks much larger th
 `textsize=med` (5.98 mm caps on r 21.6, "SURFTOBER 2026" over 145°, names to ~13 letters), and the hours
 come two ways: `centre=hoursline`, "40 HOURS!" on one line in the ring text's size, or
 `centre=hours`, the stack with its digits cut from 1.8× to 1.3× the text size. `learnings/10-v8-hub-text-30pct.png`: v8 now · one line · stacked
-(1.3×). Chase picked the stack with the digits at **1.2×** — preset `v8text` = `textsize=med centre=hours`.
+(1.3×). Chase picked the stack with the digits at **1.2×** — now preset **`v9`** = v8 + `text=inlay textsize=med centre=hours`.
 Sliced: 27 min 13 s, 6.2 g gold + 1.4 g navy, no warnings. Front view: `learnings/11-v8-hub-stack-1.2.png`.
 Then 2 layers, not 3: on a tier-colour hub the flush navy text is **0.4 mm** deep (2 × 0.2), since dark navy
 hides the gold in two layers; light text on the classic navy hub, and a recess, stay 0.6 (`textDepth(o)`).
 Re-sliced: navy only in the first two layers, 2 filament swaps (was 4), **22 min 21 s** (was 27 min 13 s),
 5.85 g gold + 0.71 g navy (was 6.23 + 1.39), no warnings.
+v9 build (preset `v9`, `v9-nahla-…-text-inlay-text-med-40h-stack-*`): the same insert and body as v8, every
+Bambu project on the textured PEI plate at 100% rectilinear infill, hub and cap on 6 walls with 1 over the hub's
+two text layers. Sliced, no warnings: body 1 h 5 min (42.7 g) · hub 23 min 15 s (8.5 g gold + 0.7 g navy, 2 swaps)
+· slim cap 17 min 16 s (7.0 g) · 2 inserts at 0.2: 2 h 59 min (11.9 / 3.0 / 2.3 g). Wall check in the G-code:
+hub z 0.2 and 0.4 one wall (outer only), from z 0.6 on ~6; cap ~6 throughout.
 
 ## Animations — the plover in the barrel, the hollow throw (v5)
 
