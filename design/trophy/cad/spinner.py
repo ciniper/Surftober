@@ -549,14 +549,15 @@ BAMBU_BED_TYPE = 'Textured PEI Plate'
 BAMBU_STILL_WALLS, BAMBU_TEXT_WALLS = 6, 1
 
 
-def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None, obj_cfg=None, ranges=None):
+def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None, obj_cfg=None, ranges=None, plate_of=None):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
     single-colour part never shares layers with another colour and the AMS only swaps where it must), plus the
     project settings
     (obj_cfg: {object name: {setting: value}} per-object settings; ranges: {object name: [(z0, z1, {setting: value})]}
-    height-range modifiers, Metadata/layer_config_ranges.xml) from bambu-x1c-project.json (X1C 0.4, 0.20 mm Standard, 4 × Bambu PLA Basic; Bambu Studio's loader
+    height-range modifiers, Metadata/layer_config_ranges.xml; plate_of: [plate index per group] to put several objects
+    on one plate, e.g. a plate of hubs — default one group per plate) from bambu-x1c-project.json (X1C 0.4, 0.20 mm Standard, 4 × Bambu PLA Basic; Bambu Studio's loader
     crashes on a project without them) with the four filament colours filled in and BAMBU_PROCESS applied."""
     import uuid
     U = lambda: str(uuid.uuid4())
@@ -564,7 +565,9 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=No
     SLOT = slots or BAMBU_SLOT
     NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
           'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"')
-    files, root_objs, items, settings, plate, rels = {}, [], [], [], [], []
+    files, root_objs, items, settings, plate, rels = {}, [], [], [], {}, []
+    plate_of = plate_of or list(range(len(groups)))
+    n_plates = max(plate_of) + 1
     mid = 0
     root_ids = list(range(sum(len(p) for _, p, _ in groups) + 1, sum(len(p) for _, p, _ in groups) + 1 + len(groups)))
     for gi, (gname, parts, (tx, ty)) in enumerate(groups):
@@ -584,22 +587,24 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=No
         rels.append(f'<Relationship Target="{fname}" Id="rel-{gi + 1}" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>')
         rid = root_ids[gi]
         root_objs.append(f'<object id="{rid}" p:UUID="{U()}" type="model"><components>{"".join(comps)}</components></object>')
-        cols = math.ceil(math.sqrt(len(groups)) - 1e-9)                        # Bambu's plate grid: plate i at column i % cols, row i // cols
+        cols = math.ceil(math.sqrt(n_plates) - 1e-9)                           # Bambu's plate grid: plate i at column i % cols, row i // cols
         step = BAMBU_BED * (1 + BAMBU_PLATE_GAP)
-        ox, oy = (gi % cols) * step, -(gi // cols) * step
+        pi = plate_of[gi]
+        ox, oy = (pi % cols) * step, -(pi // cols) * step
         items.append(f'<item objectid="{rid}" p:UUID="{U()}" transform="1 0 0 0 1 0 0 0 1 {ox + tx:.3f} {oy + ty:.3f} 0" printable="1"/>')
         first = SLOT.get(parts[0][0], 1)
         extra = ''.join(f'<metadata key="{k}" value="{escape(str(v))}"/>' for k, v in (obj_cfg or {}).get(gname, {}).items())
         settings.append(f'<object id="{rid}"><metadata key="name" value="{escape(gname)}"/><metadata key="extruder" value="{first}"/>{extra}'
                         f'<metadata face_count="{sum(len(tr) for _, (_, tr) in parts)}"/>{"".join(parts_cfg)}</object>')
-        plate.append(f'<plate><metadata key="plater_id" value="{gi + 1}"/><metadata key="plater_name" value="{escape(gname)}"/><metadata key="locked" value="false"/>'
-                     f'<model_instance><metadata key="object_id" value="{rid}"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="{100 + gi}"/></model_instance></plate>')
+        plate.setdefault(pi, []).append((gname, f'<model_instance><metadata key="object_id" value="{rid}"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="{100 + gi}"/></model_instance>'))
     root = (f'<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" {NS}>'
             f'<metadata name="Application">{BAMBU_APP}</metadata><metadata name="BambuStudio:3mfVersion">1</metadata>'
             f'<metadata name="Title">Surftober 2026 spinner</metadata><metadata name="CreationDate">{time.strftime("%Y-%m-%d")}</metadata>'
             f'<resources>{"".join(root_objs)}</resources><build p:UUID="{U()}">{"".join(items)}</build></model>')
+    plates = [f'<plate><metadata key="plater_id" value="{pi + 1}"/><metadata key="plater_name" value="{escape(inst[0][0] if len(inst) == 1 else f"{len(inst)} objects")}"/><metadata key="locked" value="false"/>'
+              + ''.join(x for _, x in inst) + '</plate>' for pi, inst in sorted(plate.items())]
     cfg = ('<?xml version="1.0" encoding="UTF-8"?>\n<config>' + ''.join(settings) +
-           ''.join(plate) + '</config>')
+           ''.join(plates) + '</config>')
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
