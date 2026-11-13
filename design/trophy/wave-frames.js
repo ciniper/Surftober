@@ -378,6 +378,101 @@ Object.assign(WAVE_VARIANTS, {
   ploverwhale: v8('a humpback whale under the wave', [
     { kind: 'whale', at: [-9.6, 32.4], dx: .45, dr: .14, ph: .1, beats: 1 }]),
 });
+// ---- v10 candidates: a more natural throw (see throwLip). All are ploverfish (v8's three fish, Chase 2026-11-13: "I think
+// ploverfish is better") with the lip rebuilt as a sheet falling to the water; the plover, board and back of the wave as v7.
+const FISH = WAVE_VARIANTS.ploverfish;
+const v10 = (label, thr, extra = {}) => ({ ...FISH, label: `v10 · ${label} (0.2 nozzle, 8 frames)`, motion: { ...FISH.motion, ...extra, throw: thr } });
+// The lip's shape, shared: tip near the right of the frame on the water; crest and roof handles long and raised so the
+// sheet stays high over the bird (≥ v7's roof) and then falls steeply to the tip.
+const LIP = { x: 1.6, out: .75, inOut: .7, rise: .03, roof: .2, fall: .6, fallIn: .45, tip: .06, boilX: .02 };
+Object.assign(WAVE_VARIANTS, {
+  // the curtain: the lip lands on the water ahead of the tube and the whitewater bursts up there, flinging drops forward
+  throwcurtain: v10('the lip lands on the water, whitewater bursts where it hits',
+    { ...LIP, sway: .03, lift: .02, foam: 'burst', boil: .07 }),
+  // the curtain with an offshore wind: spray blown back off the top of the crest as well
+  throwoffshore: v10('lip lands, offshore spray blown back off the crest',
+    { ...LIP, sway: .03, lift: .02, foam: 'burst', boil: .065, offshore: .45, spray: 'v1' }),
+  // the pitch: the lip throws out and down over the loop and lands as it reaches furthest, then draws back up for the next
+  throwpitch: v10('the lip pitches out, lands and explodes, once a loop',
+    { ...LIP, x: 1.62, sway: .09, lift: .2, foam: 'burst', boil: .07, drops: 6 }),
+  // the veil: the tip hangs short of the water and a curtain of drops falls from it into a small boil
+  throwveil: v10('the tip hangs over the water, drops falling from it',
+    { ...LIP, x: 1.56, y: .42, sway: .03, lift: .03, fall: .5, fallIn: .4, tip: .055, foam: 'veil', boil: .055, drops: 3 }),
+  // the claw: the tip hooks back under itself before it lands, shedding drops ahead of it
+  throwclaw: v10('the tip curls back under, a hooked lip',
+    { ...LIP, x: 1.58, y: .36, sway: .03, lift: .03, curl: .6, rise: .07, tip: .075, fall: .5, fallIn: .4, foam: 'claw', boil: .045 }),
+});
+// ---- v10 round 2 (Chase, 2026-11-13: offshore "not actually offshore … the spray is somehow tied in with the flow of the
+// water"; the front half "doesn't have as much of a pulse … moving almost like a rigid hook … not like a wave curling over").
+// Offshore: the shoulder behind the crest lowered to open sky there, spray streaks blown back through it, clear of the
+// water. Roll: the tip goes round an orbit and the lip bends with it (see orbitAt / throwLip).
+const ROLL = { cx: 1.54, cy: .44, rx: .1, ry: .17, throw: .55, c0: .05, cA: .55, outA: .1, riseA: .03, roofA: .06, fallA: .35 };   // tip ≤ x 1.64: whole inside the slot
+Object.assign(WAVE_VARIANTS, {
+  throwoffshore2: v10('offshore spray blown back into the sky behind the crest',
+    { ...LIP, sway: .03, lift: .02, foam: 'burst', boil: .065, shoulder: .14, offshore: .42 }),
+  throwroll: v10('the lip rolls over: reaches out, curls down, lands, rolls back',
+    { ...LIP, orbit: ROLL, foam: 'burst', boil: .07 }),
+  throwrolloffshore: v10('rolling lip + offshore spray',
+    { ...LIP, orbit: ROLL, foam: 'burst', boil: .065, shoulder: .14, offshore: .42 }),
+  throwrollbig: v10('a bigger roll + offshore spray',
+    { ...LIP, orbit: { ...ROLL, cx: 1.52, rx: .13, ry: .22, cy: .47, cA: .75, outA: .14, roofA: .08 }, foam: 'burst', boil: .07, drops: 6, shoulder: .14, offshore: .42 }),
+});
+// ---- v10 round 3: the lip keyed through hand-drawn poses, whitewater riding its tip (see poseAt / rideFoam).
+// Tip x / y in the scene's final coordinates before the mirror (+x = the throw); the trough under the mouth is y ≈ .235.
+const CURL = [   // roof / inOut: the underside's handle — low and short while the lip is a short overhang (so it has its thickness), high once it reaches over the bird
+  [0,    { x: 1.36, y: .66, c: -.90, out: .55, rise: .03, roof: .00, inOut: .45, fall: .35, fallIn: .30, tip: .090, foam: .046, splash: 0 }],   // gather: a short, heavy overhang, pitching
+  [.18,  { x: 1.52, y: .56, c: -.50, out: .66, rise: .04, roof: .07, inOut: .55, fall: .48, fallIn: .40, tip: .082, foam: .052, splash: 0 }],   // throw: out and starting down
+  [.36,  { x: 1.62, y: .42, c: -.05, out: .76, rise: .04, roof: .15, inOut: .65, fall: .58, fallIn: .45, tip: .076, foam: .060, splash: 0 }],   // curl: falling, turning under
+  [.52,  { x: 1.63, y: .27, c:  .30, out: .78, rise: .04, roof: .20, inOut: .70, fall: .62, fallIn: .45, tip: .076, foam: .080, splash: .6 }],  // land: hooked under, on the water
+  [.68,  { x: 1.58, y: .30, c:  .40, out: .74, rise: .03, roof: .20, inOut: .70, fall: .60, fallIn: .45, tip: .080, foam: .090, splash: 1 }],   // boil: the burst
+  [.85,  { x: 1.46, y: .50, c: -.40, out: .62, rise: .03, roof: .05, inOut: .50, fall: .45, fallIn: .38, tip: .086, foam: .062, splash: .2 }],  // recover: drawn back up
+];
+const curl = (label, extra = {}) => v10(label, { ...LIP, keys: CURL, foam: 'ride', ...extra });
+Object.assign(WAVE_VARIANTS, {
+  throwcurl: curl('the lip curls over and lands, whitewater riding its tip'),
+  throwcurloffshore: curl('curling lip, offshore spray blown back round it off the whitewater', { wrap: { n: 8, reach: .22, lift: .04, r: .05, lanes: [0, .05, .095] } }),
+});
+// ---- v10 round 4 (Chase 2026-11-13: riff on throwcurtain and throwcurloffshore; "the offshore spray should go more back
+// toward the crest"; "still the too skinny bug … an hourglass shape"). Both lips drawn with Q.taper (the sheet only ever
+// thins root → tip), the spray (Q.wrap.far) carried most of the way back up the lip's outer face toward the crest.
+Object.assign(WAVE_VARIANTS, {
+  throwcurtain2: v10('curtain, refined: a heavy sheet tapering to the water, whitewater bursting where it lands',
+    { ...LIP, sway: .03, lift: .02, foam: 'burst', boil: .07, tip: .085, taper: { p: 1.2 } }),
+  throwcurtain2offshore: v10('curtain + offshore spray blown back up its face toward the crest',
+    { ...LIP, x: 1.55, sway: .03, lift: .02, foam: 'burst', boil: .065, tip: .085, taper: { p: 1.2 }, wrap: { n: 8, reach: .7, far: .9, up: .92, lift: .04, r: .052, lanes: [0, .035], k0: .5, sat: 1 } }),
+  throwcurl2offshore: curl('curl, refined: tapered lip, spray blown back up round it toward the crest',
+    { taper: { p: 1.3 }, wrap: { n: 9, reach: .75, far: .9, up: .92, lift: .08, r: .054, lanes: [0, .045, .085], k0: .5, sat: 1 } }),
+});
+// ---- v10 round 5 (Chase 2026-11-13: curtain "is throwing out a bit far maybe?"; the curl "a little better but could
+// still use more work to look better. riff on it. spray is looking better than before").
+// Curtains landing closer in (the round-4 one came down at x 1.55, .3 past the board's nose).
+const WRAP5 = { n: 9, reach: .75, far: .9, up: .92, lift: .08, r: .054, lanes: [0, .045, .085], k0: .5, sat: 1 };
+const curtain = (label, x, extra = {}) => v10(label, { ...LIP, x, sway: .03, lift: .02, foam: 'burst', boil: .065, tip: .085, taper: { p: 1.2 }, wrap: { ...WRAP5, lift: .06 }, ...extra });
+// Curls: rounder — the lip leaves the crest in one arc that tightens as it goes over (no flat table top), hooks back
+// under itself as it comes down and lands closer in.
+const CURL3 = [
+  [0,    { x: 1.35, y: .65, c: -.60, out: .72, rise: .05, fall: .48, tip: .085, foam: .046, splash: 0 }],   // gather: a short lip, already arcing
+  [.18,  { x: 1.46, y: .56, c: -.30, out: .74, rise: .05, fall: .52, tip: .080, foam: .052, splash: 0 }],   // throw
+  [.36,  { x: 1.54, y: .42, c:  .25, out: .85, rise: .05, fall: .60, tip: .075, foam: .060, splash: 0 }],   // curl
+  [.52,  { x: 1.50, y: .28, c:  .70, out: .95, rise: .05, fall: .70, tip: .072, foam: .078, splash: .6 }],  // land, hooked under
+  [.68,  { x: 1.47, y: .30, c:  .75, out: .92, rise: .04, fall: .68, tip: .075, foam: .088, splash: 1 }],   // boil
+  [.85,  { x: 1.41, y: .52, c: -.15, out: .74, rise: .04, fall: .52, tip: .082, foam: .062, splash: .2 }],  // recover
+];
+// the same curl drawn back less far between throws: every frame has a full, curling lip (a gentler pulse)
+const CURL3B = [
+  [0,    { x: 1.42, y: .58, c: -.35, out: .74, rise: .05, fall: .52, tip: .082, foam: .050, splash: 0 }],
+  [.18,  { x: 1.50, y: .50, c: -.05, out: .80, rise: .05, fall: .56, tip: .078, foam: .055, splash: 0 }],
+  [.36,  { x: 1.54, y: .40, c:  .35, out: .88, rise: .05, fall: .62, tip: .074, foam: .062, splash: 0 }],
+  [.52,  { x: 1.50, y: .28, c:  .75, out: .95, rise: .05, fall: .70, tip: .072, foam: .078, splash: .6 }],
+  [.68,  { x: 1.47, y: .30, c:  .80, out: .92, rise: .04, fall: .68, tip: .075, foam: .088, splash: 1 }],
+  [.85,  { x: 1.44, y: .46, c:  .10, out: .80, rise: .04, fall: .56, tip: .080, foam: .062, splash: .2 }],
+];
+Object.assign(WAVE_VARIANTS, {
+  throwcurtain3a: curtain('curtain landing closer in + offshore spray', 1.47),
+  throwcurtain3b: curtain('curtain landing closer still + offshore spray', 1.40, { out: .7 }),
+  throwcurl3offshore: v10('curl, rounder: one tightening arc, hooked under as it lands', { ...LIP, keys: CURL3, foam: 'ride', taper: { p: 1.3 }, wrap: WRAP5, splashN: 3 }),
+  throwcurl3fulloffshore: v10('the rounder curl, drawn back less: a full curling lip in every frame', { ...LIP, keys: CURL3B, foam: 'ride', taper: { p: 1.3 }, wrap: WRAP5, splashN: 3 }),
+});
 export const WAVE_DEFAULT = 'classic';
 
 // Circle layout of a whitewater cluster, in units of its size: [dx, dy, r]
@@ -844,6 +939,250 @@ function seaLife(life, t) {
   }
   return out;
 }
+// ---- v10: a more natural throw (Chase, 2026-11-13: "can we make the throwing half of the wave look more natural? give
+// more options"). The v5–v9 lip is a stick swung in and out about a pivot (the lip points stretched from LIP_PIVOT),
+// with the foam ball riding its tip in mid-air. A pitching lip is a sheet: thick where it leaves the crest, thinning
+// as it throws, its tip falling to the flat water ahead of the tube, and the whitewater goes up where it lands. Here
+// the lip (points 9–19 of the surface: outer edge, tip at TIP, inner edge back to the roof) is rebuilt as two cubics
+// meeting at the tip: the outer edge from the crest (point 8), the inner edge from the tube's roof over the bird (point 19), each
+// leaving level and arriving at the tip `fall` steep, so the lip thins as it throws and the roof over the bird stays
+// where v7 had it. Coordinates are the scene's final ones before the mirror: +x = the throw, y = band heights.
+// Q: x, y (tip; y defaults to just above the trough), sway (tip in and out over the loop), lift (tip rises off the water
+// and falls back), out / inOut (how far the crest's / the roof's handle reaches towards the tip), rise / roof (those
+// handles raised), fall / fallIn (how high the tip's outer / inner handle stands), curl (tip hooked back under, towards the bird), tip (its
+// width, ≥ the print stroke). The tip never touches the trough (a navy polygon can't cross itself): it stops `gap`
+// above it, and the foam laid over the landing hides that sliver of ring colour.
+const bez = (P, s) => { const u = 1 - s; return [0, 1].map(j => u * u * u * P[0][j] + 3 * u * u * s * P[1][j] + 3 * u * s * s * P[2][j] + s * s * s * P[3][j]); };
+// the trough's height at x (the surface from point 25 on: down the back wall and out under the tube's mouth)
+const troughAt = (pts, x) => { const tr = pts.slice(25); for (let i = 1; i < tr.length; i++) if (tr[i][0] >= x) { const [a, b] = [tr[i - 1], tr[i]]; return a[1] + (b[1] - a[1]) * (x - a[0]) / ((b[0] - a[0]) || 1); } return tr[tr.length - 1][1]; };
+// Rolling lip (Chase, 2026-11-13: the lip "is moving like a rigid hook just going down … not like a wave curling over").
+// With Q.orbit the tip doesn't slide in and out on one path: it goes round an orbit, the way the water in a wave does —
+// out at the top, curling down the front, landing, and back in along the water — and the lip bends with it: reaching
+// forward and long when the tip is high (handles stretched, tip pointing ahead), hooking back under as it falls (the
+// curl tightens), so the curve travels along the lip instead of the whole hook moving as one. orbit: cx, cy, rx, ry (the
+// tip's orbit), throw (the share of the loop from the top, over the front, to the landing), c0 / cA (the tip's hook:
+// c0 − cA·sin θ, so pointing ahead at the top, hooked back at the bottom), outA / riseA / fallA (the crest's handle longer
+// and higher, the tip's handles shorter, at the top; roofA: the roof's handle with them, so the lip keeps its
+// thickness as it falls). θ runs from the top (π/2) clockwise round the front.
+function orbitAt(O, t) {
+  const u = (((t + (O.ph || 0)) % 1) + 1) % 1, f = O.throw ?? .5;
+  const w = u < f ? .5 * u / f : .5 + .5 * (u - f) / (1 - f);
+  return { u, f, th: Math.PI / 2 - TAU * w };
+}
+// Keyed lip (v10 round 3, Chase 2026-11-13: round 2 "horrible and buggy … the white water should move with the lip the
+// whole time"; the lip should curl over like a wave, not drop like a rigid hook). Q.keys: [[t, pose]…] from t 0, poses
+// drawn by hand — gather, throw, curl, land, boil, recover — and run through smoothly (a closed Catmull-Rom on every
+// number in the pose, so the motion never jerks at a key). pose: x, y (tip), c (the tip's hook: < 0 pointing ahead, > 0
+// hooked back under), out / rise / fall / fallIn / roof (the lip's handles, as in throwLip), tip (its width), foam (the
+// size of the whitewater riding the tip), splash (0 → 1: drops flung up out of it).
+function poseAt(keys, t) {
+  const n = keys.length; t = ((t % 1) + 1) % 1;
+  let i = n - 1; for (let j = 0; j < n; j++) if (keys[j][0] <= t) i = j;
+  const t0 = keys[i][0], t1 = i + 1 < n ? keys[i + 1][0] : 1 + keys[0][0], u = (t - t0) / (t1 - t0);
+  const K = j => keys[((j % n) + n) % n][1], p0 = K(i - 1), p1 = K(i), p2 = K(i + 1), p3 = K(i + 2), out = {};
+  for (const k in p1) out[k] = 0.5 * (2 * p1[k] + (p2[k] - p0[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u * u + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * u * u * u);
+  return out;
+}
+function throwLip(Q, pts, t) {
+  const k = wv(t, Q.ph || 0), b = pts[19];      // b: the roof over the bird's head (v7's own; points 20 on are kept)
+  // shoulder: the back behind the crest (points 5–7) lowered, so there's sky behind the crest for offshore spray
+  if (Q.shoulder) pts = pts.map((p, i) => (i >= 5 && i <= 7 ? [p[0], p[1] - Q.shoulder * [.55, .85, 1][i - 5]] : p));
+  const a = pts[8];                              // a: the crest
+  let tx = Q.x + (Q.sway || 0) * k, ty = (Q.y ?? 0) + (Q.lift || 0) * (0.5 - 0.5 * wv(t, (Q.ph || 0) + (Q.liftPh || 0)));
+  let c = Q.curl || 0, out = Q.out ?? .7, rise = Q.rise || 0, roof = Q.roof || 0, F = Q.fall ?? .6, Fi = Q.fallIn ?? F;
+  if (Q.orbit) {
+    const O = Q.orbit, { th } = orbitAt(O, t), sn = Math.sin(th);
+    tx = O.cx + O.rx * Math.cos(th); ty = O.cy + O.ry * sn;
+    c = (O.c0 || 0) - (O.cA || 0) * sn;
+    out += (O.outA || 0) * sn; rise += (O.riseA || 0) * sn; roof += (O.roofA || 0) * sn; F *= 1 - (O.fallA || 0) * sn; Fi *= 1 - (O.fallA || 0) * sn;
+  }
+  let tipW = Q.tip, inO = Q.inOut ?? .55;
+  if (Q.keys) {
+    const P = poseAt(Q.keys, t);
+    tx = P.x; ty = P.y; c = P.c; out = P.out ?? out; rise = P.rise ?? rise; roof = P.roof ?? roof; F = P.fall ?? F; Fi = P.fallIn ?? Fi; tipW = P.tip ?? tipW; inO = P.inOut ?? inO;
+  }
+  ty = Math.max(troughAt(pts, tx) + (Q.gap ?? .035), ty);
+  // the tip's direction of travel: straight down, hooked back under (−x) by c > 0, or pointing ahead by c < 0
+  const dn = Math.hypot(c, 1), d = [-c / dn, -1 / dn], nrm = [-d[1], d[0]], h = tipW / 2;   // nrm: towards +x (outer side)
+  const end = (sg) => [tx + nrm[0] * h * sg, ty + nrm[1] * h * sg];
+  const eo = end(1), ei = end(-1);
+  const back = (e, top, f) => [e[0] - d[0] * f * (top - ty), e[1] - d[1] * f * (top - ty)];      // the tip's handle, back up its path
+  const O = [a, [a[0] + out * (tx - a[0]), a[1] + rise], back(eo, a[1], F), eo];
+  const I = [b, [b[0] + inO * (tx - b[0]), b[1] + roof], back(ei, b[1], Fi), ei];
+  let under = s => bez(I, s);
+  if (Q.taper) {
+    // v10 round 4 (Chase 2026-11-13: "still the too skinny bug … an hourglass shape in some points of the animation"):
+    // the two edges drawn as separate curves could pinch mid-lip and swell again at the tip. Here the underside is the
+    // top edge set in by a width that only ever tapers, root → tip (root, then tipW at the tip: w = tipW + (root − tipW)
+    // (1 − s)^p), so the sheet can't neck; the root is eased onto the roof over the bird (b) as before.
+    const Tp = Q.taper, p = Tp.p ?? 1.3;
+    const tan = s => { const q0 = bez(O, Math.max(0, s - .002)), q1 = bez(O, Math.min(1, s + .002)), m = Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) || 1; return [(q1[0] - q0[0]) / m, (q1[1] - q0[1]) / m]; };
+    const T0 = tan(0), W0 = Tp.root ?? ((b[0] - a[0]) * T0[1] - (b[1] - a[1]) * T0[0]);     // root width: b's depth under a, across the lip
+    const w = s => tipW + (W0 - tipW) * (1 - s) ** p;
+    const fix = [b[0] - (a[0] + T0[1] * W0), b[1] - (a[1] - T0[0] * W0)];
+    under = s => { const T = tan(s), o = bez(O, s), W = w(s), k = (1 - s) ** 2; return [o[0] + T[1] * W + fix[0] * k, o[1] - T[0] * W + fix[1] * k]; };
+  }
+  const lip = [...[.12, .3, .5, .69, .86].map(s => bez(O, s)), [tx + d[0] * h * .9, ty + d[1] * h * .9], ...[.86, .68, .5, .32, .15].map(under)];
+  return pts.map((p, i) => (i >= 9 && i <= 19 ? lip[i - 9] : p));
+}
+// Round 3 whitewater: it rides the lip's tip the whole loop — a few bubbles on the lip as it gathers, boiling up as it
+// curls, bursting over the water where it lands (and flinging drops up out of the burst), carried back up small as the
+// next lip gathers. Q.wrap: offshore spray — drops leave the whitewater and blow a short way back up round the outside
+// of the lip (towards the crest), each on a path a set distance off the lip's outer edge, so they wrap the curl.
+function rideFoam(Q, M, t, surface, foam, tip, keep, r0) {
+  const P = poseAt(Q.keys, t), ts = P.foam, bold = M.bold || 0, blobs = [];
+  CLUSTER.forEach(([dx, dy, r]) => {
+    const R = Math.max(r * ts, r0), [x, y] = keep(tip[0] + dx * ts * (Q.spreadX ?? 1), tip[1] + ts * .3 + dy * ts, R);
+    blobs.push([x, Math.max(y, R + .02), R]); foam.push(ell(x, Math.max(y, R + .02), R, R, 16));
+  });
+  const a = Math.max(0, Math.min(1, P.splash || 0));
+  if (a > .08) SPLASH.slice(0, Q.splashN ?? SPLASH.length).forEach(([dx, dy, r]) => {      // splashN: fewer flung drops where the spray (Q.wrap) is already busy
+    const R = Math.max(r0, r * ts * (.5 + .5 * a)), e = .6 + .6 * a, [x, y] = keep(tip[0] + dx * ts * e * .8, tip[1] + ts * .3 + dy * ts * e, R);
+    blobs.push([x, y, R]); foam.push(ell(x, y, R, R, 12));
+  });
+  if (Q.wrap) sprayWrap(Q, t, surface, foam, keep, r0, ts, blobs);
+}
+// Offshore spray (round 3, Chase: "it should start from the white water and go back up and back around the wave … only a
+// tiny bit"): a loose puff of drops thrown up out of the whitewater at the tip and blown back up round the outside of the
+// lip, towards the crest. Drops, like the foam (and the spray off the claws of a woodblock wave), in a few lanes at
+// different heights off the lip, with uneven spacing and sizes, crowded near the whitewater and thinning as they go. A
+// drop's path follows the lip's outer face, so the puff wraps the curl; the nearest lane starts over the lip's cream edge
+// (no sliver of gap), the others clear of it. W.far (round 4, "the offshore spray should go more back toward the
+// crest"): the path runs on up the face to the crest itself and the drops may go that fraction of the way; near the top
+// of the band a drop is drawn in towards the lip rather than dropped, and every drop is kept off the lip and its
+// neighbours by at least a print gap (or merged into them), so no hairline of ring colour is left between two creams.
+function sprayWrap(Q, t, surface, foam, keep, r0, ts, blobs = []) {
+  const W = Q.wrap, far = W.far, edge = surface.slice((far ? 8 : 9) * SEG, 13 * SEG + 1), L = [0];
+  for (let i = 1; i < edge.length; i++) L.push(L[i - 1] + Math.hypot(edge[i][0] - edge[i - 1][0], edge[i][1] - edge[i - 1][1]));
+  const total = L[L.length - 1], grow = Math.min(1.2, .5 + .6 * ts / .06), lanes = W.lanes ?? [0, .055, .11], n = W.n ?? 9;
+  const at = (d, o) => {                                         // d back along the lip from its tip end, o out from it
+    const f = Math.max(0, 1 - d / total), a = subPath(edge, f, f, 1)[0], b = subPath(edge, Math.max(0, f - .02), Math.max(0, f - .02), 1)[0];
+    const dx = b[0] - a[0], dy = b[1] - a[1], m = Math.hypot(dx, dy) || 1;     // travel: tip → crest; the sky is to its right
+    return [a[0] + dy / m * o, a[1] - dx / m * o];
+  };
+  if (!far) {
+    for (let j = 0; j < n; j++) {
+      const ph = (j * .618034) % 1, k = .7 + .3 * ((j * 7) % 5) / 4, s = (t * (W.speed ?? 1) + ph) % 1;
+      if (s < .05) continue;                                       // still inside the whitewater
+      const R = Math.max(r0, (W.r ?? .05) * k * (1 - .5 * s)), lane = lanes[j % lanes.length];
+      const d = Math.min(total * .45, (W.reach ?? .3) * grow * s ** 1.5), o = lane * (.4 + .6 * s) + R * (lane ? 1.1 : .6) + (W.lift ?? .05) * s;   // slow off the foam, then away: dense at the whitewater, thinning
+      const [x, y] = at(d, o);
+      if (y > TOP - R - .02) continue;                             // gone over the top of the band: let it go, don't pin it to the edge
+      const [X, Y] = keep(x, y, R); foam.push(ell(X, Y, R, R, 14));
+    }
+    return;
+  }
+  const g = W.gap ?? .036, face = surface.slice(5 * SEG, 20 * SEG);
+  const lipDist = (x, y) => { let m = 9; for (let i = 1; i < face.length; i++) { const [p, q] = [face[i - 1], face[i]], vx = q[0] - p[0], vy = q[1] - p[1], u = Math.max(0, Math.min(1, ((x - p[0]) * vx + (y - p[1]) * vy) / (vx * vx + vy * vy || 1))); m = Math.min(m, Math.hypot(x - p[0] - u * vx, y - p[1] - u * vy)); } return m; };
+  // how far back up the face the spray may go: to where the face turns over into the top of the wave (its outward
+  // normal pointing up more than W.up), as there's no sky above the crest inside the band — beyond that it's gone
+  let reachMax = total * far;
+  for (let i = edge.length - 1; i > 0; i--) {
+    const dx = edge[i - 1][0] - edge[i][0], dy = edge[i - 1][1] - edge[i][1], m = Math.hypot(dx, dy) || 1;
+    if (-dx / m > (W.up ?? .8)) { reachMax = Math.min(reachMax, total - L[i]); break; }
+  }
+  for (let j = 0; j < n; j++) {
+    const ph = (j * .618034) % 1, k = (W.k0 ?? .6) + (1 - (W.k0 ?? .6)) * ((j * 7) % 5) / 4, s = (t * (W.speed ?? 1) + ph) % 1;
+    if (s < .05) continue;                                         // still inside the whitewater
+    const R = Math.max(r0, (W.r ?? .05) * k * (1 - (W.shrink ?? .6) * s)), lane = lanes[j % lanes.length];
+    const d = reachMax * Math.min(1, (W.reach ?? .5) * grow * s ** (W.ease ?? 1.3) / reachMax);
+    if (d >= reachMax * .97 && s > .6) continue;                   // reached the top of the face: blown away over the crest
+    let o = lane * (.4 + .6 * s) + R * (lane ? 1.1 : .6) + (W.lift ?? .03) * s ** 1.5, [x, y] = at(d, o);
+    if (y > TOP - R - .025) continue;                              // no sky left above it: gone
+    // a print gap from the lip: on it (merged) or clear of it by g
+    const dl = lipDist(x, y) - R;
+    if (dl > 0 && dl < g) { const o2 = dl < g / 2 ? o - dl - .012 : o + g - dl + .006; [x, y] = at(d, o2); if (y > TOP - R - .025) continue; }
+    const [X, Y] = keep(x, y, R);
+    if (Math.abs(X - x) > R * .5) continue;                        // would be pinned against the side of the slot: gone off the frame
+    x = X; y = Y;
+    // and from the other drops and the whitewater: merged with a neighbour, or clear of it by g
+    for (const [cx, cy, cR] of blobs) {
+      const dd = Math.hypot(x - cx, y - cy), gap = dd - R - cR;
+      if (gap > 0 && gap < g) { const m = (gap + .012) / (dd || 1); x -= (x - cx) * m; y -= (y - cy) * m; }
+    }
+    blobs.push([x, y, R]); foam.push(ell(x, y, R, R, 14));
+    // W.sat: every other drop carries a smaller one tucked behind it and off the face, merged with it — spray in little
+    // clumps like the whitewater, not a string of equal beads
+    if (W.sat && j % 2 === 0 && s > .12) {
+      const r = Math.max(r0, R * .62), [sx, sy] = at(d - R * .95, o + R * (lane ? -.5 : .55));
+      if (sy < TOP - r - .025 && Math.hypot(sx - x, sy - y) < R + r - .01) { blobs.push([sx, sy, r]); foam.push(ell(sx, sy, r, r, 12)); }
+    }
+  }
+}
+// The foam of a v10 throw. lip: the cream edge along the top of the wave from behind the crest out to the tip (as before,
+// never thinner than the print stroke). Then, by Q.foam: 'burst' — a boil of round bubbles on the water where the lip
+// lands, swelling as it hits, with droplets flung up and forward out of it on arcs; 'veil' — the tip hangs short of the
+// water and a curtain of drops falls from it into a smaller boil; 'claw' — the tip curls back under itself and sheds
+// a few drops forward; Q.offshore adds spray blown back off the crest, as an offshore wind does.
+function throwFoam(Q, M, t, surface, pts, foam, V) {
+  const bold = M.bold || 0, lw = w => Math.max(w, bold), r0 = Math.max(.034, bold * 1.15);
+  const [fL, fR] = V.frame || [0, DA], xMax = DA - fL - .01, xMin = DA - fR + .01;
+  const keep = (x, y, R) => [Math.min(xMax - R, Math.max(xMin + R, x)), Math.min(TOP - R - .01, y)];
+  foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, [[0, 0], [.15, lw(.012)], [.5, lw(.026)], [.85, lw(.03)], [1, lw(Q.lipLine ?? .03)]]), 1));
+  const tip = surface[TIP * SEG], ground = troughAt(pts, tip[0]);
+  if (Q.keys) return rideFoam(Q, M, t, surface, foam, tip, keep, r0);
+  let q = 0.5 + 0.5 * wv(t, (Q.ph || 0) - (Q.hit ?? .9));                         // q: 1 just after the lip hits
+  if (Q.orbit) { const { u, f } = orbitAt(Q.orbit, t), since = (((u - f) % 1) + 1) % 1; q = Math.max(Math.exp(-since / .3), Math.exp(-(1 - since) / .06) * .6); }
+  const blobs = [];
+  const boil = (cx, size, n = CLUSTER.length) => CLUSTER.slice(0, n).forEach(([dx, dy, r]) => {
+    const R = Math.max(r0, r * size), [x, y] = keep(cx + dx * size * 1.05, ground + size * .55 + dy * size * .8, R);
+    blobs.push([x, Math.max(y, ground + R * .6), R]); foam.push(ell(x, Math.max(y, ground + R * .6), R, R, 16));
+  });
+  if (Q.foam === 'burst' || Q.foam === 'veil') {
+    const size = (Q.boil ?? .06) * (Q.foam === 'veil' ? .75 : 1) * (Q.orbit ? 0.45 + 0.7 * q : 0.75 + 0.35 * q);   // a rolling lip: the boil dies down while the next lip forms
+    boil(tip[0] + (Q.boilX ?? .04), size, Q.foam === 'veil' ? 5 : CLUSTER.length);
+    // droplets flung up and forward out of the boil, each on its own arc, the next one leaving as the last lands
+    const n = Q.drops ?? 5;
+    for (let j = 0; j < n; j++) {
+      const s = (t + j / n) % 1, vx = (Q.fling ?? .32) * (0.7 + 0.3 * ((j * 7) % 5) / 4), vy = (Q.up ?? .55) * (0.75 + 0.25 * ((j * 3) % 4) / 3);
+      const x = tip[0] + .03 + vx * s, y = ground + .06 + vy * s - vy * 1.1 * s * s, R = Math.max(r0, .045 * (1 - .35 * s));
+      if (y < ground + R + .04 || x > xMax - R || (Q.orbit && q < .3)) continue;
+      const [X, Y] = keep(x, y, R); blobs.push([X, Y, R]); foam.push(ell(X, Y, R, R, 12));
+    }
+    if (Q.wrap) sprayWrap(Q, t, surface, foam, keep, r0, size, blobs);   // round 4: offshore spray off the burst, back up the face
+  }
+  if (Q.foam === 'veil') {
+    // a curtain of drops falling from the tip into the boil, streaming down once a loop
+    const n = Q.veil ?? 3;
+    for (let j = 0; j < n; j++) {
+      const s = (t + j / n) % 1, x = tip[0] + .015 + .02 * s, y = tip[1] - (tip[1] - ground - .07) * s * s, R = Math.max(r0, .042 * (1 - .2 * s));
+      if (y > tip[1] - R - Math.max(.035, bold) || y < ground + .09) continue;
+      foam.push(ell(x, y, R, R, 12));
+    }
+  }
+  if (Q.foam === 'claw') {
+    // the hooked tip sheds a few drops out ahead of it, falling as they go
+    for (let j = 0; j < 3; j++) {
+      const s = (t + j / 3) % 1, x = tip[0] + .05 + .22 * s, y = tip[1] + .04 - .3 * s * s, R = Math.max(r0, .04 * (1 - .3 * s));
+      if (y < ground + R + .05) continue;
+      const [X, Y] = keep(x, y, R); foam.push(ell(X, Y, R, R, 12));
+    }
+    boil(tip[0] + .02, (Q.boil ?? .045) * (0.8 + 0.3 * q), 5);
+  }
+  if (Q.offshore && Q.spray === 'v1') {
+    // the first try, kept as it was shown (throwoffshore): drops off the crest falling onto the back of the wave
+    const top = surface.reduce((m, p, i) => (i > 3 * SEG && i < TIP * SEG && p[1] > m[1] ? p : m), [0, 0]), n = 3;
+    for (let j = 0; j < n; j++) {
+      const s = (t + j / n) % 1, R = Math.max(r0, .046 * (1 - .3 * s)), x = top[0] - .08 - Q.offshore * s, y = Math.min(TOP - R - .01, top[1] - .03 - .3 * s * s);
+      if (x < xMin + R) continue;
+      foam.push(ell(x, y, R, R, 12));
+    }
+  } else if (Q.offshore) {
+    // offshore spray: blown back off the crest into the sky behind it (−x), streaks drawn along their path, each kept
+    // clear of the back of the wave (v10 first try, 2026-11-13: the drops fell onto the back and slid down it with the
+    // face lines — "it's not actually offshore … like the spray is tied in with the flow of the water"); Q.shoulder
+    // makes the room. n streaks, each leaving the crest in turn and thinning as it goes.
+    const top = surface[8 * SEG], n = Q.sprayN ?? 4;                                // the crest (point 8)
+    const backY = x => { for (let i = 1; i <= 8 * SEG; i++) if (surface[i][0] >= x) { const [p0, p1] = [surface[i - 1], surface[i]]; return p0[1] + (p1[1] - p0[1]) * (x - p0[0]) / ((p1[0] - p0[0]) || 1); } return top[1]; };
+    for (let j = 0; j < n; j++) {
+      const s = (t + j / n) % 1, L = Q.offshore, ry = Math.max(.016, bold * .55), rx = Math.max(ry * 1.6, .06 * (1 - .4 * s));
+      const x = top[0] - .1 - L * s, y0 = Math.min(TOP - ry - .015, top[1] - .01), y = y0 - .05 * s - .1 * s * s;
+      if (x < xMin + rx || y < backY(x) + ry + .035 + Math.max(.035, bold)) continue;          // clear of the cream lip line along the back
+      const ang = Math.atan2(-.05 - .2 * s, -L);                                    // along the path
+      foam.push(Array.from({ length: 14 }, (_, i) => { const a = i / 14 * TAU, ex = rx * Math.cos(a), ey = ry * Math.sin(a); return [x + ex * Math.cos(ang) - ey * Math.sin(ang), y + ex * Math.sin(ang) + ey * Math.cos(ang)]; }));
+    }
+  }
+}
 function barrelScene(V, t) {
   const M = V.motion, k = M.tuck ? 0.5 - 0.5 * Math.cos(TAU * t) : wv(t), k2 = M.tuck ? k : wv(t, 1.0);
   const T0 = V.tube || TUBE, PIV = V.lipPivot || LIP_PIVOT, S = V.level ?? SEA, CR = V.tube ? .97 : .96;   // a style may bring its own tube
@@ -890,10 +1229,12 @@ function barrelScene(V, t) {
     const Q = M.squeeze;
     return !Q || i === a.length - 1 || x <= Q.at ? [x, y] : [Q.at + (x - Q.at) * Q.crash, y];
   });
-  const surface = smooth(pts.map(([x, y]) => [x / DA, y]), SEG).map(([u, v]) => [u * DA, v]);
+  const lipPts = M.throw ? throwLip(M.throw, pts, t) : pts;          // v10: the lip drawn as a falling sheet (throwLip)
+  const surface = smooth(lipPts.map(([x, y]) => [x / DA, y]), SEG).map(([u, v]) => [u * DA, v]);
   const water = [[[0, 0], ...surface, [DA, 0]]], foam = [];
   const tip = surface[TIP * SEG];
-  if (M.foam === 'ww') {
+  if (M.throw) throwFoam(M.throw, M, t, surface, lipPts, foam, V);
+  else if (M.foam === 'ww') {
     // whitewater-return foam: a thinner feathering edge, and the full round-bubble cluster riding the lip
     // tip, small while the lip pulls back and boiling up as it throws over; kept whole inside the cell
     const lw = w => Math.max(w, M.bold || 0);
