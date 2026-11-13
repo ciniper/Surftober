@@ -118,7 +118,7 @@ const builders = {
       else if (nn && z0 === 0) { g.add(notchedRing(nn, D.notchR, D.notchDepth, 0, Math.min(h, t - D.notchKeep), M.body, rIn)); if (h > t - D.notchKeep) g.add(annulus(D.ringOut, rIn, t - D.notchKeep, h - (t - D.notchKeep), M.body, 0.4)); }   // v4 notches from the back
       else g.add(annulus(D.ringOut, rIn, z0, h, M.body, 0.4));
     };
-    if (ins) { ringPiece(0, t - D.insertT, D.ringIn); ringPiece(t - D.insertT, D.insertT, D.waveOut); }
+    if (ins) { const iT = dimFor(o).insertT; ringPiece(0, t - iT, D.ringIn); ringPiece(t - iT, iT, D.waveOut); }
     else ringPiece(0, t, D.ringIn);
     if (o.art === 'raised' && !ins) {   // one-colour relief, same material as the body
       const art = waveArt(o);
@@ -131,7 +131,8 @@ const builders = {
   },
   insert(o, M) {              // the glue-in art ring: a thin annulus in the pocket with the relief on top, shown in its print colours
     const g = new THREE.Group(), t = D.t;
-    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - D.insertT, D.insertT, M.insert, 0.3));
+    const iT = dimFor(o).insertT;
+    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - iT, iT, M.insert, 0.3));
     const art = waveArt(o);
     art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.water)));
     art.foam.forEach(p => g.add(polySlab(p, t + 0.01, D.reliefFoam, M.foam)));

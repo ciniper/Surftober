@@ -219,6 +219,9 @@ export const OPTIONS = {
             labels: { tier: 'Tier colour (gold / silver / bronze / teal)', brown: 'Light brown — the tier colour on the insert only', bone: 'Bone — the tier colour on the insert only' }, hint: 'the spinning body’s filament; the art insert is always in the tier colour, so a brown or bone body makes the gold ring the medal' },
   ring:   { label: 'Art ring',     type: 'choice', default: 'solid', values: ['solid', 'insert'],
             labels: { solid: 'One piece · relief on the body', insert: 'Glue-in insert · 1 mm ring with the relief, pocket in the body' }, hint: 'insert: the body prints single-colour at 0.4 in ~45 min; the inserts print flat at the fine nozzle, up to 4 per plate, and glue in' },
+  base:   { label: 'Insert base',  type: 'choice', default: '1.0', values: ['1.0', '0.5'],
+            labels: { '1.0': '1.0 mm · 10 layers at 0.1 (v7–v9)', '0.5': '0.5 mm · 5 layers at 0.1 — the ring under the art, and the body pocket with it (Chase, 2026-11-13: saves time)' },
+            when: o => o.ring === 'insert', hint: 'the plain tier-colour ring under the relief; the body pocket is cut the same depth, so the art stands at the same height on the rim' },
   copies: { label: 'Inserts per plate', type: 'int', default: 1, min: 1, max: 4, when: o => o.ring === 'insert', hint: 'how many insert rings the insert project file puts on one plate (Ø98: 4 fit the X1C bed)' },
   nozzle: { label: 'Nozzle',       type: 'choice', default: '0.4', values: ['0.4', '0.2'],
             labels: { '0.4': '0.4 mm · 0.20 layers (stock X1C)', '0.2': '0.2 mm · 0.10 layers — fine art, ~3.5× the ring time' }, hint: 'the -bambu.3mf project is written for this nozzle (with an insert: only the insert plate; the body plate is always 0.4) (printer, process and filament profiles, Arachne walls), so the slicer does not fall back to the stock classic walls' },
@@ -281,7 +284,8 @@ export const capDims = o => CAP_BACKS[o.magnet === 'disc' ? 'divot' : o.back];
 // Hub text depth (2026-11-10, Chase: 2 layers, not 3): dark navy text on a tier-colour hub hides the hub in 0.4 mm
 // (2 × 0.2 layers, one swap fewer); light tier-colour text on the classic navy hub keeps 0.6, and a recess stays 0.6.
 export const textDepth = o => (o.text === 'inlay' && o.still === 'tier' ? 0.4 : DIM.inlay);
-export const dimFor = o => ({ ...DIM, ...capDims(o), ...TEXT_SIZES[o.textsize || 'std'], textDepth: textDepth(o) });   // DIM with the chosen back cap + text size folded in (bridge → spinner.py)
+export const insertT = o => (o.ring === 'insert' && o.base ? parseFloat(o.base) : DIM.insertT);   // the insert's base ring (and the pocket depth)
+export const dimFor = o => ({ ...DIM, ...capDims(o), ...TEXT_SIZES[o.textsize || 'std'], textDepth: textDepth(o), insertT: insertT(o) });   // DIM with the chosen back cap + text size folded in (bridge → spinner.py)
 export const capT = o => (o.magnet === 'disc' ? DIM.capTMag : capDims(o).capT);
 export const capSpacer = o => capDims(o).capSpacer;
 // Where the back of the assembly touches a surface (the proud magnet face, or the cap's back face).
@@ -306,7 +310,7 @@ export function outputTag(o) {
     .concat(o.grip === 'ridges' || o.weight === 'bezel' ? [] : [o.grip === 'notches' ? 'notches' : 'smooth'])
     .concat(hasScrew(o) || o.magnet === 'disc' ? [] : ['noscrew'])
     .concat(o.nozzle === '0.4' ? [] : [`n${o.nozzle.replace('.', '')}`])
-    .concat(o.ring === 'insert' ? ['insert'] : [])
+    .concat(o.ring === 'insert' ? ['insert' + (o.base === '1.0' ? '' : `-base${o.base.replace('.', '')}`)] : [])
     .concat(o.body === 'tier' ? [] : [`${o.body}-body`])
     .concat(o.still === 'tier' ? [] : ['classic-hub'])
     .concat(o.back === 'divot' || o.magnet === 'disc' ? [] : [`cap-${o.back}`])
@@ -329,7 +333,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
   if (o.screw !== 'm3' && o.magnet !== 'disc') args.push(`--screw ${o.screw}`);
   if (o.magnet !== 'none') args.push(`--magnet ${o.magnet}`);
   if (o.nozzle !== '0.4') args.push(`--nozzle ${o.nozzle}`);
-  if (o.ring === 'insert') args.push('--ring insert' + (o.copies > 1 ? ` --copies ${o.copies}` : ''));
+  if (o.ring === 'insert') args.push('--ring insert' + (o.copies > 1 ? ` --copies ${o.copies}` : '') + (o.base !== OPTIONS.base.default ? ` --base ${o.base}` : ''));
   if (o.body !== 'tier') args.push(`--body ${o.body}`);
   if (o.still !== 'tier') args.push(`--still ${o.still}` + (o.cap !== OPTIONS.cap.default ? ` --cap ${o.cap}` : ''));
   if (o.back !== OPTIONS.back.default && o.magnet !== 'disc') args.push(`--back ${o.back}`);
@@ -347,6 +351,7 @@ export function cadCommand(o, { python = '.venv/bin/python' } = {}) {
 // ---------------------------------------------------------------------------
 export const PRESETS = {
   v9:        { label: '★ v9 · v8 + bigger flush hub text + hours', detail: 'The v8 build with the hub text 30% larger as a flush 2-layer navy inlay (no recess) and "40" (the tier’s hours, digits 1.2×) over "HOURS!" in the middle · Bambu projects on the textured PEI plate, hub 4 walls / 1 round the text', options: { wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim', text: 'inlay', textsize: 'med', centre: 'hours' } },
+  v9thin:    { label: 'v9 · thin insert base (0.5)', detail: 'The v9 build with the insert’s plain base ring 0.5 thick (5 layers at 0.1, was 1.0 / 10) and the body pocket 0.5 deep to match, so the art stands just as high on the rim — Chase’s plate-4 trim in Bambu, plus one layer', options: { wave: 'ploverschool', ring: 'insert', base: '0.5', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim', text: 'inlay', textsize: 'med', centre: 'hours' } },
   v8:        { label: 'v8 · school of fish, tier hub + cap', detail: 'ploverschool on the gold glue-in insert (0.2, 2 per plate) · light-brown body · hub and slim back cap in the tier colour, cap 0.5 closer and 0.5 thinner', options: { version: 'v8', wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'slim' } },
   v8flat:    { label: 'v8 · flat back cap (no divot)', detail: 'The v8 build with a flat 2.5 mm back cap: no finger divot, the screw head countersunk flush in the back', options: { version: 'v8', wave: 'ploverschool', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'tier', back: 'flat' } },
   insert:    { label: 'v7 build · gold insert on a brown body', detail: 'As printed in v7: ploverleanfine on the glue-in insert (0.2, 2 per plate) · light-brown body · navy hub, orange divot cap', options: { version: 'v7', wave: 'ploverleanfine', ring: 'insert', body: 'brown', nozzle: '0.2', copies: 2, still: 'classic', back: 'divot' } },

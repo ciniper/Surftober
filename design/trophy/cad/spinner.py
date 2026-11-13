@@ -641,7 +641,7 @@ def hex_color(h):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'weight', 'bezel', 'parts', 'preset'):
+    for k in ('version', 'name', 'tier', 'wave', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'weight', 'bezel', 'parts', 'preset', 'base'):
         ap.add_argument(f'--{k}')
     ap.add_argument('--arms', type=int); ap.add_argument('--frames', type=int); ap.add_argument('--copies', type=int, help='insert rings per plate in the insert project (ring=insert)'); ap.add_argument('--hours', type=int, help='centre=hours: the number (0 = the tier’s hours)')
     ap.add_argument('--url', default='', help='a query string of options, e.g. "arms=4&weight=cog" (flags override it)')
@@ -655,7 +655,7 @@ def main():
 
     # flags → query → bridge (validation, tag, dims, parts, wave polygons)
     q = dict(parse_qsl(a.url))
-    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'hours', 'weight', 'bezel', 'parts'):
+    for k in ('preset', 'version', 'name', 'tier', 'arms', 'wave', 'frames', 'art', 'text', 'seat', 'grip', 'magnet', 'screw', 'nozzle', 'ring', 'copies', 'base', 'body', 'still', 'cap', 'back', 'textsize', 'centre', 'hours', 'weight', 'bezel', 'parts'):
         if getattr(a, k) is not None:
             q[k] = str(getattr(a, k))
     cfg = bridge(urlencode(q))
@@ -765,7 +765,7 @@ def main():
             print(f'bambu 3mf → {tag}-bambu.3mf ({len(bam)} object(s), {n_bam} part(s); slots ' +
                   ', '.join(f'{k} {names[k]}' for k in used) + (' — 0.4 nozzle' if o['ring'] == 'insert' else '') + ')')
         if vol:
-            print('  split   ' + ', '.join(f'{k} {v:.0f}' for k, v in vol.items()) + f' mm³ = {sum(vol.values()):.0f} (body {built["body"][0].val().Volume():.0f})')
+            print('  split   ' + ', '.join(f'{k} {v:.0f}' for k, v in vol.items()) + f' mm³ = {sum(vol.values()):.0f}' + (f" (body {built['body'][0].val().Volume():.0f})" if 'body' in built else ''))
 
     if o['weight'] == 'bezel' and o['bezel'] == 'flat':
         D = cfg['dim']
