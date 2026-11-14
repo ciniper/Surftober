@@ -64,9 +64,52 @@ window.SurftoberDeckConfig = {
     'kelly', 'fort point', 'f pt', 'linda mar', 'pacifica', 'crespi', 'rockaway', 'sharp park', 'montara', 'half moon',
     'hmb', 'princeton', 'jetty', 'mavericks', 'bolinas', 'stinson', 'china beach', 'sf'],
 
+  // Stormsurf Point Reyes Buoy 029 estimates, grouped by San Francisco date.
+  // [October day, low and high from the row with the highest upper estimate.]
+  dailySurfHeights: [
+    [1, 6.2, 7.7],
+    [2, 4.6, 5.7],
+    [3, 2.8, 3.5],
+    [4, 2.7, 3.4],
+    [5, 3.5, 4.3],
+    [6, 3.9, 4.8],
+    [7, 3.7, 4.6],
+    [8, 6.8, 8.6],
+    [9, 7.2, 9.0],
+    [10, 9.5, 11.8],
+    [11, 9.7, 12.2],
+    [12, 9.0, 11.3],
+    [13, 7.2, 9.0],
+    [14, 7.0, 8.7],
+    [15, 5.8, 7.3],
+    [16, 4.7, 5.9],
+    [17, 4.6, 5.7],
+    [18, 4.9, 6.2],
+    [19, 6.9, 8.6],
+    [20, 9.5, 11.9],
+    [21, 8.7, 10.8],
+    [22, 7.8, 9.8],
+    [23, 7.3, 9.1],
+    [24, 8.1, 10.1],
+    [25, 6.3, 7.8],
+    [26, 5.4, 6.7],
+    [27, 5.2, 6.5],
+    [28, 5.7, 7.1],
+    [29, 4.7, 5.9],
+    [30, 4.1, 5.2],
+    [31, 4.5, 5.6],
+  ],
+
   // Free-text recap slides (2025 had Surf Recap + Weather Recap).
   surfRecap: '',     // size, quality, standout swells
-  weatherRecap: '',  // water temp, fog, wind
+  weatherRecap: [
+    'Air: average daily high 68°F, low 55°F. Warmest: 86°F on Oct 16.',
+    'Rain: 0.55 in total. Oct 22 was wettest at 0.41 in.',
+    'Wind: highest modeled sustained speed was 17 mph on Oct 10.',
+    'Water: 60.6°F average at San Francisco Bar (58.8–64.2°F, 30 of 31 days).',
+    'Fort Point: no October water-temperature data returned by NOAA.',
+    'Sources: Open-Meteo historical weather near Ocean Beach and NOAA buoy 46237.',
+  ].join('\n\n'),
 
   // Fundraising (2025: $1,480 contributed, 2x company match, 5 beach cleanups).
   // `contributed` = what people actually gave (leave null to show the pledge
