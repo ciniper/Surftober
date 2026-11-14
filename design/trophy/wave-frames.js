@@ -473,6 +473,23 @@ Object.assign(WAVE_VARIANTS, {
   throwcurl3offshore: v10('curl, rounder: one tightening arc, hooked under as it lands', { ...LIP, keys: CURL3, foam: 'ride', taper: { p: 1.3 }, wrap: WRAP5, splashN: 3 }),
   throwcurl3fulloffshore: v10('the rounder curl, drawn back less: a full curling lip in every frame', { ...LIP, keys: CURL3B, foam: 'ride', taper: { p: 1.3 }, wrap: WRAP5, splashN: 3 }),
 });
+// ---- v10 round 6 (Chase 2026-11-13: throwcurl3fulloffshore is a top pick; "make the wave look a littttle bit better …
+// make 4 new versions and really work hard on making them look beautiful"). Round 5's lip was one cubic each side: a
+// round hose of even width with a mushroom top. Here its top edge is a spiral (Q.spiral, see throwLip) that leaves the
+// crest along the back of the wave, bends gently, then tightens over the bird into the hook; the sheet tapers faster
+// (taper p 2) so it is heavy at the root and fine at the tip. Same timing as round 5's full curl (CURL3B, the tip on the
+// same path), same whitewater and offshore spray. A 2 × 2: the spiral, with a bolder lit cream edge, as a more hollow
+// tube (the tip hooking further back under, landing a little further out, a finer lip), and hollow + lit.
+const curlTurn = (keys, b0, g = 1, f = () => ({})) => keys.map(([t, p]) => [t, { ...p, ...f(p), turn: b0 + g * Math.atan(p.c) * 180 / Math.PI }]);   // pose c → the spiral's turn (degrees)
+const SPIRAL = { ...LIP, foam: 'ride', wrap: WRAP5, splashN: 3, spiral: { q: 2.4, lin: .5, ease: .3 }, samples: [.2, .45, .65, .8, .92], taper: { p: 2 } };
+const LIT = [[0, 0], [.12, .016], [.4, .034], [.75, .042], [1, .036]];       // the cream edge: wider along the lip (round 5: up to .03)
+const CURL4 = curlTurn(CURL3B, 115), CURL4H = curlTurn(CURL3B, 128, 1.3, p => ({ x: p.x + .04, tip: p.tip - .008 }));
+Object.assign(WAVE_VARIANTS, {
+  throwcurl4: v10('a spiral lip: leaves the crest smoothly, tightens into the hook', { ...SPIRAL, keys: CURL4 }),
+  throwcurl4lit: v10('the spiral lip with a bolder lit cream edge', { ...SPIRAL, keys: CURL4, lipBand: LIT }),
+  throwcurl4hollow: v10('a hollower tube: the spiral lip hooks further back under', { ...SPIRAL, keys: CURL4H, taper: { p: 2.4 } }),
+  throwcurl4hollowlit: v10('the hollow tube with the lit cream edge', { ...SPIRAL, keys: CURL4H, taper: { p: 2.4 }, lipBand: LIT }),
+});
 export const WAVE_DEFAULT = 'classic';
 
 // Circle layout of a whitewater cluster, in units of its size: [dx, dy, r]
@@ -1003,26 +1020,65 @@ function throwLip(Q, pts, t) {
   }
   ty = Math.max(troughAt(pts, tx) + (Q.gap ?? .035), ty);
   // the tip's direction of travel: straight down, hooked back under (−x) by c > 0, or pointing ahead by c < 0
-  const dn = Math.hypot(c, 1), d = [-c / dn, -1 / dn], nrm = [-d[1], d[0]], h = tipW / 2;   // nrm: towards +x (outer side)
+  const dn = Math.hypot(c, 1), h = tipW / 2;
+  let d = [-c / dn, -1 / dn], nrm = [-d[1], d[0]];                  // nrm: towards +x (outer side)
   const end = (sg) => [tx + nrm[0] * h * sg, ty + nrm[1] * h * sg];
-  const eo = end(1), ei = end(-1);
+  let eo = end(1), ei = end(-1);
   const back = (e, top, f) => [e[0] - d[0] * f * (top - ty), e[1] - d[1] * f * (top - ty)];      // the tip's handle, back up its path
   const O = [a, [a[0] + out * (tx - a[0]), a[1] + rise], back(eo, a[1], F), eo];
   const I = [b, [b[0] + inO * (tx - b[0]), b[1] + roof], back(ei, b[1], Fi), ei];
-  let under = s => bez(I, s);
+  let outer = s => bez(O, s), under = s => bez(I, s);
+  let tan = s => { const q0 = outer(Math.max(0, s - .002)), q1 = outer(Math.min(1, s + .002)), m = Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) || 1; return [(q1[0] - q0[0]) / m, (q1[1] - q0[1]) / m]; };
+  if (Q.spiral) {
+    // v10 round 6 (Chase 2026-11-13: throwcurl3fulloffshore — "make the wave look a littttle bit better … really work
+    // hard on making them look beautiful"): the lip's top edge as a spiral, not one cubic. Its heading turns clockwise
+    // (over and down) by `turn` degrees from the crest to the tip, the turning packed toward the tip by q (θ = −turn·u^q,
+    // q > 1: nearly straight as it leaves the crest, tightening as it goes over — a curl, not a round hose). The curve
+    // is turned and scaled so it ends on the tip's outer corner; the tip's direction is the spiral's own.
+    // lin: that share of the turn spread evenly instead (some bend from the crest on, so the face leaves it as an arc, not a ramp)
+    const Sp = Q.spiral, P = Q.keys ? poseAt(Q.keys, t) : {}, turn = (P.turn ?? Sp.turn ?? 160) * Math.PI / 180, q = P.q ?? Sp.q ?? 1.8, lin = Sp.lin ?? 0, n = 80;
+    const TH = u => turn * (lin * u + (1 - lin) * u ** q);
+    const U = [[0, 0]]; let ux = 0, uy = 0;
+    for (let i = 1; i <= n; i++) { const th = -TH((i - .5) / n); ux += Math.cos(th) / n; uy += Math.sin(th) / n; U.push([ux, uy]); }
+    const cA = Math.atan2(uy, ux), cL = Math.hypot(ux, uy);
+    let phi = 0, L = 1;
+    for (let k = 0; k < 4; k++) {        // the end's direction depends on the turn of the whole curve: settle it
+      phi = Math.atan2(eo[1] - a[1], eo[0] - a[0]) - cA; L = Math.hypot(eo[0] - a[0], eo[1] - a[1]) / cL;
+      const te = phi - turn; d = [Math.cos(te), Math.sin(te)]; nrm = [-d[1], d[0]]; eo = end(1); ei = end(-1);
+    }
+    const cs = Math.cos(phi), sn = Math.sin(phi);
+    outer = s => { const f = Math.max(0, Math.min(1, s)) * n, i = Math.min(n - 1, Math.floor(f)), r = f - i, x = U[i][0] + (U[i + 1][0] - U[i][0]) * r, y = U[i][1] + (U[i + 1][1] - U[i][1]) * r; return [a[0] + L * (x * cs - y * sn), a[1] + L * (x * sn + y * cs)]; };
+    tan = s => { const th = phi - TH(Math.max(0, Math.min(1, s))); return [Math.cos(th), Math.sin(th)]; };
+    if (Sp.ease != null) {
+      // ease: leave the crest along the back of the wave (its slope from point 7 into the crest), so the top line has no
+      // kink there; whatever extra rise the fit needs comes in over the first `ease` of the lip (the face steepening as it
+      // pitches), not as a turn of the whole curve. Settled by fixed point: the chord's angle error goes into that rise.
+      const inc = Math.atan2(a[1] - pts[7][1], a[0] - pts[7][0]), g = u => { const v = Math.min(1, u / Sp.ease); return v * v * (3 - 2 * v); };
+      let del = phi - inc, V = U;
+      const build = () => { const W2 = [[0, 0]]; let x = 0, y = 0; for (let i = 1; i <= n; i++) { const u = (i - .5) / n, th = inc + del * g(u) - TH(u); x += Math.cos(th) / n; y += Math.sin(th) / n; W2.push([x, y]); } return W2; };
+      for (let k = 0; k < 8; k++) {
+        V = build(); const [vx, vy] = V[n], want = Math.atan2(eo[1] - a[1], eo[0] - a[0]);
+        del += want - Math.atan2(vy, vx); L = Math.hypot(eo[0] - a[0], eo[1] - a[1]) / Math.hypot(vx, vy);
+        const te = inc + del - turn; d = [Math.cos(te), Math.sin(te)]; nrm = [-d[1], d[0]]; eo = end(1); ei = end(-1);
+      }
+      V = build(); const [vx, vy] = V[n]; L = Math.hypot(eo[0] - a[0], eo[1] - a[1]) / Math.hypot(vx, vy);
+      outer = s => { const f = Math.max(0, Math.min(1, s)) * n, i = Math.min(n - 1, Math.floor(f)), r = f - i; return [a[0] + L * (V[i][0] + (V[i + 1][0] - V[i][0]) * r), a[1] + L * (V[i][1] + (V[i + 1][1] - V[i][1]) * r)]; };
+      tan = s => { const u = Math.max(0, Math.min(1, s)), th = inc + del * g(u) - TH(u); return [Math.cos(th), Math.sin(th)]; };
+    }
+  }
   if (Q.taper) {
     // v10 round 4 (Chase 2026-11-13: "still the too skinny bug … an hourglass shape in some points of the animation"):
     // the two edges drawn as separate curves could pinch mid-lip and swell again at the tip. Here the underside is the
     // top edge set in by a width that only ever tapers, root → tip (root, then tipW at the tip: w = tipW + (root − tipW)
     // (1 − s)^p), so the sheet can't neck; the root is eased onto the roof over the bird (b) as before.
     const Tp = Q.taper, p = Tp.p ?? 1.3;
-    const tan = s => { const q0 = bez(O, Math.max(0, s - .002)), q1 = bez(O, Math.min(1, s + .002)), m = Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) || 1; return [(q1[0] - q0[0]) / m, (q1[1] - q0[1]) / m]; };
     const T0 = tan(0), W0 = Tp.root ?? ((b[0] - a[0]) * T0[1] - (b[1] - a[1]) * T0[0]);     // root width: b's depth under a, across the lip
     const w = s => tipW + (W0 - tipW) * (1 - s) ** p;
     const fix = [b[0] - (a[0] + T0[1] * W0), b[1] - (a[1] - T0[0] * W0)];
-    under = s => { const T = tan(s), o = bez(O, s), W = w(s), k = (1 - s) ** 2; return [o[0] + T[1] * W + fix[0] * k, o[1] - T[0] * W + fix[1] * k]; };
+    under = s => { const T = tan(s), o = outer(s), W = w(s), k = (1 - s) ** 2; return [o[0] + T[1] * W + fix[0] * k, o[1] - T[0] * W + fix[1] * k]; };
   }
-  const lip = [...[.12, .3, .5, .69, .86].map(s => bez(O, s)), [tx + d[0] * h * .9, ty + d[1] * h * .9], ...[.86, .68, .5, .32, .15].map(under)];
+  const so = Q.samples ?? [.12, .3, .5, .69, .86], si = Q.samplesIn ?? [.86, .68, .5, .32, .15];   // where the 5 + 5 lip points sit along each edge
+  const lip = [...so.map(outer), [tx + d[0] * h * .9, ty + d[1] * h * .9], ...si.map(under)];
   return pts.map((p, i) => (i >= 9 && i <= 19 ? lip[i - 9] : p));
 }
 // Round 3 whitewater: it rides the lip's tip the whole loop — a few bubbles on the lip as it gathers, boiling up as it
@@ -1118,7 +1174,8 @@ function throwFoam(Q, M, t, surface, pts, foam, V) {
   const bold = M.bold || 0, lw = w => Math.max(w, bold), r0 = Math.max(.034, bold * 1.15);
   const [fL, fR] = V.frame || [0, DA], xMax = DA - fL - .01, xMin = DA - fR + .01;
   const keep = (x, y, R) => [Math.min(xMax - R, Math.max(xMin + R, x)), Math.min(TOP - R - .01, y)];
-  foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, [[0, 0], [.15, lw(.012)], [.5, lw(.026)], [.85, lw(.03)], [1, lw(Q.lipLine ?? .03)]]), 1));
+  // Q.lipBand: the cream edge's own width profile [[along, width]…] (round 6: a bolder lit edge on the curl)
+  foam.push(band(surface.slice(5 * SEG, TIP * SEG + 1), at.bind(null, Q.lipBand ? Q.lipBand.map(([u, w]) => [u, u ? lw(w) : w]) : [[0, 0], [.15, lw(.012)], [.5, lw(.026)], [.85, lw(.03)], [1, lw(Q.lipLine ?? .03)]]), 1));
   const tip = surface[TIP * SEG], ground = troughAt(pts, tip[0]);
   if (Q.keys) return rideFoam(Q, M, t, surface, foam, tip, keep, r0);
   let q = 0.5 + 0.5 * wv(t, (Q.ph || 0) - (Q.hit ?? .9));                         // q: 1 just after the lip hits
