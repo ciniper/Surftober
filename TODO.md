@@ -1,30 +1,22 @@
 # Surftober TODO
 
 ## Next up
-- [ ] **⚠️ Merge conflict with claude/worktree-branch-status-4968c7 in
-      docs/deck.js awardSlide()** (2026-11-14) — that branch merges
-      presentation-work and deliberately keeps two differences, so every
-      merge conflicts here until this branch matches:
-      1. Empty award fallback: use the original
-         `<div>${todo('Nobody qualified for this one', 'judged')}</div>`,
-         not the `<div class="lede">No qualifying data for this award yet…`
-         message.
-      2. Award slide class: plain `cls: 'award'` — drop the ' compact-award'
-         class for surf-buddies / glutton-for-punishment / headwind-hero and
-         remove the `.compact-award` rules from docs/deck.css.
-      The large photo reveal (photo-reveal / award-photo) is intentional and
-      kept there. Make changes 1 and 2 here to stop the conflict.
-- [ ] **⚠️ Chase: run supabase-upgrade-2026-11-game.sql** (reminder, 2026-11-08)
-      — the "Who said that?" game is built but can't collect votes until the
-      two game tables exist. Review the file, paste it into the Supabase SQL
-      editor, run once (additive; safe to re-run). Then rehearse with
-      deck.html?game=rehearsal from a browser signed in as the admin.
-- [ ] **⚠️ Chase: add the BWTF visuals to the deck** (reminder, 2026-11-08) —
-      the 4 "Website Overview" pictures from the "bwtf tober" Google Slides
-      (map, 20+ yr analysis, email alerts, educational modules). Upload
-      screenshots/recordings to docs/bwtf/ and set bwtf.features[i].media in
-      deck-config.js (or set bwtf.site to the live site). Until then those
-      slides show a dashed placeholder.
+- [x] **Run supabase-upgrade-2026-11-game.sql** — applied to Surftober2
+      2026-11-08 (game_rounds + game_votes, RLS on, 7 policies).
+- [x] **Deck on main, host-only** (2026-11-09) — on surftober.com the deck
+      opens only for the admin (game.js locked(); ?lock forces it elsewhere)
+      and is linked from Account → Admin Tools (Ceremony deck · Rehearse the
+      game → deck.html?game=rehearsal#game). Previews/localhost stay open and
+      keep the landing + main-page buttons. Sign-in from the deck or
+      play.html comes back to that page (sessionStorage surftober_next, read
+      in app.js). The lock hides the deck; deck-config.js is still a public
+      file — fill judged winners on the day.
+- [ ] **⚠️ Chase: rehearse the game** — on surftober.com: Account → Admin
+      Tools → Rehearse the game, plus a phone on the QR's play link. "Reset
+      rehearsal" (top right of the intro slide) clears the practice rounds.
+- [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
+      "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
+      and wired via bwtf.features[i].media (2026-11-08).
 
 ## Branch: photography-bonus (built here — merge to main when Chase says go)
 

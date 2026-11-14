@@ -30,7 +30,7 @@
     if (!me) {
       v.innerHTML = `<div class="card"><p class="kicker">Surftober ${esc(CFG.year || '')}</p>
         <p style="margin:0 0 14px">Sign in with your Surftober account to play. Then come back to this page.</p>
-        <a class="btn" href="./index.html?mode=signin" onclick="sessionStorage.setItem('surftober_authenticated','1')">Sign in to play</a></div>`;
+        <a class="btn" href="./index.html?mode=signin" data-signin>Sign in to play</a></div>`;
       return;
     }
     $('#who').textContent = `Playing as ${me.name}`;
@@ -79,6 +79,7 @@
   }
 
   document.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-signin]')) { e.preventDefault(); G.signIn(); return; }
     const b = e.target.closest('.choice');
     if (!b || !round || round.status !== 'open' || !me) return;
     const c = b.dataset.c;

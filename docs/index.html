@@ -354,9 +354,10 @@
         <h2 class="main-title">Main</h2>
         <a href="#leaderboard" id="jump-leaderboard" class="jump-leaderboard">Jump to leaderboard ↓</a>
       </div>
-      <!-- Temporary (presentation branch): entry point to the award-ceremony
-           deck until where/when to link it for real is decided (TODO). -->
-      <a href="./deck.html" class="deck-cta">🏆 Award Ceremony deck <span aria-hidden="true">→</span></a>
+      <!-- Award-ceremony deck: previews/localhost only (on surftober.com it's
+           in Account → Admin Tools). -->
+      <a href="./deck.html" id="deck-cta" class="deck-cta" hidden>🏆 Award Ceremony deck <span aria-hidden="true">→</span></a>
+      <script>if (!/(^|\.)surftober\.com$/.test(location.hostname)) document.getElementById('deck-cta').hidden = false;</script>
       <div id="main-tools" class="main-tools" hidden></div>
       <div id="totals-tile" class="totals-tile" hidden></div>
       <div id="today-tile" hidden></div>
@@ -566,6 +567,8 @@
           <div class="subtabs">
             <a href="#awards" class="subtab">🏆 Awards</a>
             <a href="#admin" class="subtab">🛠️ Admin</a>
+            <a href="./deck.html" class="subtab">🎤 Ceremony deck</a>
+            <a href="./deck.html?game=rehearsal#game" class="subtab">🎭 Rehearse the game</a>
           </div>
         </div>
       </div>
