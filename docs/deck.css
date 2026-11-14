@@ -235,6 +235,15 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .av.big { box-shadow: 0 0 0 5px var(--panel), 0 0 0 8px var(--accent), 0 12px 30px rgba(0,0,0,.18); }
 .faces { display: flex; gap: 26px; margin-bottom: 26px; flex-wrap: wrap; }
+.photo-reveal .award-winners { display: flex; align-items: center; gap: 48px; }
+.photo-reveal .faces { flex: none; flex-wrap: nowrap; margin-bottom: 0; }
+.photo-reveal .award-result { min-width: 0; }
+.award .photo-reveal .winner { font-size: 116px; overflow-wrap: anywhere; }
+.award .photo-reveal .winner.many { font-size: 94px; }
+.award .photo-reveal .value { margin-top: 10px; font-size: 44px; }
+.award .photo-reveal .ru { margin-top: 34px; }
+.av.award-photo { border-radius: 18px; }
+.av.award-photo img { object-fit: contain; object-position: center !important; }
 .award .ru > span { display: inline-flex; align-items: center; gap: 12px; }
 .award .ru > span .av + .av { margin-left: -16px; }
 .vs .side { display: flex; flex-direction: column; gap: 22px; align-items: flex-start; }
