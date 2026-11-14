@@ -549,7 +549,7 @@ BAMBU_BED_TYPE = 'Textured PEI Plate'
 BAMBU_STILL_WALLS, BAMBU_TEXT_WALLS = 6, 1
 
 
-def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None, obj_cfg=None, ranges=None, plate_of=None):
+def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=None, obj_cfg=None, ranges=None, plate_of=None, tower=None):
     """groups: [(object_name, [(part_id, (verts, tris)), …], (x, y) on its plate), …] → a Bambu Studio project
     laid out the way Bambu Studio saves one: the meshes in 3D/Objects/, one object per print unit whose parts
     (components) each carry their filament slot in Metadata/model_settings.config, one object per plate (so a
@@ -629,6 +629,8 @@ def write_bambu_3mf(path, groups, nozzle='0.4', slot1=None, slot4=None, slots=No
         ps['filament_colour'] = [c for _, c in FIL]
         ps.update(BAMBU_PROCESS)
         ps['curr_bed_type'] = BAMBU_BED_TYPE
+        if tower:       # (x, y) of the prime tower's corner in plate mm, e.g. clear of a plate of inserts
+            ps['wipe_tower_x'], ps['wipe_tower_y'] = [f'{tower[0]:g}'], [f'{tower[1]:g}']
         diff = ps.get('different_settings_to_system') or ['']     # [process, filament 1…n, printer]: shows the process as edited
         diff[0] = ';'.join(sorted(set(filter(None, diff[0].split(';'))) | set(BAMBU_PROCESS)))
         ps['different_settings_to_system'] = diff
