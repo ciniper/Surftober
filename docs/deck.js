@@ -199,6 +199,38 @@
       </div>` };
   }
 
+  function surfHeightSlide() {
+    const days = CFG.dailySurfHeights || [];
+    if (!days.length) return null;
+    const W = 1680, H = 520, left = 74, bottom = 450, top = 32;
+    const scale = Math.ceil(Math.max(...days.map(([, , high]) => high)) / 2) * 2;
+    const y = (feet) => bottom - (bottom - top) * feet / scale;
+    const spacing = (W - left) / 31;
+    const readings = new Map(days.map(([day, low, high]) => [day, [low, high]]));
+    let svg = '';
+    for (let feet = 0; feet <= scale; feet += 2) {
+      svg += `<line class="grid" x1="${left}" x2="${W}" y1="${y(feet)}" y2="${y(feet)}"/><text x="${left - 14}" y="${y(feet) + 7}" text-anchor="end" font-size="22">${feet} ft</text>`;
+    }
+    for (let day = 1; day <= 31; day++) {
+      const x = left + (day - 0.5) * spacing;
+      const reading = readings.get(day);
+      if (reading) {
+        const [low, high] = reading;
+        const label = `${low.toFixed(1)}–${high.toFixed(1)} ft`;
+        svg += `<rect x="${x - 15}" y="${y(high)}" width="30" height="${y(low) - y(high)}" rx="5" fill="var(--r-FAIR)"><title>October ${day}: ${label}</title></rect>`;
+        svg += `<text x="${x - 7}" y="${y(high) - 9}" transform="rotate(-55 ${x - 7} ${y(high) - 9})" font-size="18">${label}</text>`;
+      } else {
+        svg += `<text x="${x}" y="${bottom - 10}" text-anchor="middle" font-size="13">No data</text>`;
+      }
+      svg += `<text x="${x}" y="${bottom + 34}" text-anchor="middle" font-size="20">${day}</text>`;
+    }
+    return { title: 'Daily surf height', html: `
+      <p class="kicker">Ocean Beach · October ${CFG.year}</p>
+      <h2>Daily peak surf height</h2>
+      <div class="grow" style="margin-top:30px"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Largest available estimated surf-height range for each October day">${svg}</svg></div>
+      <div class="legend"><span>Buoy-based surf estimates · Stormsurf / Point Reyes Buoy 029</span></div>` };
+  }
+
   function recapSlide() {
     const card = (h, txt, field) => `<div class="card"><h3>${h}</h3>${txt ? esc(txt) : todo('Your recap', field)}</div>`;
     return { title: 'Recap', html: `<p class="kicker">Recap</p><h2>Surf &amp; weather</h2>
@@ -266,10 +298,13 @@
     const ruMore = a.runnersUp.length - ruShown.length;
     const ru = ruShown.length
       ? `<div class="ru"><b>Runners-up</b>${ruShown.map((r) => `<span>${entryFaces(r, 44)}<em>${esc(entryName(r))}</em> · ${esc(r.label)}${r.extra ? ` · ${esc(r.extra)}` : ''}</span>`).join('')}${ruMore > 0 ? `<span>+${ruMore} more</span>` : ''}</div>` : '';
-    const faceSize = a.winners.length > 4 ? 96 : a.winners.length > 1 ? 130 : 170;
-    const faces = `<div class="faces">${a.winners.slice(0, 8).map((w) => entryFaces(w, w.pair ? 130 : faceSize, 'big')).join('')}</div>`;
+    const people = a.winners.slice(0, 8).flatMap((w) => w.pair || [w.user]);
+    const largePhotos = people.length <= 2 && people.some((u) => AVATARS.has(u));
+    const faceSize = largePhotos ? 300 : people.length > 4 ? 96 : people.length > 1 ? 130 : 170;
+    const faces = `<div class="faces">${people.map((u) => av(d, u, faceSize, largePhotos ? 'big award-photo' : 'big')).join('')}</div>`;
+    const result = `<div class="award-result"><div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}</div>`;
     const body = names.length
-      ? `<div class="reveal">${faces}<div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}${ru}</div>`
+      ? `<div class="reveal${largePhotos ? ' photo-reveal' : ''}"><div class="award-winners">${faces}${result}</div>${ru}</div>`
       : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
     return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
@@ -743,7 +778,7 @@
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length;
     const C = CFG;
-    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), recapSlide(), leaderboardSlide(d),
+    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), recapSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast'),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow'),
