@@ -1,6 +1,19 @@
 # Surftober TODO
 
 ## Next up
+- [ ] **⚠️ Merge conflict with claude/worktree-branch-status-4968c7 in
+      docs/deck.js awardSlide()** (2026-11-14) — that branch merges
+      presentation-work and deliberately keeps two differences, so every
+      merge conflicts here until this branch matches:
+      1. Empty award fallback: use the original
+         `<div>${todo('Nobody qualified for this one', 'judged')}</div>`,
+         not the `<div class="lede">No qualifying data for this award yet…`
+         message.
+      2. Award slide class: plain `cls: 'award'` — drop the ' compact-award'
+         class for surf-buddies / glutton-for-punishment / headwind-hero and
+         remove the `.compact-award` rules from docs/deck.css.
+      The large photo reveal (photo-reveal / award-photo) is intentional and
+      kept there. Make changes 1 and 2 here to stop the conflict.
 - [ ] **⚠️ Chase: run supabase-upgrade-2026-11-game.sql** (reminder, 2026-11-08)
       — the "Who said that?" game is built but can't collect votes until the
       two game tables exist. Review the file, paste it into the Supabase SQL
