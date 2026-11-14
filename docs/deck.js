@@ -305,8 +305,8 @@
     const result = `<div class="award-result"><div class="winner${sizeCls}">${esc(names.join(' & '))}!</div><div class="value">${esc(value)}</div>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}</div>`;
     const body = names.length
       ? `<div class="reveal${largePhotos ? ' photo-reveal' : ''}"><div class="award-winners">${faces}${result}</div>${ru}</div>`
-      : `<div class="lede">No qualifying data for this award yet. Check the required session times, OB locations, and conditions coverage.</div>`;
-    return { title: a.name, cls: `award${['surf-buddies', 'glutton-for-punishment', 'headwind-hero'].includes(a.id) ? ' compact-award' : ''}`, steps: names.length ? 1 : 0, html: `
+      : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
+    return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
       <div class="stagefloor"><div class="mystery">?</div>${body}</div>` };
   }
@@ -555,7 +555,7 @@
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
     if (!GROUNDS.length) return [];
-    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
+    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `${gameSuffix ? '<button type="button" class="g-reset" data-g-reset hidden>Reset rehearsal</button>' : ''}
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
         <p class="lede">${GROUNDS.length} journal quotes. Four suspects each. Vote from your phone.</p>
         <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
@@ -588,6 +588,16 @@
     if (e && (e.status === 401 || e.status === 403)) return 'Rehearsal mode — sign in as the admin in this browser to collect votes.';
     return 'Offline — showing the round without live votes.';
   }
+  // Rehearsal only (?game=…): wipe its rounds (votes cascade) to start over.
+  async function resetRehearsal(btn) {
+    if (!gameSuffix || !GAME.host || !window.SurftoberGame) return;
+    if (!confirm(`Clear every round and vote in ${GAME_ID}?`)) return;
+    btn.disabled = true;
+    try { await window.SurftoberGame.resetGame(GAME_ID); GAME.rows.clear(); btn.textContent = 'Cleared ✓'; }
+    catch (e) { btn.textContent = 'Reset failed'; console.error(e); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Reset rehearsal'; }, 2500);
+    gameTick();
+  }
   function drawQR(el) {
     if (!el || el.dataset.done) return;
     const paint = () => {
@@ -611,6 +621,8 @@
         drawQR(el.querySelector('[data-g="qr"]'));
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const players = new Set(vs.map((v) => v.user_id)).size;
+        const rb = el.querySelector('[data-g-reset]');
+        if (rb) rb.hidden = !GAME.host;
         set('host', `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
       } else if (s.game.kind === 'round') {
         const r = s.game.r;
@@ -662,15 +674,18 @@
     const intro = { title: 'Blue Water Task Force', html: `
       <p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2 style="max-width:1500px">${esc(B.mission)}</h2>
       <div class="stats bw-stats">${B.stats.map((s) => `<div class="stat"><div class="v">${esc(s.v)}</div><div class="k">${esc(s.k)}</div></div>`).join('')}</div>${site}` };
-    const media = (m, field) => {
+    const media = (m, field, cls = 'bw-media', alt = '') => {
       if (!m) return todo('Add this slide’s visual from the “bwtf tober” deck', field);
-      if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="bw-media" src="${esc(m)}" autoplay muted loop playsinline></video>`;
-      return `<img class="bw-media" src="${esc(m)}" alt="">`;
+      if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="${cls}" src="${esc(m)}" autoplay muted loop playsinline></video>`;
+      return `<img class="${cls}" src="${esc(m)}" alt="${esc(alt)}">`;
     };
-    const feats = (B.features || []).map((f, i) => ({ title: f.title, html: `
-      <p class="kicker">${esc(B.group)} · Website overview</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
+    const feats = (B.features || []).map((f, i) => ({ title: f.title, cls: 'bw-feature', html: `
+      <p class="kicker">${esc(B.group)} · ${esc(f.kicker || 'Website overview')}</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
       <div class="bw-frame">${media(f.media, `bwtf.features[${i}].media`)}</div>${site}` }));
-    return [intro, ...feats];
+    // Whole slides from the BWTF deck, edge to edge.
+    const full = (key) => (B[key] || []).map((x, i) => ({ title: x.title, cls: 'bw-full',
+      html: media(x.media, `bwtf.${key}[${i}].media`, 'bw-fullimg', x.title) }));
+    return [...full('before'), intro, ...feats, ...full('after')];
   }
 
   function outroSlide() {
@@ -834,6 +849,7 @@
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
     stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
+    stage.classList.toggle('bare', (slides[cur].cls || '') === 'bw-full'); // edge-to-edge picture: no footer over it
     gameOnShow();
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
@@ -854,8 +870,21 @@
     if (open) (o.querySelector('.cur') || o.querySelector('button'))?.focus();
   }
 
+  // BWTF feature media are sized from their aspect ratio (see .bw-feature in
+  // deck.css) so a small GIF still fills the slide. load events don't bubble,
+  // hence capture.
+  const setAr = (e) => {
+    const t = e.target;
+    if (!t.classList || !t.classList.contains('bw-media')) return;
+    const w = t.naturalWidth || t.videoWidth, h = t.naturalHeight || t.videoHeight;
+    if (w && h) t.style.setProperty('--ar', w / h);
+  };
+  document.addEventListener('load', setAr, true);
+  document.addEventListener('loadedmetadata', setAr, true);
+
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!slides.length && e.key !== 'l' && e.key !== 'L') return; // locked / still loading
     if (e.target.closest && e.target.closest('audio')) return; // Space = play/pause there
     if (bookOpen()) {
       switch (e.key) {
@@ -887,6 +916,9 @@
     }
   });
   $('#viewport').addEventListener('click', (e) => {
+    if (e.target.closest('[data-signin]')) { window.SurftoberGame.signIn(); return; }
+    if (e.target.closest('[data-g-reset]')) { resetRehearsal(e.target.closest('[data-g-reset]')); return; }
+    if (!slides.length) return;
     if (e.target.closest('[data-open-book]')) { openFrom(e.target.closest('[data-open-book]')); return; }
     if (e.target.closest('[data-close-book]')) { closeBook(); return; }
     if (bookOpen()) { (e.clientX < innerWidth / 2 ? turn(-1) : turn(1)); return; }
@@ -907,8 +939,22 @@
   });
   addEventListener('resize', fit);
 
+  // On surftober.com the deck opens only for the host (see game.js locked()).
+  async function hostGate() {
+    const G = window.SurftoberGame;
+    const prod = /(^|\.)surftober\.com$/.test(location.hostname);
+    if (G ? !G.locked() : !prod) return true;
+    const s = G ? await G.session() : null;
+    if (G && G.isHost(s)) return true;
+    stage.innerHTML = `<div class="loading"><img src="${LOGO}" alt=""><div>The ceremony deck is for the host.</div>
+      <div class="muted" style="font-size:24px">${s ? `Signed in as ${esc(s.user.email)} — that's not the host account.` : 'Sign in as the host to open it.'}</div>
+      ${G ? `<button type="button" class="lock-btn" data-signin>${s ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
+    return false;
+  }
+
   async function boot() {
     fit();
+    if (!(await hostGate())) return;
     const m = /^#(\d+)(?:\.(\d+))?$/.exec(location.hash);
     if (m && !slides.length) { cur = Number(m[1]) - 1; step = Number(m[2] || 0); }
     try {
@@ -917,6 +963,10 @@
       window.__deck = d; // console poking during rehearsal
       await buildAvatars(d);
       slides = buildSlides(d);
+      if (location.hash === '#game') { // Admin Tools → "Rehearse the game"
+        const g = slides.findIndex((s) => s.game && s.game.kind === 'intro');
+        if (g >= 0) { cur = g; step = 0; }
+      }
       const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       render({ text: `${raw.source === 'live' ? 'Live' : 'Fixture'} · ${fmt(d.stats.sessions)} sessions · ${when}${raw.event.logging_frozen ? '' : ' · logging still open'}` });
     } catch (err) {

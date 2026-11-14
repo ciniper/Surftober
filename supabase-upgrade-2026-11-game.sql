@@ -1,6 +1,6 @@
 -- Surftober: "Who said that?" live game (award-ceremony deck + play.html)
 --
--- NOT APPLIED. Chase reviews and runs this in the Supabase SQL editor.
+-- APPLIED to Surftober2 on 2026-11-08.
 -- Additive only: two new tables, nothing existing is touched. Safe to re-run.
 --
 -- How the game uses it

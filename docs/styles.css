@@ -498,6 +498,7 @@ a.photo-zoom { cursor: zoom-in; display: inline-block; }
 .main-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
 /* Presentation branch: temporary link to the award-ceremony deck */
 .deck-cta { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 12px; padding: 12px 16px; border-radius: 10px; font-weight: 700; text-decoration: none; color: var(--on-accent); background: linear-gradient(135deg, var(--btn-bg, var(--accent)) 0%, var(--btn-bg-strong, var(--accent-strong)) 100%); box-shadow: 0 4px 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+.deck-cta[hidden] { display: none; }
 @media (hover: hover) and (pointer: fine) { .deck-cta:hover { filter: brightness(1.1); } }
 .main-title { margin: 0; font-size: 1.3rem; }
 .main-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 10px; }
