@@ -129,8 +129,80 @@ window.SurftoberDeckConfig = {
   agenda: ['Overview', 'Awards', 'Story Time', 'Quotes'],
 
   // Photo slides: { src, caption }. `src` is a URL or a path under docs/.
+  // 2025's trophies were printed plaques: a red Golden Gate bridge on blue,
+  // "SURFTOBER 2025", and a cable car in the tier colour carrying the name.
+  // Their photos live in the [2025] Surftober Award Ceremony Google Slides.
   trophiesPast: [],  // 2025 deck: "Trophies Previous Years"
   trophiesNow: [],   // 2025 deck: "Trophies 2025"
+
+  // Trophy 2026, the spinner: a section between the two trophy galleries
+  // (orbit video, design changes, engineering challenges, the wave, a live
+  // "guess the print time" vote and the build). Content is from the trophy
+  // branch's design/trophy/README.md log; the videos are renders of preset
+  // v10 (docs/trophy/). Media: a path under docs/ or an https URL, video
+  // (.mp4/.webm/.mov) or image; empty = a dashed "fill me in" box.
+  trophy: {
+    version: 'v10',
+    orbit: 'trophy/orbit.webm', orbitPoster: 'trophy/orbit.jpg',
+    strobe: 'trophy/strobe.webm', strobePoster: 'trophy/strobe.jpg',
+    parts: [  // top of the exploded stack to the bottom, as in the orbit video
+      { name: 'Hub text', note: 'flush navy inlay, two layers deep' },
+      { name: 'Front hub', note: 'tier colour, still on the inner race' },
+      { name: 'Art insert', note: 'the 8-frame wave, 0.2 nozzle, glued in' },
+      { name: 'Body', note: 'Ø98 ring on three arms, ridged rim' },
+      { name: '608 bearing', note: 'bought, sorted by spin-down' },
+      { name: 'Back cap', note: 'finger divot, tier colour' },
+      { name: 'M3 × 12 screw', note: 'clamps hub and cap to the inner race' },
+    ],
+    // One trophy as sliced in Bambu Studio (README v9 / v10), in minutes.
+    perTrophy: [
+      { part: 'insert', min: 62 },  // 0.2 nozzle, 5 per plate: 5 h 12 min
+      { part: 'body', min: 65 },
+      { part: 'hub', min: 23 },
+      { part: 'cap', min: 17 },
+    ],
+    story: [  // kind 'design' → Design changes slide, 'print' → Engineering challenges
+      { kind: 'design', tag: 'v3 · Oct 12', stat: 'All printed', title: 'A fully printed 608 spinner',
+        text: 'The metal spinner with a printed ring became one printed body: a hub on the bearing, three arms and the wave ring at the rim. Only the bearing and a screw are bought.' },
+      { kind: 'design', tag: 'Print 2 · Oct 29', stat: 'Seat lip', title: 'A lip that spins better',
+        text: 'Print 1 wobbled and spun down in about 70% of the time of a reference spinner: the ring wasn’t square to the bearing. A 0.6 mm lip that seats the outer race: “spins much better”.' },
+      { kind: 'design', tag: 'v4 · Oct 30', stat: '2–3× slower', title: 'The magnet that killed the spin',
+        text: 'A neodymium disc behind the bearing preloaded the race and magnetised the balls. It came out. And bearings from one 20-pack spun 10 to 20 s, so every one gets sorted.' },
+      { kind: 'design', tag: 'v9 · Nov 10', stat: '27 → 22 min', title: 'Hub text as an inlay',
+        text: 'Name, SURFTOBER 2026 and “40 HOURS!” are a flush navy inlay only two layers deep: two filament swaps instead of four.' },
+      { kind: 'print', tag: 'v6 · Nov 7', stat: '0.9 mm', title: 'The print-true rule',
+        text: 'At 0.4 the slicer dropped the plover’s outline, legs, eye and lip line. New rule: nothing in any colour, gaps included, under two nozzle lines, checked on the real toolpaths.' },
+      { kind: 'print', tag: 'v7 · Nov 8', stat: '0.2 nozzle', title: 'A glue-in art insert',
+        text: 'The art moved to its own ring, printed flat at 0.2 (every minimum halved) and glued into a pocket in the body, which prints in one colour at 0.4.' },
+      { kind: 'print', tag: 'v9thin · Nov 13', stat: '18 → 13 layers', title: 'A thinner insert',
+        text: 'The insert’s plain base went from 1.0 to 0.5 mm, so the art stands as high on a shallower pocket: two inserts 2 h 59 → 2 h 17.' },
+      { kind: 'print', tag: 'v10 · Nov 15', stat: '6 rounds', title: 'The wave, redrawn',
+        text: 'Barrel, open face, a school of fish, then the lip rebuilt as a falling sheet keyed through hand-drawn poses. The pick: throwcurl4, a spiral lip.' },
+    ],
+    printFigures: [  // Bambu Studio toolpaths, from design/trophy/learnings/
+      { src: 'trophy/slice-0.4.png', caption: '0.4 nozzle: classic walls drop anything under one 0.42 mm line (left); Arachne draws thinner, but a one-line stroke prints as a wobbly bead (right)' },
+      { src: 'trophy/slice-0.2.png', caption: '0.2 nozzle on the insert: eye, collar, legs and bill all print' },
+    ],
+    waveRounds: [  // one frame of each round, drawn from wave-frames.js
+      { tag: 'v5', title: 'Plover in the barrel', src: 'trophy/wave-v5.png' },
+      { tag: 'v6', title: 'Big bird (rejected)', src: 'trophy/wave-v6.png' },
+      { tag: 'v7', title: 'First print, 0.2', src: 'trophy/wave-v7.png' },
+      { tag: 'v8', title: 'A school of fish', src: 'trophy/wave-v8.png' },
+      { tag: 'v10 · r5', title: 'Curtain lip', src: 'trophy/wave-r5.png' },
+      { tag: 'v10 ★', title: 'Spiral lip', src: 'trophy/wave-v10.png', pick: true },
+    ],
+    // Live vote bins (hours): < 25, 25–50, … , 300+.
+    voteBins: [25, 50, 75, 100, 150, 200, 300],
+    build: {
+      // The real total for every trophy, in hours (e.g. 142.5). It is also the
+      // answer the vote reveals, and this file is public: fill it on the day.
+      printHours: null,
+      trophies: null,   // how many were printed; null = this year's 10h+ medal count
+      timelapse: '',    // print timelapse, e.g. 'trophy/timelapse.mp4'
+      assembly: '',     // a trophy being assembled, e.g. 'trophy/assembly.mp4'
+      note: '',
+    },
+  },
 
   // Discussion slides from 2023/2024 — shown as big prompts.
   storyPrompts: ['What was your favorite session, favorite wave?', 'How challenging was it to complete your goal?'],

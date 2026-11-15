@@ -589,6 +589,127 @@
       <div class="reveal gr-result" data-g="result"></div>` };
   }
 
+  // ---------- Trophy 2026: the spinner (from the trophy branch's design log) ----------
+  // Videos play only while their slide is on screen (show() → playMedia), and
+  // the grid's thumbnails show the poster instead of decoding every clip.
+  const TR = CFG.trophy || {};
+  const TB = TR.build || {};
+  const isVideo = (m) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(m || '');
+  const trMedia = (src, field, label, opts = {}) => {
+    if (!src) return `<div class="tr-todo"><b>${esc(label)}</b>${todo('Add the video', field)}</div>`;
+    if (isVideo(src)) return `<video class="tr-video" src="${esc(src)}"${opts.poster ? ` poster="${esc(opts.poster)}"` : ''} muted loop playsinline preload="${opts.preload || 'auto'}" data-auto${opts.restart ? ' data-restart' : ''}${opts.controls ? ' controls' : ''} aria-label="${esc(label)}"></video>`;
+    return `<img class="tr-video" src="${esc(src)}" alt="${esc(label)}">`;
+  };
+  const perTrophyMin = () => (TR.perTrophy || []).reduce((s, p) => s + p.min, 0);
+  const trHm = (min) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min`;
+  const trophyCount = (d) => TB.trophies ?? ['PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'PARTICIPANT'].reduce((s, m) => s + (d.stats.medalCounts[m] || 0), 0);
+  const trHours = (n) => `${fmt(n, Number.isInteger(n) ? 0 : 1)}`;
+
+  function trophySlides(d) {
+    if (!CFG.trophy) return [];
+    const ver = TR.version || 'v10';
+    const section = sectionSlide(`Trophy ${CFG.year}`, 'The Spinner', 'Fully 3D-printed · one 608 bearing · a wave that plays on camera');
+
+    const parts = (TR.parts || []).map((p) => `<li><b>${esc(p.name)}</b><span>${esc(p.note)}</span></li>`).join('');
+    const orbit = { title: `Trophy ${CFG.year} · exploded`, cls: 'tr-orbit', html: `
+      <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · ${esc(ver)}</p><h2>${esc(TR.headline || 'Seven parts, one bearing')}</h2>
+        <ol class="tr-parts">${parts}</ol></div>
+      <div class="tr-stage">${trMedia(TR.orbit, 'trophy.orbit', 'The trophy, assembled then exploded', { poster: TR.orbitPoster, restart: true })}</div>` };
+
+    const card = (c) => `<div class="tr-card"><div class="tr-tag">${esc(c.tag)}</div><div class="tr-stat">${esc(c.stat)}</div><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></div>`;
+    const story = (TR.story || []);
+    const design = { title: 'Trophy · design changes', cls: 'tr-story', html: `
+      <p class="kicker">Trophy ${CFG.year} · v3 → ${esc(ver)}</p><h2>Design changes</h2>
+      <div class="tr-cards">${story.filter((c) => c.kind === 'design').map(card).join('')}</div>` };
+    const figs = (TR.printFigures || []).map((f) => `<figure><img src="${esc(f.src)}" alt="${esc(f.caption)}"><figcaption>${esc(f.caption)}</figcaption></figure>`).join('');
+    const challenges = { title: 'Trophy · engineering challenges', cls: 'tr-story tr-eng', html: `
+      <p class="kicker">Trophy ${CFG.year} · getting the art to print</p><h2>Engineering challenges</h2>
+      <div class="tr-cards">${story.filter((c) => c.kind === 'print').map(card).join('')}</div>
+      ${figs ? `<div class="tr-figs">${figs}</div>` : ''}` };
+
+    const rounds = (TR.waveRounds || []).map((w) => `<figure class="${w.pick ? 'pick' : ''}"><img src="${esc(w.src)}" alt="${esc(w.title)}"><figcaption><b>${esc(w.tag)}</b> ${esc(w.title)}</figcaption></figure>`).join('');
+    const wave = { title: 'Trophy · the wave', cls: 'tr-wave', html: `
+      <div class="tr-strobe">${trMedia(TR.strobe, 'trophy.strobe', 'The wave playing on a phone video', { poster: TR.strobePoster })}</div>
+      <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · the animation</p><h2>Spin it, film it</h2>
+        <p class="tr-lede">Eight frames of a breaking wave sit round the ring. Film it spinning at 30 fps: when the ring turns one slot per video frame, each slot lands where the last one was and the wave plays in place.</p>
+        <div class="tr-rounds">${rounds}</div></div>` };
+
+    return [section, orbit, design, challenges, wave, printVoteSlide(d), buildSlide(d)].filter(Boolean);
+  }
+
+  // Live vote: guess the trophies' total print time (round -1 of the ceremony
+  // game, game.js PRINT_ROUND). Players type hours on play.html; the reveal
+  // writes trophy.build.printHours as the answer and shows the closest guesses.
+  function printBins() {
+    const edges = TR.voteBins || [25, 50, 75, 100, 150, 200, 300];
+    return [...edges.map((hi, i) => ({ lo: i ? edges[i - 1] : 0, hi, label: i ? `${edges[i - 1]}–${hi}` : `< ${hi}` })), { lo: edges[edges.length - 1], hi: Infinity, label: `${edges[edges.length - 1]}+` }];
+  }
+  const binOf = (bins, h) => bins.findIndex((b) => h >= b.lo && h < b.hi);
+  function printVoteSlide(d) {
+    const G = window.SurftoberGame;
+    if (!G || !G.PRINT_ROUND) return null;
+    const r = { round_no: G.PRINT_ROUND, quote: `How many hours did all the ${CFG.year} trophies take to print?`, choices: [] };
+    const cols = printBins().map((b, i) => `<div class="gr-col" data-bin="${i}"><span class="gr-n"></span><span class="gr-bar"><i></i></span><span class="gr-g">${esc(b.label)}</span></div>`).join('');
+    const per = (TR.perTrophy || []).map((p) => `<span>${esc(p.part)} <b>${p.min} min</b></span>`).join('');
+    return { title: 'Guess the print time', cls: 'game grade tr-vote', steps: 1, game: { kind: 'print', r }, html: `
+      <div class="gr-head"><div><p class="kicker">Live vote · Trophy ${CFG.year}</p><h2>How long did the trophies take to print?</h2>
+        <p class="lede" style="font-size:32px;margin-top:14px">All ${trophyCount(d)} trophies, every part. Guess the hours on your phone: <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></p>
+        ${per ? `<p class="tr-hint">One trophy, as sliced: ${per} <span>= <b>${trHm(perTrophyMin())}</b></span></p>` : ''}</div>
+        <div class="g-qr gr-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>
+      <div class="tr-vote-body"><div class="gr-chart tr-chart">${cols}</div>
+        <div class="tr-podium"><div class="tr-pre" data-g="pre"><div class="mystery">?</div><p>Closest guess wins</p></div><div class="reveal" data-g="result"></div></div></div>
+      <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>` };
+  }
+
+  function buildSlide(d) {
+    const total = TB.printHours;
+    const stat = (v, k, field) => `<div class="stat">${v != null && v !== '' ? `<div class="v">${v}</div>` : `<div class="v tr-blank">?</div>`}<div class="k">${k}${v == null || v === '' ? `<br><code>${esc(field)}</code>` : ''}</div></div>`;
+    return { title: 'Trophy · the build', cls: 'tr-build', html: `
+      <p class="kicker">Trophy ${CFG.year} · the build</p><h2>${esc(TB.headline || 'Off the printer, into your hands')}</h2>
+      <div class="stats tr-stats">
+        ${stat(total != null ? `${trHours(total)}<small>h</small>` : null, 'total print time', 'trophy.build.printHours')}
+        ${stat(String(trophyCount(d)), TB.trophies != null ? 'trophies printed' : 'trophies (every 10h+ medal)', 'trophy.build.trophies')}
+        ${stat(perTrophyMin() ? trHm(perTrophyMin()).replace(' h ', '<small>h</small> ').replace(' min', '<small>m</small>') : null, 'per trophy, as sliced', 'trophy.perTrophy')}
+      </div>
+      <div class="tr-media2">
+        <figure>${trMedia(TB.timelapse, 'trophy.build.timelapse', 'Print timelapse', { controls: true, preload: 'metadata' })}<figcaption>Print timelapse</figcaption></figure>
+        <figure>${trMedia(TB.assembly, 'trophy.build.assembly', 'Assembly', { controls: true, preload: 'metadata' })}<figcaption>Assembling a trophy</figcaption></figure>
+      </div>${TB.note ? `<p class="muted" style="font-size:24px;margin-top:18px">${esc(TB.note)}</p>` : ''}` };
+  }
+
+  // Draw the print-time guesses: a histogram, a live median, and after the
+  // reveal the real total with the three closest guesses. Offline (no row),
+  // the reveal still shows the configured total so the slide works anyway.
+  function printTally(el, vs, row, step) {
+    const G = window.SurftoberGame;
+    const set = (k, html) => { const n = el.querySelector(`[data-g="${k}"]`); if (n) n.innerHTML = html; };
+    const bins = printBins(), guesses = vs.map((v) => G.parseGuess(v.choice)).filter((g) => g !== null);
+    const counts = bins.map(() => 0);
+    for (const g of guesses) counts[binOf(bins, g)]++;
+    const max = Math.max(1, ...counts);
+    const answer = row && row.status === 'revealed' && row.answer != null ? Number(row.answer) : (step >= 1 && TB.printHours != null ? Number(TB.printHours) : null);
+    const shown = step >= 1 && answer != null, win = shown ? binOf(bins, answer) : -1;
+    el.querySelectorAll('.gr-col').forEach((c, i) => {
+      c.querySelector('.gr-bar i').style.height = `${(counts[i] / max) * 100}%`;
+      c.querySelector('.gr-n').textContent = counts[i] ? String(counts[i]) : '';
+      c.classList.toggle('win', i === win);
+      c.classList.toggle('dim', shown && i !== win);
+    });
+    const sorted = [...guesses].sort((a, b) => a - b);
+    const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : null;
+    set('count', `${guesses.length} guess${guesses.length === 1 ? '' : 'es'}${median != null ? ` · median ${trHours(Math.round(median * 10) / 10)} h` : ''}`);
+    set('status', row ? (shown ? '' : 'Voting open — guess on your phone') : esc(GAME.note || gameErr(null)));
+    const pre = el.querySelector('[data-g="pre"]');
+    if (pre) pre.hidden = shown;
+    if (!shown) { set('result', step >= 1 ? '<p class="tr-wait">Add the real total in <code>trophy.build.printHours</code> to reveal</p>' : ''); return; }
+    const deck = window.__deck, byId = new Map([...deck.profileOf.entries()].map(([u, p]) => [p.id, u]));
+    const top = G.closest(vs, answer).slice(0, 3).map((x) => {
+      const u = byId.get(x.user_id);
+      return `<li><span class="g-pos">${x.rank}</span>${u ? av(deck, u, 60) : ''}<span class="g-pname">${esc(u ? deck.name(u) : x.voter_name || 'Someone')}</span><span class="tr-guess">${trHours(x.guess)} h<small>${x.off ? `off ${trHours(x.off)}` : 'spot on'}</small></span></li>`;
+    }).join('');
+    set('result', `<div class="tr-actual"><span>Actual</span><b>${trHours(answer)}<small> h</small></b></div>${top ? `<ol class="tr-top">${top}</ol>` : '<p class="tr-wait">No guesses this time</p>'}`);
+  }
+
   // Runtime: poll while a game slide is on screen. The host (admin signed in
   // on this browser) opens each round on arrival and writes the answer at
   // the reveal; anyone else sees a live mirror, or just the round if no rows.
@@ -685,6 +806,22 @@
         set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
         set('status', row ? (shown ? '' : 'Voting open — grade it on your phone') : esc(GAME.note || gameErr(null)));
         set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b>` : '<span>No votes yet — keep voting</span>') : '');
+      } else if (s.game.kind === 'print') {
+        drawQR(el.querySelector('[data-g="qr"]'));
+        const r = s.game.r, ans = TB.printHours;
+        let row = GAME.rows.get(r.round_no);
+        if (!row) {
+          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          if (row) GAME.rows.set(r.round_no, row);
+        }
+        // Reveal writes the real total; with none in the config, voting stays open.
+        if (row && step >= 1 && row.status !== 'revealed' && GAME.host && ans != null) {
+          const done = await G.reveal(row.id, String(ans));
+          row = (done && done[0]) || { ...row, status: 'revealed', answer: String(ans) };
+          GAME.rows.set(r.round_no, row);
+        }
+        const vs = row ? await G.votesFor([row.id]) : [];
+        printTally(el, vs, row, step);
       } else if (s.game.kind === 'board') {
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const rows = G.scoreboard(rs, vs).slice(0, 10);
@@ -697,6 +834,7 @@
       GAME.note = gameErr(e);
       set('status', esc(GAME.note));
       if (s.game.kind === 'intro') set('host', esc(GAME.note));
+      if (s.game.kind === 'print') printTally(el, [], null, step);
       if (s.game.kind === 'round' && step >= 1) el.querySelectorAll('.g-choice').forEach((c) => { c.classList.toggle('right', c.dataset.choice === s.game.r.answer); c.classList.toggle('wrong', c.dataset.choice !== s.game.r.answer); });
     }
   }
@@ -817,6 +955,7 @@
     const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
+      ...trophySlides(d),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow', null, true),
       charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
     let i = 0;
@@ -887,6 +1026,11 @@
     stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
     stage.classList.toggle('bare', (slides[cur].cls || '') === 'bw-full'); // edge-to-edge picture: no footer over it
     gameOnShow();
+    // Slide videos (data-auto) play only on their own slide; data-restart ones
+    // start from the top each time the slide comes up.
+    stage.querySelectorAll('video[data-auto]').forEach((v) => {
+      if (el.contains(v)) { if (v.dataset.restart && st === 0 && v.paused) v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+    });
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;
