@@ -19,6 +19,14 @@
   let polling = false;
   let voteError = '';
   const drafts = new Map();
+  const savedVotes = new Map();
+  const pollMs = 1900 + Math.random() * 200;
+  const resultMs = 6000 + Math.random() * 1000;
+  let resultsAt = 0;
+  let scoreRevision = 0;
+  let stateKey = '';
+  let recheckOwnVote = true;
+
 
   async function myName(s) {
     try {
@@ -110,9 +118,11 @@
     v.innerHTML = `<div class="card"><p class="kicker">Live vote · Trophy ${esc(CFG.year || '')}</p><p class="quote">${esc(round.quote)}</p></div>${body || ''}${voteNotice()}`;
   }
   async function refreshScore() {
+    const revision = ++scoreRevision;
     try {
       const rs = await G.rounds(GAME_ID);
-      const vs = await G.votesFor(rs.map((r) => r.id));
+      const vs = await G.playerVotesFor(rs.filter(G.isQuiz).map((r) => r.id), me.session.user.id);
+      if (revision !== scoreRevision) return;
       const mine = G.scoreboard(rs, vs).find((x) => x.user_id === me.session.user.id);
       const revealed = rs.filter((r) => G.isQuiz(r) && r.status === 'revealed').length;
       $('#score').innerHTML = revealed ? `Your score: <b>${mine ? mine.right : 0}</b> / ${revealed}` : '';
@@ -122,16 +132,36 @@
   async function tick() {
     if (document.hidden || !me || polling) return;
     polling = true;
+    const refreshOwn = recheckOwnVote;
+    recheckOwnVote = false;
     try {
-      const state = await G.ceremonyState(GAME_ID);
-      const r = state?.active_round_id ? await G.roundById(state.active_round_id) : null;
-      const votes = r ? await G.votesFor([r.id]) : [];
-      if (r?.id !== round?.id) { voteError = ''; }
+      const state = await G.phoneState(GAME_ID);
+      const id = state?.active_round_id || undefined;
+      const changedRound = id !== round?.id;
+      const nextStateKey = JSON.stringify([id, state?.active?.status, state?.active?.answer, state?.voting_closed]);
+      const changedState = nextStateKey !== stateKey;
+      const snapshot = changedRound && id ? await G.roundById(id) : round;
+      const r = id && snapshot ? { ...snapshot, ...state.active } : null;
+      let own = myChoice;
+      const savedAtStart = savedVotes.get(id);
+      if (changedRound || refreshOwn) {
+        const entries = id ? await G.playerVotesFor([id], me.session.user.id) : [];
+        own = entries[0]?.choice ?? null;
+      }
+      const revealed = r?.status === 'revealed';
+      if (revealed && r.round_no <= 0 && (changedState || Date.now() >= resultsAt)) {
+        activeVotes = await G.votesFor([r.id]);
+        resultsAt = Date.now() + resultMs;
+      } else if (changedRound) {
+        activeVotes = [];
+      }
+      if (changedRound) voteError = '';
       round = r;
       closed = !!state?.voting_closed;
-      activeVotes = votes;
-      myChoice = votes.find((x) => x.user_id === me.session.user.id)?.choice ?? null;
-      const revealed = round?.status === 'revealed';
+      myChoice = savedVotes.get(id) !== savedAtStart ? savedVotes.get(id) : own;
+      const needsScore = !stateKey || (revealed && G.isQuiz(round) && changedState);
+      stateKey = nextStateKey;
+      const votes = activeVotes;
       const rank = revealed && round.round_no === G.PRINT_ROUND ? G.closest(votes, round.answer) : [];
       const mine = rank.find((r) => r.user_id === me.session.user.id);
       guessRank = mine ? { rank: mine.rank, of: rank.length } : null;
@@ -142,9 +172,10 @@
         const focused = document.activeElement?.id === 'guess' && round?.round_no === G.PRINT_ROUND;
         render();
         if (focused) $('#guess')?.focus({ preventScroll: true });
-        refreshScore();
       }
+      if (needsScore) refreshScore();
     } catch (e) {
+      recheckOwnVote ||= refreshOwn;
       $('#view').innerHTML = `<div class="card"><p class="note">${e.missingTables ? "The game isn't set up yet — hang tight." : 'Connection hiccup — retrying…'}</p></div>`;
       lastKey = '';
     } finally { polling = false; }
@@ -153,13 +184,17 @@
   async function saveVote(choice) {
     if (!round || closed || pendingChoice() || !me) return;
     const id = round.id;
+    const quiz = G.isQuiz(round);
     inFlight.set(id, choice);
     voteError = '';
     render();
     try {
       await G.vote(id, me.session, me.name, choice);
+      savedVotes.set(id, choice);
       drafts.delete(id);
+      if (round?.id === id && round.round_no <= 0) resultsAt = 0;
       if (round?.id === id) myChoice = choice;
+      if (quiz) refreshScore();
     } catch {
       if (round?.id === id) voteError = 'Your vote was not saved. Check the prompt and try again.';
     } finally {
@@ -185,14 +220,13 @@
     }
     saveVote(String(guess));
   });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { recheckOwnVote = true; tick(); } });
 
   (async function boot() {
     const s = await G.session();
     if (s) me = { session: s, name: await myName(s) };
     render();
     if (!me) return;
-    tick(); refreshScore();
-    setInterval(tick, 1500);
+    setTimeout(() => { tick(); setInterval(tick, pollMs); }, Math.random() * 350);
   })();
 })();
