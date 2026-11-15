@@ -71,7 +71,9 @@
 
   // ---------- reads (anyone) ----------
   const rounds = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.asc`);
-  const latestRound = async (gameId) => (await req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.desc&limit=1`))[0] || null;
+  // Latest = most recently opened, so the surf-grade poll (round 0) and the
+  // quiz rounds (1..n) each take over the phones when the deck reaches them.
+  const latestRound = async (gameId) => (await req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=created_at.desc,round_no.desc&limit=1`))[0] || null;
   const votesFor = (ids) => (ids.length ? req(`game_votes?round_id=in.(${ids.map(enc).join(',')})&select=round_id,user_id,voter_name,choice`) : Promise.resolve([]));
 
   // ---------- host writes (admin; RLS enforces) ----------
@@ -92,9 +94,46 @@
     });
   }
 
+  // ---------- surf grade poll (round 0 of the same game) ----------
+  // "Grade October's surf": every vote is a school grade; the crew grade is
+  // the mean on a 0 (F) … 12 (A+) scale, rounded to the nearest grade.
+  const GRADE_ROUND = 0;
+  const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+  // Polls (round_no ≤ 0: the surf grade, the trophy print-time guess) never
+  // count toward the "Who said that?" score.
+  const isQuiz = (r) => r.round_no > 0;
+  function crewGrade(votes) {
+    const pts = votes.map((v) => GRADES.indexOf(v.choice)).filter((i) => i >= 0).map((i) => GRADES.length - 1 - i);
+    if (!pts.length) return null;
+    const mean = pts.reduce((a, b) => a + b, 0) / pts.length;
+    return { grade: GRADES[GRADES.length - 1 - Math.round(mean)], mean, n: pts.length };
+  }
+
+  // ---------- trophy print-time guess (round -1 of the same game) ----------
+  // "How long did the trophies take to print?": each vote is a number of
+  // hours, kept as text in game_votes.choice (the round's choices are []).
+  // The deck writes the real total as the answer at the reveal; the closest
+  // guesses win. No SQL change: choice is free text.
+  const PRINT_ROUND = -1;
+  const MAX_GUESS = 10000;
+  function parseGuess(s) {
+    const n = Number(String(s ?? '').replace(/,/g, '').replace(/\s*h(ours?|rs?)?\s*$/i, '').trim());
+    return Number.isFinite(n) && n > 0 && n <= MAX_GUESS ? Math.round(n * 10) / 10 : null;
+  }
+  // Valid guesses sorted by distance from the answer; ties share a rank.
+  function closest(votes, answer) {
+    const a = Number(answer);
+    if (!Number.isFinite(a)) return [];
+    const rows = votes.map((v) => ({ ...v, guess: parseGuess(v.choice) })).filter((v) => v.guess !== null)
+      .map((v) => ({ ...v, off: Math.round(Math.abs(v.guess - a) * 10) / 10 }))
+      .sort((x, y) => x.off - y.off || String(x.voter_name || '').localeCompare(String(y.voter_name || '')));
+    rows.forEach((r, i) => { r.rank = i && r.off === rows[i - 1].off ? rows[i - 1].rank : i + 1; });
+    return rows;
+  }
+
   // ---------- scoring (client side, from rounds + votes) ----------
   function scoreboard(roundList, votes) {
-    const answer = new Map(roundList.filter((r) => r.status === 'revealed').map((r) => [r.id, r.answer]));
+    const answer = new Map(roundList.filter((r) => isQuiz(r) && r.status === 'revealed').map((r) => [r.id, r.answer]));
     const by = new Map();
     for (const v of votes) {
       if (!answer.has(v.round_id)) continue;
@@ -135,5 +174,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, MAX_GUESS, parseGuess, closest };
 })();
