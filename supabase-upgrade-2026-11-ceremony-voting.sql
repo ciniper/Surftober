@@ -85,6 +85,19 @@ begin
     raise exception 'Only the host can reset the ceremony' using errcode = '42501';
   end if;
 
+  -- Keep the confirmed round set stable through the reset.
+  lock table public.game_rounds in share row exclusive mode;
+  -- Drain vote writes before taking the ceremony state lock.
+  lock table public.game_votes in share row exclusive mode;
+
+  if round_ids is null or exists (
+    select 1 from public.game_rounds
+    where (game_id = ceremony_id or starts_with(game_id, ceremony_id || '-'))
+      and (id = any(round_ids)) is not true
+  ) then
+    raise exception 'Ceremony rounds changed. Reload and try the reset again.';
+  end if;
+
   update public.ceremony_state
     set active_round_id = null, voting_closed = false, published_at = null
     where game_id = ceremony_id or starts_with(game_id, ceremony_id || '-');
