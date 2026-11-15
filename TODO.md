@@ -11,12 +11,44 @@
       play.html comes back to that page (sessionStorage surftober_next, read
       in app.js). The lock hides the deck; deck-config.js is still a public
       file — fill judged winners on the day.
-- [ ] **⚠️ Chase: rehearse the game** — on surftober.com: Account → Admin
-      Tools → Rehearse the game, plus a phone on the QR's play link. "Reset
-      rehearsal" (top right of the intro slide) clears the practice rounds.
+- [ ] **⚠️ Chase: rehearse the game, then reset it** — rehearsal mode is
+      gone (2026-11-14): there is one game, 5th-surftober-2026-ceremony.
+      Account → Admin Tools → Open the game, plus a phone on the QR's play
+      link. When done, Account → Admin Tools → Reset the game clears every
+      round and vote (and any old -rehearsal rounds), then reload the deck.
 - [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
       "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
       and wired via bwtf.features[i].media (2026-11-08).
+- [x] **Surf grade vote** (Chase, 2026-11-15) — "Grade October's surf"
+      slide after the Surf & weather recap: the crew votes A+…F on
+      play.html (round 0 of the ceremony game, so Reset the game clears it
+      too; it never counts toward the quiz score). Reveal = crew grade, the
+      mean on F=0…A+=12 rounded to the nearest grade. Needs at least one
+      vote to reveal. v1.63.0.
+- [x] **Trophy slides left to right** (2026-11-15) — trophiesPast /
+      trophiesNow photos sit in one row in config order (list oldest first).
+- [x] **Trophy 2026 section in the deck** (Chase, 2026-11-15, v1.64.0) —
+      between the two trophy galleries: "The Spinner" section, an orbit video
+      (assembled → exploded → side view, docs/trophy/orbit.webm), Design
+      changes and Engineering challenges (from the trophy branch's README log,
+      v3 → v10), "Spin it, film it" (the phone-video strobe clip + one frame
+      of each wave round), a live **guess the print time** vote (round -1 of
+      the ceremony game: players type hours on play.html, the reveal writes
+      trophy.build.printHours and shows the 3 closest; Reset the game clears
+      it; no SQL change) and the build slide. Content lives in
+      deck-config.js `trophy`. Videos are renders of preset v10 with a
+      generic "SURFER" hub (real CAD body/hub/text/cap + the viewer's
+      coloured insert), from a scratch recorder, not committed.
+- [ ] **⚠️ Chase: fill the trophy section** (deck-config.js) —
+      `trophy.build.printHours` (the vote's answer: fill it on the day, the
+      file is public), `trophy.build.timelapse` and `trophy.build.assembly`
+      (drop the videos in docs/trophy/), `trophy.build.trophies` if it isn't
+      the 10h+ medal count (43 today), and the photos for `trophiesPast`
+      (2025: they're in the [2025] Surftober Award Ceremony Google Slides)
+      and `trophiesNow`.
+- [ ] **Trophy: the apps to see the animation** (Chase, 2026-11-11) — the
+      one piece of the original trophy-slides ask not built: which phone
+      camera apps (or settings) show the wave playing.
 
 ## Branch: photography-bonus (built here — merge to main when Chase says go)
 

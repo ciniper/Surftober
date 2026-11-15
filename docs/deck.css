@@ -192,6 +192,8 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .gallery figure { margin: 0; border-radius: 20px; overflow: hidden; background: var(--panel); border: 1.5px solid var(--line); display: flex; flex-direction: column; }
 .gallery img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; }
 .gallery figcaption { padding: 14px 20px; font-size: 24px; color: var(--text-2); }
+.gallery.row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.gallery.row img { object-fit: contain; }
 
 /* ---------- award slides ---------- */
 .slide.award { justify-content: flex-start; }
@@ -361,11 +363,111 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .g-foot .g-status { margin: 0; }
 .g-ans { font-size: 32px; color: var(--text-2); }
 .g-ans b { color: var(--highlight-text); }
+/* Surf grade vote: 13 columns A+ … F, tallest = most votes. */
+.gr-head { display: flex; gap: 60px; align-items: flex-start; justify-content: space-between; }
+.gr-qr { width: 220px; height: 220px; padding: 10px; border-radius: 18px; }
+.gr-chart { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(13, 1fr); gap: 16px; margin-top: 26px; align-items: end; }
+.gr-col { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; transition: opacity .4s; }
+.gr-bar { width: 100%; flex: 1; min-height: 0; display: flex; align-items: flex-end; border-radius: 12px; background: var(--line); overflow: hidden; }
+.gr-bar i { display: block; width: 100%; height: 0; background: linear-gradient(180deg, var(--sun-1), var(--accent)); transition: height .6s cubic-bezier(.2,.8,.2,1); }
+.gr-n { font: 800 34px var(--display); font-variant-numeric: tabular-nums; min-height: 40px; }
+.gr-g { font: 800 40px var(--display); }
+.gr-col.win .gr-g { color: var(--highlight-text); }
+.gr-col.win .gr-bar { box-shadow: 0 0 0 5px var(--accent); }
+.gr-col.dim { opacity: .4; }
+.grade .num { font: 700 26px/1 var(--body); color: var(--text-3); letter-spacing: .12em; white-space: nowrap; }
+.gr-result { position: absolute; top: 90px; right: 360px; font: 800 64px var(--display); text-align: right; }
+.gr-result b { font-size: 150px; color: var(--highlight-text); display: block; line-height: 1; }
+.gr-result span { display: block; font: 600 24px var(--body); color: var(--text-2); margin-top: 8px; }
 .g-rank { list-style: none; padding: 0; margin: 30px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; }
 .g-rank li { display: flex; align-items: center; gap: 18px; padding: 14px 20px; border-radius: 16px; background: var(--panel); border: 1.5px solid var(--line); font-size: 32px; }
 .g-pos { font: 800 30px var(--display); color: var(--text-3); width: 40px; text-align: right; }
 .g-pname { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-pts { font: 800 34px var(--display); font-variant-numeric: tabular-nums; color: var(--highlight-text); }
+
+/* ---------- Trophy 2026: the spinner ---------- */
+.tr-video { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 22px; background: #f3ece2; border: 1.5px solid var(--line); box-shadow: var(--shadow); }
+.tr-todo { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+.tr-todo > b { font: 800 40px var(--display); }
+.tr-todo .todo { margin-top: 16px; }
+/* Orbit: title + parts list on the left, the video big on the right. */
+.slide.tr-orbit { flex-direction: row; gap: 56px; padding: 80px 90px 110px 120px; align-items: center; }
+.tr-orbit .tr-side { width: 520px; flex: none; }
+.tr-orbit h2 { font-size: 76px; }
+.tr-parts { list-style: none; padding: 0; margin: 36px 0 0; counter-reset: p; display: grid; gap: 14px; }
+.tr-parts li { counter-increment: p; display: grid; grid-template-columns: 44px 1fr; column-gap: 12px; font-size: 22px; color: var(--text-2); line-height: 1.25; }
+.tr-parts li::before { content: counter(p); grid-row: span 2; font: 800 28px/1 var(--display); color: var(--accent-text); padding-top: 3px; }
+.tr-parts b { font: 700 28px/1.15 var(--display); color: var(--text); }
+.tr-stage { flex: 1; min-width: 0; aspect-ratio: 16 / 9; }
+/* Design changes / engineering challenges: four cards in a row. */
+.tr-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin-top: 44px; }
+.tr-card { background: var(--panel); border: 1.5px solid var(--line); box-shadow: var(--shadow); border-radius: 24px; padding: 28px 30px 30px; display: flex; flex-direction: column; }
+.tr-tag { font: 700 20px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.tr-stat { font: 800 60px/1.05 var(--display); letter-spacing: -0.02em; color: var(--highlight-text); margin: 18px 0 16px; white-space: nowrap; }
+.tr-card h3 { font: 800 32px/1.15 var(--display); margin: 0 0 12px; }
+.tr-card p { margin: 0; font-size: 23px; line-height: 1.4; color: var(--text-2); }
+.tr-story:not(.tr-eng) .tr-cards { flex: 1; margin-bottom: 20px; }
+.tr-story:not(.tr-eng) .tr-card p { font-size: 27px; }
+.tr-story:not(.tr-eng) .tr-stat { font-size: 58px; margin: 26px 0 22px; }
+.tr-eng h2 { font-size: 76px; }
+.tr-eng .tr-cards { margin-top: 32px; }
+.tr-eng .tr-card { padding: 22px 26px 24px; }
+.tr-eng .tr-stat { font-size: 48px; margin: 12px 0 10px; }
+.tr-eng .tr-card h3 { font-size: 28px; margin-bottom: 8px; }
+.tr-eng .tr-card p { font-size: 21px; }
+.tr-figs { display: grid; grid-template-columns: 1.15fr 1fr; gap: 26px; margin-top: 26px; align-items: start; }
+.tr-figs figure { margin: 0; }
+.tr-figs img { display: block; height: 290px; width: 100%; object-fit: contain; border-radius: 16px; background: #fff; border: 1.5px solid var(--line); padding: 8px; }
+.tr-figs figcaption { font-size: 20px; color: var(--text-2); margin-top: 10px; line-height: 1.3; }
+/* The wave: the phone-video clip square on the left, the six rounds on the right. */
+.slide.tr-wave { flex-direction: row; gap: 60px; padding: 80px 110px 110px 100px; align-items: center; }
+.tr-strobe { height: 860px; aspect-ratio: 1; flex: none; }
+.tr-wave .tr-side { flex: 1; min-width: 0; }
+.tr-wave h2 { font-size: 80px; }
+.tr-lede { font-size: 27px; line-height: 1.4; color: var(--text-2); margin: 20px 0 0; }
+.tr-rounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 18px; margin-top: 34px; }
+.tr-rounds figure { margin: 0; }
+.tr-rounds img { display: block; width: 100%; aspect-ratio: 900 / 511; object-fit: cover; object-position: center bottom; border-radius: 12px; border: 1.5px solid var(--line); }
+.tr-rounds figcaption { font-size: 19px; color: var(--text-2); margin-top: 8px; }
+.tr-rounds figcaption b { color: var(--text); margin-right: 4px; }
+.tr-rounds .pick img { box-shadow: 0 0 0 5px var(--accent); border-color: var(--accent); }
+.tr-rounds .pick figcaption b { color: var(--highlight-text); }
+/* Guess the print time: histogram on the left, the reveal podium on the right. */
+.tr-vote h2 { font-size: 76px; }
+.tr-hint { font-size: 22px; color: var(--text-3); margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.tr-hint b { color: var(--text-2); }
+.tr-vote-body { flex: 1; min-height: 0; display: flex; gap: 40px; margin-top: 24px; }
+.tr-chart { margin-top: 0; grid-template-columns: repeat(8, 1fr); }
+.tr-chart .gr-g { font-size: 26px; white-space: nowrap; }
+.tr-podium { width: 560px; flex: none; position: relative; }
+.tr-pre { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border: 3px dashed var(--line); border-radius: 24px; }
+.tr-pre[hidden] { display: none; }
+.tr-pre .mystery { position: static; font: 800 150px/1 var(--display); color: var(--mystery); -webkit-text-stroke: 3px var(--line); }
+.tr-pre p { margin: 0; font: 700 28px var(--body); color: var(--text-2); }
+.tr-actual { display: flex; align-items: baseline; gap: 18px; }
+.tr-actual span { font: 700 26px var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); }
+.tr-actual b { font: 800 128px/1 var(--display); color: var(--highlight-text); letter-spacing: -0.03em; }
+.tr-actual small { font-size: .4em; }
+.tr-top { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; }
+.tr-top li { display: flex; align-items: center; gap: 16px; padding: 12px 18px; border-radius: 16px; background: var(--panel); border: 1.5px solid var(--line); font-size: 28px; }
+.tr-top li:first-child { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,107,53,.18); }
+.tr-guess { font: 800 32px var(--display); text-align: right; font-variant-numeric: tabular-nums; }
+.tr-guess small { display: block; font: 600 17px var(--body); color: var(--text-3); }
+.tr-wait { font-size: 26px; color: var(--text-2); }
+.tr-wait code { font: 600 22px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--highlight-text); }
+/* The build: three stats, then the two videos side by side. */
+.tr-stats { grid-template-columns: repeat(3, 1fr); margin-top: 36px; }
+.tr-stats .stat { padding: 26px 32px 24px; }
+.tr-stats .v { font-size: 88px; }
+.tr-stats .v.tr-blank { color: var(--line); }
+.tr-stats .k code { font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--highlight-text); }
+.tr-media2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; flex: 1; min-height: 0; }
+.tr-media2 figure { margin: 0; display: flex; flex-direction: column; min-height: 0; }
+.tr-media2 .tr-video, .tr-media2 .tr-todo { flex: 1; min-height: 0; height: auto; }
+.tr-media2 .tr-todo { border: 3px dashed rgba(209,71,15,.35); border-radius: 22px; padding: 0 36px; }
+.tr-media2 .tr-todo > b { display: none; }
+.tr-media2 .tr-todo .todo { border: 0; padding: 0; margin: 0; background: none; }
+.tr-media2 figcaption { font: 700 26px var(--display); margin-top: 12px; }
 
 /* ---------- Blue Water Task Force ---------- */
 .bw-stats { grid-template-columns: repeat(3, 1fr); margin-top: 70px; }
@@ -416,7 +518,5 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .keys.open { display: block; }
 .keys kbd { font: 600 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--text); }
 
-/* Host lock (surftober.com) and the rehearsal reset button */
+/* Host lock (surftober.com) */
 .lock-btn { font: 700 28px var(--body); padding: 18px 44px; border-radius: 999px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--sun-1), var(--accent)); box-shadow: var(--shadow); }
-.g-reset { position: absolute; top: 40px; right: 120px; z-index: 3; font: 600 22px var(--body); padding: 10px 22px; border-radius: 999px; cursor: pointer; color: var(--text-2); background: var(--panel); border: 1.5px solid var(--line); }
-.g-reset[hidden] { display: none; }
