@@ -72,6 +72,12 @@
   // ---------- reads (anyone) ----------
   const rounds = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.asc`);
   const ceremonyState = async (gameId) => (await req(`ceremony_state?game_id=eq.${enc(gameId)}&select=*`))[0] || null;
+  const phoneState = async (gameId) => (await req(
+    `ceremony_state?game_id=eq.${enc(gameId)}&select=active_round_id,voting_closed,active:game_rounds!active_round_id(status,answer)`
+  ))[0] || null;
+  const playerVotesFor = (ids, userId) => ids.length ? req(
+    `game_votes?round_id=in.(${ids.map(enc).join(',')})&user_id=eq.${enc(userId)}&select=round_id,user_id,choice`
+  ) : Promise.resolve([]);
   const roundById = async (id) => (await req(`game_rounds?id=eq.${enc(id)}&select=*`))[0] || null;
   const updateCeremony = (gameId, changes) => req('ceremony_state?on_conflict=game_id', {
     method: 'POST', prefer: 'resolution=merge-duplicates,return=representation',
@@ -192,5 +198,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, MAX_GUESS, parseGuess, closest };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, MAX_GUESS, parseGuess, closest };
 })();
