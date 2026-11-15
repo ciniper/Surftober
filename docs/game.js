@@ -71,17 +71,20 @@
 
   // ---------- reads (anyone) ----------
   const rounds = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.asc`);
-  // Latest = most recently opened, so the surf-grade poll (round 0) and the
-  // quiz rounds (1..n) each take over the phones when the deck reaches them.
-  const latestRound = async (gameId) => (await req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=created_at.desc,round_no.desc&limit=1`))[0] || null;
+  const ceremonyState = async (gameId) => (await req(`ceremony_state?game_id=eq.${enc(gameId)}&select=*`))[0] || null;
+  const roundById = async (id) => (await req(`game_rounds?id=eq.${enc(id)}&select=*`))[0] || null;
+  const updateCeremony = (gameId, changes) => req('ceremony_state?on_conflict=game_id', {
+    method: 'POST', prefer: 'resolution=merge-duplicates,return=representation',
+    body: { game_id: gameId, ...changes },
+  });
   const votesFor = (ids) => (ids.length ? req(`game_votes?round_id=in.(${ids.map(enc).join(',')})&select=round_id,user_id,voter_name,choice`) : Promise.resolve([]));
 
   // ---------- host writes (admin; RLS enforces) ----------
   async function openRound(gameId, r) {
     const existing = (await req(`game_rounds?game_id=eq.${enc(gameId)}&round_no=eq.${r.round_no}&select=*`))[0];
     if (existing) return existing;
-    const made = await req('game_rounds', { method: 'POST', prefer: 'return=representation', body: { game_id: gameId, round_no: r.round_no, quote: r.quote, choices: r.choices, status: 'open' } });
-    return made && made[0];
+    const made = await req('game_rounds?on_conflict=game_id,round_no', { method: 'POST', prefer: 'resolution=ignore-duplicates,return=representation', body: { game_id: gameId, round_no: r.round_no, quote: r.quote, choices: r.choices, status: 'open' } });
+    return made?.[0] || (await rounds(gameId)).find((row) => row.round_no === r.round_no);
   }
   const reveal = (roundId, answer) => req(`game_rounds?id=eq.${enc(roundId)}`, { method: 'PATCH', prefer: 'return=representation', body: { status: 'revealed', answer } });
   const resetGame = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}`, { method: 'DELETE' }); // votes cascade
@@ -115,10 +118,25 @@
   // The deck writes the real total as the answer at the reveal; the closest
   // guesses win. No SQL change: choice is free text.
   const PRINT_ROUND = -1;
+  const COSTUME_ROUND = -2;
+  function costumeCandidates(config) {
+    const seen = new Set();
+    return (config.bestDressedCandidates || []).flatMap((candidate) => {
+      const name = String(candidate?.name || '').trim();
+      const photo = String(candidate?.photo || '').trim();
+      if (!name || !photo || seen.has(name) || /^(?:[\w+.-]+:|\/\/)/.test(photo) && !photo.startsWith('https://')) return [];
+      seen.add(name);
+      return [{ name, photo }];
+    }).slice(0, 4);
+  }
+  function costumeResults(choices, votes) {
+    return choices.map((name) => ({ name, votes: votes.filter((v) => v.choice === name).length }))
+      .sort((a, b) => b.votes - a.votes);
+  }
   const MAX_GUESS = 10000;
   function parseGuess(s) {
     const n = Number(String(s ?? '').replace(/,/g, '').replace(/\s*h(ours?|rs?)?\s*$/i, '').trim());
-    return Number.isFinite(n) && n > 0 && n <= MAX_GUESS ? Math.round(n * 10) / 10 : null;
+    return Number.isFinite(n) && n >= 0.1 && n <= MAX_GUESS ? Math.round(n * 10) / 10 : null;
   }
   // Valid guesses sorted by distance from the answer; ties share a rank.
   function closest(votes, answer) {
@@ -174,5 +192,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, MAX_GUESS, parseGuess, closest };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, MAX_GUESS, parseGuess, closest };
 })();
