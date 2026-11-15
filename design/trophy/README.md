@@ -98,7 +98,7 @@ URL, the generator (`--url` or flags) and the manifest.
 
 | option | values | default | what |
 |---|---|---|---|
-| `version` | text, ≤ 12 | v9 | prefix on every output file (`v9-nahla-3arm-ploverschool8-n02-insert-brown-body-cap-slim-…-body.stl`); bump per print round |
+| `version` | text, ≤ 12 | v10 | prefix on every output file (`v10-nahla-3arm-ploverschool8-n02-insert-brown-body-cap-slim-…-body.stl`); bump per print round |
 | `name` | text, ≤ 16 | NAHLA | on the still hub, along the bottom |
 | `body` | tier · brown · bone | tier | the spinning body's filament; with `ring=insert` the insert is always the tier colour, so `brown`/`bone` make the gold ring the medal on a plain wheel (preset `insert`) |
 | `tier` | gold · silver · bronze · participant | gold | body colour, or the metal when a weight is fitted |
@@ -123,7 +123,7 @@ URL, the generator (`--url` or flags) and the manifest.
 | `nozzle` | 0.4 · 0.2 | 0.4 | the `-bambu.3mf` is written for this nozzle: stock X1C printer, process and filament profiles for it, Arachne walls. 0.2 = 0.10 mm layers (the 0.4 / 0.8 relief steps stay on layer lines), ~3.5× the ring's print time, every minimum feature halved |
 | `screw` | m3 · none | m3 | **centre screw** (v5): M3 × 12 countersunk from the back, through the cap, self-tapping into the hub's stem — clamps hub and cap to the inner race · none = press-fit stems only (v4) |
 | `parts` | comma list | all | which parts to show / generate |
-| `preset` | **v9** (★ v8 + hub text 30% larger as a flush 2-layer navy inlay, "40" over "HOURS!") · v8 (ploverschool, glue-in insert, brown body, 0.2, 2/plate, tier hub + slim cap) · v8flat (the same, flat cap) · insert (the v7 build as printed: ploverleanfine, navy hub, orange divot cap) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
+| `preset` | **v10** (★ v9thin with throwcurl4, the spiral-lip throw) · v9thin (v9 on the 0.5 insert base) · v9 (v8 + hub text 30% larger as a flush 2-layer navy inlay, "40" over "HOURS!") · v8 (ploverschool, glue-in insert, brown body, 0.2, 2/plate, tier hub + slim cap) · v8flat (the same, flat cap) · insert (the v7 build as printed: ploverleanfine, navy hub, orange divot cap) · full · inlays · testring · stillset · bezel · cog · plain | — | seeds the options; explicit values win |
 
 ## Parts
 
@@ -489,6 +489,12 @@ Bambu project on the textured PEI plate at 100% rectilinear infill, hub and cap 
 two text layers. Sliced, no warnings: body 1 h 5 min (42.7 g) · hub 23 min 15 s (8.5 g gold + 0.7 g navy, 2 swaps)
 · slim cap 17 min 16 s (7.0 g) · 2 inserts at 0.2: 2 h 59 min (11.9 / 3.0 / 2.3 g). Wall check in the G-code:
 hub z 0.2 and 0.4 one wall (outer only), from z 0.6 on ~6; cap ~6 throughout.
+
+**v10 — throwcurl4 (2026-11-15).** After the thin insert base (preset `v9thin`, 2026-11-13: the insert's plain ring
+0.5 thick, the body pocket 0.5 deep) and round 6 of the throw, Chase's final four were throwcurl4,
+throwcurl3fulloffshore, throwcurtain3a and ploverfish; he went forward with **throwcurl4** (the spiral lip). Preset
+**`v10`** ★ = `v9thin` + `wave=throwcurl4`; `version` defaults to v10, and presets v9 / v9thin pin v9. Production
+inserts: `insert_batch.py throwcurl4 ×5` (defaults to preset v10), 5 per plate, 13 layers, 5 h 12 min (~62 min each).
 
 ## Animations — the plover in the barrel, the hollow throw (v5)
 

@@ -6,7 +6,7 @@
 
 roster.json: {"tier": "participant", "people": [{"name": "FIRSTNAME", "hours": 15}, …]}   (keep it in out/, which is gitignored)
 
-Each hub is the preset's front hub (default preset v9: tier-colour hub, flush navy text on 2 layers, "X HOURS!" stacked
+Each hub is the preset's front hub (default preset v10, the same hub as v9: tier-colour hub, flush navy text on 2 layers, "X HOURS!" stacked
 in the centre) with that person's name and hours. All the hubs share one plate, so the navy text — only in the first
 two layers — costs 2 filament swaps for the whole plate, not 2 per hub. Every hub keeps the baked hub settings
 (6 walls, 1 over the text layers, 100% infill, textured PEI). Hubs go on a 4 × 4 grid, 58 mm pitch, less the spot on
@@ -28,7 +28,7 @@ SPOTS = [(x, y) for r in range(ROWS) for c in range(COLS) for x, y in [(X0 + c *
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('roster')
-    ap.add_argument('--url', default='preset=v9', help='base options (the name, hours and tier come from the roster)')
+    ap.add_argument('--url', default='preset=v10', help='base options (the name, hours and tier come from the roster)')
     ap.add_argument('--out', default=os.path.join(S.HERE, 'out'))
     ap.add_argument('--stl', action='store_true', help='also write each hub + text as STLs')
     a = ap.parse_args()
