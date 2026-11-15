@@ -5,8 +5,8 @@
     .venv/bin/python insert_batch.py ploverschool ploverfish --url "preset=v9&tier=silver"
     .venv/bin/python insert_batch.py throwcurl4 throwcurl4 throwcurl4 throwcurl4      # a production plate: 4 of one
 
-Each insert is the preset's art ring (default preset v9thin: the 0.5 base, 5 layers at 0.1) split into ring + navy
-water + cream foam on AMS slots 1 (tier colour), 2, 3, at the preset's nozzle (0.2 for v9/v9thin). Up to 5 per plate,
+Each insert is the preset's art ring (default preset v10: throwcurl4, the 0.5 base, 5 layers at 0.1) split into ring + navy
+water + cream foam on AMS slots 1 (tier colour), 2, 3, at the preset's nozzle (0.2 for v9/v9thin/v10). Up to 5 per plate,
 laid out like Chase's hand-made plate 4 ("v9 - animation.3mf", 2026-11-13), prime tower where he put it, above the middle.
 """
 import argparse, os, time
@@ -21,7 +21,7 @@ TOWER = (110, 204)      # the prime tower's corner, where Chase put it on plate 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('waves', nargs='+')
-    ap.add_argument('--url', default='preset=v9thin', help='base options (the wave comes from the list)')
+    ap.add_argument('--url', default='preset=v10', help='base options (the wave comes from the list)')
     ap.add_argument('--out', default=os.path.join(S.HERE, 'out'))
     ap.add_argument('--name', help='output file name (default <version>-inserts-<waves>-bambu.3mf)')
     a = ap.parse_args()
