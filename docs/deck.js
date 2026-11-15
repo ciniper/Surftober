@@ -552,13 +552,14 @@
   const GAME_ID = GCFG.id || `${CFG.team}-ceremony`;
   const PLAY_URL = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}play.html`;
   let GROUNDS = [];
+  let resultsView = false;
   function gameSlides(d) {
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
     if (!GROUNDS.length) return [];
     const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
-        <p class="lede">${GROUNDS.length} journal quotes. Four suspects each. Vote from your phone.</p>
+        <p class="lede">${GROUNDS.length} journal quotes. Four suspects each.</p>
         <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
         <div class="g-status" data-g="host"></div></div>
         <div class="g-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>` };
@@ -570,6 +571,16 @@
     const board = { title: 'Who said that? · Leaderboard', cls: 'game', game: { kind: 'board' }, html: `
       <p class="kicker">Who said that?</p><h2>Leaderboard</h2><div class="g-board" data-g="board"><p class="lede">Scores appear as rounds are revealed.</p></div>` };
     return [intro, ...rounds, board];
+  }
+
+  function costumeSlide() {
+    const candidates = window.SurftoberGame.costumeCandidates(CFG);
+    const r = { round_no: window.SurftoberGame.COSTUME_ROUND, quote: 'Who was Best Dressed?', choices: candidates.map((c) => c.name) };
+    return { title: 'The Best Dressed Award', cls: 'award game', steps: 1, game: { kind: 'costume', r }, html: `
+      <div class="head"><div><p class="kicker">Live vote · Costume surf</p><h2>The Best Dressed Award</h2></div><div class="g-qr costume-qr" data-g="qr" aria-label="Join the ceremony"></div></div>
+      <div class="costume-grid">${candidates.map(({name, photo}) => `<div><img src="${esc(photo)}" alt="Costume worn by ${esc(name)}"><b>${esc(name)}</b></div>`).join('')}</div>
+      <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>
+      <div class="reveal" data-g="result"></div>` };
   }
 
   // Live vote: the crew grades October's surf A+…F from their phones. It's
@@ -713,22 +724,19 @@
   // Runtime: poll while a game slide is on screen. The host (admin signed in
   // on this browser) opens each round on arrival and writes the answer at
   // the reveal; anyone else sees a live mirror, or just the round if no rows.
-  const GAME = { host: null, rows: new Map(), timer: null, qrDone: false, note: '' };
-  function gameStop() { clearInterval(GAME.timer); GAME.timer = null; }
+  const GAME = { host: null, rows: new Map(), timer: null, qrDone: false, note: '', busy: false, queued: false };
   function gameOnShow() {
-    gameStop();
-    const s = slides[cur];
-    if (!s || !s.game || !window.SurftoberGame) return;
+    clearInterval(GAME.timer);
     gameTick();
-    GAME.timer = setInterval(gameTick, 1500);
+    if (!resultsView) GAME.timer = setInterval(gameTick, 1500);
   }
   function gameErr(e) {
-    if (e && e.missingTables) return 'Not live — game tables not set up yet (run supabase-upgrade-2026-11-game.sql).';
+    if (e && e.missingTables) return 'Not live — apply the ceremony voting database upgrade.';
     if (e && (e.status === 401 || e.status === 403)) return 'Not live — sign in as the admin in this browser to collect votes.';
     return 'Offline — showing the round without live votes.';
   }
   function drawQR(el) {
-    if (!el || el.dataset.done) return;
+    if (!el || el.dataset.done || resultsView) return;
     const paint = () => {
       try { const q = window.qrcode(0, 'M'); q.addData(PLAY_URL); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 10, margin: 2, scalable: true }); el.dataset.done = '1'; }
       catch { el.innerHTML = `<div class="g-url">${esc(PLAY_URL)}</div>`; }
@@ -741,24 +749,61 @@
     document.head.appendChild(sc);
   }
   async function gameTick() {
+    if (GAME.busy) { GAME.queued = true; return; }
+    GAME.busy = true;
+    try { await syncGameSlide(); }
+    finally {
+      GAME.busy = false;
+      if (GAME.queued) { GAME.queued = false; gameTick(); }
+    }
+  }
+
+  async function syncGameSlide() {
     const G = window.SurftoberGame, s = slides[cur], el = stage.querySelector(`.slide[data-i="${cur}"]`);
-    if (!s || !s.game || !el) return;
+    if (!G || !s || !el || (resultsView && !s.game)) return;
+    const revealStep = step;
     const set = (k, html) => { const n = el.querySelector(`[data-g="${k}"]`); if (n) n.innerHTML = html; };
-    if (GAME.host === null) { const ses = await G.session(); GAME.host = G.isHost(ses); GAME.email = ses && ses.user && ses.user.email; }
     try {
+      if (resultsView) GAME.host = false;
+      if (GAME.host === null) { const ses = await G.session(); GAME.host = G.isHost(ses); GAME.email = ses?.user?.email; }
+      const round = s.game?.r;
+      let state = resultsView ? null : await G.ceremonyState(GAME_ID);
+      if (state?.published_at) {
+        resultsView = true;
+        GAME.host = false;
+        stage.classList.add('ceremony-results');
+        show(cur, step);
+        return;
+      }
+      if (GAME.host && slides[cur] === s) {
+        let row = round && GAME.rows.get(round.round_no);
+        if (round && !row && !state?.voting_closed) {
+          row = await G.openRound(GAME_ID, round);
+          if (row) GAME.rows.set(round.round_no, row);
+        }
+        if (!row && round && state?.voting_closed) {
+          row = (await G.rounds(GAME_ID)).find((x) => x.round_no === round.round_no);
+          if (row) GAME.rows.set(round.round_no, row);
+        }
+        const id = row?.id ?? null;
+        if (slides[cur] === s && (!state || state.active_round_id !== id)) {
+          [state] = await G.updateCeremony(GAME_ID, { active_round_id: id });
+        }
+      }
+      if (!s.game || slides[cur] !== s) return;
       if (s.game.kind === 'intro') {
         drawQR(el.querySelector('[data-g="qr"]'));
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const players = new Set(vs.map((v) => v.user_id)).size;
-        set('host', `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
+        set('host', resultsView ? 'Voting is closed. Use the arrows to view the results.' : `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
       } else if (s.game.kind === 'round') {
         const r = s.game.r;
         let row = GAME.rows.get(r.round_no);
         if (!row) {
-          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          row = (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
           if (row) GAME.rows.set(r.round_no, row);
         }
-        if (row && step >= 1 && row.status !== 'revealed' && GAME.host) {
+        if (row && revealStep >= 1 && row.status !== 'revealed' && GAME.host) {
           const done = await G.reveal(row.id, r.answer);
           row = (done && done[0]) || { ...row, status: 'revealed', answer: r.answer };
           GAME.rows.set(r.round_no, row);
@@ -766,7 +811,7 @@
         const vs = row ? await G.votesFor([row.id]) : [];
         const counts = new Map(r.choices.map((c) => [c, 0]));
         for (const v of vs) counts.set(v.choice, (counts.get(v.choice) || 0) + 1);
-        const total = vs.length, max = Math.max(1, ...counts.values()), shown = step >= 1;
+        const total = vs.length, max = Math.max(1, ...counts.values()), shown = revealStep >= 1;
         el.querySelectorAll('.g-choice').forEach((c) => {
           const n = counts.get(c.dataset.choice) || 0;
           c.classList.toggle('right', shown && c.dataset.choice === r.answer);
@@ -782,20 +827,20 @@
         const r = s.game.r;
         let row = GAME.rows.get(r.round_no);
         if (!row) {
-          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          row = (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
           if (row) GAME.rows.set(r.round_no, row);
         }
         const vs = row ? await G.votesFor([row.id]) : [];
-        const crew = row && row.status === 'revealed' && row.answer ? { grade: row.answer, n: vs.length } : G.crewGrade(vs);
+        const crew = G.crewGrade(vs);
         // Reveal once there's at least one vote; with none, voting stays open.
-        if (row && step >= 1 && row.status !== 'revealed' && GAME.host && crew) {
+        if (row && revealStep >= 1 && row.status !== 'revealed' && GAME.host && crew) {
           const done = await G.reveal(row.id, crew.grade);
           row = (done && done[0]) || { ...row, status: 'revealed', answer: crew.grade };
           GAME.rows.set(r.round_no, row);
         }
         const counts = new Map(r.choices.map((c) => [c, 0]));
         for (const v of vs) counts.set(v.choice, (counts.get(v.choice) || 0) + 1);
-        const total = vs.length, max = Math.max(1, ...counts.values()), shown = step >= 1;
+        const total = vs.length, max = Math.max(1, ...counts.values()), shown = revealStep >= 1;
         el.querySelectorAll('.gr-col').forEach((c) => {
           const n = counts.get(c.dataset.choice) || 0;
           c.querySelector('.gr-bar i').style.height = `${(n / max) * 100}%`;
@@ -805,23 +850,37 @@
         });
         set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
         set('status', row ? (shown ? '' : 'Voting open — grade it on your phone') : esc(GAME.note || gameErr(null)));
-        set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b>` : '<span>No votes yet — keep voting</span>') : '');
+        set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b>` : (resultsView ? '<span>No votes recorded</span>' : '<span>No votes yet — keep voting</span>')) : '');
       } else if (s.game.kind === 'print') {
         drawQR(el.querySelector('[data-g="qr"]'));
         const r = s.game.r, ans = TB.printHours;
         let row = GAME.rows.get(r.round_no);
         if (!row) {
-          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          row = (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
           if (row) GAME.rows.set(r.round_no, row);
         }
         // Reveal writes the real total; with none in the config, voting stays open.
-        if (row && step >= 1 && row.status !== 'revealed' && GAME.host && ans != null) {
+        if (row && revealStep >= 1 && row.status !== 'revealed' && GAME.host && ans != null) {
           const done = await G.reveal(row.id, String(ans));
           row = (done && done[0]) || { ...row, status: 'revealed', answer: String(ans) };
           GAME.rows.set(r.round_no, row);
         }
         const vs = row ? await G.votesFor([row.id]) : [];
-        printTally(el, vs, row, step);
+        printTally(el, vs, row, revealStep);
+      } else if (s.game.kind === 'costume') {
+        drawQR(el.querySelector('[data-g="qr"]'));
+        const r = s.game.r;
+        let row = GAME.rows.get(r.round_no) || (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+        const votes = row ? await G.votesFor([row.id]) : [];
+        const results = G.costumeResults(row?.choices || r.choices, votes);
+        const leaders = results.filter((x) => x.votes > 0 && x.votes === results[0]?.votes);
+        if (row && revealStep >= 1 && row.status !== 'revealed' && GAME.host) {
+          const [updated] = await G.reveal(row.id, leaders.map((x) => x.name).join(' & '));
+          row = updated || row;
+          GAME.rows.set(r.round_no, row);
+        }
+        set('count', `${votes.length} vote${votes.length === 1 ? '' : 's'}`);
+        set('result', revealStep >= 1 ? (leaders.length ? `<b>${leaders.map((x) => esc(x.name)).join(' &amp; ')}</b> · ${leaders[0].votes} ${leaders.length > 1 ? 'votes each' : 'votes'}` : 'No votes yet') : '');
       } else if (s.game.kind === 'board') {
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const rows = G.scoreboard(rs, vs).slice(0, 10);
@@ -830,12 +889,16 @@
         set('board', rows.length ? `<ol class="g-rank">${rows.map((x, i) => `<li><span class="g-pos">${i + 1}</span>${byId.has(x.user_id) ? av(window.__deck, byId.get(x.user_id), 56) : ''}<span class="g-pname">${esc(byId.has(x.user_id) ? window.__deck.name(byId.get(x.user_id)) : x.name)}</span><span class="g-pts">${x.right} / ${revealed}</span></li>`).join('')}</ol>`
           : '<p class="lede">No votes yet.</p>');
       }
+      if (resultsView && s.game.r) set('status', 'Final results · voting closed');
+      if (s.game.r && state?.active_round_id && GAME.host) {
+        set('status', state.voting_closed ? 'Voting closed' : 'Live on phones · voting open');
+      }
     } catch (e) {
       GAME.note = gameErr(e);
       set('status', esc(GAME.note));
-      if (s.game.kind === 'intro') set('host', esc(GAME.note));
-      if (s.game.kind === 'print') printTally(el, [], null, step);
-      if (s.game.kind === 'round' && step >= 1) el.querySelectorAll('.g-choice').forEach((c) => { c.classList.toggle('right', c.dataset.choice === s.game.r.answer); c.classList.toggle('wrong', c.dataset.choice !== s.game.r.answer); });
+      if (s.game?.kind === 'intro') set('host', esc(GAME.note));
+      if (s.game?.kind === 'print') printTally(el, [], null, revealStep);
+      if (s.game?.kind === 'round' && revealStep >= 1) el.querySelectorAll('.g-choice').forEach((c) => { c.classList.toggle('right', c.dataset.choice === s.game.r.answer); c.classList.toggle('wrong', c.dataset.choice !== s.game.r.answer); });
     }
   }
 
@@ -964,6 +1027,7 @@
       if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
       else if (id === 'failed-feature') slides.push(failedFeatureSlide(d, i, n));
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
+      else if (id === 'best-dressed' && window.SurftoberGame?.costumeCandidates(CFG).length >= 2) slides.push(costumeSlide());
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
     }
     if (d.conditionAwards.length) {
@@ -1019,7 +1083,8 @@
 
   function show(i, st = 0) {
     cur = Math.max(0, Math.min(slides.length - 1, i));
-    step = Math.max(0, Math.min(slides[cur].steps || 0, st));
+    step = resultsView && slides[cur].game?.r ? (slides[cur].steps || 0) : Math.max(0, Math.min(slides[cur].steps || 0, st));
+    stage.classList.toggle('ceremony-results', resultsView);
     stage.querySelectorAll('.slide').forEach((el) => el.classList.toggle('active', Number(el.dataset.i) === cur));
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
@@ -1041,7 +1106,7 @@
     history.replaceState(null, '', `#${cur + 1}${step ? '.' + step : ''}`);
   }
   const next = () => (step < (slides[cur].steps || 0) ? show(cur, step + 1) : show(cur + 1, 0));
-  const prev = () => (step > 0 ? show(cur, step - 1) : show(cur - 1, slides[Math.max(0, cur - 1)].steps || 0));
+  const prev = () => (step > 0 && !(resultsView && slides[cur].game?.r) ? show(cur, step - 1) : show(cur - 1, slides[Math.max(0, cur - 1)].steps || 0));
 
   function toggleGrid(force) {
     const o = $('#overview');
@@ -1118,16 +1183,25 @@
   });
   addEventListener('resize', fit);
 
-  // On surftober.com the deck opens only for the host (see game.js locked()).
   async function hostGate() {
     const G = window.SurftoberGame;
-    const prod = /(^|\.)surftober\.com$/.test(location.hostname);
-    if (G ? !G.locked() : !prod) return true;
-    const s = G ? await G.session() : null;
-    if (G && G.isHost(s)) return true;
-    stage.innerHTML = `<div class="loading"><img src="${LOGO}" alt=""><div>The ceremony deck is for the host.</div>
-      <div class="muted" style="font-size:24px">${s ? `Signed in as ${esc(s.user.email)} — that's not the host account.` : 'Sign in as the host to open it.'}</div>
-      ${G ? `<button type="button" class="lock-btn" data-signin>${s ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
+    const wantsResults = new URLSearchParams(location.search).get('view') === 'results';
+    const hostOnly = G ? G.locked() : /(^|\.)surftober\.com$/.test(location.hostname);
+    const session = G ? await G.session() : null;
+    let state = null;
+    if (G && session) {
+      try { state = await G.ceremonyState(GAME_ID); }
+      catch (error) { if (wantsResults) console.error(error); }
+    }
+    resultsView = !!(session && state?.published_at);
+    if (resultsView) return true;
+    if (!wantsResults && (!hostOnly || G?.isHost(session))) return true;
+
+    const message = wantsResults
+      ? (session ? 'The ceremony results are not available yet.' : 'Sign in to view the ceremony results.')
+      : 'The ceremony deck is for the host.';
+    stage.innerHTML = `<div class="loading"><img src="${LOGO}" alt=""><div>${message}</div>
+      ${G && (!session || !wantsResults) ? `<button type="button" class="lock-btn" data-signin>${session ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
     return false;
   }
 

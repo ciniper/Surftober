@@ -354,10 +354,7 @@
         <h2 class="main-title">Main</h2>
         <a href="#leaderboard" id="jump-leaderboard" class="jump-leaderboard">Jump to leaderboard ↓</a>
       </div>
-      <!-- Award-ceremony deck: previews/localhost only (on surftober.com it's
-           in Account → Admin Tools). -->
-      <a href="./deck.html" id="deck-cta" class="deck-cta" hidden>🏆 Award Ceremony deck <span aria-hidden="true">→</span></a>
-      <script>if (!/(^|\.)surftober\.com$/.test(location.hostname)) document.getElementById('deck-cta').hidden = false;</script>
+      <a href="./deck.html?view=results" id="deck-cta" class="deck-cta" hidden>🏆 View the Award Ceremony <span aria-hidden="true">→</span></a>
       <div id="main-tools" class="main-tools" hidden></div>
       <div id="totals-tile" class="totals-tile" hidden></div>
       <div id="today-tile" hidden></div>
@@ -569,9 +566,10 @@
             <a href="#admin" class="subtab">🛠️ Admin</a>
             <a href="./deck.html" class="subtab">🎤 Ceremony deck</a>
             <a href="./deck.html#game" class="subtab">🎭 Open the game</a>
+            <button type="button" id="btn-finish-presentation" class="subtab" disabled>Finish presentation</button>
             <button type="button" id="btn-game-reset" class="subtab">🧹 Reset the game</button>
           </div>
-          <p class="hint" id="game-reset-status">Rehearse on the real game, then reset it before the ceremony. Reset clears every round and vote.</p>
+          <p class="hint" id="game-reset-status">Rehearse on the real game, then reset it before the ceremony. Finish presentation closes voting and shares the results on Main. Reset clears the votes and removes the results link.</p>
         </div>
       </div>
     </section>
@@ -588,6 +586,7 @@
   <script src="./version.js"></script>
   <script src="./photo-kit.js"></script>
   <script src="./awards.js"></script>
+  <script src="./deck-config.js"></script>
   <script type="module" src="./app.js"></script>
 
   <!-- Vercel Web Analytics: cookieless page-view counts. The shim queues calls
