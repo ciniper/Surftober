@@ -231,6 +231,45 @@
       <div class="legend"><span>Buoy-based surf estimates · Stormsurf / Point Reyes Buoy 029</span></div>` };
   }
 
+  function dailyWeatherSlide() {
+    const days = CFG.dailyOctoberWeather || [];
+    if (!days.length) return null;
+    const years = [
+      { year: CFG.year - 1, offset: -9, color: 'var(--text-3)', start: 0 },
+      { year: CFG.year, offset: 9, color: 'var(--accent-text)', start: 3 },
+    ];
+    const W = 1680, H = 470, left = 80, bottom = 388, top = 24;
+    const min = Math.floor(Math.min(...days.flatMap(([low, , , priorLow]) => [low, priorLow])) / 10) * 10;
+    const max = Math.ceil(Math.max(...days.flatMap(([, high, , , priorHigh]) => [high, priorHigh])) / 10) * 10;
+    const y = (temp) => bottom - (bottom - top) * (temp - min) / (max - min);
+    const spacing = (W - left) / days.length;
+    let svg = '';
+    for (let temp = min; temp <= max; temp += 10) {
+      svg += `<line class="grid" x1="${left}" x2="${W}" y1="${y(temp)}" y2="${y(temp)}"/><text x="${left - 14}" y="${y(temp) + 7}" text-anchor="end" font-size="22">${temp}°F</text>`;
+    }
+    days.forEach((day, i) => {
+      const x = left + (i + 0.5) * spacing;
+      years.forEach(({ year, offset, color, start }) => {
+        const [low, high, sunny] = day.slice(start, start + 3);
+        const cx = x + offset;
+        svg += `<g><title>October ${i + 1}, ${year}: low ${low}°F, high ${high}°F${sunny ? ', sunny' : ''}</title>
+          <line x1="${cx}" x2="${cx}" y1="${y(low)}" y2="${y(high)}" stroke="${color}" stroke-width="9" stroke-linecap="round"/>
+          ${sunny ? `<circle cx="${cx}" cy="${bottom + 20}" r="5" fill="${color}"/>` : ''}
+        </g>`;
+      });
+      svg += `<text x="${x}" y="${bottom + 54}" text-anchor="middle" font-size="20">${i + 1}</text>`;
+    });
+    const legend = years.map(({ year, color, start }) => {
+      const sunny = days.filter((day) => day[start + 2]).length;
+      return `<span><i style="background:${color}"></i>${year} · ${sunny}/${days.length} sunny days (${Math.round(sunny * 100 / days.length)}%)</span>`;
+    }).join('');
+    return { title: 'Daily weather', html: `
+      <p class="kicker">Ocean Beach · October ${CFG.year - 1} and ${CFG.year}</p>
+      <h2>Daily high and low</h2>
+      <div class="grow" style="margin-top:24px"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily high and low temperatures in Fahrenheit for both Octobers; dots mark sunny days">${svg}</svg></div>
+      <div class="legend">${legend}<span>Dot = sunshine for at least 70% of daylight · Open-Meteo modeled weather</span></div>` };
+  }
+
   function recapSlide() {
     const card = (h, txt, field) => `<div class="card"><h3>${h}</h3>${txt ? esc(txt) : todo('Your recap', field)}</div>`;
     return { title: 'Recap', html: `<p class="kicker">Recap</p><h2>Surf &amp; weather</h2>
@@ -1015,7 +1054,7 @@
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length;
     const C = CFG;
-    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
+    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
       ...trophySlides(d),
