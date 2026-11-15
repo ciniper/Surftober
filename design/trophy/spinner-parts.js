@@ -249,7 +249,7 @@ export function waveArt(o) {
 export const POSE = {
   body: { spins: true, dz: 0 }, insert: { spins: true, dz: 12 }, 'wave-water': { spins: true, dz: 10 }, 'wave-foam': { spins: true, dz: 14 },
   hub: { spins: false, dz: 30 }, 'hub-text': { spins: false, dz: 36 }, 'back-cap': { spins: false, dz: -20 },
-  bearing: { spins: false, dz: 0 }, screw: { spins: false, dz: -38 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
+  bearing: { spins: false, dz: -10 }, screw: { spins: false, dz: -38 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
 };
 export const WEIGHT_DZ = o => (o.weight === 'cog' ? -12 : 24);
 
