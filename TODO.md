@@ -11,9 +11,11 @@
       play.html comes back to that page (sessionStorage surftober_next, read
       in app.js). The lock hides the deck; deck-config.js is still a public
       file — fill judged winners on the day.
-- [ ] **⚠️ Chase: rehearse the game** — on surftober.com: Account → Admin
-      Tools → Rehearse the game, plus a phone on the QR's play link. "Reset
-      rehearsal" (top right of the intro slide) clears the practice rounds.
+- [ ] **⚠️ Chase: rehearse the game, then reset it** — rehearsal mode is
+      gone (2026-11-14): there is one game, 5th-surftober-2026-ceremony.
+      Account → Admin Tools → Open the game, plus a phone on the QR's play
+      link. When done, Account → Admin Tools → Reset the game clears every
+      round and vote (and any old -rehearsal rounds), then reload the deck.
 - [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
       "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
       and wired via bwtf.features[i].media (2026-11-08).
