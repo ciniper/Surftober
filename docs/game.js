@@ -71,7 +71,9 @@
 
   // ---------- reads (anyone) ----------
   const rounds = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.asc`);
-  const latestRound = async (gameId) => (await req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.desc&limit=1`))[0] || null;
+  // Latest = most recently opened, so the surf-grade poll (round 0) and the
+  // quiz rounds (1..n) each take over the phones when the deck reaches them.
+  const latestRound = async (gameId) => (await req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=created_at.desc,round_no.desc&limit=1`))[0] || null;
   const votesFor = (ids) => (ids.length ? req(`game_votes?round_id=in.(${ids.map(enc).join(',')})&select=round_id,user_id,voter_name,choice`) : Promise.resolve([]));
 
   // ---------- host writes (admin; RLS enforces) ----------
@@ -92,9 +94,22 @@
     });
   }
 
+  // ---------- surf grade poll (round 0 of the same game) ----------
+  // "Grade October's surf": every vote is a school grade; the crew grade is
+  // the mean on a 0 (F) … 12 (A+) scale, rounded to the nearest grade.
+  const GRADE_ROUND = 0;
+  const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+  const isQuiz = (r) => r.round_no !== GRADE_ROUND;
+  function crewGrade(votes) {
+    const pts = votes.map((v) => GRADES.indexOf(v.choice)).filter((i) => i >= 0).map((i) => GRADES.length - 1 - i);
+    if (!pts.length) return null;
+    const mean = pts.reduce((a, b) => a + b, 0) / pts.length;
+    return { grade: GRADES[GRADES.length - 1 - Math.round(mean)], mean, n: pts.length };
+  }
+
   // ---------- scoring (client side, from rounds + votes) ----------
   function scoreboard(roundList, votes) {
-    const answer = new Map(roundList.filter((r) => r.status === 'revealed').map((r) => [r.id, r.answer]));
+    const answer = new Map(roundList.filter((r) => isQuiz(r) && r.status === 'revealed').map((r) => [r.id, r.answer]));
     const by = new Map();
     for (const v of votes) {
       if (!answer.has(v.round_id)) continue;
@@ -135,5 +150,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, latestRound, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade };
 })();

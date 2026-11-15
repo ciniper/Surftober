@@ -19,6 +19,14 @@
 - [x] **BWTF visuals in the deck** — the 4 "Website Overview" GIFs from the
       "bwtf tober" pptx are in docs/bwtf/ (map, analysis, alerts, education)
       and wired via bwtf.features[i].media (2026-11-08).
+- [x] **Surf grade vote** (Chase, 2026-11-15) — "Grade October's surf"
+      slide after the Surf & weather recap: the crew votes A+…F on
+      play.html (round 0 of the ceremony game, so Reset the game clears it
+      too; it never counts toward the quiz score). Reveal = crew grade, the
+      mean on F=0…A+=12 rounded to the nearest grade. Needs at least one
+      vote to reveal. v1.63.0.
+- [x] **Trophy slides left to right** (2026-11-15) — trophiesPast /
+      trophiesNow photos sit in one row in config order (list oldest first).
 - [ ] **Trophy slides in the deck** (Chase, 2026-11-11) — add slides for:
       the trophy's total print time; the trophy animation; and the apps you
       can download to see them.

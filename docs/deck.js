@@ -572,6 +572,23 @@
     return [intro, ...rounds, board];
   }
 
+  // Live vote: the crew grades October's surf A+…F from their phones. It's
+  // round 0 of the same game (game.js GRADE_ROUND), so play.html, the QR and
+  // Admin Tools → Reset the game all cover it. Step 1 reveals the crew grade.
+  function gradeSlide() {
+    const G = window.SurftoberGame;
+    if (!G) return null;
+    const r = { round_no: G.GRADE_ROUND, quote: `Grade October ${CFG.year}'s surf`, choices: G.GRADES };
+    const cols = G.GRADES.map((g) => `<div class="gr-col" data-choice="${esc(g)}"><span class="gr-n"></span><span class="gr-bar"><i></i></span><span class="gr-g">${esc(g)}</span></div>`).join('');
+    return { title: 'Grade the surf', cls: 'game grade', steps: 1, game: { kind: 'grade', r }, html: `
+      <div class="gr-head"><div><p class="kicker">Live vote · Ocean Beach</p><h2>Grade October’s surf</h2>
+        <p class="lede" style="font-size:32px;margin-top:14px">A+ to F, on your phone: <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></p></div>
+        <div class="g-qr gr-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>
+      <div class="gr-chart">${cols}</div>
+      <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>
+      <div class="reveal gr-result" data-g="result"></div>` };
+  }
+
   // Runtime: poll while a game slide is on screen. The host (admin signed in
   // on this browser) opens each round on arrival and writes the answer at
   // the reveal; anyone else sees a live mirror, or just the round if no rows.
@@ -639,11 +656,40 @@
         set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
         set('status', row ? (shown ? '' : 'Voting open — pick on your phone') : esc(GAME.note || gameErr(null)));
         set('got', shown && row && total ? `· ${counts.get(r.answer) || 0} of ${total} got it` : '');
+      } else if (s.game.kind === 'grade') {
+        drawQR(el.querySelector('[data-g="qr"]'));
+        const r = s.game.r;
+        let row = GAME.rows.get(r.round_no);
+        if (!row) {
+          row = GAME.host ? await G.openRound(GAME_ID, r) : (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          if (row) GAME.rows.set(r.round_no, row);
+        }
+        const vs = row ? await G.votesFor([row.id]) : [];
+        const crew = row && row.status === 'revealed' && row.answer ? { grade: row.answer, n: vs.length } : G.crewGrade(vs);
+        // Reveal once there's at least one vote; with none, voting stays open.
+        if (row && step >= 1 && row.status !== 'revealed' && GAME.host && crew) {
+          const done = await G.reveal(row.id, crew.grade);
+          row = (done && done[0]) || { ...row, status: 'revealed', answer: crew.grade };
+          GAME.rows.set(r.round_no, row);
+        }
+        const counts = new Map(r.choices.map((c) => [c, 0]));
+        for (const v of vs) counts.set(v.choice, (counts.get(v.choice) || 0) + 1);
+        const total = vs.length, max = Math.max(1, ...counts.values()), shown = step >= 1;
+        el.querySelectorAll('.gr-col').forEach((c) => {
+          const n = counts.get(c.dataset.choice) || 0;
+          c.querySelector('.gr-bar i').style.height = `${(n / max) * 100}%`;
+          c.querySelector('.gr-n').textContent = n ? String(n) : '';
+          c.classList.toggle('win', shown && !!crew && c.dataset.choice === crew.grade);
+          c.classList.toggle('dim', shown && !!crew && c.dataset.choice !== crew.grade);
+        });
+        set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
+        set('status', row ? (shown ? '' : 'Voting open — grade it on your phone') : esc(GAME.note || gameErr(null)));
+        set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b>` : '<span>No votes yet — keep voting</span>') : '');
       } else if (s.game.kind === 'board') {
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const rows = G.scoreboard(rs, vs).slice(0, 10);
         const byId = new Map([...window.__deck.profileOf.entries()].map(([u, p]) => [p.id, u]));
-        const revealed = rs.filter((r) => r.status === 'revealed').length;
+        const revealed = rs.filter((r) => G.isQuiz(r) && r.status === 'revealed').length;
         set('board', rows.length ? `<ol class="g-rank">${rows.map((x, i) => `<li><span class="g-pos">${i + 1}</span>${byId.has(x.user_id) ? av(window.__deck, byId.get(x.user_id), 56) : ''}<span class="g-pname">${esc(byId.has(x.user_id) ? window.__deck.name(byId.get(x.user_id)) : x.name)}</span><span class="g-pts">${x.right} / ${revealed}</span></li>`).join('')}</ol>`
           : '<p class="lede">No votes yet.</p>');
       }
@@ -688,9 +734,10 @@
   }
 
   // Photo slides (trophies, t-shirt): config lists of { src, caption }.
-  function gallerySlide(title, kicker, heading, imgs, field, note) {
+  // row: one line left to right, in config order (trophies), not a wrapping grid.
+  function gallerySlide(title, kicker, heading, imgs, field, note, row = false) {
     const body = imgs && imgs.length
-      ? `<div class="gallery">${imgs.map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.caption || heading)}">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`
+      ? `<div class="gallery${row ? ' row' : ''}">${imgs.map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.caption || heading)}">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`
       : todo('Add photos', field);
     return { title, html: `<p class="kicker">${esc(kicker)}</p><h2>${esc(heading)}</h2>${note ? `<p class="lede" style="font-size:30px;margin-top:14px">${esc(note)}</p>` : ''}${body}` };
   }
@@ -767,10 +814,10 @@
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length;
     const C = CFG;
-    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), recapSlide(), leaderboardSlide(d),
+    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
-      gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast'),
-      gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow'),
+      gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
+      gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow', null, true),
       charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
     let i = 0;
     for (const id of order) {

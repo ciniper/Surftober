@@ -192,6 +192,8 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .gallery figure { margin: 0; border-radius: 20px; overflow: hidden; background: var(--panel); border: 1.5px solid var(--line); display: flex; flex-direction: column; }
 .gallery img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; }
 .gallery figcaption { padding: 14px 20px; font-size: 24px; color: var(--text-2); }
+.gallery.row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.gallery.row img { object-fit: contain; }
 
 /* ---------- award slides ---------- */
 .slide.award { justify-content: flex-start; }
@@ -361,6 +363,22 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .g-foot .g-status { margin: 0; }
 .g-ans { font-size: 32px; color: var(--text-2); }
 .g-ans b { color: var(--highlight-text); }
+/* Surf grade vote: 13 columns A+ … F, tallest = most votes. */
+.gr-head { display: flex; gap: 60px; align-items: flex-start; justify-content: space-between; }
+.gr-qr { width: 220px; height: 220px; padding: 10px; border-radius: 18px; }
+.gr-chart { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(13, 1fr); gap: 16px; margin-top: 26px; align-items: end; }
+.gr-col { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; transition: opacity .4s; }
+.gr-bar { width: 100%; flex: 1; min-height: 0; display: flex; align-items: flex-end; border-radius: 12px; background: var(--line); overflow: hidden; }
+.gr-bar i { display: block; width: 100%; height: 0; background: linear-gradient(180deg, var(--sun-1), var(--accent)); transition: height .6s cubic-bezier(.2,.8,.2,1); }
+.gr-n { font: 800 34px var(--display); font-variant-numeric: tabular-nums; min-height: 40px; }
+.gr-g { font: 800 40px var(--display); }
+.gr-col.win .gr-g { color: var(--highlight-text); }
+.gr-col.win .gr-bar { box-shadow: 0 0 0 5px var(--accent); }
+.gr-col.dim { opacity: .4; }
+.grade .num { font: 700 26px/1 var(--body); color: var(--text-3); letter-spacing: .12em; white-space: nowrap; }
+.gr-result { position: absolute; top: 90px; right: 360px; font: 800 64px var(--display); text-align: right; }
+.gr-result b { font-size: 150px; color: var(--highlight-text); display: block; line-height: 1; }
+.gr-result span { display: block; font: 600 24px var(--body); color: var(--text-2); margin-top: 8px; }
 .g-rank { list-style: none; padding: 0; margin: 30px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; }
 .g-rank li { display: flex; align-items: center; gap: 18px; padding: 14px 20px; border-radius: 16px; background: var(--panel); border: 1.5px solid var(--line); font-size: 32px; }
 .g-pos { font: 800 30px var(--display); color: var(--text-3); width: 40px; text-align: right; }

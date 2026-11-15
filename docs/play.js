@@ -37,6 +37,7 @@
     if (!round) { v.innerHTML = `<div class="card"><p class="big">You're in! 🤙</p><p class="note">Waiting for the first round — watch the big screen.</p></div><div class="spin"></div>`; return; }
     const revealed = round.status === 'revealed';
     const picked = pending || myChoice;
+    if (round.round_no === G.GRADE_ROUND) { renderGrade(v, revealed, picked); return; }
     const btns = (round.choices || []).map((c) => {
       const cls = ['choice', c === picked ? 'picked' : '', revealed && c === round.answer ? 'right' : '', revealed && c !== round.answer ? 'wrong' : ''].join(' ');
       const tag = revealed ? (c === round.answer ? 'It was them!' : (c === picked ? 'Your pick' : '')) : (c === picked ? (pending ? 'Saving…' : 'Locked in') : '');
@@ -50,12 +51,26 @@
       ${verdict}<div class="choices">${btns}</div>`;
   }
 
+  // Round 0: grade October's surf A+…F (no right answer; the reveal shows
+  // the crew grade, the average of everyone's votes).
+  function renderGrade(v, revealed, picked) {
+    const btns = (round.choices || []).map((c) => {
+      const cls = ['choice', c === picked ? 'picked' : '', revealed && c === round.answer ? 'right' : ''].join(' ');
+      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${revealed ? 'disabled' : ''}>${esc(c)}</button>`;
+    }).join('');
+    const verdict = revealed
+      ? `<p class="big">Crew grade: ${esc(round.answer)}</p><p class="note">${picked ? `You gave it ${esc(picked)}.` : "You didn't vote."}</p>`
+      : `<p class="note">${picked ? (pending ? 'Saving…' : `You gave it ${esc(picked)} — change it until the reveal.`) : 'Tap a grade.'}</p>`;
+    v.innerHTML = `<div class="card"><p class="kicker">Live vote</p><p class="quote">${esc(round.quote)}</p></div>
+      ${verdict}<div class="choices grades">${btns}</div>`;
+  }
+
   async function refreshScore() {
     try {
       const rs = await G.rounds(GAME_ID);
       const vs = await G.votesFor(rs.map((r) => r.id));
       const mine = G.scoreboard(rs, vs).find((x) => x.user_id === me.session.user.id);
-      const revealed = rs.filter((r) => r.status === 'revealed').length;
+      const revealed = rs.filter((r) => G.isQuiz(r) && r.status === 'revealed').length;
       $('#score').innerHTML = revealed ? `Your score: <b>${mine ? mine.right : 0}</b> / ${revealed}` : '';
     } catch { /* keep the last score */ }
   }
