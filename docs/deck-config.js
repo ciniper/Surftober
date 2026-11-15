@@ -186,7 +186,9 @@ window.SurftoberDeckConfig = {
   },
 
   // "Who said that?" live game. Needs supabase-upgrade-2026-11-game.sql run.
-  // Players join at /play.html (QR on the intro slide). For a rehearsal that
-  // doesn't touch the real game, open the deck with ?game=rehearsal.
+  // Players join at /play.html (QR on the intro slide). There is one game:
+  // rehearse on it, then clear it with Account → Admin Tools → Reset the game
+  // (app.js clears every game_id starting with `${team}-ceremony`, so keep
+  // id = `${team}-ceremony`).
   game: { id: '5th-surftober-2026-ceremony', rounds: 6, seed: 2026 },
 };

@@ -3954,6 +3954,42 @@ function registerSW() {
     });
 }
 
+// Account → Admin Tools → "Reset the game": clears the "Who said that?"
+// rounds (votes cascade) so a rehearsal doesn't carry into the ceremony.
+// It clears every game_id starting with `<team>-ceremony` for the event on
+// screen: the real game (deck-config.js game.id) plus any old `-rehearsal`
+// copies. RLS (supabase-upgrade-2026-11-game.sql) only lets admins delete,
+// so the deleted rows are counted to catch a silent no-op.
+function attachGameResetHandler(){
+  const btn = document.getElementById('btn-game-reset');
+  const note = document.getElementById('game-reset-status');
+  if (!btn) return;
+  const say = (t) => { if (note) note.textContent = t; };
+  btn.addEventListener('click', async () => {
+    if (!sb || !isAdminUser()) { say('Sign in as the admin to reset the game.'); return; }
+    const prefix = `${(viewedEvent || activeEvent || DEFAULT_EVENT).team}-ceremony`;
+    btn.disabled = true;
+    try {
+      const { data: rounds, error } = await sb.from('game_rounds').select('id, game_id').like('game_id', `${prefix}%`);
+      if (error) throw error;
+      if (!rounds.length) { say(`Nothing to reset: ${prefix} has no rounds yet.`); return; }
+      const ids = rounds.map((r) => r.id);
+      const { count: votes } = await sb.from('game_votes').select('round_id', { count: 'exact', head: true }).in('round_id', ids);
+      const games = [...new Set(rounds.map((r) => r.game_id))].join(', ');
+      if (!confirm(`Reset "Who said that?"\n\nThis deletes ${rounds.length} round${rounds.length === 1 ? '' : 's'} and ${votes || 0} vote${votes === 1 ? '' : 's'} (${games}). It can't be undone.`)) { say('Reset cancelled.'); return; }
+      const { data: gone, error: delErr } = await sb.from('game_rounds').delete().in('id', ids).select('id');
+      if (delErr) throw delErr;
+      if (!gone || gone.length !== ids.length) throw new Error(`only ${gone ? gone.length : 0} of ${ids.length} rounds were deleted`);
+      say(`Game reset ✓ — cleared ${ids.length} round${ids.length === 1 ? '' : 's'} and ${votes || 0} vote${votes === 1 ? '' : 's'}. Reload the deck before you start.`);
+    } catch (e) {
+      console.error('[game reset]', e);
+      say(`Reset failed: ${e.message || e}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 window.addEventListener('hashchange', renderTabs);
 window.addEventListener('load', () => {
   applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
@@ -3973,6 +4009,7 @@ window.addEventListener('load', () => {
   initForm();
   attachAccountHandlers();
   attachAdminEventHandlers();
+  attachGameResetHandler();
   attachAudioHandlers();
   attachPhotoHandlers();
   attachMessageBoardHandlers();

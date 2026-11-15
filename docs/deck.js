@@ -547,15 +547,16 @@
 
   // ---------- "Who said that?" live game ----------
   const GCFG = CFG.game || {};
-  const gameSuffix = new URLSearchParams(location.search).get('game');
-  const GAME_ID = `${GCFG.id || `${CFG.team}-ceremony`}${gameSuffix ? `-${gameSuffix}` : ''}`;
-  const PLAY_URL = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}play.html${gameSuffix ? `?g=${encodeURIComponent(GAME_ID)}` : ''}`;
+  // One game, no rehearsal copy: practise on the real one, then clear it from
+  // Account → Admin Tools → Reset the game (app.js resetCeremonyGame).
+  const GAME_ID = GCFG.id || `${CFG.team}-ceremony`;
+  const PLAY_URL = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}play.html`;
   let GROUNDS = [];
   function gameSlides(d) {
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
     if (!GROUNDS.length) return [];
-    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `${gameSuffix ? '<button type="button" class="g-reset" data-g-reset hidden>Reset rehearsal</button>' : ''}
+    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
         <p class="lede">${GROUNDS.length} journal quotes. Four suspects each. Vote from your phone.</p>
         <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
@@ -573,7 +574,7 @@
 
   // Runtime: poll while a game slide is on screen. The host (admin signed in
   // on this browser) opens each round on arrival and writes the answer at
-  // the reveal; anyone else sees a live mirror, or a rehearsal if no rows.
+  // the reveal; anyone else sees a live mirror, or just the round if no rows.
   const GAME = { host: null, rows: new Map(), timer: null, qrDone: false, note: '' };
   function gameStop() { clearInterval(GAME.timer); GAME.timer = null; }
   function gameOnShow() {
@@ -584,19 +585,9 @@
     GAME.timer = setInterval(gameTick, 1500);
   }
   function gameErr(e) {
-    if (e && e.missingTables) return 'Rehearsal mode — game tables not set up yet (run supabase-upgrade-2026-11-game.sql).';
-    if (e && (e.status === 401 || e.status === 403)) return 'Rehearsal mode — sign in as the admin in this browser to collect votes.';
+    if (e && e.missingTables) return 'Not live — game tables not set up yet (run supabase-upgrade-2026-11-game.sql).';
+    if (e && (e.status === 401 || e.status === 403)) return 'Not live — sign in as the admin in this browser to collect votes.';
     return 'Offline — showing the round without live votes.';
-  }
-  // Rehearsal only (?game=…): wipe its rounds (votes cascade) to start over.
-  async function resetRehearsal(btn) {
-    if (!gameSuffix || !GAME.host || !window.SurftoberGame) return;
-    if (!confirm(`Clear every round and vote in ${GAME_ID}?`)) return;
-    btn.disabled = true;
-    try { await window.SurftoberGame.resetGame(GAME_ID); GAME.rows.clear(); btn.textContent = 'Cleared ✓'; }
-    catch (e) { btn.textContent = 'Reset failed'; console.error(e); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = 'Reset rehearsal'; }, 2500);
-    gameTick();
   }
   function drawQR(el) {
     if (!el || el.dataset.done) return;
@@ -621,8 +612,6 @@
         drawQR(el.querySelector('[data-g="qr"]'));
         const rs = await G.rounds(GAME_ID), vs = await G.votesFor(rs.map((r) => r.id));
         const players = new Set(vs.map((v) => v.user_id)).size;
-        const rb = el.querySelector('[data-g-reset]');
-        if (rb) rb.hidden = !GAME.host;
         set('host', `${GAME.host ? `Hosting as ${esc(GAME.email)}` : 'Not hosting — sign in as the admin in this browser to run the game'} · game <code>${esc(GAME_ID)}</code>${players ? ` · ${players} players so far` : ''}`);
       } else if (s.game.kind === 'round') {
         const r = s.game.r;
@@ -917,7 +906,6 @@
   });
   $('#viewport').addEventListener('click', (e) => {
     if (e.target.closest('[data-signin]')) { window.SurftoberGame.signIn(); return; }
-    if (e.target.closest('[data-g-reset]')) { resetRehearsal(e.target.closest('[data-g-reset]')); return; }
     if (!slides.length) return;
     if (e.target.closest('[data-open-book]')) { openFrom(e.target.closest('[data-open-book]')); return; }
     if (e.target.closest('[data-close-book]')) { closeBook(); return; }
@@ -963,7 +951,7 @@
       window.__deck = d; // console poking during rehearsal
       await buildAvatars(d);
       slides = buildSlides(d);
-      if (location.hash === '#game') { // Admin Tools → "Rehearse the game"
+      if (location.hash === '#game') { // Admin Tools → "Open the game"
         const g = slides.findIndex((s) => s.game && s.game.kind === 'intro');
         if (g >= 0) { cur = g; step = 0; }
       }
