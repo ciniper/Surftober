@@ -68,4 +68,35 @@ create policy "players update their own votes" on public.game_votes for update t
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- Admin reset keeps the lock and round changes in the same transaction.
+create or replace function public.reset_ceremony_game(ceremony_id text, round_ids uuid[])
+returns integer
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  deleted_count integer;
+begin
+  if lower(auth.jwt() ->> 'email') is distinct from 'ciniper@gmail.com' then
+    raise exception 'Only the host can reset the ceremony' using errcode = '42501';
+  end if;
+
+  update public.ceremony_state
+    set active_round_id = null, voting_closed = false
+    where game_id = ceremony_id or starts_with(game_id, ceremony_id || '-');
+
+  delete from public.game_rounds
+    where id = any(round_ids)
+      and (game_id = ceremony_id or starts_with(game_id, ceremony_id || '-'));
+  get diagnostics deleted_count = row_count;
+
+  if deleted_count <> cardinality(round_ids) then
+    raise exception 'Ceremony rounds changed. Reload and try the reset again.';
+  end if;
+  return deleted_count;
+end;
+$$;
+
+revoke all on function public.reset_ceremony_game(text, uuid[]) from public, anon, authenticated;
+grant execute on function public.reset_ceremony_game(text, uuid[]) to authenticated;
+
 commit;
