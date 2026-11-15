@@ -40,6 +40,11 @@
     .note { color: var(--text-2); font-size: 15px; text-align: center; margin: 0; }
     .big { font-size: 26px; font-weight: 800; text-align: center; margin: 4px 0; }
     .big.ok { color: var(--ok); } .big.no { color: var(--no); }
+    .guess { display: flex; gap: 10px; margin: 16px 0 10px; }
+    .guess input { flex: 1; min-width: 0; font: 800 26px system-ui, sans-serif; padding: 14px 16px; border-radius: 14px; border: 2px solid var(--line);
+      background: var(--panel); color: var(--text); }
+    .guess input:focus { outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+    .guess .btn { flex: none; padding: 15px 20px; }
     .btn { all: unset; display: block; text-align: center; padding: 15px 18px; border-radius: 12px; font-weight: 800; color: #fff; cursor: pointer;
       background: linear-gradient(135deg, var(--btn), var(--btn-2)); }
     .score { text-align: center; font-size: 15px; color: var(--text-2); }
