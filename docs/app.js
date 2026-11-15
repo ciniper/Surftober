@@ -174,6 +174,7 @@ async function initSupabase(){
   enforceProfileNameOnUI();
   reflectAdminVisibility(adminEmails);
   await loadEvents();
+  refreshCeremonyLink();
 
   // initial sync
   syncFromCloud();
@@ -191,6 +192,7 @@ async function initSupabase(){
     }
     currentUser = next;
     reflectAuthUI();
+    refreshCeremonyLink();
     reflectViewerNav();
     reflectAdminVisibility(adminEmails);
     if (currentUser) {
@@ -553,6 +555,7 @@ async function signOut(){
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
     reflectAuthUI();
+    refreshCeremonyLink();
   } catch (e) {
     console.error('Sign out error:', e);
   }
@@ -3954,6 +3957,51 @@ function registerSW() {
     });
 }
 
+// The shared deck and Main link both use the ceremony selected in deck-config.
+const ceremonyConfig = window.SurftoberDeckConfig;
+const publishedCeremonyId = ceremonyConfig?.game?.id || `${ceremonyConfig?.team || DEFAULT_EVENT.team}-ceremony`;
+let ceremonyLinkCheck = 0;
+
+async function refreshCeremonyLink() {
+  const version = ++ceremonyLinkCheck;
+  const link = document.getElementById('deck-cta');
+  const finish = document.getElementById('btn-finish-presentation');
+  if (!link || !finish) return;
+  if (!sb || !currentUser) { link.hidden = true; finish.disabled = true; return; }
+
+  const { data, error } = await sb.from('ceremony_state').select('published_at').eq('game_id', publishedCeremonyId).maybeSingle();
+  if (version !== ceremonyLinkCheck) return;
+  const published = !!data?.published_at;
+  link.hidden = !published;
+  finish.disabled = !!error || published || !isAdminUser();
+  finish.textContent = published ? 'Presentation finished' : 'Finish presentation';
+}
+
+function attachFinishPresentationHandler() {
+  const finish = document.getElementById('btn-finish-presentation');
+  const note = document.getElementById('game-reset-status');
+  if (!finish) return;
+  finish.addEventListener('click', async () => {
+    if (finish.disabled || !sb || !isAdminUser()) return;
+    if (!confirm('Finish the presentation? This closes voting and shares the ceremony results on the signed-in Main page.')) return;
+    finish.disabled = true;
+    try {
+      const { error } = await sb.rpc('finish_ceremony_presentation', { ceremony_id: publishedCeremonyId });
+      if (error) throw error;
+      note.textContent = 'Voting is closed. The Award Ceremony is available on Main.';
+    } catch (e) {
+      note.textContent = `Could not finish the presentation: ${e.message || e}`;
+    } finally {
+      await refreshCeremonyLink();
+    }
+  });
+  window.addEventListener('focus', refreshCeremonyLink);
+  window.addEventListener('pageshow', refreshCeremonyLink);
+  window.addEventListener('hashchange', () => {
+    if (!location.hash || location.hash === '#leaderboard' || location.hash === '#account') refreshCeremonyLink();
+  });
+}
+
 // Reset clears the selected ceremony rounds and reopens voting in one transaction.
 function attachGameResetHandler(){
   const btn = document.getElementById('btn-game-reset');
@@ -3962,7 +4010,8 @@ function attachGameResetHandler(){
   const say = (t) => { if (note) note.textContent = t; };
   btn.addEventListener('click', async () => {
     if (!sb || !isAdminUser()) { say('Sign in as the admin to reset the game.'); return; }
-    const prefix = `${(viewedEvent || activeEvent || DEFAULT_EVENT).team}-ceremony`;
+    const team = (viewedEvent || activeEvent || DEFAULT_EVENT).team;
+    const prefix = team === ceremonyConfig?.team ? publishedCeremonyId : `${team}-ceremony`;
     btn.disabled = true;
     try {
       const { data: rounds, error } = await sb.from('game_rounds').select('id, game_id').like('game_id', `${prefix}%`);
@@ -3974,13 +4023,14 @@ function attachGameResetHandler(){
         if (result.error) throw result.error;
         votes = result.count || 0;
       }
-      if (!confirm(`Reset the ceremony?\n\nThis reopens voting and deletes ${ids.length} rounds and ${votes} votes. Deleted votes can't be restored.`)) {
+      if (!confirm(`Reset the ceremony?\n\nThis removes the results link from Main, reopens voting, and deletes ${ids.length} rounds and ${votes} votes. Deleted votes can't be restored.`)) {
         say('Reset cancelled.');
         return;
       }
       const { error: resetError } = await sb.rpc('reset_ceremony_game', { ceremony_id: prefix, round_ids: ids });
       if (resetError) throw resetError;
       say('Game reset. Voting is open again. Reload the deck before you start.');
+      await refreshCeremonyLink();
     } catch (e) {
       console.error('[game reset]', e);
       say(`Reset failed: ${e.message || e}`);
@@ -4010,6 +4060,7 @@ window.addEventListener('load', () => {
   attachAccountHandlers();
   attachAdminEventHandlers();
   attachGameResetHandler();
+  attachFinishPresentationHandler();
   attachAudioHandlers();
   attachPhotoHandlers();
   attachMessageBoardHandlers();

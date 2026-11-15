@@ -8,6 +8,11 @@ create table if not exists public.ceremony_state (
   voting_closed boolean not null default false
 );
 
+alter table public.ceremony_state add column if not exists published_at timestamptz;
+alter table public.ceremony_state drop constraint if exists published_ceremony_is_closed;
+alter table public.ceremony_state add constraint published_ceremony_is_closed
+  check (published_at is null or voting_closed);
+
 alter table public.ceremony_state enable row level security;
 drop policy if exists "ceremony state is public" on public.ceremony_state;
 drop policy if exists "admins manage ceremony state" on public.ceremony_state;
@@ -81,7 +86,7 @@ begin
   end if;
 
   update public.ceremony_state
-    set active_round_id = null, voting_closed = false
+    set active_round_id = null, voting_closed = false, published_at = null
     where game_id = ceremony_id or starts_with(game_id, ceremony_id || '-');
 
   delete from public.game_rounds
@@ -98,5 +103,30 @@ $$;
 
 revoke all on function public.reset_ceremony_game(text, uuid[]) from public, anon, authenticated;
 grant execute on function public.reset_ceremony_game(text, uuid[]) to authenticated;
+
+-- Closing voting and publishing are one operation, including for a ceremony
+-- which never opened a voting slide. Preserve the date on repeated requests.
+create or replace function public.finish_ceremony_presentation(ceremony_id text)
+returns timestamptz
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  finished_at timestamptz;
+begin
+  if lower(auth.jwt() ->> 'email') is distinct from 'ciniper@gmail.com' then
+    raise exception 'Only the host can finish the ceremony' using errcode = '42501';
+  end if;
+
+  insert into public.ceremony_state as ceremony (game_id, voting_closed, published_at)
+    values (ceremony_id, true, now())
+    on conflict (game_id) do update
+      set voting_closed = true, published_at = coalesce(ceremony.published_at, excluded.published_at)
+    returning published_at into finished_at;
+  return finished_at;
+end;
+$$;
+
+revoke all on function public.finish_ceremony_presentation(text) from public, anon, authenticated;
+grant execute on function public.finish_ceremony_presentation(text) to authenticated;
 
 commit;

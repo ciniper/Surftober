@@ -18,6 +18,7 @@ const ASSETS = [
   './styles.css',
   './app.js',
   './awards.js',
+  './deck-config.js',
   './photo-kit.js',
   './manifest.webmanifest',
   './logo.svg',
