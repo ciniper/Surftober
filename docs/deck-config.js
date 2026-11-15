@@ -118,6 +118,10 @@ window.SurftoberDeckConfig = {
   charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '' },
 
   // Judged awards — the data can't pick these. `winner` is free text.
+  // Best Dressed ballot, up to four entries with unique names.
+  // Set photo to a path under docs/ or an HTTPS image URL.
+  // Example: { name: 'Contestant name', photo: 'costumes/contestant.jpg' }
+  bestDressedCandidates: [],
   judged: {
     'best-dressed': { winner: '', value: '' },     // costume-surf candidates are listed on the slide
     'fallen-fathers': { winner: '', value: '' },

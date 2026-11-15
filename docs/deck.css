@@ -520,3 +520,11 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 
 /* Host lock (surftober.com) */
 .lock-btn { font: 700 28px var(--body); padding: 18px 44px; border-radius: 999px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--sun-1), var(--accent)); box-shadow: var(--shadow); }
+
+.costume-grid { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 24px; margin: 24px 0; }
+.costume-grid > div { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; text-align: center; font-size: 28px; padding-bottom: 12px; }
+.costume-grid img { display: block; width: 100%; height: 480px; object-fit: contain; margin-bottom: 10px; }
+.costume-grid ~ [data-g="result"] { font-size: 38px; }
+.costume-qr.g-qr { width: 132px; height: 132px; padding: 8px; border-radius: 12px; }
+
+.ceremony-results .g-qr, .ceremony-results .g-steps, .ceremony-results .gr-head .lede { display: none; }
