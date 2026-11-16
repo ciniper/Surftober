@@ -1108,12 +1108,6 @@
       ${x.detail ? `<p class="lede">${esc(x.detail)}</p>` : ''}${figs ? `<div class="stats donate-figs">${figs}</div>` : ''}${x.link ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(x.link)}</p>` : todo('Donation link', 'donate.link')}` };
   }
 
-  function filmSlide() {
-    const f = CFG.shortFilm || {};
-    return { title: 'Short film', cls: 'prompt', html: `<p class="kicker">Movie time</p><h2>${esc(f.title || 'Short film')}</h2>
-      ${f.url ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(f.url)}</p>` : todo('Film title + link', 'shortFilm')}` };
-  }
-
   // The Failed Feature Award: the winner is an app feature, not a surfer —
   // and the reveal plays the feature's entire output for the season.
   function failedFeatureSlide(d, i, n) {
@@ -1184,8 +1178,7 @@
     else slides.push(judgedSlide('best-dressed', bestDressed[0], bestDressed[1], ++i, n, d, d.costumeSurfers));
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
     slides.push(...gameSlides(d));
-    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
-      gallerySlide('T-shirt', 'Merch', 'T-shirt concept', (C.tshirt || {}).images, 'tshirt.images', (C.tshirt || {}).note), outroSlide());
+    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), outroSlide());
     return slides.filter(Boolean);
   }
 

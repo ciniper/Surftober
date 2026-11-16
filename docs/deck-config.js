@@ -313,8 +313,6 @@ window.SurftoberDeckConfig = {
     lastYear: { amount: '$2,960', label: 'raised in 2025: $1,480 given, doubled by the company match' },
     match: { amount: '$10,000', label: 'in matching this year, dollar for dollar' },
   },
-  shortFilm: { title: '', url: '' },  // 2023/2024 "Movie Time" / "Short Film?"
-  tshirt: { images: [], note: '' },   // 2025 "T-shirt Concept": { src, caption } images
 
   // Hand-picked journal quotes: { text, by }.
   quotes: [],
