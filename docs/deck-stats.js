@@ -341,8 +341,8 @@
     // Aim for the Stars (2023): furthest short of the goal set at sign-up.
     const goalOf = (u) => { const g = parseFloat(String((profileOf.get(u) || {}).target_hours || '').replace(/[^\d.]/g, '')); return g > 0 ? g : null; };
     const goalUsers = users.filter((u) => goalOf(u));
-    if (goalUsers.length) push({ id: 'aim-for-the-stars', name: 'The “Aim for the Stars and Land on the Earth” Award', desc: 'Fewest hours compared to their original goal',
-      r: rank(goalUsers.filter((u) => hoursOf(u) < goalOf(u)).map((u) => ({ user: u, value: hoursOf(u) / goalOf(u), label: `${hoursOf(u).toFixed(1)} hours of a ${goalOf(u)}-hour goal`, extra: `${pct(hoursOf(u) / goalOf(u))} of the goal` })), { dir: 'min' }) });
+    if (goalUsers.length) push({ id: 'aim-for-the-stars', name: 'The “Aim for the Stars and Land on the Earth” Award', desc: `Smallest share of their goal completed (minimum ${MIN_HOURS} credited hours)`,
+      r: rank(goalUsers.filter((u) => hoursOf(u) >= MIN_HOURS && hoursOf(u) < goalOf(u)).map((u) => ({ user: u, value: hoursOf(u) / goalOf(u), label: `${hoursOf(u).toFixed(1)} hours of a ${goalOf(u)}-hour goal`, extra: `${pct(hoursOf(u) / goalOf(u))} of the goal` })), { dir: 'min' }) });
     const goalsHit = goalUsers.filter((u) => hoursOf(u) >= goalOf(u)).length;
 
     // --- 2023/2024 superlatives ---
