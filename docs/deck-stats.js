@@ -234,6 +234,13 @@
     push({ id: 'minimalist', name: 'The Minimalist Award', desc: `Fewest different boards (minimum ${MIN_HOURS} credited hours)`,
       r: rank(boardUsers.filter((u) => hoursOf(u) >= MIN_HOURS).map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} board${boardsOf(u).size === 1 ? '' : 's'}`, extra: boardList(u).slice(0, 4).join(' · ') })), { dir: 'min' }) });
     // Count board names once even if the log also names a fin setup or a second board.
+    // Anton logged these boards both by length alone and by name.
+    const antonBoardAliases = new Map([
+      ['510', '510 simaril arakawa'],
+      ['510 simaril', '510 simaril arakawa'],
+      ['60', '60 ci traveler'],
+      ['66', '66 arakawa rp'],
+    ]);
     const hoarderBoard = (s) => {
       if (s.type === 'swim') return '';
       const board = normBoard(s.board);
@@ -243,6 +250,7 @@
       if (/^6[02] rp slayer x /.test(board)) return board.slice(0, 12);
       if (/^59 lost stepdriver grom step ?up$/.test(board)) return '59 lost stepdriver grom step up';
       if (board === 'stretch and recon') return 'stretch';
+      if (s.user === 'Anton Arboleda') return antonBoardAliases.get(board) || board;
       return board;
     };
     const hoarderEntries = users.map((u) => {
