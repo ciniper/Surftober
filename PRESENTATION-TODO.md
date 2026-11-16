@@ -1,5 +1,11 @@
 # Surftober presentation TODO
 
+## Award review checkpoint
+
+- The Adventurer Award is next for approval. Jimmy Newman and Erica Brooks tie at 11 spots. Seany Boi is the first runner-up with eight.
+- The Localism Award is provisionally approved and flagged below. The Marathon and Rivalry awards are approved.
+- Continue in the order defined in `docs/deck.js`.
+
 ## Next edits
 
 - [ ] **Revisit The Localism Award.** Approved provisionally during the award review.
