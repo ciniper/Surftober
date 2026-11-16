@@ -1053,7 +1053,15 @@
     // Whole slides from the BWTF deck, edge to edge.
     const full = (key) => (B[key] || []).map((x, i) => ({ title: x.title, cls: 'bw-full',
       html: media(x.media, `bwtf.${key}[${i}].media`, 'bw-fullimg', x.title) }));
-    return [...full('before'), intro, ...feats, ...full('after')];
+    // Water Quality Test Bonus: our own sampling photos in one row. Each
+    // photo's width follows its shape (ar = width / height in the config), so
+    // portraits and landscapes share one height.
+    const X = B.bonus;
+    const bonus = X && (X.photos || []).length ? { title: X.title || 'Water Quality Test Bonus', cls: 'bw-bonus', html: `
+      <p class="kicker">${esc(X.kicker || `Blue Water Task Force · ${B.group}`)}</p><h2>${esc(X.title || 'Water Quality Test Bonus')}</h2>
+      ${X.note ? `<p class="lede">${esc(X.note)}</p>` : ''}
+      <div class="bw-row">${X.photos.map((ph) => `<figure style="--ar:${ph.ar || 0.75}"><img src="${esc(ph.src)}" alt="${esc(ph.alt || '')}"></figure>`).join('')}</div>` } : null;
+    return [...full('before'), intro, ...feats, ...full('after'), bonus].filter(Boolean);
   }
 
   function outroSlide() {

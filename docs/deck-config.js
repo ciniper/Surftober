@@ -353,6 +353,19 @@ window.SurftoberDeckConfig = {
       { title: 'Westside transport box: decanting', media: 'bwtf/decanting.jpg' },
     ],
     site: '',
+    // Last slide of the section: our own water sampling (the app's one-time
+    // +1 hour Water Quality Reading bonus). Photos sit in one row, sized by
+    // their own shape (ar = width / height), in this order.
+    bonus: {
+      title: 'Water Quality Test Bonus',
+      kicker: 'Surftober × Blue Water Task Force',
+      note: 'Water sampling with the SF Blue Water Task Force: a one-time +1 hour bonus.',
+      photos: [
+        { src: 'bwtf/bonus-sampling-1.jpg', ar: 0.75, alt: 'Wading into the shore break with the sampling pole' },
+        { src: 'bwtf/bonus-sampling-2.jpg', ar: 0.75, alt: 'Taking a water sample in the surf' },
+        { src: 'bwtf/bonus-crew.jpg', ar: 1.333, alt: 'The sampling crew under the Surfrider banner' },
+      ],
+    },
   },
 
   // "Who said that?" live game. Needs supabase-upgrade-2026-11-game.sql run.
