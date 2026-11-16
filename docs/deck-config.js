@@ -22,6 +22,9 @@ window.SurftoberDeckConfig = {
     { year: 2024, participants: 20, hours: 615, caption: 'Foggy Spooky Surf' },
     { year: 2025, participants: 26, observers: 8, hours: 808, caption: 'Foggy Spooky Surf' },
   ],
+  // Title slide photo (path under docs/). Empty = the sun-and-waves title.
+  titlePhoto: 'photos/costume-surf-2026.jpg',
+  titlePhotoCaption: 'The 2026 costume surf crew',
   currentCaption: '', // e.g. 'Sunny Spooky Surf' for this year's costume surf
 
   // Last year's final hours, copied from the [2025] deck's Final Results.
@@ -173,7 +176,12 @@ window.SurftoberDeckConfig = {
   // 2025's trophies were printed plaques: a red Golden Gate bridge on blue,
   // "SURFTOBER 2025", and a cable car in the tier colour carrying the name.
   // Their photos live in the [2025] Surftober Award Ceremony Google Slides.
-  trophiesPast: [],  // 2025 deck: "Trophies Previous Years"
+  trophiesPast: [    // 2025 deck: "Trophies Previous Years"
+    { src: 'trophy/past-2022.jpg', caption: '2022' },
+    { src: 'trophy/past-2023.jpg', caption: '2023' },
+    { src: 'trophy/past-2024.jpg', caption: '2024' },
+    { src: 'trophy/past-2025.jpg', caption: '2025' },
+  ],
   trophiesNow: [],   // 2025 deck: "Trophies 2025"
 
   // Trophy 2026, the spinner: a section between the two trophy galleries
@@ -249,7 +257,12 @@ window.SurftoberDeckConfig = {
   storyPrompts: ['What was your favorite session, favorite wave?', 'How challenging was it to complete your goal?'],
 
   // Closing slides. Empty strings = placeholder.
-  donate: { text: 'Consider donating to Surfrider', detail: '$3–5 per hour', link: '' },
+  // lastYear / match show as two big figures on the Donate slide.
+  donate: {
+    text: 'Consider donating to Surfrider', detail: '$3–5 per hour', link: '',
+    lastYear: { amount: '$2,960', label: 'raised in 2025: $1,480 given, doubled by the company match' },
+    match: { amount: '$10,000', label: 'in matching this year, dollar for dollar' },
+  },
   shortFilm: { title: '', url: '' },  // 2023/2024 "Movie Time" / "Short Film?"
   tshirt: { images: [], note: '' },   // 2025 "T-shirt Concept": { src, caption } images
 

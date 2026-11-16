@@ -82,6 +82,12 @@ self.addEventListener('fetch', (e) => {
   // API response from cache.
   if (url.pathname.startsWith('/_vercel/') || url.pathname.startsWith('/api/')) return;
 
+  // Video and audio go straight to the network. Players ask for byte ranges
+  // (206 responses), which the Cache API can't store, and Safari stalls when a
+  // service worker answers a media range request — the deck's trophy videos
+  // sat on their poster frame.
+  if (req.headers.has('range') || /\.(webm|mp4|m4v|mov|mp3|m4a|wav)$/i.test(url.pathname)) return;
+
   // Deploy marker: always fetch fresh (bypass HTTP + SW cache) so the
   // visible version reliably reflects what is actually live.
   if (url.pathname.endsWith('version.js')) {

@@ -102,7 +102,27 @@
     </svg>`;
   }
 
+  // Title: the year's group photo across the top (CFG.titlePhoto), the
+  // name under it. Without a photo it falls back to the sun-and-waves art.
   function titleSlide(d) {
+    // The photo is shown near its own size (it's ~970 px wide) so it stays
+    // sharp; the name and a few light numbers fill the left. Hours stay off
+    // this slide: they're the reveal on Final results.
+    if (CFG.titlePhoto) return { title: 'Title', cls: 'title photo-title', html: `
+      <div class="tp-grid">
+        <div class="content">
+          <img class="logo" src="${LOGO}" alt="">
+          <p class="kicker">${esc(CFG.edition || '')} Surftober · October ${CFG.year}</p>
+          <h1>Surftober<br><span class="yr">${CFG.year}</span></h1>
+          <p class="lede">Award Ceremony</p>
+          <div class="tp-stats">
+            <div><b>31</b><span>days</span></div>
+            <div><b>${fmt(d.stats.surfers)}</b><span>surfers</span></div>
+            <div><b>${fmt(d.stats.sessions)}</b><span>sessions</span></div>
+          </div>
+        </div>
+        <figure class="tp-fig"><img class="tp-photo" src="${esc(CFG.titlePhoto)}" alt="The ${esc(CFG.year)} Surftober crew in costume with their boards">${CFG.titlePhotoCaption ? `<figcaption>${esc(CFG.titlePhotoCaption)}</figcaption>` : ''}</figure>
+      </div>` };
     return { title: 'Title', cls: 'title', html: `
       <div class="sun"></div>${wavesSvg()}
       <div class="content">
@@ -1007,8 +1027,11 @@
 
   function donateSlide() {
     const x = CFG.donate || {};
+    // Last year's total and this year's match, as two big figures.
+    const fig = (f) => f && f.amount ? `<div class="stat"><div class="v">${esc(f.amount)}</div><div class="k">${esc(f.label || '')}</div></div>` : '';
+    const figs = fig(x.lastYear) + fig(x.match);
     return { title: 'Donate', cls: 'prompt', html: `<p class="kicker">Giving back</p><h2>${esc(x.text || 'Consider donating to Surfrider')}</h2>
-      ${x.detail ? `<p class="lede">${esc(x.detail)}</p>` : ''}${x.link ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(x.link)}</p>` : todo('Donation link', 'donate.link')}` };
+      ${x.detail ? `<p class="lede">${esc(x.detail)}</p>` : ''}${figs ? `<div class="stats donate-figs">${figs}</div>` : ''}${x.link ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(x.link)}</p>` : todo('Donation link', 'donate.link')}` };
   }
 
   function filmSlide() {
@@ -1150,7 +1173,7 @@
     // Slide videos (data-auto) play only on their own slide; data-restart ones
     // start from the top each time the slide comes up.
     stage.querySelectorAll('video[data-auto]').forEach((v) => {
-      if (el.contains(v)) { if (v.dataset.restart && st === 0 && v.paused) v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+      if (el.contains(v)) { if (v.dataset.restart && st === 0 && v.paused) v.currentTime = 0; v.play().catch((e) => { if (e && e.name === 'NotAllowedError') v.controls = true; }); } else v.pause(); // autoplay blocked (e.g. iPhone Low Power Mode): show controls so a tap plays it
     });
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);

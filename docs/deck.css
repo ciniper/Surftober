@@ -98,6 +98,20 @@ h3 { font-size: 40px; font-weight: 700; }
 .title h1 .yr { color: var(--highlight-text); }
 .title .logo { width: 132px; height: 132px; margin-bottom: 32px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.25)); }
 .title .lede { color: inherit; opacity: .85; margin-top: 16px; font-size: 44px; }
+/* photo title: name + light numbers on the left, the group photo near its
+   native ~970 px on the right so it stays sharp */
+.slide.photo-title { justify-content: center; padding: 80px 120px 120px; }
+.photo-title .tp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 1040px; gap: 72px; align-items: center; }
+.photo-title .content { max-width: none; }
+.photo-title .logo { width: 104px; height: 104px; margin-bottom: 28px; }
+.photo-title h1 { font-size: 124px; line-height: .95; }
+.photo-title .lede { margin-top: 22px; font-size: 48px; }
+.photo-title .tp-stats { display: flex; gap: 44px; margin-top: 56px; }
+.photo-title .tp-stats b { display: block; font: 800 60px/1 var(--display); letter-spacing: -0.02em; }
+.photo-title .tp-stats span { display: block; margin-top: 8px; font-size: 22px; text-transform: uppercase; letter-spacing: .12em; opacity: .7; }
+.photo-title .tp-fig { margin: 0; }
+.photo-title .tp-photo { display: block; width: 100%; border-radius: 28px; box-shadow: 0 30px 70px rgba(0,0,0,.22); }
+.photo-title figcaption { margin-top: 18px; font-size: 24px; opacity: .7; text-align: right; }
 
 /* ---------- section divider ---------- */
 .slide.section { justify-content: center; align-items: flex-start; }
@@ -188,11 +202,12 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .agenda li::before { content: counter(ag, decimal-leading-zero); font: 800 30px/1 var(--body); color: var(--accent-text); }
 .slide.prompt { justify-content: center; }
 .slide.prompt h2 { font-size: 120px; max-width: 1500px; }
+.stats.donate-figs { grid-template-columns: repeat(2, minmax(0, 560px)); margin-top: 48px; }
 .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; margin-top: 36px; flex: 1; min-height: 0; }
 .gallery figure { margin: 0; border-radius: 20px; overflow: hidden; background: var(--panel); border: 1.5px solid var(--line); display: flex; flex-direction: column; }
 .gallery img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; }
 .gallery figcaption { padding: 14px 20px; font-size: 24px; color: var(--text-2); }
-.gallery.row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.gallery.row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: center; }
 .gallery.row img { object-fit: contain; }
 
 /* ---------- award slides ---------- */
