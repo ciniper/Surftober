@@ -823,9 +823,10 @@
     const total = counts.reduce((a, b) => a + b, 0), max = Math.max(1, ...counts);
     const answer = row && row.status === 'revealed' && row.answer != null ? Number(row.answer) : (step >= 1 && TB.printHours != null ? Number(TB.printHours) : null);
     const shown = step >= 1 && answer != null, win = shown ? binOf(bins, answer) : -1;
+    const results = step >= 1; // the split shows on the results step only
     el.querySelectorAll('.gr-col').forEach((c, i) => {
-      c.querySelector('.gr-bar i').style.height = `${(counts[i] / max) * 100}%`;
-      c.querySelector('.gr-n').textContent = counts[i] ? String(counts[i]) : '';
+      c.querySelector('.gr-bar i').style.height = results ? `${(counts[i] / max) * 100}%` : '0';
+      c.querySelector('.gr-n').textContent = results && counts[i] ? String(counts[i]) : '';
       c.classList.toggle('win', i === win);
       c.classList.toggle('dim', shown && i !== win);
     });
@@ -908,6 +909,14 @@
           row = (await G.rounds(GAME_ID)).find((x) => x.round_no === round.round_no);
           if (row) GAME.rows.set(round.round_no, row);
         }
+        // Each vote has two steps: voting (step 0) and results (step 1). The
+        // results step closes voting (reveal); stepping back to voting
+        // reopens it, so people can still vote or change their pick.
+        if (row && revealStep === 0 && row.status === 'revealed' && !state?.voting_closed) {
+          const [opened] = (await G.reopen(row.id)) || [];
+          row = opened || { ...row, status: 'open', answer: null };
+          GAME.rows.set(round.round_no, row);
+        }
         const id = row?.id ?? null;
         if (slides[cur] === s && (!state || state.active_round_id !== id)) {
           [state] = await G.updateCeremony(GAME_ID, { active_round_id: id });
@@ -966,8 +975,8 @@
         const total = vs.length, max = Math.max(1, ...counts.values()), shown = revealStep >= 1;
         el.querySelectorAll('.gr-col').forEach((c) => {
           const n = counts.get(c.dataset.choice) || 0;
-          c.querySelector('.gr-bar i').style.height = `${(n / max) * 100}%`;
-          c.querySelector('.gr-n').textContent = n ? String(n) : '';
+          c.querySelector('.gr-bar i').style.height = shown ? `${(n / max) * 100}%` : '0'; // results step only
+          c.querySelector('.gr-n').textContent = shown && n ? String(n) : '';
           c.classList.toggle('win', shown && !!crew && c.dataset.choice === crew.grade);
           c.classList.toggle('dim', shown && !!crew && c.dataset.choice !== crew.grade);
         });
@@ -1014,7 +1023,7 @@
       }
       if (resultsView && s.game.r) set('status', 'Final results · voting closed');
       if (s.game.r && state?.active_round_id && GAME.host) {
-        set('status', state.voting_closed ? 'Voting closed' : 'Live on phones · voting open');
+        set('status', state.voting_closed ? 'Voting closed' : revealStep >= 1 ? 'Results · voting closed for this vote (← reopens it)' : 'Live on phones · voting open');
       }
     } catch (e) {
       GAME.note = gameErr(e);
