@@ -231,8 +231,8 @@
     const boardsOf = (u) => new Set(water(u).map((s) => normBoard(s.board)).filter(Boolean));
     const boardUsers = users.filter((u) => water(u).filter((s) => normBoard(s.board)).length >= MIN_SESSIONS);
     const boardList = (u) => [...new Set(water(u).map((s) => (s.board || '').trim()).filter((b) => normBoard(b)))];
-    push({ id: 'minimalist', name: 'The Minimalist Award', desc: 'Fewest different boards',
-      r: rank(boardUsers.map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} board${boardsOf(u).size === 1 ? '' : 's'}`, extra: boardList(u).slice(0, 4).join(' · ') })), { dir: 'min' }) });
+    push({ id: 'minimalist', name: 'The Minimalist Award', desc: `Fewest different boards (minimum ${MIN_HOURS} credited hours)`,
+      r: rank(boardUsers.filter((u) => hoursOf(u) >= MIN_HOURS).map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} board${boardsOf(u).size === 1 ? '' : 's'}`, extra: boardList(u).slice(0, 4).join(' · ') })), { dir: 'min' }) });
     push({ id: 'board-hoarder', name: 'The Board Hoarder Award', desc: 'Most different boards ridden',
       r: rank(boardUsers.map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} boards` }))) });
 
