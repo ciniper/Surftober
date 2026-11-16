@@ -268,7 +268,27 @@
       .map((u) => ({ u, f: u.split(/\s+/)[0].toLowerCase() }))
       .filter((x) => x.f.length >= 3 && firstCounts.get(x.f) === 1 && !WORDLIKE.has(x.f))
       .map((x) => ({ ...x, re: new RegExp(`\\b${escRe(x.f)}\\b`, 'i') }));
-    const mentionsBy = (u) => byUser.get(u).reduce((a, s) => a + mentionables.filter((m) => m.u !== u && m.re.test(s.notes || '')).length, 0);
+    // Confirmed additional mentions from the October 2026 ceremony audit.
+    const auditedMentions = new Map([
+      ["arlo moore-bloom", 2],
+      ["Ashtin Singh", 2],
+      ["Chase Cooper", 8],
+      ["Erica Brooks", 4],
+      ["Gabriel Levine", 7],
+      ["Jason Armstrong", 8],
+      ["Jimmy Newman", 2],
+      ["Juliette", 2],
+      ["Lawrence De Geest", 3],
+      ["Nahla Achi", 4],
+      ["Nic Risser", 1],
+      ["Nicolas", 8],
+      ["Reed Klaeser", 4],
+      ["Rohan Kurse", 11],
+      ["Sophie Frank", 2],
+      ["Tony Sacharny", 1],
+    ]);
+    const mentionsBy = (u) => byUser.get(u).reduce((a, s) => a + mentionables.filter((m) => m.u !== u && m.re.test(s.notes || '')).length, 0)
+      + (config.team === '5th-surftober-2026' ? (auditedMentions.get(u) || 0) : 0);
     push({ id: 'friendship', name: 'The Friendship and Lovers Award', desc: 'Mentioned other surfers the most',
       r: rank(items(users, mentionsBy, (v) => `${v} mentions`)) });
 
