@@ -3,6 +3,8 @@
 ## Next edits
 
 - [ ] **Review the superlative awards with Chase.** Walk through each award, check how it is calculated and how it is worded on the slide, and record any changes Chase wants before updating the deck.
+  - [ ] Revisit **The Fall from Grace Award** after doubling Sam Steele’s credited hours as a one-time adjustment. Recalculate and review the runner-up before updating the slide.
+- [ ] **Make a trophy for Sam Steele.**
 - [ ] **Correct the trophy exploded render.** Chase will update the viewer on the `trophy` branch so the inlaid text stays flush with the hub and the bearing moves farther out. Regenerate the exploded-view media and replace the ceremony deck asset.
 - [ ] **Add slides that explain the animation.** The deck already has an orbit render, a phone strobe clip, and wave-development frames. Add a side-by-side of the spinning wheel and the apparent animation. Show the camera frames or strobe pulses, where each sample lands, and how the visible frame advances after a full turn. Label the actual frame rate and wheel speed once measured.
 - [ ] **Share animation app links.** Confirm the exact Zoetrope and strobe-light apps and their store links. Put a QR code on the slide, surface tap-ready links in the existing phone game session, or use both.
