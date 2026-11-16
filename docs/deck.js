@@ -345,9 +345,16 @@
     const body = names.length
       ? `<div class="reveal${largePhotos ? ' photo-reveal' : ''}"><div class="award-winners">${faces}${result}</div>${ru}</div>`
       : `<div>${todo('Nobody qualified for this one', 'judged')}</div>`;
-    return { title: a.name, cls: 'award', steps: names.length ? 1 : 0, html: `
+    const entry = a.id === 'author' && d.sessionsOf('Lawrence De Geest').find((session) =>
+      String(session.date).slice(0, 10) === '2026-10-29' && session.notes?.trim().split(/\s+/).length === 257);
+    const journal = entry ? `<div data-author-journal hidden>
+      <h3>Longest single entry · Oct. 29</h3>
+      <p>Lawrence De Geest · 257 words</p>
+      <div style="columns:2;column-gap:2em;font-size:20px;line-height:1.35;white-space:pre-wrap">${esc(entry.notes.trim())}</div>
+    </div>` : '';
+    return { title: a.name, cls: 'award', steps: entry ? 2 : names.length ? 1 : 0, html: `
       <div class="head"><div><p class="kicker">${esc(a.group || 'Award')}</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div>
-      <div class="stagefloor"><div class="mystery">?</div>${body}</div>` };
+      <div class="stagefloor" data-award-results><div class="mystery">?</div>${body}</div>${journal}` };
   }
 
   function rivalrySlide(r, i, n, d) {
@@ -1130,6 +1137,11 @@
     stage.querySelectorAll('.slide').forEach((el) => el.classList.toggle('active', Number(el.dataset.i) === cur));
     const el = stage.querySelector(`.slide[data-i="${cur}"]`);
     el.querySelectorAll('.reveal').forEach((r) => r.classList.toggle('shown', step >= 1));
+    const journal = el.querySelector('[data-author-journal]');
+    if (journal) {
+      journal.hidden = step < 2;
+      el.querySelector('[data-award-results]').style.display = step >= 2 ? 'none' : '';
+    }
     stage.classList.toggle('on-title', (slides[cur].cls || '') === 'title'); // footer clashes with the beach art
     stage.classList.toggle('bare', (slides[cur].cls || '') === 'bw-full'); // edge-to-edge picture: no footer over it
     gameOnShow();
