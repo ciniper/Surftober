@@ -669,7 +669,7 @@
 
     const parts = (TR.parts || []).map((p) => `<li><b>${esc(p.name)}</b><span>${esc(p.note)}</span></li>`).join('');
     const orbit = { title: `Trophy ${CFG.year} · exploded`, cls: 'tr-orbit', html: `
-      <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · ${esc(ver)}</p><h2>${esc(TR.headline || 'Seven parts, one bearing')}</h2>
+      <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · ${esc(ver)}</p><h2>${esc(TR.headline || 'Six parts, one bearing')}</h2>
         <ol class="tr-parts">${parts}</ol></div>
       <div class="tr-stage">${trMedia(TR.orbit, 'trophy.orbit', 'The trophy, assembled then exploded', { poster: TR.orbitPoster, restart: true })}</div>` };
 
