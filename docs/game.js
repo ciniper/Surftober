@@ -93,6 +93,8 @@
     return made?.[0] || (await rounds(gameId)).find((row) => row.round_no === r.round_no);
   }
   const reveal = (roundId, answer) => req(`game_rounds?id=eq.${enc(roundId)}`, { method: 'PATCH', prefer: 'return=representation', body: { status: 'revealed', answer } });
+  // Back to voting: the host stepped back from a vote's results (answer hidden again).
+  const reopen = (roundId) => req(`game_rounds?id=eq.${enc(roundId)}`, { method: 'PATCH', prefer: 'return=representation', body: { status: 'open', answer: null } });
   const resetGame = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}`, { method: 'DELETE' }); // votes cascade
 
   // ---------- player write ----------
@@ -191,5 +193,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, reopen, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
 })();
