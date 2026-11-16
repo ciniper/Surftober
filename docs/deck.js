@@ -1068,6 +1068,9 @@
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
       else if (id === 'best-dressed' && window.SurftoberGame?.costumeCandidates(CFG).length >= 2) slides.push(costumeSlide());
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
+      if (id === 'author') slides.push({ title: 'Web Analytics', html: `
+        <div class="head"><div><h2>Web Analytics</h2></div></div>
+        <p class="lede">Vercel visitor countries and data usage over time</p>` });
     }
     if (d.conditionAwards.length) {
       slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
