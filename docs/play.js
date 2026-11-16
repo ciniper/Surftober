@@ -18,7 +18,6 @@
   let activeVotes = [];
   let polling = false;
   let voteError = '';
-  const drafts = new Map();
   const savedVotes = new Map();
   const pollMs = 1900 + Math.random() * 200;
   const resultMs = 6000 + Math.random() * 1000;
@@ -73,7 +72,7 @@
       return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || pendingChoice() ? 'disabled' : ''}>${esc(c)}</button>`;
     }).join('');
     const verdict = revealed
-      ? `<p class="big">Crew grade: ${esc(G.crewGrade(activeVotes)?.grade || 'No votes yet')}</p><p class="note">${picked ? `You gave it ${esc(picked)}.` : "You didn't vote."}</p>`
+      ? (() => { const crew = G.crewGrade(activeVotes); return `<p class="big">Crew grade: ${esc(crew?.grade || 'No votes yet')}</p><p class="note">${crew ? `The average of ${crew.n} vote${crew.n === 1 ? '' : 's'}. ` : ''}${picked ? `You gave it ${esc(picked)}.` : "You didn't vote."}</p>`; })()
       : `<p class="note">${picked ? (pendingChoice() ? 'Saving…' : `You gave it ${esc(picked)} — change it until voting closes.`) : 'Tap a grade.'}</p>`;
     v.innerHTML = `<div class="card"><p class="kicker">Live vote</p><p class="quote">${esc(round.quote)}</p></div>
       ${verdict}${voteNotice()}<div class="choices grades">${btns}</div>`;
@@ -95,27 +94,24 @@
       ${voteNotice()}<div class="choices costumes">${buttons}</div>`;
   }
 
-  // Round -1: guess the trophies' total print time in hours (closest wins).
-  // The input survives re-renders while the player is typing.
-  let guessRank = null;   // { rank, of } after the reveal
+  // Round -1: guess the trophies' total print time by tapping an hour range.
+  // The answer (written at the reveal) is the real total in hours.
   const hrs = (n) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 1 })} h`;
   function renderGuess(v, revealed, picked) {
-    const mine = G.parseGuess(picked);
-    let body;
-    if (revealed) {
-      const ans = Number(round.answer);
-      const off = mine !== null ? Math.abs(mine - ans) : null;
-      body = `<p class="big">${esc(hrs(ans))}</p><p class="note">of printing for every trophy.</p>
-        <p class="note" style="margin-top:10px">${mine === null ? "You didn't guess." : `You guessed ${esc(hrs(mine))}: ${off === 0 ? 'spot on! 🎯' : `off by ${esc(hrs(off))}`}${guessRank ? ` · #${guessRank.rank} of ${guessRank.of}` : ''}`}</p>`;
-    }
-    if (!closed) {
-      body = (body || '') + `<form class="guess" data-guess>
-          <input id="guess" type="number" inputmode="decimal" min="0.1" max="${G.MAX_GUESS}" step="any" placeholder="Hours" aria-label="Your guess in hours" value="${esc(drafts.get(round.id) ?? mine ?? '')}">
-          <button type="submit" class="btn" ${pendingChoice() ? 'disabled' : ''}>${mine === null ? 'Lock it in' : 'Update'}</button>
-        </form>
-        <p class="note">${pendingChoice() ? 'Saving…' : mine === null ? 'All the trophies, every part. Closest guess wins.' : `Your guess: <b>${esc(hrs(mine))}</b> — change it until voting closes.`}</p>`;
-    }
-    v.innerHTML = `<div class="card"><p class="kicker">Live vote · Trophy ${esc(CFG.year || '')}</p><p class="quote">${esc(round.quote)}</p></div>${body || ''}${voteNotice()}`;
+    const ranges = G.printRanges(CFG.trophy && CFG.trophy.voteBins);
+    const choices = round.choices && round.choices.length ? round.choices : ranges.map((b) => b.label);
+    const ans = revealed ? Number(round.answer) : null;
+    const right = revealed ? G.printRangeOf(ranges, ans)?.label : null;
+    const btns = choices.map((c) => {
+      const cls = ['choice', c === picked ? 'picked' : '', revealed && c === right ? 'right' : '', revealed && c === picked && c !== right ? 'wrong' : ''].join(' ');
+      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || revealed || pendingChoice() ? 'disabled' : ''}>${esc(c)}</button>`;
+    }).join('');
+    const verdict = revealed
+      ? `<p class="big">${esc(hrs(ans))}</p><p class="note">of printing for every trophy${right ? ` (${esc(right)})` : ''}.</p>
+        <p class="note" style="margin-top:10px">${!picked ? "You didn't pick a range." : picked === right ? 'You got it! 🎯' : `You picked ${esc(picked)}.`}</p>`
+      : `<p class="note">${picked ? (pendingChoice() ? 'Saving…' : `You picked ${esc(picked)} — change it until voting closes.`) : 'All the trophies, every part. Tap a range.'}</p>`;
+    v.innerHTML = `<div class="card"><p class="kicker">Live vote · Trophy ${esc(CFG.year || '')}</p><p class="quote">${esc(round.quote)}</p></div>
+      ${verdict}${voteNotice()}<div class="choices ranges">${btns}</div>`;
   }
   async function refreshScore() {
     const revision = ++scoreRevision;
@@ -162,16 +158,11 @@
       const needsScore = !stateKey || (revealed && G.isQuiz(round) && changedState);
       stateKey = nextStateKey;
       const votes = activeVotes;
-      const rank = revealed && round.round_no === G.PRINT_ROUND ? G.closest(votes, round.answer) : [];
-      const mine = rank.find((r) => r.user_id === me.session.user.id);
-      guessRank = mine ? { rank: mine.rank, of: rank.length } : null;
       const result = revealed && round.round_no <= 0 ? votes.map((v) => v.choice).sort() : null;
-      const key = JSON.stringify([round?.id, round?.status, round?.answer, closed, myChoice, pendingChoice(), result, guessRank, voteError]);
+      const key = JSON.stringify([round?.id, round?.status, round?.answer, closed, myChoice, pendingChoice(), result, voteError]);
       if (key !== lastKey) {
         lastKey = key;
-        const focused = document.activeElement?.id === 'guess' && round?.round_no === G.PRINT_ROUND;
         render();
-        if (focused) $('#guess')?.focus({ preventScroll: true });
       }
       if (needsScore) refreshScore();
     } catch (e) {
@@ -191,7 +182,6 @@
     try {
       await G.vote(id, me.session, me.name, choice);
       savedVotes.set(id, choice);
-      drafts.delete(id);
       if (round?.id === id && round.round_no <= 0) resultsAt = 0;
       if (round?.id === id) myChoice = choice;
       if (quiz) refreshScore();
@@ -208,17 +198,6 @@
     if (e.target.closest('[data-signin]')) { e.preventDefault(); G.signIn(); return; }
     const button = e.target.closest('[data-c]');
     if (button) saveVote(button.dataset.c);
-  });
-  document.addEventListener('input', (e) => { if (e.target.id === 'guess' && round) drafts.set(round.id, e.target.value); });
-  document.addEventListener('submit', (e) => {
-    if (!e.target.closest('[data-guess]')) return;
-    e.preventDefault();
-    const guess = G.parseGuess(e.target.querySelector('#guess').value);
-    if (guess === null) {
-      e.target.nextElementSibling.textContent = `Enter a number of hours (0.1–${G.MAX_GUESS}).`;
-      return;
-    }
-    saveVote(String(guess));
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { recheckOwnVote = true; tick(); } });
 

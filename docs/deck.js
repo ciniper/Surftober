@@ -776,26 +776,24 @@
   }
 
   // Live vote: guess the trophies' total print time (round -1 of the ceremony
-  // game, game.js PRINT_ROUND). Players type hours on play.html; the reveal
-  // writes trophy.build.printHours as the answer and shows the closest guesses.
-  function printBins() {
-    const edges = TR.voteBins || [25, 50, 75, 100, 150, 200, 300];
-    return [...edges.map((hi, i) => ({ lo: i ? edges[i - 1] : 0, hi, label: i ? `${edges[i - 1]}–${hi}` : `< ${hi}` })), { lo: edges[edges.length - 1], hi: Infinity, label: `${edges[edges.length - 1]}+` }];
-  }
+  // game, game.js PRINT_ROUND). Multiple choice: players tap an hour range on
+  // play.html; the reveal writes trophy.build.printHours as the answer, lights
+  // up the range that holds it and names everyone who picked it.
+  const printBins = () => window.SurftoberGame.printRanges(TR.voteBins);
   const binOf = (bins, h) => bins.findIndex((b) => h >= b.lo && h < b.hi);
   function printVoteSlide(d) {
     const G = window.SurftoberGame;
     if (!G || !G.PRINT_ROUND) return null;
-    const r = { round_no: G.PRINT_ROUND, quote: `How many hours did all the ${CFG.year} trophies take to print?`, choices: [] };
-    const cols = printBins().map((b, i) => `<div class="gr-col" data-bin="${i}"><span class="gr-n"></span><span class="gr-bar"><i></i></span><span class="gr-g">${esc(b.label)}</span></div>`).join('');
+    const r = { round_no: G.PRINT_ROUND, quote: `How many hours did all the ${CFG.year} trophies take to print?`, choices: printBins().map((b) => b.label) };
+    const cols = printBins().map((b, i) => `<div class="gr-col" data-bin="${i}"><span class="gr-n"></span><span class="gr-bar"><i></i></span><span class="gr-g">${esc(b.label.replace(/ h$/, ''))}</span></div>`).join('');
     const per = (TR.perTrophy || []).map((p) => `<span>${esc(p.part)} <b>${p.min} min</b></span>`).join('');
     return { title: 'Guess the print time', cls: 'game grade tr-vote', steps: 1, game: { kind: 'print', r }, html: `
       <div class="gr-head"><div><p class="kicker">Live vote · Trophy ${CFG.year}</p><h2>How long did the trophies take to print?</h2>
-        <p class="lede" style="font-size:32px;margin-top:14px">All ${trophyCount(d)} trophies, every part. Guess the hours on your phone: <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></p>
+        <p class="lede" style="font-size:32px;margin-top:14px">All ${trophyCount(d)} trophies, every part. Pick a range on your phone: <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></p>
         ${per ? `<p class="tr-hint">One trophy, as sliced: ${per} <span>= <b>${trHm(perTrophyMin())}</b></span></p>` : ''}</div>
         <div class="g-qr gr-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>
       <div class="tr-vote-body"><div class="gr-chart tr-chart">${cols}</div>
-        <div class="tr-podium"><div class="tr-pre" data-g="pre"><div class="mystery">?</div><p>Closest guess wins</p></div><div class="reveal" data-g="result"></div></div></div>
+        <div class="tr-podium"><div class="tr-pre" data-g="pre"><div class="mystery">?</div><p>Pick the right range</p></div><div class="reveal" data-g="result"></div></div></div>
       <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>` };
   }
 
@@ -815,16 +813,14 @@
       </div>${TB.note ? `<p class="muted" style="font-size:24px;margin-top:18px">${esc(TB.note)}</p>` : ''}` };
   }
 
-  // Draw the print-time guesses: a histogram, a live median, and after the
-  // reveal the real total with the three closest guesses. Offline (no row),
-  // the reveal still shows the configured total so the slide works anyway.
+  // Draw the print-time votes: how many picked each range, and after the
+  // reveal the real total, the right range and everyone who picked it.
+  // Offline (no row), the reveal still shows the configured total.
   function printTally(el, vs, row, step) {
-    const G = window.SurftoberGame;
     const set = (k, html) => { const n = el.querySelector(`[data-g="${k}"]`); if (n) n.innerHTML = html; };
-    const bins = printBins(), guesses = vs.map((v) => G.parseGuess(v.choice)).filter((g) => g !== null);
-    const counts = bins.map(() => 0);
-    for (const g of guesses) counts[binOf(bins, g)]++;
-    const max = Math.max(1, ...counts);
+    const bins = printBins();
+    const counts = bins.map((b) => vs.filter((v) => v.choice === b.label).length);
+    const total = counts.reduce((a, b) => a + b, 0), max = Math.max(1, ...counts);
     const answer = row && row.status === 'revealed' && row.answer != null ? Number(row.answer) : (step >= 1 && TB.printHours != null ? Number(TB.printHours) : null);
     const shown = step >= 1 && answer != null, win = shown ? binOf(bins, answer) : -1;
     el.querySelectorAll('.gr-col').forEach((c, i) => {
@@ -833,19 +829,19 @@
       c.classList.toggle('win', i === win);
       c.classList.toggle('dim', shown && i !== win);
     });
-    const sorted = [...guesses].sort((a, b) => a - b);
-    const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : null;
-    set('count', `${guesses.length} guess${guesses.length === 1 ? '' : 'es'}${median != null ? ` · median ${trHours(Math.round(median * 10) / 10)} h` : ''}`);
-    set('status', row ? (shown ? '' : 'Voting open — guess on your phone') : esc(GAME.note || gameErr(null)));
+    set('count', `${total} vote${total === 1 ? '' : 's'}`);
+    set('status', row ? (shown ? '' : 'Voting open — pick a range on your phone') : esc(GAME.note || gameErr(null)));
     const pre = el.querySelector('[data-g="pre"]');
     if (pre) pre.hidden = shown;
     if (!shown) { set('result', step >= 1 ? '<p class="tr-wait">Add the real total in <code>trophy.build.printHours</code> to reveal</p>' : ''); return; }
     const deck = window.__deck, byId = new Map([...deck.profileOf.entries()].map(([u, p]) => [p.id, u]));
-    const top = G.closest(vs, answer).slice(0, 3).map((x) => {
-      const u = byId.get(x.user_id);
-      return `<li><span class="g-pos">${x.rank}</span>${u ? av(deck, u, 60) : ''}<span class="g-pname">${esc(u ? deck.name(u) : x.voter_name || 'Someone')}</span><span class="tr-guess">${trHours(x.guess)} h<small>${x.off ? `off ${trHours(x.off)}` : 'spot on'}</small></span></li>`;
-    }).join('');
-    set('result', `<div class="tr-actual"><span>Actual</span><b>${trHours(answer)}<small> h</small></b></div>${top ? `<ol class="tr-top">${top}</ol>` : '<p class="tr-wait">No guesses this time</p>'}`);
+    const right = win >= 0 ? vs.filter((v) => v.choice === bins[win].label) : [];
+    const names = right.map((x) => { const u = byId.get(x.user_id); return { u, name: u ? deck.name(u) : x.voter_name || 'Someone' }; })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const faces = names.slice(0, 12).map(({ u, name }) => `<li>${u ? av(deck, u, 48) : ''}<span class="g-pname">${esc(name)}</span></li>`).join('');
+    set('result', `<div class="tr-actual"><span>Actual</span><b>${trHours(answer)}<small> h</small></b></div>
+      <p class="tr-range">${win >= 0 ? `${esc(bins[win].label)} · ${right.length} of ${total} got it` : ''}</p>
+      ${faces ? `<ol class="tr-top tr-right">${faces}</ol>${names.length > 12 ? `<p class="tr-wait">+ ${names.length - 12} more</p>` : ''}` : '<p class="tr-wait">Nobody picked this range</p>'}`);
   }
 
   // Runtime: poll while a game slide is on screen. The host (admin signed in
@@ -977,7 +973,7 @@
         });
         set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
         set('status', row ? (shown ? '' : 'Voting open — grade it on your phone') : esc(GAME.note || gameErr(null)));
-        set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b>` : (resultsView ? '<span>No votes recorded</span>' : '<span>No votes yet — keep voting</span>')) : '');
+        set('result', shown ? (crew ? `Crew grade <b>${esc(crew.grade)}</b><span>Average of ${crew.n} vote${crew.n === 1 ? '' : 's'}</span>` : (resultsView ? '<span>No votes recorded</span>' : '<span>No votes yet — keep voting</span>')) : '');
       } else if (s.game.kind === 'print') {
         drawQR(el.querySelector('[data-g="qr"]'));
         const r = s.game.r, ans = TB.printHours;

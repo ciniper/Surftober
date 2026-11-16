@@ -104,8 +104,9 @@
   }
 
   // ---------- surf grade poll (round 0 of the same game) ----------
-  // "Grade October's surf": every vote is a school grade; the crew grade is
-  // the mean on a 0 (F) … 12 (A+) scale, rounded to the nearest grade.
+  // "Grade October's surf": every vote is a school grade, scored F = 0, D- = 1
+  // … A = 11, A+ = 12. The crew grade is the average of every vote, rounded
+  // to the nearest grade (e.g. B+ 9, A- 10, A 11 → mean 10 → A-).
   const GRADE_ROUND = 0;
   const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
   // Polls (round_no ≤ 0: the surf grade, the trophy print-time guess) never
@@ -119,10 +120,10 @@
   }
 
   // ---------- trophy print-time guess (round -1 of the same game) ----------
-  // "How long did the trophies take to print?": each vote is a number of
-  // hours, kept as text in game_votes.choice (the round's choices are []).
-  // The deck writes the real total as the answer at the reveal; the closest
-  // guesses win. No SQL change: choice is free text.
+  // "How long did the trophies take to print?": multiple choice. The round's
+  // choices are hour ranges built from trophy.voteBins (printRanges), and each
+  // vote is one range label. The deck writes the real total in hours as the
+  // answer at the reveal; everyone who picked the range holding it got it.
   const PRINT_ROUND = -1;
   const COSTUME_ROUND = -2;
   function costumeCandidates(config) {
@@ -139,21 +140,13 @@
     return choices.map((name) => ({ name, votes: votes.filter((v) => v.choice === name).length }))
       .sort((a, b) => b.votes - a.votes);
   }
-  const MAX_GUESS = 10000;
-  function parseGuess(s) {
-    const n = Number(String(s ?? '').replace(/,/g, '').replace(/\s*h(ours?|rs?)?\s*$/i, '').trim());
-    return Number.isFinite(n) && n >= 0.1 && n <= MAX_GUESS ? Math.round(n * 10) / 10 : null;
+  // Bin edges in hours → ranges [lo, hi): [25, 50] → Under 25 h, 25–50 h, 50+ h.
+  function printRanges(edges) {
+    const e = (edges && edges.length ? edges : [25, 50, 75, 100, 150, 200, 300]).map(Number);
+    return [...e.map((hi, i) => ({ lo: i ? e[i - 1] : 0, hi, label: i ? `${e[i - 1]}–${hi} h` : `Under ${hi} h` })),
+      { lo: e[e.length - 1], hi: Infinity, label: `${e[e.length - 1]}+ h` }];
   }
-  // Valid guesses sorted by distance from the answer; ties share a rank.
-  function closest(votes, answer) {
-    const a = Number(answer);
-    if (!Number.isFinite(a)) return [];
-    const rows = votes.map((v) => ({ ...v, guess: parseGuess(v.choice) })).filter((v) => v.guess !== null)
-      .map((v) => ({ ...v, off: Math.round(Math.abs(v.guess - a) * 10) / 10 }))
-      .sort((x, y) => x.off - y.off || String(x.voter_name || '').localeCompare(String(y.voter_name || '')));
-    rows.forEach((r, i) => { r.rank = i && r.off === rows[i - 1].off ? rows[i - 1].rank : i + 1; });
-    return rows;
-  }
+  const printRangeOf = (ranges, hours) => ranges.find((b) => hours >= b.lo && hours < b.hi) || null;
 
   // ---------- scoring (client side, from rounds + votes) ----------
   function scoreboard(roundList, votes) {
@@ -198,5 +191,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, MAX_GUESS, parseGuess, closest };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
 })();
