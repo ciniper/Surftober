@@ -375,9 +375,9 @@
     const roundShare = (u, n) => durs(u).filter((m) => m % n === 0).length / (durs(u).length || 1);
     push({ id: 'ocd-precision', name: 'The OCD Precision Award', desc: 'Most precise session lengths (fewest round numbers)',
       r: rank(items(precUsers, (u) => roundShare(u, 5), (v, u) => `${pct(1 - v)} of sessions logged to the odd minute`), { dir: 'min' }) });
-    push({ id: 'loosey-goosey', name: 'The Loosey Goosey Award', desc: 'Least precise session lengths (most rounded to 15 min)',
+    push({ id: 'loosey-goosey', name: 'The Loosey Goosey Award', desc: 'Least precise session lengths (most rounded to 30 min)',
       // ties on share go to whoever rounded the most sessions
-      r: rank(precUsers.map((u) => ({ user: u, value: roundShare(u, 15) + durs(u).length * 1e-6, label: `${pct(roundShare(u, 15))} of ${durs(u).length} sessions rounded to 15 minutes` }))) });
+      r: rank(precUsers.map((u) => ({ user: u, value: roundShare(u, 30) + durs(u).length * 1e-6, label: `${pct(roundShare(u, 30))} of ${durs(u).length} sessions rounded to 30 minutes` }))) });
 
     // --- The Failed Feature Award: the app feature the crew used least ---
     const FEATURES = [
