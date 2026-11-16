@@ -186,9 +186,9 @@ window.SurftoberDeckConfig = {
     version: 'v10',
     orbit: 'trophy/orbit.webm', orbitPoster: 'trophy/orbit.jpg',
     strobe: 'trophy/strobe.webm', strobePoster: 'trophy/strobe.jpg',
+    headline: 'Six parts, one bearing',
     parts: [  // top of the exploded stack to the bottom, as in the orbit video
-      { name: 'Hub text', note: 'flush navy inlay, two layers deep' },
-      { name: 'Front hub', note: 'tier colour, still on the inner race' },
+      { name: 'Front hub', note: 'tier colour, flush navy text inlay' },
       { name: 'Art insert', note: 'the 8-frame wave, 0.2 nozzle, glued in' },
       { name: 'Body', note: 'Ø98 ring on three arms, ridged rim' },
       { name: '608 bearing', note: 'bought, sorted by spin-down' },
