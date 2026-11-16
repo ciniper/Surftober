@@ -140,7 +140,50 @@ window.SurftoberDeckConfig = {
     [53.6, 63.9, 1, 54.3, 61.6, 1],
   ],
 
-  // Free-text recap slides (2025 had Surf Recap + Weather Recap).
+  // Highest water temperature each October day, °F: NOAA NDBC buoy 46237
+  // (San Francisco Bar, CDIP 142), readings every 30 min grouped by San
+  // Francisco date. Each row: [day, then one high per year in waterYears];
+  // null = no reading that day. 2026: the buoy's October file starts Oct 2 at
+  // 3:30 pm, so Oct 1 is empty and Oct 2 is a partial day.
+  waterYears: [2024, 2025, 2026],
+  dailyWaterHighs: [
+    [1, 63.1, 62.6, null],
+    [2, 61.3, 63.0, 60.3],
+    [3, 61.5, 63.0, 63.9],
+    [4, 61.9, 63.7, 63.1],
+    [5, 64.6, 63.3, 61.7],
+    [6, 63.9, 63.7, 61.7],
+    [7, 61.3, 63.5, 60.8],
+    [8, 60.6, 63.5, 60.8],
+    [9, 60.3, 63.5, 60.4],
+    [10, 60.8, 63.5, 60.4],
+    [11, 61.2, 64.2, 60.6],
+    [12, 61.0, 63.3, 62.2],
+    [13, 60.8, 63.0, 60.8],
+    [14, 59.9, 62.8, 61.7],
+    [15, 59.5, 62.2, 62.2],
+    [16, 59.5, 62.4, 64.2],
+    [17, 59.9, 62.1, 61.2],
+    [18, 59.5, 62.2, 61.0],
+    [19, 59.5, 61.5, 60.4],
+    [20, 61.0, 61.7, 61.3],
+    [21, 59.0, 61.2, 60.8],
+    [22, 59.0, 61.5, 60.8],
+    [23, 58.6, 61.3, 61.3],
+    [24, 59.5, 61.2, 62.2],
+    [25, 59.4, 61.0, 62.2],
+    [26, 60.1, 60.8, 61.7],
+    [27, 58.8, 61.3, 61.5],
+    [28, 58.3, 61.3, 62.8],
+    [29, 57.7, 61.5, 62.6],
+    [30, 57.4, 60.4, 62.6],
+    [31, 57.0, 60.3, 61.7],
+  ],
+  waterNote: 'No 2026 reading on Oct 1 · hollow dot = Oct 2, from 3:30 pm only',
+  waterPartialDays: [2],  // this year's days with partial readings (hollow dots)
+
+  // Free-text recap (2025 had Surf Recap + Weather Recap). Not shown since
+  // 2026-11-16: the water-temperature chart replaced the Surf & weather slide.
   surfRecap: '',     // size, quality, standout swells
   weatherRecap: [
     'Air: average daily high 68°F, low 55°F. Warmest: 86°F on Oct 16.',

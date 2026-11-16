@@ -290,10 +290,71 @@
       <div class="legend">${legend}<span>Dot = sunshine for at least 70% of daylight · Open-Meteo modeled weather</span></div>` };
   }
 
-  function recapSlide() {
-    const card = (h, txt, field) => `<div class="card"><h3>${h}</h3>${txt ? esc(txt) : todo('Your recap', field)}</div>`;
-    return { title: 'Recap', html: `<p class="kicker">Recap</p><h2>Surf &amp; weather</h2>
-      <div class="recap">${card('Surf', CFG.surfRecap, 'surfRecap')}${card('Weather', CFG.weatherRecap, 'weatherRecap')}</div>` };
+  // Highest water temperature each October day, one line per year, with a
+  // small bar chart of each year's average daily high beside it.
+  // CFG.dailyWaterHighs rows: [day, one high per year in CFG.waterYears].
+  function waterTempSlide() {
+    const days = CFG.dailyWaterHighs || [];
+    if (!days.length) return null;
+    const ys = CFG.waterYears || [CFG.year - 1, CFG.year];
+    const palette = ['var(--teal)', 'var(--text-3)', 'var(--accent-text)']; // oldest … this year
+    const years = ys.map((year, k) => ({ year, col: k + 1, color: palette[palette.length - ys.length + k] || 'var(--text-2)' }));
+    const partialOf = (year) => new Set(year === CFG.year ? CFG.waterPartialDays || [] : []);
+    years.forEach((Y) => {
+      const skip = partialOf(Y.year); // partial days stay out of the average
+      const xs = days.filter((r) => r[Y.col] != null && !skip.has(r[0]));
+      Y.avg = xs.reduce((a, r) => a + r[Y.col], 0) / xs.length;
+      Y.top = xs.reduce((a, r) => (r[Y.col] > a[Y.col] ? r : a));
+    });
+    const vals = days.flatMap((r) => years.map((Y) => r[Y.col])).filter((v) => v != null);
+    const min = Math.floor(Math.min(...vals)), max = Math.ceil(Math.max(...vals));
+
+    // Lines: daily highs.
+    const W = 1240, H = 470, left = 80, right = 16, bottom = 400, top = 24;
+    const y = (t) => bottom - (bottom - top) * (t - min) / (max - min);
+    const spacing = (W - left - right) / days.length;
+    const x = (i) => left + (i + 0.5) * spacing;
+    let svg = '';
+    for (let t = min; t <= max; t++) {
+      svg += `<line class="grid" x1="${left}" x2="${W - right}" y1="${y(t)}" y2="${y(t)}"/><text x="${left - 14}" y="${y(t) + 7}" text-anchor="end" font-size="22">${t}°F</text>`;
+    }
+    years.forEach(({ year, col, color }) => {
+      let path = '', pen = false; // breaks where a day has no reading
+      days.forEach((r, i) => { const v = r[col]; if (v == null) { pen = false; return; } path += `${pen ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`; pen = true; });
+      svg += `<path d="${path}" fill="none" stroke="${color}" stroke-width="${year === CFG.year ? 5 : 4}" stroke-linejoin="round" stroke-linecap="round"/>`;
+      const partial = partialOf(year);
+      days.forEach((r, i) => {
+        const v = r[col]; if (v == null) return;
+        const part = partial.has(r[0]);
+        svg += `<circle cx="${x(i)}" cy="${y(v)}" r="${year === CFG.year ? 7 : 5.5}" fill="${part ? 'var(--bg)' : color}" stroke="${color}" stroke-width="${part ? 4 : 0}"><title>October ${r[0]}, ${year}: high ${v.toFixed(1)}°F${part ? ' (partial day)' : ''}</title></circle>`;
+      });
+    });
+    days.forEach((r, i) => { if (r[0] % 2) svg += `<text x="${x(i)}" y="${bottom + 40}" text-anchor="middle" font-size="20">${r[0]}</text>`; });
+
+    // Bars: each year's average daily high. Water never nears 0°F, so the
+    // bars start at a labelled floor a little under the lowest average.
+    const BW = 380, bTop = 70, bBottom = 400;
+    const floor = Math.floor(Math.min(...years.map((Y) => Y.avg))) - 2;
+    const ceil = Math.ceil(Math.max(...years.map((Y) => Y.avg))) + 1;
+    const by = (t) => bBottom - (bBottom - bTop) * (t - floor) / (ceil - floor);
+    const slot = (BW - 40) / years.length;
+    let bars = `<line class="grid" x1="20" x2="${BW - 20}" y1="${bBottom}" y2="${bBottom}"/><text x="20" y="${bBottom + 74}" font-size="22">Bars start at ${floor}°F</text>`;
+    years.forEach((Y, k) => {
+      const cx = 20 + (k + 0.5) * slot;
+      bars += `<rect x="${cx - 42}" y="${by(Y.avg)}" width="84" height="${bBottom - by(Y.avg)}" rx="8" fill="${Y.color}"><title>${Y.year}: average daily high ${Y.avg.toFixed(1)}°F</title></rect>
+        <text x="${cx}" y="${by(Y.avg) - 14}" text-anchor="middle" font-size="30" font-weight="800" style="fill:${Y.color}">${Y.avg.toFixed(1)}°</text>
+        <text x="${cx}" y="${bBottom + 38}" text-anchor="middle" font-size="22">${Y.year}</text>`;
+    });
+
+    const legend = years.map(({ year, color, top: t }) => `<span><i style="background:${color}"></i>${year} · warmest ${t[years.find((Y) => Y.year === year).col].toFixed(1)}°F on Oct ${t[0]}</span>`).join('');
+    return { title: 'Water temperature', html: `
+      <p class="kicker">San Francisco Bar buoy · October ${ys[0]}–${ys[ys.length - 1]}</p>
+      <h2>Warmest water each day</h2>
+      <div class="grow water-grid">
+        <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Highest water temperature each October day in Fahrenheit, ${ys.join(', ')}">${svg}</svg>
+        <div class="water-avg"><p>Average daily high</p><svg class="chart" viewBox="0 0 ${BW} ${H}" role="img" aria-label="Average daily high water temperature: ${years.map((Y) => `${Y.year} ${Y.avg.toFixed(1)}°F`).join(', ')}">${bars}</svg></div>
+      </div>
+      <div class="legend">${legend}<span>NOAA buoy 46237${CFG.waterNote ? ` · ${esc(CFG.waterNote)}` : ''}</span></div>` };
   }
 
   function leaderboardSlide(d) {
@@ -1084,7 +1145,7 @@
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length + 1;
     const C = CFG;
-    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
+    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), waterTempSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
       ...trophySlides(d),
