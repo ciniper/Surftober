@@ -54,7 +54,7 @@
     const btns = (round.choices || []).map((c) => {
       const cls = ['choice', c === picked ? 'picked' : '', revealed && c === round.answer ? 'right' : '', revealed && c !== round.answer ? 'wrong' : ''].join(' ');
       const tag = revealed ? (c === round.answer ? 'It was them!' : (c === picked ? 'Your pick' : '')) : (c === picked ? (pendingChoice() ? 'Saving…' : 'Saved') : '');
-      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || pendingChoice() ? 'disabled' : ''}><span>${esc(c)}</span><span class="tag">${esc(tag)}</span></button>`;
+      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || revealed || pendingChoice() ? 'disabled' : ''}><span>${esc(c)}</span><span class="tag">${esc(tag)}</span></button>`;
     }).join('');
     let verdict = '';
     if (revealed) verdict = !picked ? `<p class="big">It was ${esc(round.answer)}!</p><p class="note">You didn't vote this round.</p>`
@@ -69,7 +69,7 @@
   function renderGrade(v, revealed, picked) {
     const btns = (round.choices || []).map((c) => {
       const cls = ['choice', c === picked ? 'picked' : '', revealed && c === G.crewGrade(activeVotes)?.grade ? 'right' : ''].join(' ');
-      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || pendingChoice() ? 'disabled' : ''}>${esc(c)}</button>`;
+      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || revealed || pendingChoice() ? 'disabled' : ''}>${esc(c)}</button>`;
     }).join('');
     const verdict = revealed
       ? (() => { const crew = G.crewGrade(activeVotes); return `<p class="big">Crew grade: ${esc(crew?.grade || 'No votes yet')}</p><p class="note">${crew ? `The average of ${crew.n} vote${crew.n === 1 ? '' : 's'}. ` : ''}${picked ? `You gave it ${esc(picked)}.` : "You didn't vote."}</p>`; })()
@@ -87,7 +87,7 @@
     const photos = new Map(G.costumeCandidates(CFG).map((c) => [c.name, c.photo]));
     const results = G.costumeResults(round.choices, activeVotes);
     const leaders = results.filter((x) => x.votes > 0 && x.votes === results[0]?.votes);
-    const buttons = round.choices.map((name) => `<button type="button" class="choice${picked === name ? ' picked' : ''}" data-c="${esc(name)}" ${closed || pendingChoice() ? 'disabled' : ''}>
+    const buttons = round.choices.map((name) => `<button type="button" class="choice${picked === name ? ' picked' : ''}" data-c="${esc(name)}" ${closed || revealed || pendingChoice() ? 'disabled' : ''}>
       ${photos.has(name) ? `<img src="${esc(photos.get(name))}" alt="Costume worn by ${esc(name)}">` : ''}<span>${esc(name)}</span></button>`).join('');
     v.innerHTML = `<div class="card"><p class="kicker">Best Dressed</p><p class="quote">${esc(round.quote)}</p></div>
       <p class="note">${revealed ? (leaders.length ? leaders.map((x) => esc(x.name)).join(' &amp; ') : 'No votes yet') : 'Tap a costume to vote.'}</p>

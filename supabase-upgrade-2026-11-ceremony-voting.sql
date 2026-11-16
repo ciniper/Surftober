@@ -1,4 +1,7 @@
 -- Apply after supabase-upgrade-2026-11-game.sql and before deploying the deck.
+-- check_ceremony_vote below is SUPERSEDED: re-running this file brings back
+-- the numeric print-time check. Run supabase-upgrade-2026-11-16-vote-check.sql
+-- after it.
 -- Existing rounds and votes stay in place.
 begin;
 
