@@ -1242,7 +1242,11 @@
     history.replaceState(null, '', `#${cur + 1}${step ? '.' + step : ''}`);
   }
   const next = () => (step < (slides[cur].steps || 0) ? show(cur, step + 1) : show(cur + 1, 0));
-  const prev = () => (step > 0 && !(resultsView && slides[cur].game?.r) ? show(cur, step - 1) : show(cur - 1, slides[Math.max(0, cur - 1)].steps || 0));
+  // Backing into a live vote lands on its voting step, never its reveal: the
+  // reveal step writes the answer to the database (host only), so only a
+  // deliberate → on the slide should reach it.
+  const lastStep = (i) => (slides[i]?.game && !resultsView ? 0 : slides[i]?.steps || 0);
+  const prev = () => (step > 0 && !(resultsView && slides[cur].game?.r) ? show(cur, step - 1) : show(cur - 1, lastStep(Math.max(0, cur - 1))));
 
   function toggleGrid(force) {
     const o = $('#overview');
@@ -1352,6 +1356,9 @@
       window.__deck = d; // console poking during rehearsal
       await buildAvatars(d);
       slides = buildSlides(d);
+      // A reload restores the slide but not a live vote's reveal step (#20.1):
+      // reopening it would write the reveal before anyone has voted.
+      if (slides[cur]?.game && !resultsView) step = 0;
       if (location.hash === '#game') { // Admin Tools → "Open the game"
         const g = slides.findIndex((s) => s.game && s.game.kind === 'intro');
         if (g >= 0) { cur = g; step = 0; }
