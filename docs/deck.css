@@ -473,6 +473,11 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-guess { font: 800 32px var(--display); text-align: right; font-variant-numeric: tabular-nums; }
 .tr-guess small { display: block; font: 600 17px var(--body); color: var(--text-3); }
 .tr-wait { font-size: 26px; color: var(--text-2); }
+.tr-range { margin: 10px 0 0; font: 700 28px var(--body); color: var(--text-2); }
+.tr-top.tr-right { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.tr-top.tr-right li { padding: 8px 12px; font-size: 22px; gap: 10px; min-width: 0; }
+.tr-top.tr-right li:first-child { border-color: var(--line); box-shadow: none; }
+.tr-top.tr-right .g-pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-wait code { font: 600 22px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--highlight-text); }
 /* The build: three stats, then the two videos side by side. */
 .tr-stats { grid-template-columns: repeat(3, 1fr); margin-top: 36px; }

@@ -283,7 +283,8 @@ window.SurftoberDeckConfig = {
       { tag: 'v10 · r5', title: 'Curtain lip', src: 'trophy/wave-r5.png' },
       { tag: 'v10 ★', title: 'Spiral lip', src: 'trophy/wave-v10.png', pick: true },
     ],
-    // Live vote bins (hours): < 25, 25–50, … , 300+.
+    // Print-time vote: the multiple-choice ranges, in hours (Under 25 h,
+    // 25–50 h, … , 300+ h). Changing them after voting opens orphans votes.
     voteBins: [25, 50, 75, 100, 150, 200, 300],
     build: {
       // The real total for every trophy, in hours (e.g. 142.5). It is also the
