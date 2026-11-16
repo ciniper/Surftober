@@ -97,6 +97,11 @@
   function rank(items, { dir = 'max', n = 2, eps = 1e-9 } = {}) {
     const list = items.filter((x) => Number.isFinite(x.value));
     list.sort((a, b) => (dir === 'min' ? a.value - b.value : b.value - a.value) || a.user.localeCompare(b.user));
+    return pickRanked(list, { n, eps });
+  }
+  // Winners (all tied for first) and runners-up from a list already in rank
+  // order. rank() uses it, and so does an award exclusion re-pick.
+  function pickRanked(list, { n = 2, eps = 1e-9 } = {}) {
     if (!list.length) return { winners: [], runnersUp: [], all: [] };
     const same = (a, b) => Math.abs(a - b) < eps;
     const winners = list.filter((x) => same(x.value, list[0].value));
@@ -165,7 +170,19 @@
     const eligibleS = users.filter((u) => water(u).length >= MIN_SESSIONS);
 
     const awards = [];
-    const push = (a) => awards.push({ ...a, winners: a.r.winners, runnersUp: a.r.runnersUp });
+    // config.awardExclusions: { awardId: [names] } leaves those surfers out
+    // of that one award (matched on the app display name or the slide name,
+    // any case); the next in line moves up. They still count everywhere else.
+    const exclusions = config.awardExclusions || {};
+    const push = (a) => {
+      const out = new Set((exclusions[a.id] || []).map((x) => String(x).trim().toLowerCase()));
+      let r = a.r;
+      if (out.size && r.all) {
+        const hit = (u) => out.has(String(u).toLowerCase()) || out.has(String(name(u)).toLowerCase());
+        r = pickRanked(r.all.filter((x) => !(x.pair || [x.user]).some(hit)));
+      }
+      awards.push({ ...a, winners: r.winners, runnersUp: r.runnersUp });
+    };
     const items = (list, fn, label) => list.map((u) => {
       const v = fn(u);
       return { user: u, value: v, label: label(v, u) };

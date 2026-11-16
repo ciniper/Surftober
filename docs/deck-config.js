@@ -200,6 +200,12 @@ window.SurftoberDeckConfig = {
   // the way the 2025 deck counted $1,480 contributed → $2,960 raised.
   charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '' },
 
+  // Leave a surfer out of one computed award; the next in line moves up.
+  // Keys are award ids (deck-stats.js), names as in the app.
+  awardExclusions: {
+    marathon: ['Sam Steele'],  // Chase, 2026-11-16
+  },
+
   // Judged awards — the data can't pick these. `winner` is free text.
   // Best Dressed ballot, up to four entries with unique names.
   // Set photo to a path under docs/ or an HTTPS image URL.
