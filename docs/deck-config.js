@@ -289,7 +289,7 @@ window.SurftoberDeckConfig = {
     build: {
       // The real total for every trophy, in hours (e.g. 142.5). It is also the
       // answer the vote reveals, and this file is public: fill it on the day.
-      printHours: null,
+      printHours: 135,
       trophies: null,   // how many were printed; null = this year's 10h+ medal count
       timelapse: '',    // print timelapse, e.g. 'trophy/timelapse.mp4'
       assembly: '',     // a trophy being assembled, e.g. 'trophy/assembly.mp4'
