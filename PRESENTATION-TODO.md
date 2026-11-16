@@ -2,6 +2,8 @@
 
 ## Next edits
 
+- [ ] Decide whether to remove **The OCD Precision Award** from the ceremony deck.
+
 - [ ] **Review the superlative awards with Chase.** Walk through each award, check how it is calculated and how it is worded on the slide, and record any changes Chase wants before updating the deck.
   - [ ] Revisit **The Fall from Grace Award** after doubling Sam Steele’s credited hours as a one-time adjustment. Recalculate and review the runner-up before updating the slide.
 - [ ] **Make a trophy for Sam Steele.**
