@@ -219,8 +219,8 @@
     // --- journals ---
     const wpe = (u) => byUser.get(u).reduce((a, s) => a + wordCount(s.notes), 0) / (byUser.get(u).length || 1);
     const journalUsers = users.filter((u) => byUser.get(u).length >= MIN_SESSIONS);
-    push({ id: 'monk', name: 'The Monk Award', desc: 'Fewest words per journal entry',
-      r: rank(items(journalUsers, wpe, (v) => `${v.toFixed(1)} words per entry`), { dir: 'min' }) });
+    push({ id: 'monk', name: 'The Monk Award', desc: `Fewest words per journal entry (minimum ${MIN_HOURS} credited hours)`,
+      r: rank(items(journalUsers.filter((u) => hoursOf(u) >= MIN_HOURS), wpe, (v) => `${v.toFixed(1)} words per entry`), { dir: 'min' }) });
     push({ id: 'author', name: 'The Author Award', desc: 'Longest journal entries',
       r: rank(items(journalUsers, wpe, (v, u) => {
         const words = byUser.get(u).reduce((a, s) => a + wordCount(s.notes), 0);
