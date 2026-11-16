@@ -233,8 +233,25 @@
     const boardList = (u) => [...new Set(water(u).map((s) => (s.board || '').trim()).filter((b) => normBoard(b)))];
     push({ id: 'minimalist', name: 'The Minimalist Award', desc: `Fewest different boards (minimum ${MIN_HOURS} credited hours)`,
       r: rank(boardUsers.filter((u) => hoursOf(u) >= MIN_HOURS).map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} board${boardsOf(u).size === 1 ? '' : 's'}`, extra: boardList(u).slice(0, 4).join(' · ') })), { dir: 'min' }) });
+    // Count board names once even if the log also names a fin setup or a second board.
+    const hoarderBoard = (s) => {
+      if (s.type === 'swim') return '';
+      const board = normBoard(s.board);
+      if (/^(body( surf(ing)?|boardless)?|swim(ming)?|no board|fins|snorkel|metal detector|spot light|spotlight)$/.test(board)
+        || /\bspearfishing gun\b/.test(board)) return '';
+      if (/^60 ev comp x /.test(board)) return '60 ev comp';
+      if (/^6[02] rp slayer x /.test(board)) return board.slice(0, 12);
+      if (/^59 lost stepdriver grom step ?up$/.test(board)) return '59 lost stepdriver grom step up';
+      if (board === 'stretch and recon') return 'stretch';
+      return board;
+    };
+    const hoarderEntries = users.map((u) => {
+      const boards = water(u).map(hoarderBoard).filter(Boolean);
+      const value = new Set(boards).size;
+      return { user: u, entries: boards.length, value, label: `${value} boards` };
+    });
     push({ id: 'board-hoarder', name: 'The Board Hoarder Award', desc: 'Most different boards ridden',
-      r: rank(boardUsers.map((u) => ({ user: u, value: boardsOf(u).size, label: `${boardsOf(u).size} boards` }))) });
+      r: rank(hoarderEntries.filter((u) => u.entries >= MIN_SESSIONS)) });
 
     // --- session shape ---
     const durs = (u) => water(u).map((s) => s.duration_minutes).filter((m) => m > 0);
