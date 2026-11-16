@@ -297,8 +297,8 @@ window.SurftoberDeckConfig = {
       // answer the vote reveals, and this file is public: fill it on the day.
       printHours: 135,
       trophies: null,   // how many were printed; null = this year's 10h+ medal count
-      timelapse: '',    // print timelapse, e.g. 'trophy/timelapse.mp4'
-      assembly: '',     // a trophy being assembled, e.g. 'trophy/assembly.mp4'
+      timelapse: 'trophy/timelapse.mp4',  // four Bambu timelapses (Nov 10, 11, 14, 16) joined; every layer kept, 2 Mbps (3 MB)
+      assembly: 'trophy/assembly.mp4',  // assembling a trophy, sped up 5x; re-encoded to 15 fps, 1.5 Mbps (3 MB)
       note: '',
     },
   },
