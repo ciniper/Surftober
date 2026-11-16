@@ -1042,9 +1042,9 @@
   // 2025 order, with the 2023/2024 superlatives slotted next to their
   // cousins; the conditions awards follow as their own section.
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
-    'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'best-dressed', 'board-hoarder', 'fish', 'marathon', 'rivalry',
+    'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'board-hoarder', 'fish', 'marathon', 'rivalry',
     'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature'];
+    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature', 'best-dressed'];
   const JUDGED = {
     'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
     'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
