@@ -1044,7 +1044,7 @@
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
     'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'board-hoarder', 'fish', 'marathon', 'rivalry',
     'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature', 'best-dressed'];
+    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature'];
   const JUDGED = {
     'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
     'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
@@ -1059,7 +1059,7 @@
     // A computed award wins over its judged fallback (e.g. Aim for the Stars
     // is computed when goals are readable, judged otherwise).
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
-    const n = order.length + d.conditionAwards.length;
+    const n = order.length + d.conditionAwards.length + 1;
     const C = CFG;
     const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), recapSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
@@ -1073,8 +1073,7 @@
       if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
       else if (id === 'failed-feature') slides.push(failedFeatureSlide(d, i, n));
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
-      else if (id === 'best-dressed' && window.SurftoberGame?.costumeCandidates(CFG).length >= 2) slides.push(costumeSlide());
-      else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, id === 'best-dressed' ? d.costumeSurfers : null));
+      else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, null));
       if (id === 'author') slides.push({ title: 'Web Analytics', html: `
         <div class="head"><div><h2>Web Analytics</h2></div></div>
         <p class="lede">Vercel visitor countries and data usage over time</p>` });
@@ -1083,6 +1082,9 @@
       slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
+    const bestDressed = JUDGED['best-dressed'];
+    if (window.SurftoberGame?.costumeCandidates(CFG).length >= 2) slides.push(costumeSlide());
+    else slides.push(judgedSlide('best-dressed', bestDressed[0], bestDressed[1], ++i, n, d, d.costumeSurfers));
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
     slides.push(...gameSlides(d));
     slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), filmSlide(),
