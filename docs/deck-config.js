@@ -218,6 +218,13 @@ window.SurftoberDeckConfig = {
     'commuter': { winner: '', value: '' },          // 2024: travelled farthest to surf
   },
 
+  // Slide order + flags from the deck's arrange mode (G grid → A → Export
+  // file): paste the exported JSON here as the value. Slides are matched by
+  // key; 'remove' slides are skipped, slides added since keep their place.
+  // A draft saved in a browser overrides this in that browser. null = the
+  // built order.
+  slideArrangement: null,
+
   // Agenda slide (2023 had one). Empty = no agenda slide.
   agenda: ['Overview', 'Awards', 'Story Time', 'Quotes'],
 
