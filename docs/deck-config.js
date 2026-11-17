@@ -358,6 +358,9 @@ window.SurftoberDeckConfig = {
   // The journal book. Empty title = built from the 3 most-said words
   // ("The Fun, the Waves & the Good"); set a string to override.
   bookTitle: '',
+  // "(N equivalent paperback pages)" on the book slide. null = words / 300.
+  // 60 ≈ 314 words a page for the 18,866-word journal (2026-11-16).
+  bookPaperbackPages: 60,
 
   // Blue Water Task Force — from the "bwtf tober" deck (2026-11-08), in its
   // order: the `before` pictures, the intro (mission + stats), the
