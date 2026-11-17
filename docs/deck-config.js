@@ -221,10 +221,16 @@ window.SurftoberDeckConfig = {
   },
 
   // Judged awards — the data can't pick these. `winner` is free text.
-  // Best Dressed ballot, up to four entries with unique names.
+  // Best Dressed ballot, up to six entries with unique names.
   // Set photo to a path under docs/ or an HTTPS image URL.
   // Example: { name: 'Contestant name', photo: 'costumes/contestant.jpg' }
-  bestDressedCandidates: [],
+  bestDressedCandidates: [  // Best Dressed live vote (up to 6); votes are by name
+    { name: 'Erica', costume: 'Officer Dick You Down', photo: 'photos/costume-officer.jpg' },
+    { name: 'Brian', costume: 'Christ', photo: 'photos/costume-christ.jpg' },
+    { name: 'Jimmy', costume: 'Snow White', photo: 'photos/costume-snow-white.jpg' },
+    { name: 'Anton', costume: 'Crabman', photo: 'photos/costume-crabman.jpg' },
+    { name: 'Sophie', costume: 'Goldwoman', photo: 'photos/costume-goldwoman.jpg' },
+  ],
   judged: {
     'best-dressed': { winner: '', value: '' },     // costume-surf candidates are listed on the slide
     'fallen-fathers': { winner: '', value: '' },

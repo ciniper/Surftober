@@ -760,7 +760,7 @@
     const r = { round_no: window.SurftoberGame.COSTUME_ROUND, quote: 'Who was Best Dressed?', choices: candidates.map((c) => c.name) };
     return { title: 'The Best Dressed Award', cls: 'award game', steps: 1, game: { kind: 'costume', r }, html: `
       <div class="head"><div><p class="kicker">Live vote · Costume surf</p><h2>The Best Dressed Award</h2></div><div class="g-qr costume-qr" data-g="qr" aria-label="Join the ceremony"></div></div>
-      <div class="costume-grid">${candidates.map(({name, photo}) => `<div><img src="${esc(photo)}" alt="Costume worn by ${esc(name)}"><b>${esc(name)}</b></div>`).join('')}</div>
+      <div class="costume-grid">${candidates.map(({ name, photo, costume }) => `<div><img src="${esc(photo)}" alt="${esc(costume || 'Costume')} worn by ${esc(name)}">${costume ? `<span class="costume-name">${esc(costume)}</span>` : ''}<b>${esc(name)}</b></div>`).join('')}</div>
       <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>
       <div class="reveal" data-g="result"></div>` };
   }
