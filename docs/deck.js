@@ -1094,6 +1094,8 @@
     const B = CFG.bwtf;
     if (!B) return [];
     const site = B.site ? `<p class="bw-site">${esc(B.site.replace(/^https?:\/\//, ''))}</p>` : '';
+    // Logo badge (top right) on every BWTF slide: CFG.bwtf.logos, in order.
+    const logos = (B.logos || []).length ? `<div class="bw-logos">${B.logos.map((l) => `<img src="${esc(l.src)}" alt="${esc(l.alt || '')}"${l.dark ? ' class="bw-logo-ink"' : ''}>`).join('')}</div>` : '';
     const intro = { title: 'Blue Water Task Force', html: `
       <p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2 style="max-width:1500px">${esc(B.mission)}</h2>
       <div class="stats bw-stats">${B.stats.map((s) => `<div class="stat"><div class="v">${esc(s.v)}</div><div class="k">${esc(s.k)}</div></div>`).join('')}</div>${site}` };
@@ -1102,7 +1104,15 @@
       if (/\.(mp4|webm|mov)(\?|$)/i.test(m)) return `<video class="${cls}" src="${esc(m)}" autoplay muted loop playsinline></video>`;
       return `<img class="${cls}" src="${esc(m)}" alt="${esc(alt)}">`;
     };
-    const feats = (B.features || []).map((f, i) => ({ title: f.title, cls: 'bw-feature', html: `
+    // combineIntro: the mission + stats share one slide with the first
+    // feature (How the data flows); it keeps the intro's title, so its key.
+    const f0 = B.combineIntro && (B.features || [])[0];
+    const combo = f0 && { title: 'Blue Water Task Force', cls: 'bw-combo', html: `
+      <div class="bw-combo-left"><p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2>${esc(B.mission)}</h2>
+        <div class="bw-mini">${B.stats.map((x) => `<div><b>${esc(x.v)}</b><span>${esc(x.k)}</span></div>`).join('')}</div>${site}</div>
+      <div class="bw-combo-right"><p class="kicker">${esc(f0.kicker || 'How it works')}</p><h3>${esc(f0.title)}</h3>
+        <div class="bw-frame">${media(f0.media, 'bwtf.features[0].media')}</div></div>` };
+    const feats = (B.features || []).slice(combo ? 1 : 0).map((f, j) => ({ i: j + (combo ? 1 : 0), f })).map(({ i, f }) => ({ title: f.title, cls: 'bw-feature', html: `
       <p class="kicker">${esc(B.group)} · ${esc(f.kicker || 'Website overview')}</p><h2>${esc(f.title)}</h2>${f.blurb ? `<p class="lede" style="font-size:32px;margin-top:14px">${esc(f.blurb)}</p>` : ''}
       <div class="bw-frame">${media(f.media, `bwtf.features[${i}].media`)}</div>${site}` }));
     // Whole slides from the BWTF deck, edge to edge.
@@ -1116,7 +1126,10 @@
       <p class="kicker">${esc(X.kicker || `Blue Water Task Force · ${B.group}`)}</p><h2>${esc(X.title || 'Water Quality Test Bonus')}</h2>
       ${X.note ? `<p class="lede">${esc(X.note)}</p>` : ''}
       <div class="bw-row">${X.photos.map((ph) => `<figure style="--ar:${ph.ar || 0.75}"><img src="${esc(ph.src)}" alt="${esc(ph.alt || '')}"></figure>`).join('')}</div>` } : null;
-    return [...full('before'), intro, ...feats, ...full('after'), bonus].filter(Boolean);
+    // The badge goes on the slides drawn here; the full-bleed ones are the BWTF
+    // deck's own slides (already branded, and their corners hold titles/art).
+    const badged = (x) => x && { ...x, html: x.html + logos };
+    return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(bonus)].filter(Boolean);
   }
 
   function outroSlide() {
@@ -1437,6 +1450,7 @@
     });
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
+    fitAward(el);
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;
     $('#pageno').textContent = `${cur + 1} / ${slides.length}`;
     const status = $('#status');
@@ -1445,6 +1459,27 @@
     history.replaceState(null, '', `#${cur + 1}${step ? '.' + step : ''}`);
   }
   const next = () => (step < (slides[cur].steps || 0) ? show(cur, step + 1) : show(cur + 1, 0));
+  // Award slides: a long award name (two title lines) plus photos, winner and
+  // runners-up can run into the footer. Measure the slide as it comes up (the
+  // hidden reveal still takes its space) and step the title and the winner
+  // area down until the reveal fits the floor. Slides that fit stay as built.
+  const FIT_LEVELS = 5;
+  function fitAward(el) {
+    if (!el.classList.contains('award')) return;
+    const floor = el.querySelector('.stagefloor'), body = floor && floor.querySelector(':scope > .reveal');
+    if (!body) return;
+    // Measure without the reveal's slide-in transform (it scales and shifts it).
+    const { transform, transition } = body.style;
+    body.style.transition = 'none'; body.style.transform = 'none';
+    const fits = () => body.getBoundingClientRect().bottom <= floor.getBoundingClientRect().bottom + 1
+      && body.getBoundingClientRect().top >= floor.getBoundingClientRect().top - 1;
+    delete el.dataset.fit;
+    for (let lv = 1; lv < FIT_LEVELS && !fits(); lv++) el.dataset.fit = String(lv);
+    void body.offsetHeight; // apply the fit before the transform comes back, so nothing animates
+    body.style.transform = transform; body.style.transition = transition;
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { const el = stage.querySelector('.slide.active'); if (el) fitAward(el); });
+
   // Backing into a live vote lands on its voting step, never its reveal: the
   // reveal step writes the answer to the database (host only), so only a
   // deliberate → on the slide should reach it.

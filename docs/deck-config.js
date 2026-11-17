@@ -359,6 +359,14 @@ window.SurftoberDeckConfig = {
   bwtf: {
     group: 'Data & Technology Group',
     mission: 'Empower beachgoers and the Blue Water Task Force by making available data more useful.',
+    combineIntro: true,  // mission + stats on one slide with the first feature (How the data flows)
+    // Logo badge, top right of the BWTF slides the deck draws: intro,
+    // features, bonus, not the full-bleed before/after slides. Files come from
+    // the BWTF_SF site's static/brand. dark: black-ink logo, lightened in dark mode.
+    logos: [
+      { src: 'bwtf/logo-bwtf.png', alt: 'Blue Water Task Force' },
+      { src: 'bwtf/logo-surfrider-sf.png', alt: 'Surfrider Foundation San Francisco', dark: true },
+    ],
     stats: [
       { v: '27', k: 'years of beach postings' },
       { v: '82,000+', k: 'city lab results since 2000' },
