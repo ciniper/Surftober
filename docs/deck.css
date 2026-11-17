@@ -234,7 +234,13 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .gallery img { width: 100%; flex: 1; min-height: 0; object-fit: cover; display: block; }
 .gallery figcaption { padding: 14px 20px; font-size: 24px; color: var(--text-2); }
 .gallery.row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: center; }
-.gallery.row img { object-fit: contain; }
+.gallery.row img, .gallery.row video { object-fit: contain; }
+/* Tall photos/videos in a row: cap the media at the row height (minus the
+   caption) so a card never grows into the heading. Wide ones never reach it. */
+.gallery.row { container-type: size; }
+.gallery.row figure { max-height: 100cqh; }
+.gallery.row img, .gallery.row video { max-height: calc(100cqh - 64px); }
+.gallery video { width: 100%; flex: 1; min-height: 0; display: block; background: var(--panel); }
 
 /* ---------- award slides ---------- */
 .slide.award { justify-content: flex-start; }
