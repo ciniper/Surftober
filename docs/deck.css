@@ -604,6 +604,8 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .costume-grid > div { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; text-align: center; font-size: 28px; padding-bottom: 12px; }
 .costume-grid img { display: block; width: 100%; height: 480px; object-fit: contain; margin-bottom: 10px; }
 .costume-grid ~ [data-g="result"] { font-size: 38px; }
+.costume-grid .costume-name { display: block; font: 700 22px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text); margin: 2px 8px 4px; }
+.costume-grid img { height: 440px; }
 .costume-qr.g-qr { width: 132px; height: 132px; padding: 8px; border-radius: 12px; }
 
 .ceremony-results .g-qr, .ceremony-results .g-steps, .ceremony-results .gr-head .lede { display: none; }

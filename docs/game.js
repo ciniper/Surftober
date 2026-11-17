@@ -133,10 +133,11 @@
     return (config.bestDressedCandidates || []).flatMap((candidate) => {
       const name = String(candidate?.name || '').trim();
       const photo = String(candidate?.photo || '').trim();
+      const costume = String(candidate?.costume || '').trim(); // shown beside the name; votes are by name
       if (!name || !photo || seen.has(name) || /^(?:[\w+.-]+:|\/\/)/.test(photo) && !photo.startsWith('https://')) return [];
       seen.add(name);
-      return [{ name, photo }];
-    }).slice(0, 4);
+      return [{ name, photo, costume }];
+    }).slice(0, 6);
   }
   function costumeResults(choices, votes) {
     return choices.map((name) => ({ name, votes: votes.filter((v) => v.choice === name).length }))
