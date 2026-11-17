@@ -539,7 +539,7 @@
     const words = b.topWords.map((x) => `“${esc(x.word)}” ×${x.n}`).join(' · ');
     return { title: 'The Book', cls: 'bookslide', html: `
       <div class="bookslide-copy"><p class="kicker">From the journals</p><h2>The whole season, in one book</h2>
-        <p class="lede">${fmt(b.words)} words · ${fmt(b.entries.length)} entries · <span class="book-pages">${fmt(Math.round(b.words / 130))}</span> pages</p>
+        <p class="lede">${fmt(b.words)} words · ${fmt(b.entries.length)} entries · <span class="book-pages">${fmt(Math.round(b.words / 130))}</span> pages <span class="book-paperback">(${fmt(CFG.bookPaperbackPages || Math.round(b.words / 300))} equivalent paperback pages)</span></p>
         <p class="lede" style="font-size:28px">Title from the three most-said words: ${words}</p>
         <p class="muted" style="font-size:24px;margin-top:40px">Enter or click the book to open · ← → to turn pages · Esc to close</p></div>
       <div class="cover" role="button" tabindex="0" data-open-book="journal" aria-label="Open the book">
