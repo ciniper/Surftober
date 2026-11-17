@@ -458,6 +458,7 @@
     return { title: 'Giving back', cls: photo ? 'give' : '', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
       <div class="give-grid"><div><div class="stats give-stats">${money}
         <div class="stat"><div class="v">${s.cleanupSessions}</div><div class="k">beach cleanups logged</div></div>
+        <div class="stat"><div class="v">${s.teachAKookSessions}</div><div class="k">Teach a Kook sessions</div></div>
         <div class="stat"><div class="v">${s.pledgers}</div><div class="k">surfers pledged per hour</div></div>
       </div>${c.note ? `<p class="lede">${esc(c.note)}</p>` : ''}</div>${photo}</div>${logoBadge()}` };
   }
@@ -1110,7 +1111,7 @@
   };
 
   // ---------- Blue Water Task Force (from the "bwtf tober" deck) ----------
-  function bwtfSlides() {
+  function bwtfSlides(d) {
     const B = CFG.bwtf;
     if (!B) return [];
     const site = B.site ? `<p class="bw-site">${esc(B.site.replace(/^https?:\/\//, ''))}</p>` : '';
@@ -1145,11 +1146,15 @@
     const bonus = X && (X.photos || []).length ? { title: X.title || 'Water Quality Test Bonus', cls: 'bw-bonus', html: `
       <p class="kicker">${esc(X.kicker || `Blue Water Task Force · ${B.group}`)}</p><h2>${esc(X.title || 'Water Quality Test Bonus')}</h2>
       ${X.note ? `<p class="lede">${esc(X.note)}</p>` : ''}
+      <p class="lede">${d.stats.waterBonusPeople} ${d.stats.waterBonusPeople === 1 ? 'person earned' : 'people earned'} the bonus.</p>
       <div class="bw-row">${X.photos.map((ph) => `<figure style="--ar:${ph.ar || 0.75}"><img src="${esc(ph.src)}" alt="${esc(ph.alt || '')}"></figure>`).join('')}</div>` } : null;
     // The badge goes on the slides drawn here; the full-bleed ones are the BWTF
     // deck's own slides (already branded, and their corners hold titles/art).
     const badged = (x) => x && { ...x, html: x.html + logos };
-    return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(bonus)].filter(Boolean);
+    const donation = { title: 'What Your Donation Will Do', html: `<p class="kicker">Estimated annual costs</p><h2>What Your Donation Will Do</h2>
+      <div class="stats">${(B.donationCosts || []).map((x) => `<div class="stat"><div class="v">${esc(x.amount)}</div><div class="k">${esc(x.label)}</div></div>`).join('')}</div>
+      <p class="lede">Estimated total: $15,580 per year</p>` };
+    return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(donation), badged(bonus)].filter(Boolean);
   }
 
   function outroSlide() {
@@ -1264,7 +1269,7 @@
       ...trophy.slice(1),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow', null, true),
       ((x) => ({ ...x, html: x.html + logoBadge() }))(sectionSlide('Surfrider · Blue Water Task Force', 'Giving Back', 'Fundraising · beach cleanups · water quality', 'section-giving-back')),
-      charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated', 'section-awards')];
+      charitySlide(d), ...bwtfSlides(d), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated', 'section-awards')];
     let i = 0;
     for (const id of order) {
       i++;
