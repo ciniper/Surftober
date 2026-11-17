@@ -9,6 +9,7 @@
 // G = slide grid · F = fullscreen · T = light/dark · L = reload live data · ? = key help.
 
 (function () {
+  window.__surftoberPageStarted = true; // deck.html's stale-page guard
   const CFG = window.SurftoberDeckConfig;
   const DS = window.SurftoberDeckStats;
   const SUPABASE_URL = 'https://rdrblueqytucygpmjuyh.supabase.co'; // sadscan:disable kingfisher.supabase.3

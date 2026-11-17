@@ -10,6 +10,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
   <link rel="stylesheet" href="./deck.css">
+  <script>
+    // Stale-page guard: each deploy renames the scripts, so a cached old copy of
+    // this page asks for files that are gone and never starts. If the page's
+    // script hasn't flagged itself started within 8 s, reload once from a fresh
+    // address (at most once a minute, so it can't loop).
+    (function () {
+      var KEY = 'surftober.freshReload';
+      setTimeout(function () {
+        if (window.__surftoberPageStarted) return;
+        var last = 0;
+        try { last = Number(sessionStorage.getItem(KEY) || 0); } catch (e) { /* private mode */ }
+        if (Date.now() - last < 60000) return;
+        try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) { /* private mode */ }
+        var u = new URL(location.href);
+        u.searchParams.set('fresh', String(Date.now()));
+        location.replace(u.toString());
+      }, 8000);
+    })();
+  </script>
 </head>
 <body>
   <div class="viewport" id="viewport">

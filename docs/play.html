@@ -55,6 +55,25 @@
     @keyframes s { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
   </style>
+  <script>
+    // Stale-page guard: each deploy renames the scripts, so a cached old copy of
+    // this page asks for files that are gone and never starts. If the page's
+    // script hasn't flagged itself started within 8 s, reload once from a fresh
+    // address (at most once a minute, so it can't loop).
+    (function () {
+      var KEY = 'surftober.freshReload';
+      setTimeout(function () {
+        if (window.__surftoberPageStarted) return;
+        var last = 0;
+        try { last = Number(sessionStorage.getItem(KEY) || 0); } catch (e) { /* private mode */ }
+        if (Date.now() - last < 60000) return;
+        try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) { /* private mode */ }
+        var u = new URL(location.href);
+        u.searchParams.set('fresh', String(Date.now()));
+        location.replace(u.toString());
+      }, 8000);
+    })();
+  </script>
 </head>
 <body>
   <main>
