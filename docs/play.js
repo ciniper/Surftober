@@ -2,6 +2,7 @@
 // until the host closes voting for the ceremony.
 
 (function () {
+  window.__surftoberPageStarted = true; // play.html's stale-page guard
   const G = window.SurftoberGame;
   const CFG = window.SurftoberDeckConfig || {};
   const GAME_ID = new URLSearchParams(location.search).get('g') || (CFG.game && CFG.game.id) || `${CFG.team}-ceremony`;
