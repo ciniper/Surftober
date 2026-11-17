@@ -134,8 +134,8 @@
       </div>` };
   }
 
-  function sectionSlide(kicker, word, count) {
-    return { title: word, cls: 'section', html: `<div class="rule"></div><p class="kicker">${esc(kicker)}</p><h1>${esc(word)}</h1>${count ? `<div class="count">${esc(count)}</div>` : ''}` };
+  function sectionSlide(kicker, word, count, key) {
+    return { title: word, cls: 'section', ...(key ? { key } : {}), html: `<div class="rule"></div><p class="kicker">${esc(kicker)}</p><h1>${esc(word)}</h1>${count ? `<div class="count">${esc(count)}</div>` : ''}` };
   }
 
   function historySlide(d) {
@@ -740,7 +740,7 @@
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
     if (!GROUNDS.length) return [];
-    const intro = { title: 'Who said that?', cls: 'game', game: { kind: 'intro' }, html: `
+    const intro = { title: 'Who said that?', key: 'section-game', cls: 'game', game: { kind: 'intro' }, html: `
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
         <p class="lede">${GROUNDS.length} journal quotes. Four suspects each.</p>
         <ol class="g-steps"><li>Scan the code or open <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></li><li>Sign in with your Surftober account</li><li>Tap who wrote it</li></ol>
@@ -802,7 +802,7 @@
   function trophySlides(d) {
     if (!CFG.trophy) return [];
     const ver = TR.version || 'v10';
-    const section = sectionSlide(`Trophy ${CFG.year}`, 'The Spinner', 'Fully 3D-printed · one 608 bearing · a wave that plays on camera');
+    const section = sectionSlide(`Trophy ${CFG.year} · The Spinner`, 'The Trophy', 'Fully 3D-printed · one 608 bearing · a wave that plays on camera', 'section-trophy');
 
     const parts = (TR.parts || []).map((p) => `<li><b>${esc(p.name)}</b><span>${esc(p.note)}</span></li>`).join('');
     const orbit = { title: `Trophy ${CFG.year} · exploded`, cls: 'tr-orbit', html: `
@@ -1147,9 +1147,19 @@
       <div class="content"><img class="logo" src="${LOGO}" alt=""><h1>Until next<br>time…</h1><p class="lede">See you in the water. Surftober ${CFG.year + 1}.</p></div>` };
   }
 
+  // Agenda: CFG.agenda items are 'Label' or { label, to: slide key }; a tile
+  // with `to` is a button that jumps to that section slide.
   function agendaSlide() {
     const a = CFG.agenda || [];
-    return a.length ? { title: 'Agenda', html: `<p class="kicker">Tonight</p><h2>Agenda</h2><ol class="agenda">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` } : null;
+    const item = (x) => (typeof x === 'string' ? { label: x } : x || {});
+    return a.length ? { title: 'Agenda', html: `<p class="kicker">Tonight</p><h2>Agenda</h2><ol class="agenda">${a.map(item).map((x) => x.to
+      ? `<li><button type="button" class="agenda-go" data-goto="${esc(x.to)}">${esc(x.label)}<span aria-hidden="true">→</span></button></li>`
+      : `<li>${esc(x.label)}</li>`).join('')}</ol>` } : null;
+  }
+  // Jump to a slide by key (agenda tiles). A key the arrangement removed: stay put.
+  function goToKey(key) {
+    const i = slides.findIndex((s) => s.key === key);
+    if (i >= 0) show(i);
   }
 
   // Photo slides (trophies, t-shirt): config lists of { src, caption }.
@@ -1232,12 +1242,19 @@
     const order = AWARD_ORDER.filter((id) => byId.has(id) || JUDGED[id] || (id === 'rivalry' && d.rivalry) || (id === 'failed-feature' && d.features.failed.winners.length));
     const n = order.length + d.conditionAwards.length + 1;
     const C = CFG;
-    const slides = [titleSlide(d), agendaSlide(), historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), waterTempSlide(), gradeSlide(), leaderboardSlide(d),
+    // Agenda sections (CFG.agenda jumps to these keys): Overview, The Trophy,
+    // Giving Back, Awards, Who said that? (the game's intro), Closing.
+    const trophy = trophySlides(d), trophySection = trophy.length ? [trophy[0]] : [];
+    const slides = [titleSlide(d), agendaSlide(),
+      sectionSlide(`Surftober ${C.year}`, 'Overview', 'The season in numbers', 'section-overview'),
+      historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), waterTempSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
+      ...trophySection,
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
-      ...trophySlides(d),
+      ...trophy.slice(1),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow', null, true),
-      charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated')];
+      sectionSlide('Surfrider · Blue Water Task Force', 'Giving Back', 'Fundraising · beach cleanups · water quality', 'section-giving-back'),
+      charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated', 'section-awards')];
     let i = 0;
     for (const id of order) {
       i++;
@@ -1256,7 +1273,7 @@
     else slides.push(judgedSlide('best-dressed', bestDressed[0], bestDressed[1], ++i, n, d, d.costumeSurfers));
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
     slides.push(...gameSlides(d));
-    slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), outroSlide());
+    slides.push(sectionSlide('From the journals', 'Closing', 'The book · the photo album · quotes', 'section-closing'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), outroSlide());
     return withKeys(slides.filter(Boolean));
   }
 
@@ -1535,6 +1552,7 @@
     }
     if (e.key === 'Enter' && slides[cur] && slides[cur].opensBook) { e.preventDefault(); openBook(slides[cur].opensBook); return; }
     if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-open-book]')) { e.preventDefault(); openFrom(e.target.closest('[data-open-book]')); return; }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-goto]')) { e.preventDefault(); goToKey(e.target.closest('[data-goto]').dataset.goto); return; }
     const gridOpen = $('#overview').classList.contains('open');
     if (gridOpen && (e.target.matches && e.target.matches('input, textarea'))) { if (e.key === 'Escape') e.target.blur(); return; } // typing the note
     if (gridOpen && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); setArranging(!arranging); return; }
@@ -1558,6 +1576,8 @@
     if (!slides.length) return;
     if (e.target.closest('[data-open-book]')) { openFrom(e.target.closest('[data-open-book]')); return; }
     if (e.target.closest('[data-close-book]')) { closeBook(); return; }
+    const go = e.target.closest('[data-goto]');
+    if (go) { goToKey(go.dataset.goto); return; }
     if (bookOpen()) { (e.clientX < innerWidth / 2 ? turn(-1) : turn(1)); return; }
     if (e.target.closest('a, button, audio')) return;
     (e.clientX < innerWidth * 0.3 ? prev : next)();

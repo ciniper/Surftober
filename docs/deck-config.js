@@ -246,7 +246,15 @@ window.SurftoberDeckConfig = {
   slideArrangement: null,
 
   // Agenda slide (2023 had one). Empty = no agenda slide.
-  agenda: ['Overview', 'Awards', 'Story Time', 'Quotes'],
+  // Each tile jumps to its section slide (`to` = the slide's key).
+  agenda: [
+    { label: 'Surftober 2026 Overview', to: 'section-overview' },
+    { label: 'The Trophy', to: 'section-trophy' },
+    { label: 'Giving Back', to: 'section-giving-back' },
+    { label: 'Awards', to: 'section-awards' },
+    { label: 'Who Said That?', to: 'section-game' },
+    { label: 'Closing', to: 'section-closing' },
+  ],
 
   // Photo slides: { src, caption }. `src` is a URL or a path under docs/.
   // 2025's trophies were printed plaques: a red Golden Gate bridge on blue,

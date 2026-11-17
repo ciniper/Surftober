@@ -200,6 +200,14 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .agenda { list-style: none; padding: 0; margin: 50px 0 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 28px; counter-reset: ag; }
 .agenda li { counter-increment: ag; border-radius: 20px; padding: 26px 32px; font: 700 40px/1.1 var(--display); display: flex; gap: 24px; align-items: center; }
 .agenda li::before { content: counter(ag, decimal-leading-zero); font: 800 30px/1 var(--body); color: var(--accent-text); }
+.agenda li:has(.agenda-go) { padding: 0; }
+.agenda li:has(.agenda-go)::before { margin-left: 32px; }
+.agenda-go { all: unset; cursor: pointer; flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px 32px 26px 0; font: inherit; color: inherit; }
+.agenda-go span { color: var(--accent-text); opacity: .5; transition: transform .15s, opacity .15s; }
+.agenda li:has(.agenda-go):hover { border-color: var(--accent); }
+.agenda-go:hover span, .agenda-go:focus-visible span { opacity: 1; transform: translateX(6px); }
+.agenda-go:focus-visible { outline: none; }
+.agenda li:has(.agenda-go:focus-visible) { border-color: var(--accent); }
 .slide.prompt { justify-content: center; }
 .slide.prompt h2 { font-size: 120px; max-width: 1500px; }
 .stats.donate-figs { grid-template-columns: repeat(2, minmax(0, 560px)); margin-top: 48px; }
