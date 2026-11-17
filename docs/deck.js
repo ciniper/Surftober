@@ -1661,16 +1661,45 @@
     return false;
   }
 
+  // Startup progress on the loading screen, and a watchdog: if the deck isn't
+  // up in 15 s, show the step it's stuck on plus any errors, with a button to
+  // clear this deck's saved settings (arrangement draft, theme) and reload.
+  const BOOT = { step: 'starting', errors: [] };
+  addEventListener('error', (e) => BOOT.errors.push(String(e.message || e.error || 'error')));
+  addEventListener('unhandledrejection', (e) => BOOT.errors.push(String((e.reason && (e.reason.message || e.reason)) || 'rejected promise')));
+  function bootStep(text) {
+    BOOT.step = text;
+    const n = !slides.length && stage.querySelector('.loading > div');
+    if (n) n.textContent = text;
+  }
+  setTimeout(() => {
+    if (slides.length) return;
+    const box = stage.querySelector('.loading');
+    if (!box || box.querySelector('[data-boot-help]')) return;
+    box.insertAdjacentHTML('beforeend', `<div class="muted" data-boot-help style="font-size:22px;max-width:1200px;text-align:center">
+      Still on: <b>${esc(BOOT.step)}</b>${BOOT.errors.length ? `<br>Errors: ${esc(BOOT.errors.slice(-4).join(' · '))}` : ''}<br>
+      <button type="button" class="lock-btn" data-boot-reset style="margin-top:22px">Clear this deck’s saved settings and reload</button></div>`);
+    box.querySelector('[data-boot-reset]').addEventListener('click', () => {
+      try { Object.keys(localStorage).filter((k) => k.startsWith('surftober.deck.')).forEach((k) => localStorage.removeItem(k)); } catch { /* private mode */ }
+      location.replace(location.pathname);
+    });
+  }, 15000);
+
   async function boot() {
     fit();
+    bootStep('Checking sign-in…');
     if (!(await hostGate())) return;
     const m = /^#(\d+)(?:\.(\d+))?$/.exec(location.hash);
     if (m && !slides.length) { cur = Number(m[1]) - 1; step = Number(m[2] || 0); }
     try {
+      bootStep('Paddling out for the season’s data…');
       const raw = await loadData();
+      bootStep('Crunching the numbers…');
       const d = DS.computeDeck({ ...raw, config: CFG });
       window.__deck = d; // console poking during rehearsal
+      bootStep('Loading profile photos…');
       await buildAvatars(d);
+      bootStep('Building the slides…');
       allSlides = buildSlides(d);
       slides = arranged(allSlides, arrangement());
       // A reload restores the slide but not a live vote's reveal step (#20.1):
@@ -1683,6 +1712,7 @@
       const openArrange = location.hash === '#arrange'; // Admin Tools → "Arrange slides"
       if (openArrange) { arranging = true; cur = 0; step = 0; }
       const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      bootStep('Drawing the slides…');
       setTimeout(() => { if (openArrange) toggleGrid(true); }, 0);
       render({ text: `${raw.source === 'live' ? 'Live' : 'Fixture'} · ${fmt(d.stats.sessions)} sessions · ${when}${raw.event.logging_frozen ? '' : ' · logging still open'}` });
     } catch (err) {
