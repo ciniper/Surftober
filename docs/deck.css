@@ -242,7 +242,7 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .award .num { font: 700 26px/1 var(--body); color: var(--text-3); letter-spacing: .12em; white-space: nowrap; padding-top: 4px; }
 .award h2 { font-size: 104px; max-width: 1500px; }
 .award .desc { font-size: 40px; color: var(--text-2); margin-top: 22px; }
-.award .stagefloor { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
+.award .stagefloor { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; position: relative; }
 .award .mystery { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-start; font: 800 300px/1 var(--display); color: var(--mystery); transition: opacity .4s; }
 .award .winner { font: 800 190px/0.95 var(--display); letter-spacing: -0.035em; background: var(--winner-grad); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 12px; }
 .award .winner.many { font-size: 130px; }
@@ -285,6 +285,19 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .award .photo-reveal .winner.many { font-size: 94px; }
 .award .photo-reveal .value { margin-top: 10px; font-size: 44px; }
 .award .photo-reveal .ru { margin-top: 34px; }
+/* Award fit levels (deck.js fitAward): smaller title, then a smaller winner area */
+.slide.award[data-fit="1"] h2 { font-size: 88px; }
+.slide.award[data-fit="1"] .desc { font-size: 34px; margin-top: 14px; }
+.slide.award[data-fit="1"] .stagefloor > .reveal { zoom: .9; }
+.slide.award[data-fit="2"] h2 { font-size: 78px; }
+.slide.award[data-fit="2"] .desc { font-size: 32px; margin-top: 12px; }
+.slide.award[data-fit="2"] .stagefloor > .reveal { zoom: .8; }
+.slide.award[data-fit="3"] h2 { font-size: 72px; }
+.slide.award[data-fit="3"] .desc { font-size: 30px; margin-top: 10px; }
+.slide.award[data-fit="3"] .stagefloor > .reveal { zoom: .7; }
+.slide.award[data-fit="4"] h2 { font-size: 72px; }
+.slide.award[data-fit="4"] .desc { font-size: 30px; margin-top: 10px; }
+.slide.award[data-fit="4"] .stagefloor > .reveal { zoom: .6; }
 .av.award-photo { border-radius: 18px; }
 .av.award-photo img { object-fit: contain; object-position: center !important; }
 .award .ru > span { display: inline-flex; align-items: center; gap: 12px; }
@@ -517,6 +530,24 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 
 /* ---------- Blue Water Task Force ---------- */
 .bw-stats { grid-template-columns: repeat(3, 1fr); margin-top: 70px; }
+/* BWTF logo badge, top right of every BWTF slide */
+.bw-logos { position: absolute; top: 40px; right: 64px; z-index: 4; display: flex; align-items: center; gap: 22px; }
+.bw-logos img { display: block; height: 64px; width: auto; }
+.bw-logos img + img { height: 58px; }
+:root[data-theme="dark"] .bw-logos .bw-logo-ink { filter: invert(1); }
+/* BWTF intro + How the data flows on one slide: mission and stats left, the animation right */
+.slide.bw-combo { padding: 64px 80px 96px; flex-direction: row; gap: 64px; align-items: stretch; }
+.bw-combo-left { flex: 0 0 560px; display: flex; flex-direction: column; justify-content: center; }
+.bw-combo-left .kicker { font-size: 22px; margin-bottom: 14px; }
+.bw-combo-left h2 { font-size: 54px; line-height: 1.08; }
+.bw-mini { display: grid; gap: 22px; margin-top: 40px; }
+.bw-mini b { display: block; font: 800 76px/1 var(--display); letter-spacing: -0.03em; color: var(--highlight-text); }
+.bw-mini span { display: block; font-size: 24px; color: var(--text-2); margin-top: 6px; }
+.bw-combo-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.bw-combo-right .kicker { font-size: 22px; margin-bottom: 8px; }
+.bw-combo-right h3 { font-size: 48px; }
+.bw-combo .bw-frame { container-type: size; margin-top: 20px; }
+.bw-combo .bw-media { width: min(100cqw, 100cqh * var(--ar, 1.7131)); height: auto; max-width: none; max-height: none; }
 .bw-stats .v { font-size: 130px; color: var(--highlight-text); }
 .bw-frame { flex: 1; min-height: 0; margin-top: 30px; display: flex; align-items: center; justify-content: center; }
 .bw-frame .todo { width: 100%; }
