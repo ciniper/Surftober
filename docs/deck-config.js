@@ -182,6 +182,20 @@ window.SurftoberDeckConfig = {
   waterNote: 'No 2026 reading on Oct 1 · hollow dot = Oct 2, from 3:30 pm only',
   waterPartialDays: [2],  // this year's days with partial readings (hollow dots)
 
+  // Web Analytics slide (after The Author award): a snapshot, pulled
+  // 2026-11-16 from Vercel Web Analytics (production, Oct 1–31 UTC days) and
+  // the Surftober2 Supabase project. Vercel counts a visitor once per day, so
+  // `visits` is visitor-days, not unique people.
+  webAnalytics: {
+    period: 'October 2026',
+    visits: 1236, pageviews: 2355, mobile: 1038,
+    countries: [['US', 1181], ['GB', 21], ['ID', 12], ['SG', 8], ['DE', 2], ['FR', 2], ['IL', 2], ['NL', 2], ['PR', 2], ['ES', 1], ['FJ', 1], ['PL', 1], ['PT', 1]],
+    dailyVisits: [44, 54, 50, 55, 58, 46, 49, 40, 39, 34, 11, 30, 36, 40, 46, 52, 43, 33, 29, 32, 34, 37, 26, 33, 36, 39, 28, 40, 38, 50, 54],
+    // Photos + audio in Supabase Storage at the end of each October day, MB.
+    storageMb: [26.4, 30.2, 31.8, 34.7, 39.4, 41.7, 44.8, 45.5, 46.8, 47.3, 50.1, 52.2, 52.6, 53.8, 56.1, 59.0, 59.9, 66.1, 66.9, 68.1, 68.1, 69.2, 69.4, 70.1, 73.2, 74.3, 75.4, 77.1, 78.9, 79.9, 81.6],
+    supabase: { sessions: 893, journals: 773, photos: 146, surfers: 52, databaseMb: 22 },
+  },
+
   // Free-text recap (2025 had Surf Recap + Weather Recap). Not shown since
   // 2026-11-16: the water-temperature chart replaced the Surf & weather slide.
   surfRecap: '',     // size, quality, standout swells
