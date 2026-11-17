@@ -808,8 +808,8 @@
         ${stat(perTrophyMin() ? trHm(perTrophyMin()).replace(' h ', '<small>h</small> ').replace(' min', '<small>m</small>') : null, 'per trophy, as sliced', 'trophy.perTrophy')}
       </div>
       <div class="tr-media2">
-        <figure>${trMedia(TB.timelapse, 'trophy.build.timelapse', 'Print timelapse', { controls: true, preload: 'metadata' })}<figcaption>Print timelapse</figcaption></figure>
-        <figure>${trMedia(TB.assembly, 'trophy.build.assembly', 'Assembly', { controls: true, preload: 'metadata' })}<figcaption>Assembling a trophy</figcaption></figure>
+        <figure>${trMedia(TB.timelapse, 'trophy.build.timelapse', 'Print timelapse')}<figcaption>Print timelapse</figcaption></figure>
+        <figure>${trMedia(TB.assembly, 'trophy.build.assembly', 'Assembly')}<figcaption>Assembling a trophy</figcaption></figure>
       </div>${TB.note ? `<p class="muted" style="font-size:24px;margin-top:18px">${esc(TB.note)}</p>` : ''}` };
   }
 
@@ -1179,7 +1179,61 @@
     slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
     slides.push(...gameSlides(d));
     slides.push(sectionSlide('From the journals', 'Quotes'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), outroSlide());
-    return slides.filter(Boolean);
+    return withKeys(slides.filter(Boolean));
+  }
+
+  // Every slide gets a stable key from its title (the-marathon-award; a
+  // repeat gets -2, -3 …), so a saved or exported arrangement still finds
+  // its slides after the data changes.
+  const slug = (t) => String(t || 'slide').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'slide';
+  function withKeys(list) {
+    const seen = new Map();
+    for (const s of list) {
+      const base = s.key || slug(s.title);
+      const n = (seen.get(base) || 0) + 1;
+      seen.set(base, n);
+      s.key = n > 1 ? `${base}-${n}` : base;
+    }
+    return list;
+  }
+
+  // ---------------- slide arrangement ----------------
+  // An arrangement = { order: [keys], status: { key: 'complete' | 'in-progress'
+  // | 'remove' }, note }. It comes from this browser's draft (arrange mode in
+  // the G grid, saved in localStorage) or else CFG.slideArrangement (an
+  // exported file pasted into deck-config.js). 'remove' slides are skipped
+  // when presenting; complete / in-progress only show in arrange mode.
+  const ARRANGE_KEY = `surftober.deck.arrange.${CFG.team}`;
+  const STATUSES = [['complete', '✓', 'Complete'], ['in-progress', '◐', 'In progress'], ['remove', '✕', 'Remove']];
+  let allSlides = [];   // every slide, in built order
+  let draft = null;     // this browser's arrangement, if any
+  let arranging = false;
+  try { draft = JSON.parse(localStorage.getItem(ARRANGE_KEY) || 'null'); } catch { draft = null; }
+  const saveDraft = () => { try { if (draft) localStorage.setItem(ARRANGE_KEY, JSON.stringify(draft)); else localStorage.removeItem(ARRANGE_KEY); } catch { /* private mode: lives until reload */ } };
+  function fromFile(a) {
+    const list = a && Array.isArray(a.slides) ? a.slides : null;
+    if (!list) return null;
+    return { order: list.map((x) => x.key), status: Object.fromEntries(list.filter((x) => x.status).map((x) => [x.key, x.status])), note: a.note || '' };
+  }
+  const arrangement = () => draft || fromFile(CFG.slideArrangement);
+  const arrangementSource = () => (draft ? 'this browser’s draft' : CFG.slideArrangement ? 'deck-config.js' : 'built order');
+  function arranged(list, arr, keepRemoved = false) {
+    let out = list.slice();
+    if (arr && arr.order && arr.order.length) {
+      const byKey = new Map(list.map((s) => [s.key, s]));
+      out = arr.order.filter((k) => byKey.has(k)).map((k) => byKey.get(k));
+      const placed = new Set(out.map((s) => s.key));
+      // A slide the arrangement doesn't know (new since it was saved) keeps
+      // its place right after the slide it followed in the built order.
+      list.forEach((s, i) => {
+        if (placed.has(s.key)) return;
+        let j = i - 1;
+        while (j >= 0 && !placed.has(list[j].key)) j--;
+        out.splice(j < 0 ? 0 : out.indexOf(list[j]) + 1, 0, s);
+        placed.add(s.key);
+      });
+    }
+    return keepRemoved ? out : out.filter((s) => !(arr && arr.status && arr.status[s.key] === 'remove'));
   }
 
   // ---------------- runtime: render, scale, navigate ----------------
@@ -1207,7 +1261,9 @@
     stage.style.top = `${(innerHeight - 1080 * s) / 2}px`;
   }
 
+  let lastDataInfo = { text: '' };
   function render(dataInfo) {
+    lastDataInfo = dataInfo;
     stage.innerHTML = slides.map((s, i) => `<section class="slide ${s.cls || ''}" data-i="${i}" aria-label="${esc(s.title)}">${s.html}</section>`).join('')
       + `<div class="footer"><span><img src="${LOGO}" alt="">Surftober ${CFG.year}</span><span id="pageno"></span></div><div class="progress" id="progress"></div>`
       + `<div class="status${dataInfo.err ? ' err' : ''}" id="status"><i></i>${esc(dataInfo.text)}</div>`
@@ -1218,9 +1274,78 @@
     setTimeout(() => ensureBook('journal'), 400);
     // Grid = live thumbnails: each slide's own markup at 1/8 scale, before
     // any reveal (so opening the grid on the projector spoils nothing).
-    $('#overview').innerHTML = slides.map((s, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}: ${esc(s.title)}"><span class="thumb" aria-hidden="true"><span class="thumb-inner"><section class="slide ${s.cls || ''}">${s.html}</section></span></span><small>${i + 1}</small>${esc(s.title)}</button>`).join('');
+    renderGrid();
     show(Math.min(cur, slides.length - 1), step);
   }
+
+  const thumb = (s) => `<span class="thumb" aria-hidden="true"><span class="thumb-inner"><section class="slide ${s.cls || ''}">${s.html}</section></span></span>`;
+  function renderGrid() {
+    const o = $('#overview');
+    o.classList.toggle('arranging', arranging);
+    if (!arranging) {
+      o.innerHTML = `<div class="arr-bar"><span>${slides.length} slides · order: ${esc(arrangementSource())}</span><button type="button" class="arr-btn" data-arrange="on">Arrange slides <kbd>A</kbd></button></div>`
+        + slides.map((s, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}: ${esc(s.title)}">${thumb(s)}<small>${i + 1}</small>${esc(s.title)}</button>`).join('');
+      o.querySelectorAll('button[data-i]').forEach((b) => b.classList.toggle('cur', Number(b.dataset.i) === cur));
+      return;
+    }
+    const arr = arrangement() || { order: [], status: {} };
+    const list = arranged(allSlides, arr, true);
+    const st = (k) => (arr.status || {})[k] || '';
+    const count = (x) => list.filter((s) => st(s.key) === x).length;
+    let n = 0;
+    o.innerHTML = `<div class="arr-bar arr-on">
+        <span><b>Arrange slides</b> · drag to reorder · flag each one · ${list.length - count('remove')} shown, ${count('remove')} removed · ✓ ${count('complete')} · ◐ ${count('in-progress')}</span>
+        <input type="text" class="arr-note" data-arr-note placeholder="Note for Claude (optional)" value="${esc(arr.note || '')}">
+        <button type="button" class="arr-btn" data-arrange="export">Export file</button>
+        <button type="button" class="arr-btn" data-arrange="copy">Copy</button>
+        <button type="button" class="arr-btn" data-arrange="reset">Reset</button>
+        <button type="button" class="arr-btn arr-done" data-arrange="off">Done <kbd>A</kbd></button>
+        <span class="arr-msg" data-arr-msg>${draft ? 'Saved in this browser.' : `Order from ${esc(arrangementSource())}. Any change starts this browser’s draft.`}</span>
+      </div>`
+      + list.map((s) => {
+        const k = st(s.key), gone = k === 'remove';
+        return `<div class="arr-tile${gone ? ' gone' : ''}${k ? ` is-${k}` : ''}" draggable="true" data-key="${esc(s.key)}">${thumb(s)}
+          <small>${gone ? '—' : ++n}</small>${esc(s.title)}
+          <span class="arr-flags">${STATUSES.map(([v, icon, label]) => `<button type="button" data-flag="${v}" class="${k === v ? 'on' : ''}" title="${label}" aria-pressed="${k === v}">${icon} ${label}</button>`).join('')}</span></div>`;
+      }).join('');
+  }
+
+  // Edits always go to this browser's draft (started from what's showing).
+  function editDraft(fn) {
+    const base = arrangement() || { order: [], status: {}, note: '' };
+    draft = { order: arranged(allSlides, base, true).map((s) => s.key), status: { ...(base.status || {}) }, note: base.note || '' };
+    fn(draft);
+    draft.updated = new Date().toISOString();
+    saveDraft();
+  }
+  function exportArrangement() {
+    const arr = arrangement() || { order: [], status: {} };
+    let n = 0;
+    return {
+      deck: CFG.team, exported: new Date().toISOString(),
+      note: arr.note || '',
+      slides: arranged(allSlides, arr, true).map((s) => {
+        const status = (arr.status || {})[s.key] || '';
+        return { n: status === 'remove' ? null : ++n, key: s.key, title: s.title, status };
+      }),
+    };
+  }
+  function setArranging(on) {
+    if (arranging === on) return;
+    arranging = on;
+    if (!on) { // apply: present in the new order, staying on the same slide
+      const key = slides[cur] && slides[cur].key;
+      slides = arranged(allSlides, arrangement());
+      const at = slides.findIndex((s) => s.key === key);
+      cur = at >= 0 ? at : Math.min(cur, slides.length - 1);
+      step = 0;
+      render(lastDataInfo);
+      toggleGrid(true);
+      return;
+    }
+    renderGrid();
+  }
+  function arrMsg(t) { const m = $('#overview [data-arr-msg]'); if (m) m.textContent = t; }
 
   function show(i, st = 0) {
     cur = Math.max(0, Math.min(slides.length - 1, i));
@@ -1239,8 +1364,23 @@
     gameOnShow();
     // Slide videos (data-auto) play only on their own slide; data-restart ones
     // start from the top each time the slide comes up.
+    // play() can be refused while the slide is still fading in (Safari is
+    // strict about muted autoplay), so retry a few times while the slide is
+    // up; only if every try is refused (e.g. iPhone Low Power Mode) do the
+    // controls appear so a tap plays it. `ended` restarts a loop a browser
+    // let stop.
+    const shownAt = cur;
+    const playVideo = (v, tries = 0) => {
+      v.muted = true;
+      if (!v.dataset.looped) { v.dataset.looped = '1'; v.addEventListener('ended', () => { v.currentTime = 0; v.play().catch(() => {}); }); }
+      v.play().catch((e) => {
+        if (cur !== shownAt || !el.contains(v)) return;
+        if (tries < 4) setTimeout(() => { if (cur === shownAt && v.paused) playVideo(v, tries + 1); }, 350);
+        else if (e && e.name === 'NotAllowedError') v.controls = true;
+      });
+    };
     stage.querySelectorAll('video[data-auto]').forEach((v) => {
-      if (el.contains(v)) { if (v.dataset.restart && st === 0 && v.paused) v.currentTime = 0; v.play().catch((e) => { if (e && e.name === 'NotAllowedError') v.controls = true; }); } else v.pause(); // autoplay blocked (e.g. iPhone Low Power Mode): show controls so a tap plays it
+      if (el.contains(v)) { if (v.dataset.restart && st === 0 && v.paused) v.currentTime = 0; playVideo(v); } else v.pause();
     });
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
@@ -1295,14 +1435,16 @@
     if (e.key === 'Enter' && slides[cur] && slides[cur].opensBook) { e.preventDefault(); openBook(slides[cur].opensBook); return; }
     if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-open-book]')) { e.preventDefault(); openFrom(e.target.closest('[data-open-book]')); return; }
     const gridOpen = $('#overview').classList.contains('open');
+    if (gridOpen && (e.target.matches && e.target.matches('input, textarea'))) { if (e.key === 'Escape') e.target.blur(); return; } // typing the note
+    if (gridOpen && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); setArranging(!arranging); return; }
     if (gridOpen && e.key !== 'Escape' && e.key !== 'g' && e.key !== 'G') return;
     switch (e.key) {
       case 'ArrowRight': case 'PageDown': case ' ': case 'Enter': e.preventDefault(); next(); break;
       case 'ArrowLeft': case 'PageUp': case 'Backspace': e.preventDefault(); prev(); break;
       case 'Home': show(0); break;
       case 'End': show(slides.length - 1, slides[slides.length - 1].steps || 0); break;
-      case 'g': case 'G': toggleGrid(); break;
-      case 'Escape': toggleGrid(false); $('#keys').classList.remove('open'); break;
+      case 'g': case 'G': if (arranging) setArranging(false); toggleGrid(); break;
+      case 'Escape': if (arranging) { setArranging(false); break; } toggleGrid(false); $('#keys').classList.remove('open'); break;
       case 'f': case 'F': (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())?.catch?.(() => {}); break;
       case 'l': case 'L': boot(); break;
       case '?': $('#keys').classList.toggle('open'); break;
@@ -1328,9 +1470,73 @@
     if (Math.abs(dx) > 50) { e.preventDefault(); if (bookOpen()) turn(dx < 0 ? 1 : -1); else (dx < 0 ? next : prev)(); }
   });
   $('#overview').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-arrange]');
+    if (a) {
+      const what = a.dataset.arrange;
+      if (what === 'on') setArranging(true);
+      else if (what === 'off') setArranging(false);
+      else if (what === 'reset') { if (confirm('Reset to the built order and clear every flag in this browser?')) { draft = null; saveDraft(); renderGrid(); } }
+      else {
+        const text = JSON.stringify(exportArrangement(), null, 2);
+        if (what === 'copy') navigator.clipboard.writeText(text).then(() => arrMsg('Copied. Paste it to Claude.'), () => arrMsg('Copy failed. Use Export file.'));
+        else {
+          const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+          const link = Object.assign(document.createElement('a'), { href: url, download: `${CFG.team}-slide-arrangement.json` });
+          document.body.appendChild(link); link.click(); link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          arrMsg('Exported. Hand the file to Claude.');
+        }
+      }
+      return;
+    }
+    const f = e.target.closest('[data-flag]');
+    if (f) {
+      const key = f.closest('[data-key]').dataset.key, v = f.dataset.flag;
+      editDraft((dr) => { if (dr.status[key] === v) delete dr.status[key]; else dr.status[key] = v; });
+      renderGrid();
+      return;
+    }
     const b = e.target.closest('button[data-i]');
     if (b) { show(Number(b.dataset.i)); toggleGrid(false); }
   });
+  $('#overview').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-arr-note]')) return;
+    const note = e.target.value;
+    editDraft((dr) => { dr.note = note; });
+    arrMsg('Saved in this browser.');
+  });
+  // Drag a tile onto another: it lands before or after it (by which half).
+  let dragKey = null;
+  const tileAt = (e) => e.target.closest && e.target.closest('.arr-tile');
+  const clearMarks = () => $('#overview').querySelectorAll('.drop-before, .drop-after, .dragging').forEach((t) => t.classList.remove('drop-before', 'drop-after', 'dragging'));
+  $('#overview').addEventListener('dragstart', (e) => {
+    const t = tileAt(e); if (!t) return;
+    dragKey = t.dataset.key; t.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragKey);
+  });
+  $('#overview').addEventListener('dragover', (e) => {
+    const t = tileAt(e); if (!t || !dragKey) return;
+    e.preventDefault();
+    const r = t.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+    $('#overview').querySelectorAll('.drop-before, .drop-after').forEach((x) => x !== t && x.classList.remove('drop-before', 'drop-after'));
+    t.classList.toggle('drop-after', after); t.classList.toggle('drop-before', !after);
+  });
+  $('#overview').addEventListener('drop', (e) => {
+    const t = tileAt(e); if (!t || !dragKey) return;
+    e.preventDefault();
+    const target = t.dataset.key, after = t.classList.contains('drop-after'), moving = dragKey;
+    dragKey = null; clearMarks();
+    if (target === moving) return;
+    editDraft((dr) => {
+      const order = dr.order.filter((k) => k !== moving);
+      order.splice(order.indexOf(target) + (after ? 1 : 0), 0, moving);
+      dr.order = order;
+    });
+    renderGrid();
+    arrMsg('Saved in this browser.');
+  });
+  $('#overview').addEventListener('dragend', () => { dragKey = null; clearMarks(); });
   addEventListener('resize', fit);
 
   async function hostGate() {
@@ -1365,7 +1571,8 @@
       const d = DS.computeDeck({ ...raw, config: CFG });
       window.__deck = d; // console poking during rehearsal
       await buildAvatars(d);
-      slides = buildSlides(d);
+      allSlides = buildSlides(d);
+      slides = arranged(allSlides, arrangement());
       // A reload restores the slide but not a live vote's reveal step (#20.1):
       // reopening it would write the reveal before anyone has voted.
       if (slides[cur]?.game && !resultsView) step = 0;
@@ -1373,7 +1580,10 @@
         const g = slides.findIndex((s) => s.game && s.game.kind === 'intro');
         if (g >= 0) { cur = g; step = 0; }
       }
+      const openArrange = location.hash === '#arrange'; // Admin Tools → "Arrange slides"
+      if (openArrange) { arranging = true; cur = 0; step = 0; }
       const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      setTimeout(() => { if (openArrange) toggleGrid(true); }, 0);
       render({ text: `${raw.source === 'live' ? 'Live' : 'Fixture'} · ${fmt(d.stats.sessions)} sessions · ${when}${raw.event.logging_frozen ? '' : ' · logging still open'}` });
     } catch (err) {
       console.error(err);
