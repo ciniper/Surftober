@@ -453,12 +453,13 @@
     const base = c.contributed != null ? Number(c.contributed) : s.pledged;
     const how = `$${fmt(base)} ${c.contributed != null ? 'contributed' : 'pledged'}${mult > 1 ? ` × ${esc(c.match || `${mult}x match`)}` : ''}`;
     const fine = c.contributed != null ? '' : `<div class="k" style="font-size:20px;color:var(--text-3)">Pledged = each surfer's $/hour × their hours — an estimate until charity.contributed is filled in.</div>`;
-    const money = `<div class="stat hero"><div class="v">$${fmt(base * mult)}</div><div class="k">raised · ${how}</div>${fine}</div>`;
-    return { title: 'Giving back', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
-      <div class="stats">${money}
+    const money = `<div class="stat hero"><div class="v"><span class="give-icon" aria-hidden="true">💰</span>$${fmt(base * mult)}</div><div class="k">raised · ${how}</div>${fine}</div>`;
+    const photo = c.photo ? `<figure class="give-photo"><img src="${esc(c.photo)}" alt="${esc(c.photoCaption || 'Beach cleanup')}">${c.photoCaption ? `<figcaption>${esc(c.photoCaption)}</figcaption>` : ''}</figure>` : '';
+    return { title: 'Giving back', cls: photo ? 'give' : '', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
+      <div class="give-grid"><div><div class="stats give-stats">${money}
         <div class="stat"><div class="v">${s.cleanupSessions}</div><div class="k">beach cleanups logged</div></div>
         <div class="stat"><div class="v">${s.pledgers}</div><div class="k">surfers pledged per hour</div></div>
-      </div>${c.note ? `<p class="lede">${esc(c.note)}</p>` : ''}` };
+      </div>${c.note ? `<p class="lede">${esc(c.note)}</p>` : ''}</div>${photo}</div>${logoBadge()}` };
   }
 
   // Award slide: step 0 = the award and its criterion; step 1 = the reveal.
@@ -739,6 +740,8 @@
   function gameSlides(d) {
     if (!window.SurftoberGame) return [];
     GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
+    // Hand-picked quotes play after the random rounds (game.extraQuotes).
+    GROUNDS = GROUNDS.concat(window.SurftoberGame.pinnedRounds(d.book.entries, d.name, GCFG.extraQuotes, { startNo: GROUNDS.length + 1, seed: GCFG.seed || 2026 }));
     if (!GROUNDS.length) return [];
     const intro = { title: 'Who said that?', key: 'section-game', cls: 'game', game: { kind: 'intro' }, html: `
       <div class="g-intro"><div><p class="kicker">Live game</p><h1 style="font-size:150px">Who said that?</h1>
@@ -1099,13 +1102,20 @@
     }
   }
 
+  // Surfrider SF + BWTF logo badge (CFG.bwtf.logos) for the Giving Back
+  // slides; cls ' bw-corner' puts it bottom right on a white pill (full-bleed slides).
+  const logoBadge = (cls = '') => {
+    const L = (CFG.bwtf && CFG.bwtf.logos) || [];
+    return L.length ? `<div class="bw-logos${cls}">${L.map((l) => `<img src="${esc(l.src)}" alt="${esc(l.alt || '')}"${l.dark ? ' class="bw-logo-ink"' : ''}>`).join('')}</div>` : '';
+  };
+
   // ---------- Blue Water Task Force (from the "bwtf tober" deck) ----------
   function bwtfSlides() {
     const B = CFG.bwtf;
     if (!B) return [];
     const site = B.site ? `<p class="bw-site">${esc(B.site.replace(/^https?:\/\//, ''))}</p>` : '';
     // Logo badge (top right) on every BWTF slide: CFG.bwtf.logos, in order.
-    const logos = (B.logos || []).length ? `<div class="bw-logos">${B.logos.map((l) => `<img src="${esc(l.src)}" alt="${esc(l.alt || '')}"${l.dark ? ' class="bw-logo-ink"' : ''}>`).join('')}</div>` : '';
+    const logos = logoBadge();
     const intro = { title: 'Blue Water Task Force', html: `
       <p class="kicker">Blue Water Task Force · ${esc(B.group)}</p><h2 style="max-width:1500px">${esc(B.mission)}</h2>
       <div class="stats bw-stats">${B.stats.map((s) => `<div class="stat"><div class="v">${esc(s.v)}</div><div class="k">${esc(s.k)}</div></div>`).join('')}</div>${site}` };
@@ -1127,7 +1137,7 @@
       <div class="bw-frame">${media(f.media, `bwtf.features[${i}].media`)}</div>${site}` }));
     // Whole slides from the BWTF deck, edge to edge.
     const full = (key) => (B[key] || []).map((x, i) => ({ title: x.title, cls: 'bw-full',
-      html: media(x.media, `bwtf.${key}[${i}].media`, 'bw-fullimg', x.title) }));
+      html: media(x.media, `bwtf.${key}[${i}].media`, 'bw-fullimg', x.title) + logoBadge(' bw-corner') }));
     // Water Quality Test Bonus: our own sampling photos in one row. Each
     // photo's width follows its shape (ar = width / height in the config), so
     // portraits and landscapes share one height.
@@ -1253,7 +1263,7 @@
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
       ...trophy.slice(1),
       gallerySlide(`Trophies ${C.year}`, 'This year’s hardware', `Trophies ${C.year}`, C.trophiesNow, 'trophiesNow', null, true),
-      sectionSlide('Surfrider · Blue Water Task Force', 'Giving Back', 'Fundraising · beach cleanups · water quality', 'section-giving-back'),
+      ((x) => ({ ...x, html: x.html + logoBadge() }))(sectionSlide('Surfrider · Blue Water Task Force', 'Giving Back', 'Fundraising · beach cleanups · water quality', 'section-giving-back')),
       charitySlide(d), ...bwtfSlides(), hurtsSlide(d), sectionSlide(`${n} awards`, 'Awards', 'Nominees, please stay seated', 'section-awards')];
     let i = 0;
     for (const id of order) {

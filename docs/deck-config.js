@@ -212,7 +212,8 @@ window.SurftoberDeckConfig = {
   // `contributed` = what people actually gave (leave null to show the pledge
   // estimate: $/hour × hours). `matchMultiplier` 2 = company match doubles it,
   // the way the 2025 deck counted $1,480 contributed → $2,960 raised.
-  charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '' },
+  charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '',
+    photo: 'photos/cleanup-haul.jpg', photoCaption: 'One beach cleanup haul' },  // photo beside the numbers
 
   // Leave a surfer out of one computed award; the next in line moves up.
   // Keys are award ids (deck-stats.js), names as in the app.
@@ -546,5 +547,15 @@ window.SurftoberDeckConfig = {
   // rehearse on it, then clear it with Account → Admin Tools → Reset the game
   // (app.js clears every game_id starting with `${team}-ceremony`, so keep
   // id = `${team}-ceremony`).
-  game: { id: '5th-surftober-2026-ceremony', rounds: 6, seed: 2026 },
+  game: {
+    id: '5th-surftober-2026-ceremony', rounds: 6, seed: 2026,
+    // Hand-picked rounds after the 6 random ones (Chase, 2026-11-16). Matched
+    // to the journal by text; no author here, since this file is public.
+    extraQuotes: [
+      { text: 'Light offshore, small, warm. First time surfing in the Garden State. Kept thinking about The Sopranos. The waves today were positively baked ziti.' },
+      { text: 'Stormy SeaWorld all up in Lawton. Dolphins backpaddling us, dolphins dropping in on us, dolphins snaking waves and catchin airs - zero etiquette out there.' },
+      { text: 'SUP with my PUP. Counting Dune as a Kook cause he keeps trying to sit on my feet and lean over to look at birds and buoys' },
+      { text: 'Loggiest of log days. Little peaks, sunshine, friends. Saw Jesus' },
+    ],
+  },
 };
