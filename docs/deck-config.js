@@ -258,7 +258,10 @@ window.SurftoberDeckConfig = {
     { src: 'trophy/past-2024.jpg', caption: '2024' },
     { src: 'trophy/past-2025.jpg', caption: '2025' },
   ],
-  trophiesNow: [],   // 2025 deck: "Trophies 2025"
+  trophiesNow: [     // 2025 deck: "Trophies 2025". A .mp4 entry plays as a looping video.
+    { src: 'trophy/trophies-2026.jpg', caption: 'Gold · Silver · Bronze · Participant' },
+    { src: 'trophy/trophies-2026-spin.mp4', caption: 'Spinning, seen through the Zoetrope Viewer app' },
+  ],
 
   // Trophy 2026, the spinner: a section between the two trophy galleries
   // (orbit video, design changes, engineering challenges, the wave, a live

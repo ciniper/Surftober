@@ -1155,7 +1155,9 @@
   // row: one line left to right, in config order (trophies), not a wrapping grid.
   function gallerySlide(title, kicker, heading, imgs, field, note, row = false) {
     const body = imgs && imgs.length
-      ? `<div class="gallery${row ? ' row' : ''}">${imgs.map((g) => `<figure><img src="${esc(g.src)}" alt="${esc(g.caption || heading)}">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`
+      ? `<div class="gallery${row ? ' row' : ''}">${imgs.map((g) => `<figure${g.ar ? ` style="--ar:${g.ar}"` : ''}>${isVideo(g.src)
+        ? `<video src="${esc(g.src)}" muted loop playsinline preload="auto" data-auto aria-label="${esc(g.caption || heading)}"></video>`
+        : `<img src="${esc(g.src)}" alt="${esc(g.caption || heading)}">`}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div>`
       : todo('Add photos', field);
     return { title, html: `<p class="kicker">${esc(kicker)}</p><h2>${esc(heading)}</h2>${note ? `<p class="lede" style="font-size:30px;margin-top:14px">${esc(note)}</p>` : ''}${body}` };
   }
