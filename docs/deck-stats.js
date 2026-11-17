@@ -674,6 +674,8 @@
       sessions: sessions.length, scoredHours: scoredMinutes / 60, rawHours: rawMinutes / 60,
       photos: sessions.filter((s) => s.photo_url).length,
       cleanupSessions: sessions.filter((s) => s.type === 'cleanup').length,
+      teachAKookSessions: sessions.filter((s) => s.taught_kook).length,
+      waterBonusPeople: users.filter((u) => byUser.get(u).some((s) => s.type === 'water' || s.water_reading)).length,
       cleanupItems: sessions.reduce((a, s) => a + (s.cleanup_items || 0), 0),
       noWetsuitSessions: sessions.filter((s) => s.no_wetsuit).length,
       costumeSurfers: costumeSurfers.length,
