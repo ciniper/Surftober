@@ -29,8 +29,27 @@
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     return sb;
   }
+  // supabase-js serializes auth across tabs with a lock; if another Surftober
+  // tab holds it (e.g. mid token refresh) getSession() can wait forever and
+  // the deck sat on its loading screen. After a few seconds, read the saved
+  // session straight from storage (default key sb-<project ref>-auth-token).
+  const STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+  function storedSession() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      return s && s.access_token && s.user ? s : null;
+    } catch { return null; }
+  }
   async function session() {
-    try { const c = await client(); const { data } = await c.auth.getSession(); return (data && data.session) || null; } catch { return null; }
+    try {
+      const c = await client();
+      const live = c.auth.getSession().then(({ data }) => (data && data.session) || null);
+      const late = new Promise((resolve) => setTimeout(() => resolve(undefined), 5000));
+      const s = await Promise.race([live, late]);
+      if (s !== undefined) return s;
+      console.warn('[Surftober] sign-in check is stuck (another tab?); using the saved session');
+      return storedSession();
+    } catch { return storedSession(); }
   }
   const isHost = (s) => !!(s && s.user && s.user.email && HOSTS.includes(String(s.user.email).toLowerCase()));
 
