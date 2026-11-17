@@ -270,6 +270,17 @@ window.SurftoberDeckConfig = {
     version: 'v10',
     orbit: 'trophy/orbit.webm', orbitPoster: 'trophy/orbit.jpg',
     strobe: 'trophy/strobe.webm', strobePoster: 'trophy/strobe.jpg',
+    // "Watch it play" slide after Spin it, film it: the app that plays the wave
+    // on a phone, one QR per store. Video: Nov 15, 4K → 720x1280, every frame.
+    viewer: {
+      video: 'trophy/zoetrope-app.mp4',
+      headline: 'Watch your trophy surf',
+      lede: 'Get the free Zoetrope Viewer app, give your trophy a spin and point your phone at it: the wave breaks right on the ring.',
+      apps: [
+        { label: 'iPhone', store: 'App Store', url: 'https://apps.apple.com/us/app/zoetrope-viewer/id6814818405' },
+        { label: 'Android', store: 'Google Play', url: 'https://play.google.com/store/apps/details?id=com.animatedrecordcompany.zoetropeviewer' },
+      ],
+    },
     headline: 'Six parts, one bearing',
     parts: [  // top of the exploded stack to the bottom, as in the orbit video
       { name: 'Front hub', note: 'tier colour, flush navy text inlay' },

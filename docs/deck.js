@@ -827,7 +827,16 @@
         <p class="tr-lede">Eight frames of a breaking wave sit round the ring. Film it spinning at 30 fps: when the ring turns one slot per video frame, each slot lands where the last one was and the wave plays in place.</p>
         <div class="tr-rounds">${rounds}</div></div>` };
 
-    return [section, orbit, design, challenges, wave, printVoteSlide(d), buildSlide(d)].filter(Boolean);
+    // Watch it yourself: the phone app that plays the wave, one QR per store.
+    const V = TR.viewer;
+    const viewer = V && { title: 'Trophy · watch it play', cls: 'tr-wave tr-viewer', html: `
+      <div class="tr-strobe">${trMedia(V.video, 'trophy.viewer.video', 'The trophy spinning, seen through the Zoetrope Viewer app')}</div>
+      <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · see it yourself</p><h2>${esc(V.headline || 'Watch your trophy surf')}</h2>
+        <p class="tr-lede">${esc(V.lede || '')}</p>
+        <div class="tr-apps">${(V.apps || []).map((a) => `<figure><div class="tr-qr" data-qr-url="${esc(a.url)}" aria-label="QR code: ${esc(a.store)}"></div>
+          <figcaption><b>${esc(a.label)}</b>${esc(a.store)}</figcaption></figure>`).join('')}</div></div>` };
+
+    return [section, orbit, design, challenges, wave, viewer, printVoteSlide(d), buildSlide(d)].filter(Boolean);
   }
 
   // Live vote: guess the trophies' total print time (round -1 of the ceremony
@@ -914,17 +923,17 @@
     if (e && (e.status === 401 || e.status === 403)) return 'Not live — sign in as the admin in this browser to collect votes.';
     return 'Offline — showing the round without live votes.';
   }
-  function drawQR(el) {
-    if (!el || el.dataset.done || resultsView) return;
+  function drawQR(el, url = PLAY_URL) {
+    if (!el || el.dataset.done || (resultsView && url === PLAY_URL)) return;
     const paint = () => {
-      try { const q = window.qrcode(0, 'M'); q.addData(PLAY_URL); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 10, margin: 2, scalable: true }); el.dataset.done = '1'; }
-      catch { el.innerHTML = `<div class="g-url">${esc(PLAY_URL)}</div>`; }
+      try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 10, margin: 2, scalable: true }); el.dataset.done = '1'; }
+      catch { el.innerHTML = `<div class="g-url">${esc(url)}</div>`; }
     };
     if (window.qrcode) return paint();
     const sc = document.createElement('script');
     sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
     sc.onload = paint;
-    sc.onerror = () => { el.innerHTML = `<div class="g-url">${esc(PLAY_URL)}</div>`; };
+    sc.onerror = () => { el.innerHTML = `<div class="g-url">${esc(url)}</div>`; };
     document.head.appendChild(sc);
   }
   async function gameTick() {
@@ -1451,6 +1460,7 @@
     const m = el.querySelector('.mystery');
     if (m) m.classList.toggle('gone', step >= 1);
     fitAward(el);
+    el.querySelectorAll('[data-qr-url]').forEach((q) => drawQR(q, q.dataset.qrUrl)); // link QR codes (e.g. the viewer app)
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;
     $('#pageno').textContent = `${cur + 1} / ${slides.length}`;
     const status = $('#status');

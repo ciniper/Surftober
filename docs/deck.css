@@ -400,6 +400,16 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .g-steps b { color: var(--text); }
 .g-qr { width: 460px; height: 460px; flex: none; background: #fff; border-radius: 24px; padding: 18px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; }
 .g-qr svg { width: 100%; height: 100%; }
+/* Trophy viewer slide: two app QR codes under the lede */
+.tr-viewer .tr-strobe { aspect-ratio: 9 / 16; height: 860px; }
+.tr-viewer .tr-lede { font-size: 30px; max-width: 900px; }
+.tr-apps { display: flex; gap: 48px; margin-top: 44px; }
+.tr-apps figure { margin: 0; text-align: center; }
+.tr-qr { width: 300px; height: 300px; background: #fff; border-radius: 22px; padding: 14px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.tr-qr svg { width: 100%; height: 100%; }
+.tr-qr .g-url { font-size: 16px; word-break: break-all; color: #111; }
+.tr-apps figcaption { margin-top: 14px; font-size: 24px; color: var(--text-2); }
+.tr-apps figcaption b { display: block; font: 800 34px var(--display); color: var(--text); }
 .g-url { font: 700 28px var(--body); color: #2d2416; text-align: center; word-break: break-all; }
 .g-status { font-size: 24px; color: var(--text-3); margin-top: 26px; display: block; }
 .g-status code { font-size: .9em; }
