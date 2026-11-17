@@ -290,6 +290,61 @@
       <div class="legend">${legend}<span>Dot = sunshine for at least 70% of daylight · Open-Meteo modeled weather</span></div>` };
   }
 
+  // Web Analytics: a Vercel + Supabase snapshot (CFG.webAnalytics). Visits
+  // per day as bars, storage growth as a line under them, countries beside.
+  function webAnalyticsSlide() {
+    const W = CFG.webAnalytics;
+    if (!W) return { title: 'Web Analytics', html: `<p class="kicker">surftober.com</p><h2>Web Analytics</h2>${todo('Vercel + Supabase numbers', 'webAnalytics')}` };
+    const days = W.dailyVisits || [], mb = W.storageMb || [], S = W.supabase || {};
+    const flag = (cc) => String.fromCodePoint(...[...cc.toUpperCase()].map((c) => 0x1f1a5 + c.charCodeAt(0)));
+    let names = null;
+    try { names = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* old browser: codes */ }
+    const country = (cc) => (cc === 'US' ? 'United States' : cc === 'GB' ? 'United Kingdom' : names ? names.of(cc) : cc);
+    // Visits per day.
+    const VW = 1060, VH = 300, left = 56, bottom = 262, top = 14;
+    const vmax = Math.ceil(Math.max(...days) / 20) * 20;
+    const vy = (v) => bottom - (bottom - top) * v / vmax;
+    const slot = (VW - left) / days.length;
+    let bars = '';
+    for (let t = 0; t <= vmax; t += 20) bars += `<line class="grid" x1="${left}" x2="${VW}" y1="${vy(t)}" y2="${vy(t)}"/><text x="${left - 10}" y="${vy(t) + 6}" text-anchor="end" font-size="18">${t}</text>`;
+    days.forEach((v, i) => {
+      const x = left + i * slot;
+      bars += `<rect x="${x + 3}" y="${vy(v)}" width="${slot - 6}" height="${bottom - vy(v)}" rx="3" fill="var(--accent)"><title>Oct ${i + 1}: ${v} visits</title></rect>`;
+      if (i % 5 === 0 || i === days.length - 1) bars += `<text x="${x + slot / 2}" y="${bottom + 28}" text-anchor="middle" font-size="18">${i + 1}</text>`;
+    });
+    // Storage growth.
+    const SH = 150, sb = 120, st = 16;
+    const smin = Math.floor(Math.min(...mb) / 10) * 10, smax = Math.ceil(Math.max(...mb) / 10) * 10;
+    const sy = (v) => sb - (sb - st) * (v - smin) / (smax - smin);
+    const pts = mb.map((v, i) => `${(left + (i + 0.5) * slot).toFixed(1)},${sy(v).toFixed(1)}`).join(' ');
+    let line = `<line class="grid" x1="${left}" x2="${VW}" y1="${sb}" y2="${sb}"/><text x="${left - 10}" y="${sb + 6}" text-anchor="end" font-size="18">${smin}</text><text x="${left - 10}" y="${st + 6}" text-anchor="end" font-size="18">${smax}</text>`;
+    line += `<polygon points="${left + 0.5 * slot},${sb} ${pts} ${left + (mb.length - 0.5) * slot},${sb}" fill="var(--teal)" opacity=".18"/><polyline points="${pts}" fill="none" stroke="var(--teal)" stroke-width="4" stroke-linejoin="round"/>`;
+    if (mb.length) line += `<text x="${left + 0.5 * slot + 8}" y="${sy(mb[0]) - 10}" font-size="20" font-weight="700">${mb[0]} MB</text><text x="${left + (mb.length - 0.5) * slot}" y="${sy(mb[mb.length - 1]) - 12}" text-anchor="end" font-size="20" font-weight="700">${mb[mb.length - 1]} MB</text>`;
+    const cmax = Math.max(...(W.countries || []).map(([, n]) => n));
+    const list = (W.countries || []).slice(0, 9).map(([cc, n]) => `<li><span class="wa-flag" aria-hidden="true">${flag(cc)}</span><span class="wa-c">${esc(country(cc))}</span><span class="wa-bar"><i style="width:${Math.max(2, (n / cmax) * 100)}%"></i></span><b>${fmt(n)}</b></li>`).join('');
+    const more = (W.countries || []).slice(9);
+    const stat = (v, k) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+    return { title: 'Web Analytics', cls: 'web-analytics', html: `
+      <p class="kicker">surftober.com · ${esc(W.period || '')}</p><h2>Web Analytics</h2>
+      <div class="stats wa-stats">
+        ${stat(fmt(W.visits), 'visits <small>(a visitor counts once a day)</small>')}
+        ${stat(fmt(W.pageviews), 'page views')}
+        ${stat(String((W.countries || []).length), 'countries')}
+        ${stat(`${Math.round((W.mobile / W.visits) * 100)}%`, 'on phones')}
+      </div>
+      <div class="wa-body">
+        <div class="wa-charts">
+          <p class="wa-h">Visits per day</p>
+          <svg class="chart" viewBox="0 0 ${VW} ${VH}" role="img" aria-label="Visits per day in ${esc(W.period || '')}">${bars}</svg>
+          <p class="wa-h">Photos &amp; audio stored (Supabase)</p>
+          <svg class="chart" viewBox="0 0 ${VW} ${SH}" role="img" aria-label="Photos and audio stored grew from ${mb[0]} to ${mb[mb.length - 1]} MB">${line}</svg>
+          <p class="wa-foot">${fmt(S.sessions)} sessions logged · ${fmt(S.journals)} with journal notes · ${fmt(S.photos)} with photos · ${fmt(S.surfers)} surfers · ${S.databaseMb} MB database</p>
+        </div>
+        <div class="wa-countries"><p class="wa-h">Where visits came from</p><ol>${list}</ol>
+          ${more.length ? `<p class="wa-more">+ ${more.map(([cc]) => `${flag(cc)} ${esc(country(cc))}`).join(', ')}: ${fmt(more.reduce((a, [, n]) => a + n, 0))} more</p>` : ''}</div>
+      </div>` };
+  }
+
   // Highest water temperature each October day, one line per year, with a
   // small bar chart of each year's average daily high beside it.
   // CFG.dailyWaterHighs rows: [day, one high per year in CFG.waterYears].
@@ -1165,9 +1220,7 @@
       else if (id === 'failed-feature') slides.push(failedFeatureSlide(d, i, n));
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, null));
-      if (id === 'author') slides.push({ title: 'Web Analytics', html: `
-        <div class="head"><div><h2>Web Analytics</h2></div></div>
-        <p class="lede">Vercel visitor countries and data usage over time</p>` });
+      if (id === 'author') slides.push(webAnalyticsSlide());
     }
     if (d.conditionAwards.length) {
       slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
