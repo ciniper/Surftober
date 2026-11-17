@@ -560,6 +560,18 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .bw-logos img { display: block; height: 64px; width: auto; }
 .bw-logos img + img { height: 58px; }
 :root[data-theme="dark"] .bw-logos .bw-logo-ink { filter: invert(1); }
+/* The same badge bottom right on a white pill (full-bleed BWTF slides: no footer there) */
+.bw-logos.bw-corner { top: auto; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 16px; background: rgba(255, 255, 255, .94); box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.bw-logos.bw-corner img { height: 46px; }
+.bw-logos.bw-corner .bw-logo-ink { filter: none; }
+/* Giving back: the numbers left (money icon on the total), the cleanup photo right */
+.give-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 56px; align-items: start; flex: 1; min-height: 0; }
+.give-grid:not(:has(.give-photo)) { grid-template-columns: minmax(0, 1fr); }
+.give-stats { grid-template-columns: repeat(2, 1fr); margin-top: 44px; }
+.give-icon { font-size: .62em; margin-right: 22px; vertical-align: .08em; }
+.give-photo { margin: 44px 0 0; height: 620px; display: flex; flex-direction: column; }
+.give-photo img { height: 100%; min-height: 0; width: auto; border-radius: 22px; box-shadow: var(--shadow); border: 1.5px solid var(--line); object-fit: cover; }
+.give-photo figcaption { margin-top: 12px; font-size: 22px; color: var(--text-2); text-align: center; }
 /* BWTF intro + How the data flows on one slide: mission and stats left, the animation right */
 .slide.bw-combo { padding: 64px 80px 96px; flex-direction: row; gap: 64px; align-items: stretch; }
 .bw-combo-left { flex: 0 0 560px; display: flex; flex-direction: column; justify-content: center; }

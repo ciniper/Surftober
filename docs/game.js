@@ -213,5 +213,26 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, reopen, resetGame, vote, scoreboard, makeRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
+  // Hand-picked quotes (deck-config game.extraQuotes: [{ by, text }]) become
+  // extra rounds after the random ones. Each is matched to its journal entry
+  // by text (whitespace-insensitive; `by` must start the author's name), and
+  // gets `choices - 1` other authors as suspects, seeded so they're stable.
+  function pinnedRounds(entries, nameOf, picks, { startNo = 1, seed = 2026, choices = 4 } = {}) {
+    const norm = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const authors = [...new Set(entries.map((e) => e.user))];
+    const out = [];
+    for (const [k, q] of (picks || []).entries()) {
+      const e = entries.find((x) => norm(x.text) === norm(q.text) && (!q.by || nameOf(x.user).toLowerCase().startsWith(String(q.by).toLowerCase())));
+      if (!e) { console.warn('[Surftober] extra quote not found:', q.by, q.text); continue; }
+      const r = rng(seed + 1000 + k);
+      const others = authors.filter((a) => a !== e.user);
+      const opts = [e.user];
+      while (opts.length < choices && others.length) opts.push(others.splice(Math.floor(r() * others.length), 1)[0]);
+      for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+      out.push({ round_no: startNo + out.length, quote: e.text, answer: nameOf(e.user), answerUser: e.user, choices: opts.map(nameOf), choiceUsers: opts, date: e.date, location: e.location });
+    }
+    return out;
+  }
+
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, reopen, resetGame, vote, scoreboard, makeRounds, pinnedRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
 })();
