@@ -268,6 +268,13 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .award .ru > span { border-radius: 14px; padding: 12px 20px; }
 .award .ru > span em { font-style: normal; color: var(--text); font-weight: 700; }
 .reveal { opacity: 0; transform: translateY(30px) scale(.98); transition: opacity .5s ease, transform .6s cubic-bezier(.2,.8,.2,1.2); }
+.insta-stage { position: relative; flex: 1; min-height: 0; }
+.insta-stage > .mystery { position: absolute; inset: 0; display: grid; place-items: center; }
+.insta-result { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 16px; }
+.insta-winner { font: 800 54px/1.1 var(--display); color: var(--text); }
+.insta-gallery { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); gap: 8px; }
+.insta-gallery img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.instagram-award:has(.insta-result.shown) .insta-stage > .mystery { opacity: 0; }
 .reveal.shown { opacity: 1; transform: none; }
 .mystery.gone { opacity: 0; }
 .vs { display: flex; align-items: center; gap: 60px; }
