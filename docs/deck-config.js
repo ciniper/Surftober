@@ -213,7 +213,12 @@ window.SurftoberDeckConfig = {
   // estimate: $/hour × hours). `matchMultiplier` 2 = company match doubles it,
   // the way the 2025 deck counted $1,480 contributed → $2,960 raised.
   charity: { contributed: null, matchMultiplier: 2, match: '2x company match', note: '',
-    photo: 'photos/cleanup-haul.jpg', photoCaption: 'One beach cleanup haul' },  // photo beside the numbers
+    photo: 'photos/cleanup-haul.jpg', photoCaption: 'One beach cleanup haul',  // used only if no cleanup session has a photo
+    // Beside the numbers: a collage of the photos logged on beach cleanup
+    // sessions (live). Skip any by a piece of its photo URL.
+    collageCaption: 'From the crew’s cleanup logs',
+    collageSkip: ['658695c4'],  // Oct 24: birds on a lamp post, no trash (Chase, 2026-11-18)
+  },
 
   // Leave a surfer out of one computed award; the next in line moves up.
   // Keys are award ids (deck-stats.js), names as in the app.
@@ -272,7 +277,6 @@ window.SurftoberDeckConfig = {
       {"key":"trophy-engineering-challenges","title":"Trophy · engineering challenges","status":"in-progress"},
       {"key":"trophy-the-wave","title":"Trophy · the wave","status":"in-progress"},
       {"key":"trophy-watch-it-play","title":"Trophy · watch it play","status":"in-progress"},
-      {"key":"trophy-how-it-works","title":"Trophy · how it works","status":"in-progress"},
       {"key":"guess-the-print-time","title":"Guess the print time","status":"complete"},
       {"key":"trophy-the-build","title":"Trophy · the build","status":"complete"},
       {"key":"section-giving-back","title":"Giving Back","status":"complete"},
@@ -405,7 +409,12 @@ window.SurftoberDeckConfig = {
     viewer: {
       video: 'trophy/zoetrope-app.mp4',
       headline: 'Watch your trophy surf',
-      lede: 'Get the free Zoetrope Viewer app, give your trophy a spin and point your phone at it: the wave breaks right on the ring. Bright sunlight or a flashlight is required.',
+      lede: 'No app needed: any phone camera or a strobe light plays the wave. The free Zoetrope Viewer app just makes it easiest.',
+      steps: [  // why lower is better: the sync spin is 60 × fps ÷ 8 frames RPM (30 fps → 225, 60 fps → 450)
+        { title: 'Spin it', text: 'Flick it counter-clockwise as you face it, in bright sun or under a flashlight.' },
+        { title: 'Watch it', text: 'Through the app, your phone’s camera or a strobe light. The wave plays as the spin slows into sync.' },
+        { title: 'Go low', text: 'A lower frame rate is better: 24 or 30 fps (not slo-mo), or a slow strobe, syncs at an easier, slower spin.' },
+      ],
       apps: [
         { label: 'iPhone', store: 'App Store', url: 'https://apps.apple.com/us/app/zoetrope-viewer/id6814818405' },
         { label: 'Android', store: 'Google Play', url: 'https://play.google.com/store/apps/details?id=com.animatedrecordcompany.zoetropeviewer' },
@@ -434,26 +443,32 @@ window.SurftoberDeckConfig = {
         text: 'Fitted screws on either end and raised relief on the hub cap.' },
       { kind: 'design', tag: '03', stat: 'Animation', title: 'Bring the wave to life', image: 'trophy/wave-v10.png',
         text: 'A sequence of wave frames animates as the trophy spins.' },
-      { kind: 'print', tag: 'v6 · Nov 7', stat: '0.9 mm', title: 'The print-true rule',
-        text: 'At 0.4 the slicer dropped the plover’s outline, legs, eye and lip line. New rule: nothing in any colour, gaps included, under two nozzle lines, checked on the real toolpaths.' },
-      { kind: 'print', tag: 'v7 · Nov 8', stat: '0.2 nozzle', title: 'A glue-in art insert',
-        text: 'The art moved to its own ring, printed flat at 0.2 (every minimum halved) and glued into a pocket in the body, which prints in one colour at 0.4.' },
-      { kind: 'print', tag: 'v9thin · Nov 13', stat: '18 → 13 layers', title: 'A thinner insert',
-        text: 'The insert’s plain base went from 1.0 to 0.5 mm, so the art stands as high on a shallower pocket: two inserts 2 h 59 → 2 h 17.' },
-      { kind: 'print', tag: 'v10 · Nov 15', stat: '6 rounds', title: 'The wave, redrawn',
-        text: 'Barrel, open face, a school of fish, then the lip rebuilt as a falling sheet keyed through hand-drawn poses. The pick: throwcurl4, a spiral lip.' },
+      // Engineering challenges: the challenge, the solution, the versions.
+      { kind: 'print', tag: 'The challenge', stat: 'Detail vs time', title: 'Animation resolution vs print time',
+        text: 'A fine 0.2 nozzle prints every line of the wave, but the whole trophy at 0.2 would take far too long. At 0.4 the slicer drops the thin lines: outline, legs, eye.' },
+      { kind: 'print', tag: 'The solution', stat: '0.2 insert', title: 'The animation as its own insert',
+        text: 'The art ring prints flat on a small 0.2 nozzle and glues into a pocket in the body. Body, hub and cap print fast at 0.4.' },
+      { kind: 'print', tag: 'v1 → v10', stat: '10 versions', title: 'Ten versions to get there',
+        text: 'The insert arrived in v7. v9 thinned its base (two inserts 2 h 59 → 2 h 17) and v10 settled on the spiral-lip wave.' },
     ],
     printFigures: [  // Bambu Studio toolpaths, from design/trophy/learnings/
       { src: 'trophy/slice-0.4.png', caption: '0.4 nozzle: classic walls drop anything under one 0.42 mm line (left); Arachne draws thinner, but a one-line stroke prints as a wobbly bead (right)' },
       { src: 'trophy/slice-0.2.png', caption: '0.2 nozzle on the insert: eye, collar, legs and bill all print' },
     ],
-    waveRounds: [  // one frame of each round, drawn from wave-frames.js
-      { tag: 'v5', title: 'Plover in the barrel', src: 'trophy/wave-v5.png' },
-      { tag: 'v6', title: 'Big bird (rejected)', src: 'trophy/wave-v6.png' },
-      { tag: 'v7', title: 'First print, 0.2', src: 'trophy/wave-v7.png' },
-      { tag: 'v8', title: 'A school of fish', src: 'trophy/wave-v8.png' },
-      { tag: 'v10 · r5', title: 'Curtain lip', src: 'trophy/wave-r5.png' },
-      { tag: 'v10 ★', title: 'Spiral lip', src: 'trophy/wave-v10.png', pick: true },
+    // "Spin it, film it": each round's animation, played live from
+    // trophy/wave-frames.js (copied verbatim from the trophy branch, 50d0b6f)
+    // the way the trophy's wave demo draws its flipbook. `wave` is the style;
+    // `src` is a still shown until it starts (and in the slide grid).
+    waveFps: 7.5,  // flipbook speed: the demo's 4× slow-down of a 30 fps phone video
+    waveRounds: [
+      { tag: 'v1–v2', title: 'Classic break', wave: 'classic', src: 'trophy/wave-v1.png' },
+      { tag: 'v3–v4', title: 'Whitewater return', wave: 'return', src: 'trophy/wave-v3.png' },
+      { tag: 'v5', title: 'Plover in the barrel', wave: 'plovertube', src: 'trophy/wave-v5.png' },
+      { tag: 'v6', title: 'Big bird (rejected)', wave: 'ploverbig', src: 'trophy/wave-v6.png' },
+      { tag: 'v7', title: 'First print, 0.2', wave: 'ploverleanfine', src: 'trophy/wave-v7.png' },
+      { tag: 'v8–v9', title: 'A school of fish', wave: 'ploverschool', src: 'trophy/wave-v8.png' },
+      { tag: 'v10 · r5', title: 'Curtain lip', wave: 'throwcurtain3a', src: 'trophy/wave-r5.png' },
+      { tag: 'v10 ★', title: 'Spiral lip', wave: 'throwcurl4', src: 'trophy/wave-v10.png', pick: true },
     ],
     // Print-time vote: the multiple-choice ranges, in hours (Under 25 h,
     // 25–50 h, … , 300+ h). Changing them after voting opens orphans votes.
@@ -528,7 +543,7 @@ window.SurftoberDeckConfig = {
       { title: 'Data Analysis Spanning 20+ Years', media: 'bwtf/analysis.gif' },
       { title: 'Targeted Email Alerts', media: 'bwtf/alerts.gif' },
       { title: 'Educational Modules', media: 'bwtf/education.gif' },
-      { title: 'SFPUC Water Quality Map', media: '' },
+      { title: 'SFPUC Water Quality Map', media: 'bwtf/sfpuc-map.png' },
     ],
     after: [
       { title: 'Do you know of a space we could use to home our lab?', media: 'bwtf/lab-space.jpg' },

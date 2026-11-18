@@ -454,12 +454,19 @@
     const how = `$${fmt(base)} ${c.contributed != null ? 'contributed' : 'pledged'}${mult > 1 ? ` × ${esc(c.match || `${mult}x match`)}` : ''}`;
     const fine = c.contributed != null ? '' : `<div class="k" style="font-size:20px;color:var(--text-3)">Pledged = each surfer's $/hour × their hours — an estimate until charity.contributed is filled in.</div>`;
     const money = `<div class="stat hero"><div class="v"><span class="give-icon" aria-hidden="true">💰</span>$${fmt(base * mult)}</div><div class="k">raised · ${how}</div>${fine}</div>`;
-    const photo = c.photo ? `<figure class="give-photo"><img src="${esc(c.photo)}" alt="${esc(c.photoCaption || 'Beach cleanup')}">${c.photoCaption ? `<figcaption>${esc(c.photoCaption)}</figcaption>` : ''}</figure>` : '';
+    // Collage of the photos logged on beach cleanup sessions (minus collageSkip);
+    // with none, the single config photo.
+    const skip = (c.collageSkip || []).map(String);
+    const shots = (d.photos || []).filter((x) => (x.type === 'cleanup' || x.cleanup_items > 0) && !skip.some((k) => String(x.photo_url).includes(k)));
+    const photo = shots.length
+      ? `<figure class="give-photo give-collage" style="--n:${shots.length}"><div class="give-shots">${shots.map((x) => `<div class="give-shot"><img src="${esc(x.photo_url)}" alt="Beach cleanup photo from ${esc(d.name(x.user))}" loading="lazy"><span>${esc(d.name(x.user))}</span></div>`).join('')}</div>${c.collageCaption ? `<figcaption>${esc(c.collageCaption)}</figcaption>` : ''}</figure>`
+      : c.photo ? `<figure class="give-photo"><img src="${esc(c.photo)}" alt="${esc(c.photoCaption || 'Beach cleanup')}">${c.photoCaption ? `<figcaption>${esc(c.photoCaption)}</figcaption>` : ''}</figure>` : '';
     return { title: 'Giving back', cls: photo ? 'give' : '', html: `<p class="kicker">Surfing is selfish, so we have to make up for it somehow…</p><h2>Giving back</h2>
       <div class="give-grid"><div><div class="stats give-stats">${money}
         <div class="stat"><div class="v">${s.cleanupSessions}</div><div class="k">beach cleanups logged</div></div>
         <div class="stat"><div class="v">${s.teachAKookSessions}</div><div class="k">Teach a Kook sessions</div></div>
-        <div class="stat"><div class="v">${s.pledgers}</div><div class="k">surfers pledged per hour</div></div>
+        <div class="stat"><div class="v">${s.waterBonusPeople}</div><div class="k">surfers took a water quality sample</div></div>
+        <div class="stat"><div class="v">${s.photoSessions}</div><div class="k">photo sessions</div></div>
       </div>${c.note ? `<p class="lede">${esc(c.note)}</p>` : ''}</div>${photo}</div>${logoBadge()}` };
   }
 
@@ -831,15 +838,15 @@
       <div class="tr-cards">${story.filter((c) => c.kind === 'design').map(card).join('')}</div>` };
     const figs = (TR.printFigures || []).map((f) => `<figure><img src="${esc(f.src)}" alt="${esc(f.caption)}"><figcaption>${esc(f.caption)}</figcaption></figure>`).join('');
     const challenges = { title: 'Trophy · engineering challenges', cls: 'tr-story tr-eng', html: `
-      <p class="kicker">Trophy ${CFG.year} · getting the art to print</p><h2>Engineering challenges</h2>
+      <p class="kicker">Trophy ${CFG.year} · resolution vs print time</p><h2>Engineering challenges</h2>
       <div class="tr-cards">${story.filter((c) => c.kind === 'print').map(card).join('')}</div>
       ${figs ? `<div class="tr-figs">${figs}</div>` : ''}` };
 
-    const rounds = (TR.waveRounds || []).map((w) => `<figure class="${w.pick ? 'pick' : ''}"><img src="${esc(w.src)}" alt="${esc(w.title)}"><figcaption><b>${esc(w.tag)}</b> ${esc(w.title)}</figcaption></figure>`).join('');
+    const rounds = (TR.waveRounds || []).map((w) => `<figure class="${w.pick ? 'pick' : ''}"><div class="tr-wavebox"><img src="${esc(w.src)}" alt="${esc(w.title)}">${w.wave ? `<canvas data-wave="${esc(w.wave)}" aria-hidden="true"></canvas>` : ''}</div><figcaption><b>${esc(w.tag)}</b> ${esc(w.title)}</figcaption></figure>`).join('');
     const wave = { title: 'Trophy · the wave', cls: 'tr-wave', html: `
       <div class="tr-strobe">${trMedia(TR.strobe, 'trophy.strobe', 'The wave playing on a phone video', { poster: TR.strobePoster })}</div>
       <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · the animation</p><h2>Spin it, film it</h2>
-        <p class="tr-lede">Eight frames of a breaking wave sit round the ring. Film it spinning at 30 fps: when the ring turns one slot per video frame, each slot lands where the last one was and the wave plays in place.</p>
+        <p class="tr-lede">Eight frames of a breaking wave sit round the ring. When it turns one slot between camera frames or strobe flashes, each slot lands where the last one was and the wave plays in place.</p>
         <div class="tr-rounds">${rounds}</div></div>` };
 
     // Watch it yourself: the phone app that plays the wave, one QR per store.
@@ -848,11 +855,11 @@
       <div class="tr-strobe">${trMedia(V.video, 'trophy.viewer.video', 'The trophy spinning, seen through the Zoetrope Viewer app')}</div>
       <div class="tr-side"><p class="kicker">Trophy ${CFG.year} · see it yourself</p><h2>${esc(V.headline || 'Watch your trophy surf')}</h2>
         <p class="tr-lede">${esc(V.lede || '')}</p>
+        ${(V.steps || []).length ? `<ol class="tr-steps">${V.steps.map((s) => `<li><b>${esc(s.title)}</b> ${esc(s.text)}</li>`).join('')}</ol>` : ''}
         <div class="tr-apps">${(V.apps || []).map((a) => `<figure><div class="tr-qr" data-qr-url="${esc(a.url)}" aria-label="QR code: ${esc(a.store)}"></div>
           <figcaption><b>${esc(a.label)}</b>${esc(a.store)}</figcaption></figure>`).join('')}</div></div>` };
 
-    const howItWorks = { title: 'Trophy · how it works', cls: 'tr-story', html: `<p class="kicker">Trophy ${CFG.year} · the animation</p><h2>How It Works</h2><p class="lede">Animation explanation coming soon.</p>` };
-    return [section, orbit, design, challenges, wave, viewer, howItWorks, printVoteSlide(d), buildSlide(d)].filter(Boolean);
+    return [section, orbit, design, challenges, wave, viewer, printVoteSlide(d), buildSlide(d)].filter(Boolean);
   }
 
   // Live vote: guess the trophies' total print time (round -1 of the ceremony
@@ -1469,6 +1476,49 @@
   }
   function arrMsg(t) { const m = $('#overview [data-arr-msg]'); if (m) m.textContent = t; }
 
+  // "Spin it, film it": each tile plays its wave style live, frame by frame,
+  // with the trophy branch's own renderer (trophy/wave-frames.js, drawn the
+  // way its wave demo draws a flipbook cell). Only while the slide is up; the
+  // still under each canvas shows until the module loads, or if it can't.
+  let waveLib = null, waveRaf = 0;
+  function playWaves(el) {
+    cancelAnimationFrame(waveRaf);
+    const cans = [...el.querySelectorAll('canvas[data-wave]')];
+    if (!cans.length) return;
+    waveLib = waveLib || import('./trophy/wave-frames.js');
+    waveLib.then((W) => {
+      if (!el.classList.contains('active')) return;
+      const fps = Number(CFG.trophy?.waveFps) || 7.5, dpr = 2;  // slide px are scaled to the screen; 2× stays sharp up to 4K
+      const tiles = cans.map((c) => {
+        const V = W.WAVE_VARIANTS[c.dataset.wave];
+        if (!V) return null;
+        c.width = Math.round(c.clientWidth * dpr); c.height = Math.round(c.clientHeight * dpr);
+        const N = V.N || 8, A = c.width / c.height, LC = W.layerColors(c.dataset.wave);
+        const frames = Array.from({ length: N }, (_, k) => W.waveFrame(c.dataset.wave, k / N, A));
+        return { c, g: c.getContext('2d'), N, LC, frames, k: -1 };
+      }).filter(Boolean);
+      const map = (c) => ([u, v]) => [u * c.width, (1 - v) * c.height];
+      const fill = (g, polys, m) => polys.forEach((p) => { g.beginPath(); p.forEach((pt, i) => { const [x, y] = m(pt); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill(); });
+      const t0 = performance.now();
+      const tick = (now) => {
+        if (!el.classList.contains('active')) return;
+        const f = Math.floor((now - t0) / 1000 * fps);
+        for (const t of tiles) {
+          const k = f % t.N;
+          if (k === t.k) continue;
+          t.k = k;
+          const { water, foam } = t.frames[k], m = map(t.c);
+          t.g.fillStyle = '#d4b03a'; t.g.fillRect(0, 0, t.c.width, t.c.height);
+          t.g.fillStyle = t.LC.water; fill(t.g, water, m);
+          t.g.fillStyle = t.LC.foam; fill(t.g, foam, m);
+          t.c.classList.add('on');
+        }
+        waveRaf = requestAnimationFrame(tick);
+      };
+      waveRaf = requestAnimationFrame(tick);
+    }).catch((e) => console.warn('[Surftober] wave animations unavailable:', e));
+  }
+
   function show(i, st = 0) {
     cur = Math.max(0, Math.min(slides.length - 1, i));
     step = resultsView && slides[cur].game?.r ? (slides[cur].steps || 0) : Math.max(0, Math.min(slides[cur].steps || 0, st));
@@ -1508,6 +1558,7 @@
     if (m) m.classList.toggle('gone', step >= 1);
     fitAward(el);
     el.querySelectorAll('[data-qr-url]').forEach((q) => drawQR(q, q.dataset.qrUrl)); // link QR codes (e.g. the viewer app)
+    playWaves(el);
     $('#progress').style.width = `${((cur + 1) / slides.length) * 100}%`;
     $('#pageno').textContent = `${cur + 1} / ${slides.length}`;
     const status = $('#status');
