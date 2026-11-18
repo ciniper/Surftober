@@ -580,22 +580,35 @@
         if (best && best.wind_kts_max != null) storm.push({ user: u, value: Number(best.wind_kts_max), label: `${Math.round(best.wind_kts_max)} kt gusts`, extra: [best.location, A.localDate(best.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ') });
       }
       pushC({ id: 'storm-rider', name: 'The Storm Rider Award', desc: 'Paddled out in the windiest Ocean Beach session', r: rank(storm) });
-      pushC({ id: 'dawn-patrol', name: 'The Dawn Patrol Award', desc: 'Earliest average start time',
-        r: rank(items(condUsers, (u) => avg(condOf(u).map((c) => timeToMin(c.start_time))), (v) => `Average start ${fmtClock(v)}`), { dir: 'min' }) });
+      // October 2026 sunrise at Ocean Beach, Pacific daylight time; Open-Meteo
+      // sunrise values fetched in UTC and converted for each date.
+      const sunrise = [425,426,427,428,429,430,431,431,432,433,434,435,436,437,438,439,440,441,442,443,444,445,446,447,448,449,450,451,452,453,454];
+      const dawnCount = (u) => water(u).filter((s) => {
+        const raw = String(s.location || '').trim(), date = String(s.date).slice(0, 10);
+        if (!s.start_time || !/^2026-10-\d\d$/.test(date) || !(/^(ob\b|ocean beach\b)/i.test(raw) || spotArea(normLocation(raw)) === 'ob')) return false;
+        const rise = sunrise[Number(date.slice(-2)) - 1];
+        return rise != null && timeToMin(s.start_time) < rise;
+      }).length;
+      pushC({ id: 'dawn-patrol', name: 'The Dawn Patrol Award', desc: 'Most Ocean Beach sessions started before sunrise',
+        r: rank(items(users, dawnCount, (v) => `${v} pre-sunrise session${v === 1 ? '' : 's'}`).filter((x) => x.value > 0)) });
       const lowTide = [];
       for (const u of users) {
-        const cs = condOf(u).filter((c) => c.tide_start_ft != null);
+        const cs = water(u).filter((s) => /^(ob\b|ocean beach\b)/i.test(String(s.location || '').trim()) || spotArea(normLocation(s.location)) === 'ob')
+          .map((s) => condBy.get(s._id)).filter((c) => c && c.tide_start_ft != null && c.tide_end_ft != null);
         if (!cs.length) continue;
-        const low = cs.map((c) => ({ c, t: Math.min(Number(c.tide_start_ft), Number(c.tide_end_ft ?? c.tide_start_ft)) })).sort((a, b) => a.t - b.t)[0];
-        lowTide.push({ user: u, value: low.t, label: `${low.t.toFixed(1)} ft tide`, extra: [low.c.location, A.localDate(low.c.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ') });
+        const change = cs.reduce((sum, c) => sum + Number(c.tide_end_ft) - Number(c.tide_start_ft), 0);
+        lowTide.push({ user: u, value: change, label: `${change.toFixed(2)} ft net tide change · ${cs.length} sessions` });
       }
-      pushC({ id: 'low-tide', name: 'The Low-Tide Lord Award', desc: 'Surfed the lowest tide', r: rank(lowTide, { dir: 'min' }) });
+      pushC({ id: 'low-tide', name: 'The Low-Tide Lord Award', desc: 'Most negative total tide change across OB sessions, adding rises and drops from start to finish', r: rank(lowTide, { dir: 'min' }) });
       // Glassy = under 6 kt, or offshore (easterly, 45–135° "from") at Ocean Beach.
       const glassy = (c) => Number(c.wind_kts_avg) < 6 || (Number(c.wind_dir_avg) >= 45 && Number(c.wind_dir_avg) <= 135);
-      pushC({ id: 'glasshunter', name: 'The Glasshunter Award', desc: 'Most sessions in glassy or offshore wind',
-        r: rank(items(users, (u) => condOf(u).filter(glassy).length, (v) => `${v} glassy sessions`).filter((x) => x.value > 0)) });
-      pushC({ id: 'golden-hour', name: 'The Golden Hour Award', desc: 'Most sessions when the forecast was Fair or better',
-        r: rank(items(users, (u) => condOf(u).filter((c) => FAIR_PLUS.has(c.rating)).length, (v) => `${v} Fair+ sessions`).filter((x) => x.value > 0)) });
+      pushC({ id: 'glasshunter', name: 'The Glasshunter Award', desc: 'Most Ocean Beach sessions in glassy or offshore wind',
+        r: rank(items(users, (u) => water(u).filter((s) => /^(ob\b|ocean beach\b)/i.test(String(s.location || '').trim()) || spotArea(normLocation(s.location)) === 'ob').map((s) => condBy.get(s._id)).filter((c) => c && glassy(c)).length, (v) => `${v} glassy sessions`).filter((x) => x.value > 0)) });
+      const ratedOB = (u) => water(u).filter((s) => /^(ob\b|ocean beach\b)/i.test(String(s.location || '').trim()) || spotArea(normLocation(s.location)) === 'ob')
+        .map((s) => condBy.get(s._id)).filter((c) => c && c.rating);
+      pushC({ id: 'golden-hour', name: 'The Golden Hour Award', desc: 'Highest percentage of rated Ocean Beach sessions with Fair or better conditions · minimum 5',
+        r: rank(users.map((u) => { const cs = ratedOB(u), fair = cs.filter((c) => FAIR_PLUS.has(c.rating)).length;
+          return { user: u, value: cs.length >= 5 ? fair / cs.length : NaN, label: `${pct(fair / cs.length)} · ${fair} of ${cs.length} sessions` }; })) });
     }
 
     // The view supplies a modal rating and average wind per session, not
@@ -612,9 +625,9 @@
       const rated = metricRows(u, (c) => RATING_ORDER.includes(c.rating));
       if (rated.length >= MIN_SESSIONS) {
         const minutes = rated.reduce((sum, { s }) => sum + s.duration_minutes, 0);
-        const bad = rated.filter(({ c }) => c.rating === 'POOR' || c.rating === 'VERY_POOR')
+        const bad = rated.filter(({ c }) => ['POOR', 'VERY_POOR', 'POOR_TO_FAIR'].includes(c.rating))
           .reduce((sum, { s }) => sum + s.duration_minutes, 0);
-        if (bad > 0) poor.push({ user: u, value: bad / minutes, label: `${pct(bad / minutes)} Poor or Very poor · ${(bad / 60).toFixed(1)} estimated hours`, extra: coverage(u, rated) });
+        if (bad > 0) poor.push({ user: u, value: bad / minutes, label: `${pct(bad / minutes)} Poor to Fair or worse · ${(bad / 60).toFixed(1)} estimated hours`, extra: coverage(u, rated) });
       }
       const windy = metricRows(u, (c) => c.wind_kts_avg != null && c.wind_dir_avg != null &&
         Number.isFinite(Number(c.wind_kts_avg)) && Number.isFinite(Number(c.wind_dir_avg)) &&
@@ -626,7 +639,7 @@
       }
     }
     pushC({ id: 'glutton-for-punishment', name: 'The Glutton for Punishment Award',
-      desc: 'Highest share of matched OB surf time rated Poor or Very poor. Minimum 5 rated sessions; estimated from each session’s modal rating.', r: rank(poor) });
+      desc: 'Highest share of matched OB surf time rated Poor to Fair or worse. Minimum 5 rated sessions; estimated from each session’s modal rating.', r: rank(poor) });
     pushC({ id: 'headwind-hero', name: 'The Headwind Hero Award',
       desc: 'Most estimated OB surf hours with average onshore wind ≥12 kt, from 202.5–337.5°. Minimum 5 wind-matched sessions; session averages, not exact exposure.', r: rank(headwind) });
 
