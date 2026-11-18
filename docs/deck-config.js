@@ -263,6 +263,7 @@ window.SurftoberDeckConfig = {
       {"key":"daily-surf-height","title":"Daily surf height","status":"complete"},
       {"key":"daily-weather","title":"Daily weather","status":"complete"},
       {"key":"water-temperature","title":"Water temperature","status":"complete"},
+      {"key":"join-the-game","title":"Join the game","status":"complete"},
       {"key":"grade-the-surf","title":"Grade the surf","status":"complete"},
       {"key":"where-it-hurts","title":"Where it hurts","status":"complete"},
       {"key":"the-ascenders","title":"The Ascenders","status":"complete"},
@@ -297,6 +298,7 @@ window.SurftoberDeckConfig = {
       {"key":"targeted-email-alerts","title":"Targeted Email Alerts","status":"in-progress"},
       {"key":"do-you-know-of-a-space-we-could-use-to-home-our-lab","title":"Do you know of a space we could use to home our lab?","status":"in-progress"},
       {"key":"what-your-donation-will-do","title":"What Your Donation Will Do","status":"in-progress"},
+      {"key":"get-involved","title":"Get involved","status":"in-progress"},
       {"key":"section-awards","title":"Awards","status":"complete"},
       {"key":"the-fall-from-grace-award","title":"The Fall from Grace Award","status":"complete"},
       {"key":"the-competition-award","title":"The Competition Award","status":"complete"},
@@ -549,12 +551,38 @@ window.SurftoberDeckConfig = {
       { title: 'Do you know of a space we could use to home our lab?', media: 'bwtf/lab-space.jpg' },
       { title: 'Westside transport box: decanting', media: 'bwtf/decanting.jpg' },
     ],
-    donationCosts: [
-      { amount: '$2,080', label: 'Routine sampling · 26 rounds × 4 sites × $20' },
-      { amount: '$1,200', label: 'Storm sampling · 10 events × 6 sites × $20' },
-      { amount: '$300', label: 'Lab equipment and consumables' },
-      { amount: '$12,000', label: 'Lab space · $1,000 per month' },
-    ],
+    // "What your donation will do": what the program does today beside what a
+    // donation adds, one row each (Chase, 2026-11-18). `graphic`: sites | storm | lab.
+    donationPlan: {
+      perSample: 'Every water sample costs about $20 to process',
+      rows: [
+        { graphic: 'lab', label: 'Lab space', now: 'A borrowed garage or rented shed',
+          next: 'A proper lab with a water hookup and easy access', amount: '$6,000–$10,000', per: 'a year' },
+        { graphic: 'sites', label: 'Routine sampling', now: 'Every 2 weeks at 4 sites', nowN: 4,
+          next: 'Expand to 8 sites', nextN: 8, amount: '$2,080', per: 'a year', math: '26 rounds × 4 more sites × $20' },
+        { graphic: 'storm', label: 'Storm sampling', now: '6 sites, 10 storms a year', nowN: 6,
+          next: 'Follow-up samples after every storm', nextN: 6, amount: '$1,200', per: 'a year', math: '10 storms × 6 sites × $20' },
+      ],
+      pledge: '100% of your donation goes to this program',
+      more: 'And it doesn’t stop there: every extra $20 tests one more sample.',
+    },
+    // Last Giving Back slide: why it's awesome + how to help (Chase, 2026-11-18).
+    getInvolved: {
+      kicker: 'Donations open until December 2',
+      title: 'Get involved',
+      why: [
+        { icon: '🌊', text: 'Feel connected to the water we all use' },
+        { icon: '🔬', text: 'A hands-on way to learn real science' },
+        { icon: '🎒', text: 'High schoolers are part of the team' },
+      ],
+      asks: [
+        { icon: '📅', big: 'Dec 2', text: 'Donations are open until December 2' },
+        { icon: '🤝', big: '$10,000', text: 'Dollar-for-dollar company match, up to $10,000' },
+        { icon: '👨‍👩‍👧', big: 'Share it', text: 'Ask your friends and family to chip in' },
+        { icon: '🙋', big: 'Volunteer', text: 'Want to sample with us? Reach out' },
+      ],
+      note: 'We’re also reaching out to other funding sources.',
+    },
     site: '',
     // Last slide of the section: our own water sampling (the app's one-time
     // +1 hour Water Quality Reading bonus). Photos sit in one row, sized by
