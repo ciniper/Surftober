@@ -562,14 +562,26 @@ window.SurftoberDeckConfig = {
   // (app.js clears every game_id starting with `${team}-ceremony`, so keep
   // id = `${team}-ceremony`).
   game: {
-    id: '5th-surftober-2026-ceremony', rounds: 6, seed: 2026,
-    // Hand-picked rounds after the 6 random ones (Chase, 2026-11-16). Matched
-    // to the journal by text; no author here, since this file is public.
+    id: '5th-surftober-2026-ceremony', rounds: 0, seed: 2026,  // rounds: random journal rounds before the picks (0 = none)
+    // The rounds, in play order (Chase, 2026-11-17): a whole journal entry or
+    // a part of one, matched to its entry by text. No authors here, since this
+    // file is public. Changing them after a rehearsal? Admin Tools → Reset
+    // Who said that? only, so the stored rounds pick up the new quotes.
     extraQuotes: [
-      { text: 'Light offshore, small, warm. First time surfing in the Garden State. Kept thinking about The Sopranos. The waves today were positively baked ziti.' },
-      { text: 'Stormy SeaWorld all up in Lawton. Dolphins backpaddling us, dolphins dropping in on us, dolphins snaking waves and catchin airs - zero etiquette out there.' },
-      { text: 'SUP with my PUP. Counting Dune as a Kook cause he keeps trying to sit on my feet and lean over to look at birds and buoys' },
-      { text: 'Loggiest of log days. Little peaks, sunshine, friends. Saw Jesus' },
+      { text: "I hate dawn patrol. There i said it. Next time im hitting snooze and waiting for gentlemans hour." },
+      { text: "-0.9ft low tide GoPro search party, fail, should have been able to find it in < 1ft of water" },
+      { text: "My toes were purple but my smile was wide Crabocide" },
+      { text: "The rights were big drops but no shoulders, so got to practice my bottom turn touching the water like tom curren. I'm late to work, but my boards are trapping me in my apartment." },
+      { text: "Easy sunday morning small waves and blue skies. I tried to make banana pancakes and they sucked what's up with that jack johnson" },
+      { text: "Stormy SeaWorld all up in Lawton. Dolphins backpaddling us, dolphins dropping in on us, dolphins snaking waves and catchin airs - zero etiquette out there." },
+      { text: "met some amish! pelicans! taught amish about onshore vs offshore wind." },
+      { text: "first pee in new neoprene" },
+      { text: "Gloomy, mushy, smallish, but some fun ones -- all the words you'd use to describe my herb garden." },
+      { text: "Love me some big bouncy waves. Also love when a guy looks you up and down and says \"there are some serious waves out there...\"" },
+      { text: "Loggiest of log days. Little peaks, sunshine, friends. Saw Jesus" },
+      { text: "Light offshore, small, warm. First time surfing in the Garden State. Kept thinking about The Sopranos. The waves today were positively baked ziti." },
+      { text: "SUP with my PUP. Counting Dune as a Kook cause he keeps trying to sit on my feet and lean over to look at birds and buoys" },
+      { text: "I surfed for a while and didn't see anyone I knew. It was strange. Going backside feels like a neglected dirty hamper." },
     ],
   },
 };

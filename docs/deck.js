@@ -740,7 +740,7 @@
   let resultsView = false;
   function gameSlides(d) {
     if (!window.SurftoberGame) return [];
-    GROUNDS = window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds || 6, seed: GCFG.seed || 2026 });
+    GROUNDS = (GCFG.rounds ?? 6) > 0 ? window.SurftoberGame.makeRounds(d.book.entries, d.name, { rounds: GCFG.rounds ?? 6, seed: GCFG.seed || 2026 }) : [];
     // Hand-picked quotes play after the random rounds (game.extraQuotes).
     GROUNDS = GROUNDS.concat(window.SurftoberGame.pinnedRounds(d.book.entries, d.name, GCFG.extraQuotes, { startNo: GROUNDS.length + 1, seed: GCFG.seed || 2026 }));
     if (!GROUNDS.length) return [];

@@ -214,22 +214,31 @@
   }
 
   // Hand-picked quotes (deck-config game.extraQuotes: [{ by, text }]) become
-  // extra rounds after the random ones. Each is matched to its journal entry
-  // by text (whitespace-insensitive; `by` must start the author's name), and
-  // gets `choices - 1` other authors as suspects, seeded so they're stable.
+  // rounds after the random ones. `text` is a whole journal entry or a part of
+  // one (an excerpt); it's matched to its entry ignoring whitespace and curly
+  // vs straight quotes, and the round shows the entry's own wording of that
+  // part. `by` (optional) must start the author's name. Each round gets
+  // `choices - 1` other authors as suspects, seeded so they're stable.
   function pinnedRounds(entries, nameOf, picks, { startNo = 1, seed = 2026, choices = 4 } = {}) {
-    const norm = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    // Character-for-character swaps only, so positions line up with the original.
+    const flat = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+    const key = (t) => flat(t).replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').toLowerCase();
     const authors = [...new Set(entries.map((e) => e.user))];
     const out = [];
     for (const [k, q] of (picks || []).entries()) {
-      const e = entries.find((x) => norm(x.text) === norm(q.text) && (!q.by || nameOf(x.user).toLowerCase().startsWith(String(q.by).toLowerCase())));
+      const want = key(q.text);
+      const hits = entries.filter((x) => key(x.text).includes(want) && (!q.by || nameOf(x.user).toLowerCase().startsWith(String(q.by).toLowerCase())));
+      const e = hits[0];
       if (!e) { console.warn('[Surftober] extra quote not found:', q.by, q.text); continue; }
+      if (hits.length > 1) console.warn('[Surftober] extra quote matches', hits.length, 'entries; using the first:', q.text);
+      const at = key(e.text).indexOf(want);
+      const shown = flat(e.text).slice(at, at + want.length);
       const r = rng(seed + 1000 + k);
       const others = authors.filter((a) => a !== e.user);
       const opts = [e.user];
       while (opts.length < choices && others.length) opts.push(others.splice(Math.floor(r() * others.length), 1)[0]);
       for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
-      out.push({ round_no: startNo + out.length, quote: e.text, answer: nameOf(e.user), answerUser: e.user, choices: opts.map(nameOf), choiceUsers: opts, date: e.date, location: e.location });
+      out.push({ round_no: startNo + out.length, quote: shown, answer: nameOf(e.user), answerUser: e.user, choices: opts.map(nameOf), choiceUsers: opts, date: e.date, location: e.location });
     }
     return out;
   }

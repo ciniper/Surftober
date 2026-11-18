@@ -4040,6 +4040,45 @@ function attachGameResetHandler(){
   });
 }
 
+// Reset only the "Who said that?" quiz rounds (round 1 and up): the surf
+// grade, print-time guess and Best Dressed keep their rounds and votes. The
+// admin may delete rounds directly (RLS); their votes go with them. The deck
+// recreates each round, with the current quotes, when it reaches it.
+function attachQuizResetHandler(){
+  const btn = document.getElementById('btn-quiz-reset');
+  const note = document.getElementById('game-reset-status');
+  if (!btn) return;
+  const say = (t) => { if (note) note.textContent = t; };
+  btn.addEventListener('click', async () => {
+    if (!sb || !isAdminUser()) { say('Sign in as the admin to reset Who said that?.'); return; }
+    const team = (viewedEvent || activeEvent || DEFAULT_EVENT).team;
+    const prefix = team === ceremonyConfig?.team ? publishedCeremonyId : `${team}-ceremony`;
+    btn.disabled = true;
+    try {
+      const { data: rounds, error } = await sb.from('game_rounds').select('id, game_id, round_no').like('game_id', `${prefix}%`).gt('round_no', 0);
+      if (error) throw error;
+      const ids = rounds.filter((r) => r.game_id === prefix || r.game_id.startsWith(prefix + '-')).map((r) => r.id);
+      if (!ids.length) { say('Who said that? has no rounds to reset.'); return; }
+      const result = await sb.from('game_votes').select('round_id', { count: 'exact', head: true }).in('round_id', ids);
+      if (result.error) throw result.error;
+      const votes = result.count || 0;
+      if (!confirm(`Reset Who said that? only?\n\nThis deletes its ${ids.length} rounds and ${votes} votes. The surf grade, print-time guess and Best Dressed are kept. Deleted votes can't be restored.`)) {
+        say('Reset cancelled.');
+        return;
+      }
+      const { data: gone, error: delError } = await sb.from('game_rounds').delete().in('id', ids).select('id');
+      if (delError) throw delError;
+      if ((gone || []).length !== ids.length) throw new Error(`deleted ${(gone || []).length} of ${ids.length} rounds; reload and try again`);
+      say(`Who said that? reset: ${ids.length} rounds and ${votes} votes cleared. Reload the deck before you start.`);
+    } catch (e) {
+      console.error('[quiz reset]', e);
+      say(`Reset failed: ${e.message || e}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 window.addEventListener('hashchange', renderTabs);
 window.addEventListener('load', () => {
   applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
@@ -4060,6 +4099,7 @@ window.addEventListener('load', () => {
   attachAccountHandlers();
   attachAdminEventHandlers();
   attachGameResetHandler();
+  attachQuizResetHandler();
   attachFinishPresentationHandler();
   attachAudioHandlers();
   attachPhotoHandlers();
