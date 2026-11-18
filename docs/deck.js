@@ -824,7 +824,7 @@
         <ol class="tr-parts">${parts}</ol></div>
       <div class="tr-stage">${trMedia(TR.orbit, 'trophy.orbit', 'The trophy, assembled then exploded', { poster: TR.orbitPoster, restart: true })}</div>` };
 
-    const card = (c) => `<div class="tr-card"><div class="tr-tag">${esc(c.tag)}</div><div class="tr-stat">${esc(c.stat)}</div><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></div>`;
+    const card = (c) => `<div class="tr-card"><div class="tr-tag">${esc(c.tag)}</div><div class="tr-stat">${esc(c.stat)}</div><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p>${c.image ? `<img class="tr-design-image" src="${esc(c.image)}" alt="${esc(c.title)}">` : ''}</div>`;
     const story = (TR.story || []);
     const design = { title: 'Trophy · design changes', cls: 'tr-story', html: `
       <p class="kicker">Trophy ${CFG.year} · v3 → ${esc(ver)}</p><h2>Design changes</h2>
@@ -851,7 +851,8 @@
         <div class="tr-apps">${(V.apps || []).map((a) => `<figure><div class="tr-qr" data-qr-url="${esc(a.url)}" aria-label="QR code: ${esc(a.store)}"></div>
           <figcaption><b>${esc(a.label)}</b>${esc(a.store)}</figcaption></figure>`).join('')}</div></div>` };
 
-    return [section, orbit, design, challenges, wave, viewer, printVoteSlide(d), buildSlide(d)].filter(Boolean);
+    const howItWorks = { title: 'Trophy · how it works', cls: 'tr-story', html: `<p class="kicker">Trophy ${CFG.year} · the animation</p><h2>How It Works</h2><p class="lede">Animation explanation coming soon.</p>` };
+    return [section, orbit, design, challenges, wave, viewer, howItWorks, printVoteSlide(d), buildSlide(d)].filter(Boolean);
   }
 
   // Live vote: guess the trophies' total print time (round -1 of the ceremony

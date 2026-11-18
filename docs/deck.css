@@ -492,7 +492,8 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-stat { font: 800 60px/1.05 var(--display); letter-spacing: -0.02em; color: var(--highlight-text); margin: 18px 0 16px; white-space: nowrap; }
 .tr-card h3 { font: 800 32px/1.15 var(--display); margin: 0 0 12px; }
 .tr-card p { margin: 0; font-size: 23px; line-height: 1.4; color: var(--text-2); }
-.tr-story:not(.tr-eng) .tr-cards { flex: 1; margin-bottom: 20px; }
+.tr-story:not(.tr-eng) .tr-cards { flex: 1; margin-bottom: 20px; grid-template-columns: repeat(3, 1fr); min-height: 0; }
+.tr-design-image { width: 100%; flex: 1; min-height: 0; object-fit: contain; margin-top: 18px; }
 .tr-story:not(.tr-eng) .tr-card p { font-size: 27px; }
 .tr-story:not(.tr-eng) .tr-stat { font-size: 58px; margin: 26px 0 22px; }
 .tr-eng h2 { font-size: 76px; }
