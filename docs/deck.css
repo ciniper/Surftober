@@ -436,7 +436,7 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-viewer .tr-strobe { aspect-ratio: 9 / 16; height: 860px; }
 .tr-viewer .tr-lede { font-size: 30px; max-width: 900px; }
 .tr-viewer .tr-apps { margin-top: 28px; }
-.tr-steps { list-style: none; counter-reset: s; margin: 24px 0 0; padding: 0; display: grid; gap: 16px; max-width: 900px; }
+.tr-steps { list-style: none; counter-reset: s; margin: 22px 0 0; padding: 0; display: grid; gap: 12px; max-width: 900px; }
 .tr-steps li { counter-increment: s; position: relative; padding-left: 58px; font-size: 25px; line-height: 1.35; color: var(--text-2); }
 .tr-steps li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 22px/40px var(--display); text-align: center; }
 .tr-steps b { color: var(--text); }

@@ -535,17 +535,6 @@
       <div class="stagefloor">${j.winner ? '<div class="mystery">?</div>' : ''}${body}</div>` };
   }
 
-  function quoteSlides() {
-    const q = CFG.quotes || [];
-    if (!q.length) return [{ title: 'Quotes', html: `<p class="kicker">From the journals</p><h2>Quotes</h2>${todo('Hand-pick the best journal lines', 'quotes')}` }];
-    const out = [];
-    for (let i = 0; i < q.length; i += 4) {
-      out.push({ title: `Quotes ${out.length + 1}`, html: `<p class="kicker">From the journals</p><h2>Quotes</h2>
-        <div class="quotes">${q.slice(i, i + 4).map((x) => `<div class="quote">“${esc(x.text)}”<cite>— ${esc(x.by)}</cite></div>`).join('')}</div>` });
-    }
-    return out;
-  }
-
   // ---------- The Book: every journal entry as a flip-through book ----------
   const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
   function bookTitle(d) {
@@ -1262,19 +1251,6 @@
       <p class="muted" style="font-size:22px;margin-top:22px">Journal entries mentioning each complaint.</p>` };
   }
 
-  function promptSlide(text, kicker) {
-    return { title: text, cls: 'prompt', html: `<p class="kicker">${esc(kicker)}</p><h2>${esc(text)}</h2>` };
-  }
-
-  function donateSlide() {
-    const x = CFG.donate || {};
-    // Last year's total and this year's match, as two big figures.
-    const fig = (f) => f && f.amount ? `<div class="stat"><div class="v">${esc(f.amount)}</div><div class="k">${esc(f.label || '')}</div></div>` : '';
-    const figs = fig(x.lastYear) + fig(x.match);
-    return { title: 'Donate', cls: 'prompt', html: `<p class="kicker">Giving back</p><h2>${esc(x.text || 'Consider donating to Surfrider')}</h2>
-      ${x.detail ? `<p class="lede">${esc(x.detail)}</p>` : ''}${figs ? `<div class="stats donate-figs">${figs}</div>` : ''}${x.link ? `<p class="lede" style="color:var(--accent-text);font-weight:700">${esc(x.link)}</p>` : todo('Donation link', 'donate.link')}` };
-  }
-
   // The Failed Feature Award: the winner is an app feature, not a surfer —
   // and the reveal plays the feature's entire output for the season.
   function failedFeatureSlide(d, i, n) {
@@ -1301,13 +1277,13 @@
   // cousins; the conditions awards follow as their own section.
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
     'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'board-hoarder', 'fish', 'marathon', 'rivalry',
-    'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'instagram', 'bonus-junkies', 'failed-feature'];
+    'localism', 'adventurer', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
+    'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'drifter', 'instagram', 'bonus-junkies', 'failed-feature'];
+  // Computed awards cut from the ceremony (deck-stats still works them out).
+  const CUT_AWARDS = new Set(['tech-nomad', 'commuter', 'crabtracker', 'headwind-hero']);
   const JUDGED = {
     'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
-    'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
     'aim-for-the-stars': ['The “Aim for the Stars and Land on the Earth” Award', 'Fewest hours compared to their original goal'],
-    'commuter': ['The Commuter Award', 'Travelled the farthest to surf'],
   };
 
   function buildSlides(d) {
@@ -1343,15 +1319,13 @@
       if (id === 'author') slides.push(webAnalyticsSlide());
     }
     if (d.conditionAwards.length) {
-      slides.push(sectionSlide('New this year · from the OB forecast', 'Conditions', `${d.conditionAwards.length} awards for the brave and the lucky`));
       for (const a of d.conditionAwards) slides.push(awardSlide({ ...a, group: 'Conditions award' }, ++i, n, d));
     }
     const bestDressed = JUDGED['best-dressed'];
     if (window.SurftoberGame?.costumeCandidates(CFG).length >= 2) slides.push(costumeSlide());
     else slides.push(judgedSlide('best-dressed', bestDressed[0], bestDressed[1], ++i, n, d, d.costumeSurfers));
-    slides.push(sectionSlide('Grab the mic', 'Story Time'), ...(C.storyPrompts || []).map((p) => promptSlide(p, 'Story time')));
     slides.push(...gameSlides(d));
-    slides.push(sectionSlide('From the journals', 'Closing', 'The book · the photo album · quotes', 'section-closing'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), ...quoteSlides(), donateSlide(), outroSlide());
+    slides.push(sectionSlide('From the journals', 'Closing', 'The book · the photo album', 'section-closing'), bookCoverSlide(d), albumCoverSlide(d), shelfSlide(d), outroSlide());
     return withKeys(slides.filter(Boolean));
   }
 
@@ -1839,6 +1813,10 @@
       const raw = await loadData();
       bootStep('Crunching the numbers…');
       const d = DS.computeDeck({ ...raw, config: CFG });
+      // Awards cut from the ceremony (Chase, 2026-11-18): gone from the slides,
+      // the award count and everyone's book pages.
+      d.awards = d.awards.filter((a) => !CUT_AWARDS.has(a.id));
+      d.conditionAwards = d.conditionAwards.filter((a) => !CUT_AWARDS.has(a.id));
       window.__deck = d; // console poking during rehearsal
       bootStep('Loading profile photos…');
       await buildAvatars(d);
