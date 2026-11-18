@@ -683,10 +683,11 @@
         if (timed.some((t) => t.date === date && t.st < hr + 60 && t.en > hr)) fairSurfed++;
       }
     }
+    // Top spots: every Ocean Beach peak (Lawton, Pacheco, …) counts as one OB.
     const spots = new Map();
     for (const s of sessions.filter((x) => WATER_TYPES.has(x.type))) {
       const l = normLocation(s.location);
-      if (l) spots.set(l, (spots.get(l) || 0) + s.duration_minutes);
+      if (l) { const a = spotArea(l); spots.set(a, (spots.get(a) || 0) + s.duration_minutes); }
     }
     const busiest = [...daily].sort((a, b) => b.minutes - a.minutes)[0];
     const stats = {
@@ -696,6 +697,7 @@
       cleanupSessions: sessions.filter((s) => s.type === 'cleanup').length,
       teachAKookSessions: sessions.filter((s) => s.taught_kook).length,
       waterBonusPeople: users.filter((u) => byUser.get(u).some((s) => s.type === 'water' || s.water_reading)).length,
+      photoSessions: sessions.filter((s) => s.type === 'photography').length,
       cleanupItems: sessions.reduce((a, s) => a + (s.cleanup_items || 0), 0),
       noWetsuitSessions: sessions.filter((s) => s.no_wetsuit).length,
       costumeSurfers: costumeSurfers.length,

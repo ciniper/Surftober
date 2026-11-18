@@ -425,6 +425,11 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 /* Trophy viewer slide: two app QR codes under the lede */
 .tr-viewer .tr-strobe { aspect-ratio: 9 / 16; height: 860px; }
 .tr-viewer .tr-lede { font-size: 30px; max-width: 900px; }
+.tr-viewer .tr-apps { margin-top: 28px; }
+.tr-steps { list-style: none; counter-reset: s; margin: 24px 0 0; padding: 0; display: grid; gap: 16px; max-width: 900px; }
+.tr-steps li { counter-increment: s; position: relative; padding-left: 58px; font-size: 25px; line-height: 1.35; color: var(--text-2); }
+.tr-steps li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 22px/40px var(--display); text-align: center; }
+.tr-steps b { color: var(--text); }
 .tr-apps { display: flex; gap: 48px; margin-top: 44px; }
 .tr-apps figure { margin: 0; text-align: center; }
 .tr-qr { width: 300px; height: 300px; background: #fff; border-radius: 22px; padding: 14px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; }
@@ -497,7 +502,7 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-story:not(.tr-eng) .tr-card p { font-size: 27px; }
 .tr-story:not(.tr-eng) .tr-stat { font-size: 58px; margin: 26px 0 22px; }
 .tr-eng h2 { font-size: 76px; }
-.tr-eng .tr-cards { margin-top: 32px; }
+.tr-eng .tr-cards { margin-top: 32px; grid-template-columns: repeat(3, 1fr); }
 .tr-eng .tr-card { padding: 22px 26px 24px; }
 .tr-eng .tr-stat { font-size: 48px; margin: 12px 0 10px; }
 .tr-eng .tr-card h3 { font-size: 28px; margin-bottom: 8px; }
@@ -512,9 +517,13 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-wave .tr-side { flex: 1; min-width: 0; }
 .tr-wave h2 { font-size: 80px; }
 .tr-lede { font-size: 27px; line-height: 1.4; color: var(--text-2); margin: 20px 0 0; }
-.tr-rounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 18px; margin-top: 34px; }
+.tr-rounds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 18px; margin-top: 34px; }
 .tr-rounds figure { margin: 0; }
 .tr-rounds img { display: block; width: 100%; aspect-ratio: 900 / 511; object-fit: cover; object-position: center bottom; border-radius: 12px; border: 1.5px solid var(--line); }
+.tr-wavebox { position: relative; }
+.tr-wavebox canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 12px; border: 1.5px solid var(--line); visibility: hidden; }
+.tr-wavebox canvas.on { visibility: visible; }
+.tr-rounds .pick canvas { box-shadow: 0 0 0 5px var(--accent); border-color: var(--accent); }
 .tr-rounds figcaption { font-size: 19px; color: var(--text-2); margin-top: 8px; }
 .tr-rounds figcaption b { color: var(--text); margin-right: 4px; }
 .tr-rounds .pick img { box-shadow: 0 0 0 5px var(--accent); border-color: var(--accent); }
@@ -575,11 +584,23 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 /* Giving back: the numbers left (money icon on the total), the cleanup photo right */
 .give-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 56px; align-items: start; flex: 1; min-height: 0; }
 .give-grid:not(:has(.give-photo)) { grid-template-columns: minmax(0, 1fr); }
-.give-stats { grid-template-columns: repeat(2, 1fr); margin-top: 44px; }
+.give-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-top: 44px; }
+.give-stats .stat.hero { grid-column: 1 / -1; }
+.give-stats .stat:not(.hero) { padding: 26px 22px 24px; }
+.give-stats .stat:not(.hero) .v { font-size: 88px; }
+.give-stats .stat:not(.hero) .k { font-size: 23px; }
 .give-icon { font-size: .62em; margin-right: 22px; vertical-align: .08em; }
 .give-photo { margin: 44px 0 0; height: 620px; display: flex; flex-direction: column; }
 .give-photo img { height: 100%; min-height: 0; width: auto; border-radius: 22px; box-shadow: var(--shadow); border: 1.5px solid var(--line); object-fit: cover; }
 .give-photo figcaption { margin-top: 12px; font-size: 22px; color: var(--text-2); text-align: center; }
+/* Cleanup collage: portrait phone photos, two per row, filling the photo column. */
+.give-collage { width: 560px; }
+.give-shots { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 12px; }
+.give-shot { position: relative; min-height: 0; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); border: 1.5px solid var(--line); }
+.give-shot img { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; border-radius: 0; box-shadow: none; }
+.give-shot span { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-size: 18px; font-weight: 700; }
+.give-collage[style*="--n:1"] .give-shots { grid-template-columns: 1fr; }
+.give-collage[style*="--n:3"] .give-shot:first-child { grid-row: span 2; }
 /* BWTF intro + How the data flows on one slide: mission and stats left, the animation right */
 .slide.bw-combo { padding: 64px 80px 96px; flex-direction: row; gap: 64px; align-items: stretch; }
 .bw-combo-left { flex: 0 0 560px; display: flex; flex-direction: column; justify-content: center; }
