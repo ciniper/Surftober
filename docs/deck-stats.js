@@ -358,13 +358,15 @@
       for (const s of water(u)) { const l = normLocation(s.location); if (l) m.set(l, (m.get(l) || 0) + 1); }
       return m;
     };
-    const locUsers = users.filter((u) => [...locsOf(u).values()].reduce((a, b) => a + b, 0) >= MIN_SESSIONS * 2);
-    push({ id: 'localism', name: 'The Localism Award', desc: 'Surfed the fewest spots',
-      r: rank(locUsers.map((u) => {
-        const m = locsOf(u), n = [...m.values()].reduce((a, b) => a + b, 0);
-        const [topSpot, c] = [...m.entries()].sort((a, b) => b[1] - a[1])[0];
-        return { user: u, value: m.size + (1 - c / n) * 0.001, label: `${m.size} spot${m.size === 1 ? '' : 's'} · ${pct(c / n)} at ${titleSpot(topSpot)}` };
-      }), { dir: 'min', eps: 1e-7 }) });
+    const localUsers = users.filter((u) => {
+      const ss = water(u);
+      return hoursOf(u) >= 10 && ss.length > 0 && ss.every((s) => {
+        const raw = String(s.location || '').trim();
+        return raw && (/^(ob\b|ocean beach\b)/i.test(raw) || spotArea(normLocation(raw)) === 'ob');
+      });
+    });
+    push({ id: 'localism', name: 'The Localism Award', desc: 'Only logged Ocean Beach locations · 10+ scored hours',
+      r: rank(localUsers.map((u) => ({ user: u, value: 1, label: 'Ocean Beach' }))) });
 
     // --- timing ---
     push({ id: 'procrastinator', name: 'The Procrastinator Award', desc: 'Biggest share of hours in the second half',
@@ -388,7 +390,7 @@
       }
       return { best, bestEnd };
     };
-    push({ id: 'streak', name: 'The Surf Streak Award', desc: 'Longest unbroken streak of days in the water',
+    push({ id: 'streak', name: 'The Wet Wetsuit Award', desc: 'Longest unbroken streak of days in the water',
       r: rank(items(users, (u) => streakOf(u).best, (v) => `${v} day streak`)) });
     const twofers = (u) => { const m = new Map(); for (const s of water(u)) m.set(s.date, (m.get(s.date) || 0) + 1); return [...m.values()].filter((v) => v >= 2).length; };
     push({ id: 'twofer', name: 'The Twofer Award', desc: 'Most days with 2+ sessions',
@@ -573,10 +575,11 @@
     if (conditions.length) {
       const storm = [];
       for (const u of users) {
-        const best = condOf(u).sort((a, b) => (b.wind_kts_max || 0) - (a.wind_kts_max || 0))[0];
+        const best = water(u).filter((s) => /^(ob\b|ocean beach\b)/i.test(String(s.location || '').trim()) || spotArea(normLocation(s.location)) === 'ob')
+          .map((s) => condBy.get(s._id)).filter(Boolean).sort((a, b) => (b.wind_kts_max || 0) - (a.wind_kts_max || 0))[0];
         if (best && best.wind_kts_max != null) storm.push({ user: u, value: Number(best.wind_kts_max), label: `${Math.round(best.wind_kts_max)} kt gusts`, extra: [best.location, A.localDate(best.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })].filter(Boolean).join(' · ') });
       }
-      pushC({ id: 'storm-rider', name: 'The Storm Rider Award', desc: 'Paddled out in the windiest session', r: rank(storm) });
+      pushC({ id: 'storm-rider', name: 'The Storm Rider Award', desc: 'Paddled out in the windiest Ocean Beach session', r: rank(storm) });
       pushC({ id: 'dawn-patrol', name: 'The Dawn Patrol Award', desc: 'Earliest average start time',
         r: rank(items(condUsers, (u) => avg(condOf(u).map((c) => timeToMin(c.start_time))), (v) => `Average start ${fmtClock(v)}`), { dir: 'min' }) });
       const lowTide = [];
