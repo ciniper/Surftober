@@ -91,9 +91,17 @@
   // ---------- reads (anyone) ----------
   const rounds = (gameId) => req(`game_rounds?game_id=eq.${enc(gameId)}&select=*&order=round_no.asc`);
   const ceremonyState = async (gameId) => (await req(`ceremony_state?game_id=eq.${enc(gameId)}&select=*`))[0] || null;
-  const phoneState = async (gameId) => (await req(
-    `ceremony_state?game_id=eq.${enc(gameId)}&select=active_round_id,voting_closed,active:game_rounds!active_round_id(status,answer)`
-  ))[0] || null;
+  // active_slide: the deck's current slide key (newer column; without it the
+  // query falls back to the round-only state, so phones keep working).
+  let slideColumn = true;
+  const phoneState = async (gameId) => {
+    const cols = 'active_round_id,voting_closed,active:game_rounds!active_round_id(status,answer)';
+    if (slideColumn) {
+      try { return (await req(`ceremony_state?game_id=eq.${enc(gameId)}&select=${cols},active_slide`))[0] || null; }
+      catch (e) { if (e && e.status === 400) slideColumn = false; else throw e; }
+    }
+    return (await req(`ceremony_state?game_id=eq.${enc(gameId)}&select=${cols}`))[0] || null;
+  };
   const playerVotesFor = (ids, userId) => ids.length ? req(
     `game_votes?round_id=in.(${ids.map(enc).join(',')})&user_id=eq.${enc(userId)}&select=round_id,user_id,choice`
   ) : Promise.resolve([]);

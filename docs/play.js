@@ -26,6 +26,11 @@
   let scoreRevision = 0;
   let stateKey = '';
   let recheckOwnVote = true;
+  let slide = null;       // the deck's current slide key (ceremony_state.active_slide)
+  // On this slide the phone shows how to watch the trophy's wave, with the
+  // Zoetrope Viewer store links (deck-config trophy.viewer).
+  const VIEWER = (CFG.trophy && CFG.trophy.viewer) || null;
+  const VIEWER_SLIDE = (VIEWER && VIEWER.phoneSlide) || 'trophy-watch-it-play';
 
 
   async function myName(s) {
@@ -46,6 +51,7 @@
       return;
     }
     $('#who').textContent = `Playing as ${me.name}`;
+    if (VIEWER && slide === VIEWER_SLIDE) { renderViewer(v); return; }
     if (!round) { v.innerHTML = `<div class="card"><p class="big">You're in! 🤙</p><p class="note">${closed ? 'Voting is closed.' : 'Waiting for the next activity — watch the big screen.'}</p></div><div class="spin"></div>`; return; }
     const revealed = round.status === 'revealed';
     const picked = pendingChoice() || myChoice;
@@ -63,6 +69,18 @@
     else verdict = `<p class="note">${picked ? 'You can change your pick until voting closes.' : 'Who wrote this journal entry?'}</p>`;
     v.innerHTML = `<div class="card"><p class="kicker">Round ${round.round_no}</p><p class="quote">“${esc(round.quote)}”</p></div>
       ${verdict}${voteNotice()}<div class="choices">${btns}</div>`;
+  }
+
+  // "Watch your trophy surf": the app links as buttons (this phone's own
+  // store first) and the three steps from the slide.
+  function renderViewer(v) {
+    const android = /android/i.test(navigator.userAgent);
+    const apps = [...(VIEWER.apps || [])].sort((a, b) => (/android/i.test(b.label) === android) - (/android/i.test(a.label) === android));
+    const steps = (VIEWER.steps || []).map((x) => `<li><b>${esc(x.title)}</b> ${esc(x.text)}</li>`).join('');
+    v.innerHTML = `<div class="viewer"><div class="card"><p class="kicker">Your trophy</p><p class="quote">${esc(VIEWER.headline || 'Watch your trophy surf')}</p>
+        ${VIEWER.lede ? `<p class="viewer-lede">${esc(VIEWER.lede)}</p>` : ''}${steps ? `<ol class="viewer-steps">${steps}</ol>` : ''}</div>
+      <div class="choices">${apps.map((a, i) => `<a class="btn${i ? ' alt' : ''}" href="${esc(a.url)}" target="_blank" rel="noopener">Zoetrope Viewer · ${esc(a.store)}</a>`).join('')}</div>
+      <p class="note">The free app is optional. The game picks back up on the next vote.</p></div>`;
   }
 
   // Round 0: grade October's surf A+…F (no right answer; the reveal shows
@@ -155,13 +173,14 @@
       }
       if (changedRound) voteError = '';
       round = r;
+      slide = state?.active_slide || null;
       closed = !!state?.voting_closed;
       myChoice = savedVotes.get(id) !== savedAtStart ? savedVotes.get(id) : own;
       const needsScore = !stateKey || (revealed && G.isQuiz(round) && changedState);
       stateKey = nextStateKey;
       const votes = activeVotes;
       const result = revealed && round.round_no <= 0 ? votes.map((v) => v.choice).sort() : null;
-      const key = JSON.stringify([round?.id, round?.status, round?.answer, closed, myChoice, pendingChoice(), result, voteError]);
+      const key = JSON.stringify([round?.id, round?.status, round?.answer, closed, myChoice, pendingChoice(), result, voteError, slide === VIEWER_SLIDE]);
       if (key !== lastKey) {
         lastKey = key;
         render();
