@@ -858,7 +858,7 @@
         <div class="tr-apps">${(V.apps || []).map((a) => `<figure><div class="tr-qr" data-qr-url="${esc(a.url)}" aria-label="QR code: ${esc(a.store)}"></div>
           <figcaption><b>${esc(a.label)}</b>${esc(a.store)}</figcaption></figure>`).join('')}</div></div>` };
 
-    return [section, orbit, design, challenges, wave, viewer, printVoteSlide(d), buildSlide(d)].filter(Boolean);
+    return [section, orbit, design, challenges, wave, spinOffSlide(), viewer, printVoteSlide(d), buildSlide(d)].filter(Boolean);
   }
 
   // Live vote: guess the trophies' total print time (round -1 of the ceremony
@@ -881,6 +881,42 @@
       <div class="tr-vote-body"><div class="gr-chart tr-chart">${cols}</div>
         <div class="tr-podium"><div class="tr-pre" data-g="pre"><div class="mystery">?</div><p>Pick the right range</p></div><div class="reveal" data-g="result"></div></div></div>
       <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>` };
+  }
+
+  // Live vote after Spin it, film it (round -3, game.js SPIN_ROUND): which
+  // spun longer from one flick, the trophy or a normal fidget spinner? The
+  // reveal shows both times, lights up the winner and how many called it.
+  function spinOffSlide() {
+    const G = window.SurftoberGame, S = TR.spinOff;
+    if (!G || !G.SPIN_ROUND || !S || !(S.contenders || []).length) return null;
+    const r = { round_no: G.SPIN_ROUND, quote: S.question || 'Which spins longer?', choices: S.contenders.map((c) => c.name) };
+    const cards = S.contenders.map((c) => `<div class="so-card" data-choice="${esc(c.name)}"><span class="so-name">${esc(c.name)}</span><span class="so-time">?:??</span><span class="so-bar"><i></i></span><span class="so-n"></span></div>`).join('');
+    return { title: 'Trophy · spin-off', cls: 'game grade so', steps: 1, game: { kind: 'spin', r }, html: `
+      <div class="gr-head"><div><p class="kicker">Live vote · Trophy ${CFG.year}</p><h2>${esc(r.quote)}</h2>
+        <p class="lede" style="font-size:32px;margin-top:14px">${esc(S.lede || '')} Vote on your phone: <b>${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</b></p></div>
+        <div class="g-qr gr-qr" data-g="qr" aria-label="QR code for ${esc(PLAY_URL)}"></div></div>
+      <div class="so-body">${S.photo ? `<figure class="so-photo"><img src="${esc(S.photo)}" alt="The ${esc(CFG.year)} trophy beside a normal fidget spinner"></figure>` : ''}
+        <div class="so-cards">${cards}<p class="so-got" data-g="result"></p></div></div>
+      <div class="g-foot"><span class="g-status" data-g="status"></span><span class="num" data-g="count"></span></div>` };
+  }
+  // Votes per contender; on the results step, both times and the winner.
+  function spinTally(el, vs, row, step) {
+    const set = (k, html) => { const n = el.querySelector(`[data-g="${k}"]`); if (n) n.innerHTML = html; };
+    const S = TR.spinOff, win = window.SurftoberGame.spinWinner(S.contenders), shown = step >= 1;
+    const times = new Map(S.contenders.map((c) => [c.name, c.time]));
+    const counts = new Map(S.contenders.map((c) => [c.name, vs.filter((v) => v.choice === c.name).length]));
+    const total = vs.length, max = Math.max(1, ...counts.values());
+    el.querySelectorAll('.so-card').forEach((c) => {
+      const name = c.dataset.choice, n = counts.get(name) || 0;
+      c.classList.toggle('win', shown && win && name === win.name);
+      c.classList.toggle('dim', shown && win && name !== win.name);
+      c.querySelector('.so-time').textContent = shown ? times.get(name) || '' : '?:??';
+      c.querySelector('.so-bar i').style.width = shown ? `${(n / max) * 100}%` : '0';
+      c.querySelector('.so-n').textContent = shown && row ? `${n} vote${n === 1 ? '' : 's'}` : '';
+    });
+    set('count', row ? `${total} vote${total === 1 ? '' : 's'}` : '');
+    set('status', row ? (shown ? '' : 'Voting open — pick on your phone') : esc(GAME.note || gameErr(null)));
+    set('result', shown && win ? (row && total ? `${counts.get(win.name) || 0} of ${total} called it` : '') : '');
   }
 
   function buildSlide(d) {
@@ -1091,6 +1127,21 @@
         }
         const vs = row ? await G.votesFor([row.id]) : [];
         printTally(el, vs, row, revealStep);
+      } else if (s.game.kind === 'spin') {
+        drawQR(el.querySelector('[data-g="qr"]'));
+        const r = s.game.r, win = G.spinWinner(TR.spinOff.contenders);
+        let row = GAME.rows.get(r.round_no);
+        if (!row) {
+          row = (await G.rounds(GAME_ID)).find((x) => x.round_no === r.round_no);
+          if (row) GAME.rows.set(r.round_no, row);
+        }
+        if (row && revealStep >= 1 && row.status !== 'revealed' && GAME.host && win) {
+          const done = await G.reveal(row.id, win.name);
+          row = (done && done[0]) || { ...row, status: 'revealed', answer: win.name };
+          GAME.rows.set(r.round_no, row);
+        }
+        const vs = row ? await G.votesFor([row.id]) : [];
+        spinTally(el, vs, row, revealStep);
       } else if (s.game.kind === 'costume') {
         drawQR(el.querySelector('[data-g="qr"]'));
         const r = s.game.r;
@@ -1122,6 +1173,7 @@
       set('status', esc(GAME.note));
       if (s.game?.kind === 'intro') set('host', esc(GAME.note));
       if (s.game?.kind === 'print') printTally(el, [], null, revealStep);
+      if (s.game?.kind === 'spin') spinTally(el, [], null, revealStep);
       if (s.game?.kind === 'round' && revealStep >= 1) el.querySelectorAll('.g-choice').forEach((c) => { c.classList.toggle('right', c.dataset.choice === s.game.r.answer); c.classList.toggle('wrong', c.dataset.choice !== s.game.r.answer); });
     }
   }
@@ -1203,7 +1255,7 @@
     const GI = B.getInvolved;
     const involved = GI && { title: GI.title || 'Get involved', key: 'get-involved', cls: 'gi', html: `<p class="kicker">${esc(GI.kicker || '')}</p><h2>${esc(GI.title || 'Get involved')}</h2>
       <div class="gi-grid"><div class="gi-why"><p class="gi-h">Why it’s awesome</p>${(GI.why || []).map((w) => `<div class="gi-why-item"><span class="gi-emoji" aria-hidden="true">${esc(w.icon || '')}</span><span>${esc(w.text)}</span></div>`).join('')}</div>
-        <div class="gi-asks">${(GI.asks || []).map((x) => `<div class="gi-ask"><span class="gi-emoji" aria-hidden="true">${esc(x.icon || '')}</span><div><div class="gi-big">${esc(x.big || '')}</div><div class="gi-text">${esc(x.text)}</div></div></div>`).join('')}</div></div>
+        <div class="gi-asks">${(GI.asks || []).map((x) => `<div class="gi-ask${x.wide ? ' wide' : ''}"><span class="gi-emoji" aria-hidden="true">${esc(x.icon || '')}</span><div><div class="gi-big">${esc(x.big || '')}</div><div class="gi-text">${esc(x.text)}</div></div></div>`).join('')}</div></div>
       ${GI.note ? `<p class="gi-note">${esc(GI.note)}</p>` : ''}` };
     return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(donation), badged(involved), badged(bonus)].filter(Boolean);
   }

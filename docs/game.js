@@ -155,6 +155,14 @@
   // answer at the reveal; everyone who picked the range holding it got it.
   const PRINT_ROUND = -1;
   const COSTUME_ROUND = -2;
+  // Trophy spin-off (round -3): which spun longer, the trophy or a normal
+  // fidget spinner? Choices are trophy.spinOff.contenders' names; the one with
+  // the longest time ('m:ss') is the answer the reveal writes.
+  const SPIN_ROUND = -3;
+  const spinSeconds = (t) => String(t || '').split(':').reduce((a, b) => a * 60 + Number(b || 0), 0);
+  function spinWinner(contenders) {
+    return [...(contenders || [])].sort((a, b) => spinSeconds(b.time) - spinSeconds(a.time))[0] || null;
+  }
   function costumeCandidates(config) {
     const seen = new Set();
     return (config.bestDressedCandidates || []).flatMap((candidate) => {
@@ -251,5 +259,5 @@
     return out;
   }
 
-  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, reopen, resetGame, vote, scoreboard, makeRounds, pinnedRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, costumeCandidates, costumeResults, printRanges, printRangeOf };
+  window.SurftoberGame = { client, session, isHost, locked, signIn, rounds, ceremonyState, phoneState, playerVotesFor, roundById, updateCeremony, votesFor, openRound, reveal, reopen, resetGame, vote, scoreboard, makeRounds, pinnedRounds, GRADE_ROUND, GRADES, isQuiz, crewGrade, PRINT_ROUND, COSTUME_ROUND, SPIN_ROUND, spinWinner, costumeCandidates, costumeResults, printRanges, printRangeOf };
 })();

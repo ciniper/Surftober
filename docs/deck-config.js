@@ -397,6 +397,18 @@ window.SurftoberDeckConfig = {
     version: 'v10',
     orbit: 'trophy/orbit.webm', orbitPoster: 'trophy/orbit.jpg',
     strobe: 'trophy/strobe.webm', strobePoster: 'trophy/strobe.jpg',
+    // Live vote after Spin it, film it: which spun longer from one flick?
+    // Times are 'm:ss'; the longest wins and is the answer the reveal shows.
+    // This file is public, so the times are visible to anyone who looks.
+    spinOff: {
+      question: 'Which spins longer?',
+      lede: 'One flick each, timed until it stops.',
+      photo: 'trophy/spin-off.jpg',
+      contenders: [
+        { name: 'Surftober trophy', time: '3:35' },
+        { name: 'Normal fidget spinner', time: '2:43' },
+      ],
+    },
     // "Watch it play" slide after Spin it, film it: the app that plays the wave
     // on a phone, one QR per store. Video: Nov 15, 4K → 720x1280, every frame.
     viewer: {
@@ -557,6 +569,8 @@ window.SurftoberDeckConfig = {
         { icon: '🤝', big: '$10,000', text: 'Dollar-for-dollar company match, up to $10,000' },
         { icon: '👨‍👩‍👧', big: 'Share it', text: 'Ask your friends and family to chip in' },
         { icon: '🙋', big: 'Volunteer', text: 'Want to sample with us? Reach out' },
+        // wide: spans both columns (an odd tile out)
+        { icon: '🧪', big: 'Become a beta tester', text: 'Try new surftober.com features before anyone else. Just ask Chase', wide: true },
       ],
       note: 'We’re also reaching out to other funding sources.',
     },
