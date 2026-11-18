@@ -18,6 +18,7 @@
   --accent-text: #b54a17;      /* accent used AS text: passes on cream */
   --highlight-text: #c2410c;   /* big highlighted numbers / names */
   --up-text: #1e7a6f;
+  --give-green: #1e7a6f;
   --sun-1: #ffd27a;
   --sun-2: #ff6b35;
   --teal: #3aa9a3;
@@ -47,6 +48,7 @@
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 :root[data-theme="dark"] {
+  --give-green: #5fd0b5;
   --bg: #0a1628; --bg-deep: #060f1d; --panel: #152238; --line: #2d4a62; --row-line: rgba(45,74,98,.7);
   --text: #e8f4f8; --text-2: #b4c7d3; --text-3: #7f97a8;
   --accent: #ff6b35; --accent-2: #ff4500; --accent-text: #ff6b35; --highlight-text: #ffd27a; --up-text: #4ecdc4;
@@ -422,6 +424,14 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .g-steps b { color: var(--text); }
 .g-qr { width: 460px; height: 460px; flex: none; background: #fff; border-radius: 24px; padding: 18px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; }
 .g-qr svg { width: 100%; height: 100%; }
+/* Join the game: the biggest QR in the deck, so the back of the room can scan it. */
+.slide.join { flex-direction: row; align-items: center; gap: 90px; }
+.join-qr.g-qr { width: 820px; height: 820px; padding: 30px; border-radius: 36px; }
+.join-side { flex: 1; min-width: 0; }
+.join-side h2 { font-size: 120px; line-height: 1; }
+.join-url { font: 800 44px var(--display); color: var(--highlight-text); margin: 28px 0 0; word-break: break-all; }
+.join-side .g-steps { margin-top: 40px; }
+.ceremony-results .join-qr { display: none; }
 /* Trophy viewer slide: two app QR codes under the lede */
 .tr-viewer .tr-strobe { aspect-ratio: 9 / 16; height: 860px; }
 .tr-viewer .tr-lede { font-size: 30px; max-width: 900px; }
@@ -706,3 +716,43 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .costume-qr.g-qr { width: 132px; height: 132px; padding: 8px; border-radius: 12px; }
 
 .ceremony-results .g-qr, .ceremony-results .g-steps, .ceremony-results .gr-head .lede { display: none; }
+
+/* ---------- What your donation will do: today → with your donation ---------- */
+.dp-head, .dp-row { display: grid; grid-template-columns: 250px minmax(0, 1fr) 60px minmax(0, 1.25fr); gap: 0 22px; align-items: stretch; }
+.dp-head { margin-top: 30px; font-size: 22px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.dp-head > span { padding-left: 4px; }
+.dp-head .dp-head-next { color: var(--give-green); }
+.dp-rows { display: grid; gap: 16px; margin-top: 14px; }
+.dp-label { font: 800 34px/1.1 var(--display); align-self: center; }
+.dp-now, .dp-next { border-radius: 20px; padding: 19px 24px; display: flex; align-items: center; gap: 22px; min-width: 0; }
+.dp-now { background: var(--panel); border: 1.5px solid var(--line); }
+.dp-next { background: color-mix(in srgb, var(--give-green) 10%, var(--panel)); border: 2px solid color-mix(in srgb, var(--give-green) 55%, transparent); }
+.dp-now p, .dp-next p { margin: 0; font-size: 25px; line-height: 1.3; color: var(--text-2); }
+.dp-next p { color: var(--text); font-weight: 600; }
+.dp-arrow { align-self: center; text-align: center; font: 800 46px var(--display); color: var(--give-green); }
+.dp-art { flex: none; display: flex; align-items: flex-end; gap: 5px; }
+.dp-ico { height: 52px; width: auto; display: block; }
+.dp-cloud { height: 50px; width: auto; margin-right: 6px; align-self: flex-start; }
+.dp-big { height: 84px; width: auto; display: block; }
+.dp-plus { font: 800 30px var(--display); color: var(--give-green); align-self: center; margin: 0 2px; }
+.dp-next-text { min-width: 0; }
+.dp-amt { font: 800 42px/1.1 var(--display); color: var(--give-green); margin-top: 6px; white-space: nowrap; }
+.dp-amt span { font: 600 22px var(--body); color: var(--text-2); }
+.dp-math { font-size: 18px; color: var(--text-3); margin-top: 2px; }
+.dp-pledge { margin-top: 22px; border-radius: 20px; padding: 18px 28px; background: var(--hero-bg); border: 1.5px solid var(--hero-line); display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap; }
+.dp-pledge b { font: 800 38px var(--display); color: var(--highlight-text); }
+.dp-pledge span { font-size: 26px; color: var(--text-2); }
+
+/* ---------- Get involved: why it's awesome + how to help ---------- */
+.gi-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; margin-top: 40px; align-items: stretch; }
+.gi-h { font-size: 22px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--give-green); margin: 0 0 18px; }
+.gi-why { background: color-mix(in srgb, var(--give-green) 10%, var(--panel)); border: 2px solid color-mix(in srgb, var(--give-green) 50%, transparent); border-radius: 24px; padding: 36px 38px; display: grid; gap: 34px; align-content: center; }
+.gi-why .gi-h { margin: 0; }
+.gi-why-item { display: flex; align-items: center; gap: 26px; font: 700 40px/1.2 var(--display); color: var(--text); }
+.gi-emoji { flex: none; width: 92px; height: 92px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 48px; }
+.gi-asks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 22px; }
+.gi-ask { background: var(--panel); border: 1.5px solid var(--line); box-shadow: var(--shadow); border-radius: 22px; padding: 32px 28px; display: flex; gap: 20px; align-items: flex-start; }
+.gi-ask .gi-emoji { width: 76px; height: 76px; font-size: 40px; }
+.gi-big { font: 800 56px/1.05 var(--display); color: var(--highlight-text); }
+.gi-text { font-size: 28px; line-height: 1.3; color: var(--text-2); margin-top: 10px; }
+.gi-note { margin: 30px 0 0; font-size: 28px; color: var(--text-3); }

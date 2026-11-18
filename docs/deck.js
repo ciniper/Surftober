@@ -787,6 +787,16 @@
       <div class="reveal" data-g="result"></div>` };
   }
 
+  // Before the first live vote: a big QR so the room can join play.html.
+  function joinSlide() {
+    if (!window.SurftoberGame) return null;
+    return { title: 'Join the game', key: 'join-the-game', cls: 'join', html: `
+      <div class="join-qr g-qr" data-qr-url="${esc(PLAY_URL)}" aria-label="QR code for ${esc(PLAY_URL)}"></div>
+      <div class="join-side"><p class="kicker">Live votes · grab your phone</p><h2>Join the game</h2>
+        <p class="join-url">${esc(PLAY_URL.replace(/^https?:\/\//, ''))}</p>
+        <ol class="g-steps"><li>Scan the code</li><li>Sign in with your Surftober account</li><li>Keep the page open: it follows the big screen</li></ol></div>` };
+  }
+
   // Live vote: the crew grades October's surf A+…F from their phones. It's
   // round 0 of the same game (game.js GRADE_ROUND), so play.html, the QR and
   // Admin Tools → Reset the game all cover it. Step 1 reveals the crew grade.
@@ -1175,10 +1185,38 @@
     // The badge goes on the slides drawn here; the full-bleed ones are the BWTF
     // deck's own slides (already branded, and their corners hold titles/art).
     const badged = (x) => x && { ...x, html: x.html + logos };
-    const donation = { title: 'What Your Donation Will Do', html: `<p class="kicker">Estimated annual costs</p><h2>What Your Donation Will Do</h2>
-      <div class="stats">${(B.donationCosts || []).map((x) => `<div class="stat"><div class="v">${esc(x.amount)}</div><div class="k">${esc(x.label)}</div></div>`).join('')}</div>
-      <p class="lede">Estimated total: $15,580 per year</p>` };
-    return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(donation), badged(bonus)].filter(Boolean);
+    // What your donation will do: today beside what a donation adds, row by
+    // row, each with a small picture of the change (bwtf.donationPlan).
+    const DP = B.donationPlan || {};
+    const pin = (c) => `<svg class="dp-ico" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z" fill="${c}"/><circle cx="12" cy="12" r="4.6" fill="var(--panel)"/></svg>`;
+    const bottle = (c) => `<svg class="dp-ico" viewBox="0 0 16 32" aria-hidden="true"><rect x="5" y="0" width="6" height="5" rx="1.5" fill="${c}"/><path d="M2.5 7h11v20.5a4.5 4.5 0 0 1-4.5 4.5H7a4.5 4.5 0 0 1-4.5-4.5z" fill="${c}"/><rect x="5.5" y="17" width="5" height="10" rx="1.5" fill="var(--panel)" opacity=".55"/></svg>`;
+    const cloud = (c) => `<svg class="dp-cloud" viewBox="0 0 64 44" aria-hidden="true"><path d="M17 30a11 11 0 0 1 1.2-21.9A15 15 0 0 1 46.6 12 9.5 9.5 0 0 1 48 30z" fill="${c}"/><path d="M33 31l-6 9h6l-3 4" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const shed = (c) => `<svg class="dp-big" viewBox="0 0 64 56" aria-hidden="true"><path d="M6 26 32 6l26 20v27H6z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/><rect x="25" y="33" width="14" height="20" fill="${c}"/><path d="M14 33h6M14 40h6M44 33h6M44 40h6" stroke="${c}" stroke-width="3"/></svg>`;
+    const lab = (c) => `<svg class="dp-big" viewBox="0 0 72 56" aria-hidden="true"><rect x="4" y="12" width="46" height="42" rx="4" fill="${c}"/><rect x="2" y="8" width="50" height="6" rx="2" fill="${c}"/><path d="M23 20v9l-7 15h20l-7-15v-9M21 20h10" stroke="var(--panel)" stroke-width="3" fill="none" stroke-linejoin="round"/><path d="M50 24h12v8" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 38c-2.4 3.4-3.6 5.4-3.6 7a3.6 3.6 0 0 0 7.2 0c0-1.6-1.2-3.6-3.6-7z" fill="${c}"/></svg>`;
+    const OLD = 'var(--text-3)', NEW = 'var(--give-green)';
+    const art = (r, next) => {
+      if (r.graphic === 'sites') return `<div class="dp-art">${Array.from({ length: next ? r.nextN : r.nowN }, (_, i) => pin(i < r.nowN ? OLD : NEW)).join('')}</div>`;
+      if (r.graphic === 'storm') return `<div class="dp-art">${cloud(next ? NEW : OLD)}${next ? `<span class="dp-plus">+</span>` : ''}${Array.from({ length: next ? r.nextN : r.nowN }, () => bottle(next ? NEW : OLD)).join('')}</div>`;
+      if (r.graphic === 'lab') return `<div class="dp-art">${next ? lab(NEW) : shed(OLD)}</div>`;
+      return '';
+    };
+    const rows = (DP.rows || []).map((r) => `<div class="dp-row">
+        <div class="dp-label">${esc(r.label)}</div>
+        <div class="dp-now">${art(r, false)}<p>${esc(r.now)}</p></div>
+        <div class="dp-arrow" aria-hidden="true">→</div>
+        <div class="dp-next">${art(r, true)}<div class="dp-next-text"><p>${esc(r.next)}</p><div class="dp-amt">${esc(r.amount)} <span>${esc(r.per || '')}</span></div>${r.math ? `<div class="dp-math">${esc(r.math)}</div>` : ''}</div></div>
+      </div>`).join('');
+    const donation = { title: 'What Your Donation Will Do', cls: 'dp', html: `<p class="kicker">${esc(DP.perSample || 'Blue Water Task Force')}</p><h2>What Your Donation Will Do</h2>
+      <div class="dp-head"><span></span><span>Today</span><span></span><span class="dp-head-next">With your donation</span></div>
+      <div class="dp-rows">${rows}</div>
+      <div class="dp-pledge"><b>${esc(DP.pledge || '')}</b>${DP.more ? `<span>${esc(DP.more)}</span>` : ''}</div>` };
+    // Closing slide: why it's awesome, and how to help before the window shuts.
+    const GI = B.getInvolved;
+    const involved = GI && { title: GI.title || 'Get involved', key: 'get-involved', cls: 'gi', html: `<p class="kicker">${esc(GI.kicker || '')}</p><h2>${esc(GI.title || 'Get involved')}</h2>
+      <div class="gi-grid"><div class="gi-why"><p class="gi-h">Why it’s awesome</p>${(GI.why || []).map((w) => `<div class="gi-why-item"><span class="gi-emoji" aria-hidden="true">${esc(w.icon || '')}</span><span>${esc(w.text)}</span></div>`).join('')}</div>
+        <div class="gi-asks">${(GI.asks || []).map((x) => `<div class="gi-ask"><span class="gi-emoji" aria-hidden="true">${esc(x.icon || '')}</span><div><div class="gi-big">${esc(x.big || '')}</div><div class="gi-text">${esc(x.text)}</div></div></div>`).join('')}</div></div>
+      ${GI.note ? `<p class="gi-note">${esc(GI.note)}</p>` : ''}` };
+    return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(donation), badged(involved), badged(bonus)].filter(Boolean);
   }
 
   function outroSlide() {
@@ -1286,7 +1324,7 @@
     const trophy = trophySlides(d), trophySection = trophy.length ? [trophy[0]] : [];
     const slides = [titleSlide(d), agendaSlide(),
       sectionSlide(`Surftober ${C.year}`, 'Overview', 'The season in numbers', 'section-overview'),
-      historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), waterTempSlide(), gradeSlide(), leaderboardSlide(d),
+      historySlide(d), overviewSlide(d), dailySlide(d), surfHeightSlide(), dailyWeatherSlide(), waterTempSlide(), joinSlide(), gradeSlide(), leaderboardSlide(d),
       medalsSlide(d), ascendersSlide(d), rookiesSlide(d),
       ...trophySection,
       gallerySlide('Trophies past', 'Hall of fame', 'Trophies previous years', C.trophiesPast, 'trophiesPast', null, true),
