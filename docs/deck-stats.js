@@ -188,6 +188,10 @@
       return { user: u, value: v, label: label(v, u) };
     });
 
+    push({ id: 'instagram', name: 'The Instagram Award', desc: 'Most photos uploaded',
+      r: rank(items(users, (u) => byUser.get(u).filter((s) => s.photo_url).length,
+        (v) => `${v} photo${v === 1 ? '' : 's'}`).filter((x) => x.value > 0)) });
+
     // --- year over year ---
     const prior = config.priorHours || {};
     const alias = config.aliases || {};

@@ -496,6 +496,16 @@
       <div class="stagefloor" data-award-results><div class="mystery">?</div>${body}</div>${journal}` };
   }
 
+  function instagramSlide(a, i, n, d) {
+    const winners = new Set(a.winners.map((w) => w.user));
+    const photos = d.photos.filter((s) => winners.has(s.user));
+    const columns = Math.max(1, Math.ceil(Math.sqrt(photos.length * 2)));
+    const rows = Math.max(1, Math.ceil(photos.length / columns));
+    const result = a.winners.length ? `<div class="reveal insta-result"><div class="insta-winner">${esc(a.winners.map((w) => d.name(w.user)).join(' & '))} · ${esc(a.winners[0].label)}${a.winners.length > 1 ? ' each' : ''}</div>
+      <div class="insta-gallery" style="--columns:${columns};--rows:${rows}">${photos.map((s) => `<img src="${esc(s.photo_url)}" alt="Photo uploaded by ${esc(d.name(s.user))}" loading="lazy">`).join('')}</div></div>` : '<div class="reveal insta-result">No photos uploaded yet.</div>';
+    return { title: a.name, cls: 'award instagram-award', steps: 1, html: `<div class="head"><div><p class="kicker">Award</p><h2>${esc(a.name)}</h2><div class="desc">${esc(a.desc)}</div></div><div class="num">${i} / ${n}</div></div><div class="insta-stage"><div class="mystery">?</div>${result}</div>` };
+  }
+
   function rivalrySlide(r, i, n, d) {
     const [a, b] = r.pair.map(d.name);
     return { title: r.name, cls: 'award', steps: 1, html: `
@@ -1240,7 +1250,7 @@
   const AWARD_ORDER = ['fall-from-grace', 'competition', 'sophomore-slump', 'aim-for-the-stars', 'monk', 'author', 'minimalist',
     'quickie', 'ocd-precision', 'loosey-goosey', 'budgie', 'friendship', 'surf-buddies', 'board-hoarder', 'fish', 'marathon', 'rivalry',
     'localism', 'adventurer', 'tech-nomad', 'commuter', 'procrastinator', 'early-achiever', 'consistent', 'inconsistent',
-    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'bonus-junkies', 'failed-feature'];
+    'fallen-fathers', 'streak', 'twofer', 'weekend-warrior', 'work-allergic', 'marine-biologist', 'crabtracker', 'drifter', 'instagram', 'bonus-junkies', 'failed-feature'];
   const JUDGED = {
     'best-dressed': ['The Best Dressed Award', 'Best costume-surf attire'],
     'fallen-fathers': ['The Fallen Fathers Award', 'DNF Surftober due to fatherhood'],
@@ -1275,6 +1285,7 @@
       i++;
       if (id === 'rivalry') slides.push(rivalrySlide(d.rivalry, i, n, d));
       else if (id === 'failed-feature') slides.push(failedFeatureSlide(d, i, n));
+      else if (id === 'instagram') slides.push(instagramSlide(byId.get(id), i, n, d));
       else if (byId.has(id)) slides.push(awardSlide(byId.get(id), i, n, d));
       else if (JUDGED[id]) slides.push(judgedSlide(id, JUDGED[id][0], JUDGED[id][1], i, n, d, null));
       if (id === 'author') slides.push(webAnalyticsSlide());
