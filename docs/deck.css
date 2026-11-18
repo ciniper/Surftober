@@ -538,6 +538,23 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .tr-rounds figcaption b { color: var(--text); margin-right: 4px; }
 .tr-rounds .pick img { box-shadow: 0 0 0 5px var(--accent); border-color: var(--accent); }
 .tr-rounds .pick figcaption b { color: var(--highlight-text); }
+/* Spin-off vote: the photo on the left, one card per contender on the right. */
+.so h2 { font-size: 76px; }
+.so-body { flex: 1; min-height: 0; display: flex; gap: 48px; margin-top: 28px; }
+.so-photo { margin: 0; flex: none; height: 100%; aspect-ratio: 4 / 3; }
+.so-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 22px; box-shadow: var(--shadow); border: 1.5px solid var(--line); display: block; }
+.so-cards { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 24px; }
+.so-card { background: var(--panel); border: 2px solid var(--line); border-radius: 24px; padding: 28px 34px; box-shadow: var(--shadow); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 28px; align-items: center; transition: opacity .4s, border-color .4s, box-shadow .4s; }
+.so-name { font: 800 50px/1.05 var(--display); }
+.so-time { font: 800 76px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--text-3); }
+.so-bar { height: 22px; border-radius: 11px; background: var(--line); overflow: hidden; }
+.so-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun-1), var(--accent)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.so-n { font: 700 28px var(--body); color: var(--text-2); text-align: right; min-width: 4ch; font-variant-numeric: tabular-nums; }
+.so-card.win { border-color: var(--accent); box-shadow: 0 0 0 5px rgba(255,107,53,.22), var(--shadow); }
+.so-card.win .so-time { color: var(--highlight-text); }
+.so-card.win .so-name::after { content: ' 🏆'; }
+.so-card.dim { opacity: .45; }
+.so-got { margin: 0; min-height: 36px; font: 700 30px var(--body); color: var(--text-2); }
 /* Guess the print time: histogram on the left, the reveal podium on the right. */
 .tr-vote h2 { font-size: 76px; }
 .tr-hint { font-size: 22px; color: var(--text-3); margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
@@ -752,6 +769,13 @@ table.t td.up { color: var(--up-text); font-weight: 800; font-variant-numeric: t
 .gi-emoji { flex: none; width: 92px; height: 92px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 48px; }
 .gi-asks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 22px; }
 .gi-ask { background: var(--panel); border: 1.5px solid var(--line); box-shadow: var(--shadow); border-radius: 22px; padding: 32px 28px; display: flex; gap: 20px; align-items: flex-start; }
+.gi-ask.wide { grid-column: 1 / -1; align-items: center; }
+/* five tiles (three rows): tighter so the grid and note clear the footer */
+.gi-asks:has(.wide) { gap: 20px; }
+.gi-asks:has(.wide) .gi-ask { padding: 28px 26px; align-items: center; }
+.gi-asks:has(.wide) .gi-emoji { width: 72px; height: 72px; font-size: 38px; }
+.gi-asks:has(.wide) .gi-big { font-size: 50px; }
+.gi-asks:has(.wide) .gi-text { font-size: 26px; margin-top: 8px; }
 .gi-ask .gi-emoji { width: 76px; height: 76px; font-size: 40px; }
 .gi-big { font: 800 56px/1.05 var(--display); color: var(--highlight-text); }
 .gi-text { font-size: 28px; line-height: 1.3; color: var(--text-2); margin-top: 10px; }

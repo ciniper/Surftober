@@ -58,6 +58,7 @@
     if (round.round_no === G.COSTUME_ROUND) { renderCostume(v, revealed, picked); return; }
     if (round.round_no === G.GRADE_ROUND) { renderGrade(v, revealed, picked); return; }
     if (round.round_no === G.PRINT_ROUND) { renderGuess(v, revealed, picked); return; }
+    if (round.round_no === G.SPIN_ROUND) { renderSpin(v, revealed, picked); return; }
     const btns = (round.choices || []).map((c) => {
       const cls = ['choice', c === picked ? 'picked' : '', revealed && c === round.answer ? 'right' : '', revealed && c !== round.answer ? 'wrong' : ''].join(' ');
       const tag = revealed ? (c === round.answer ? 'It was them!' : (c === picked ? 'Your pick' : '')) : (c === picked ? (pendingChoice() ? 'Saving…' : 'Saved') : '');
@@ -112,6 +113,24 @@
     v.innerHTML = `<div class="card"><p class="kicker">Best Dressed</p><p class="quote">${esc(round.quote)}</p></div>
       <p class="note">${revealed ? (leaders.length ? leaders.map((x) => esc(x.name)).join(' &amp; ') : 'No votes yet') : 'Tap a costume to vote.'}</p>
       ${voteNotice()}<div class="choices costumes">${buttons}</div>`;
+  }
+
+  // Round -3: which spun longer, the trophy or a normal fidget spinner? The
+  // reveal writes the winner's name; both times show beside the choices.
+  function renderSpin(v, revealed, picked) {
+    const S = (CFG.trophy && CFG.trophy.spinOff) || {};
+    const times = new Map((S.contenders || []).map((c) => [c.name, c.time]));
+    const ans = revealed ? round.answer : null;
+    const btns = (round.choices || []).map((c) => {
+      const cls = ['choice', c === picked ? 'picked' : '', revealed && c === ans ? 'right' : '', revealed && c !== ans ? 'wrong' : ''].join(' ');
+      const tag = revealed ? (times.get(c) || '') : (c === picked ? (pendingChoice() ? 'Saving…' : 'Saved') : '');
+      return `<button type="button" class="${cls}" data-c="${esc(c)}" ${closed || revealed || pendingChoice() ? 'disabled' : ''}><span>${esc(c)}</span><span class="tag">${esc(tag)}</span></button>`;
+    }).join('');
+    const verdict = revealed
+      ? `<p class="big">${esc(ans)} wins! 🏆</p><p class="note">${!picked ? "You didn't vote." : picked === ans ? 'You called it! 🎉' : 'Not this time.'}</p>`
+      : `<p class="note">${picked ? 'You can change your pick until voting closes.' : 'Tap the one you think spun longer.'}</p>`;
+    v.innerHTML = `<div class="card"><p class="kicker">Live vote · Trophy ${esc(CFG.year || '')}</p><p class="quote">${esc(round.quote)}</p>${S.lede ? `<p class="note">${esc(S.lede)}</p>` : ''}</div>
+      ${verdict}${voteNotice()}<div class="choices">${btns}</div>`;
   }
 
   // Round -1: guess the trophies' total print time by tapping an hour range.
