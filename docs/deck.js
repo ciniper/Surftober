@@ -986,6 +986,12 @@
         show(cur, step);
         return;
       }
+      // Tell phones which slide is up (play.html shows the Zoetrope Viewer
+      // links on "Watch your trophy surf"). Skipped until ceremony_state has
+      // the active_slide column (supabase-upgrade-2026-11-18-active-slide.sql).
+      if (GAME.host && slides[cur] === s && state && 'active_slide' in state && state.active_slide !== (s.key || null)) {
+        [state] = await G.updateCeremony(GAME_ID, { active_slide: s.key || null });
+      }
       if (GAME.host && slides[cur] === s) {
         let row = round && GAME.rows.get(round.round_no);
         if (round && !row && !state?.voting_closed) {
