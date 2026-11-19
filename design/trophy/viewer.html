@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
+<script src="./admin-gate.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Surftober 2026 trophy — spinner configurator</title>
 <style>
@@ -189,6 +190,7 @@ async function refreshManifests() {
   }
   const sel = $('gensel'), cur = sel.value;
   sel.innerHTML = '<option value="">— procedural preview —</option>';
+  manifests = manifests.filter(m => m && m.tag && Array.isArray(m.parts));   // cad/out/ also holds hub_batch rosters
   manifests.sort((a, b) => (b.generated || '').localeCompare(a.generated || '')).forEach(m => sel.add(new Option(`${m.tag}  (${m.parts.length} parts, ${m.generated || ''})`, m.tag)));
   sel.value = manifests.some(m => m.tag === cur) ? cur : '';
   $('genhint').textContent = apiOk ? 'Runs cad/spinner.py on this machine for the ticked printed parts (10–30 s), then loads the real geometry here.'
