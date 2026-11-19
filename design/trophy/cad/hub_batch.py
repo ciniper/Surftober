@@ -3,6 +3,7 @@
 
     .venv/bin/python hub_batch.py out/roster-participant.json
     .venv/bin/python hub_batch.py roster.json --url "preset=v9&tier=participant"
+    .venv/bin/python hub_batch.py out/roster-gold.json --names NAME1,NAME2 --nozzle 0.2     # a few people, fine nozzle
 
 roster.json: {"tier": "participant", "people": [{"name": "FIRSTNAME", "hours": 15}, …]}   (keep it in out/, which is gitignored)
 
@@ -30,10 +31,19 @@ def main():
     ap.add_argument('roster')
     ap.add_argument('--url', default='preset=v10', help='base options (the name, hours and tier come from the roster)')
     ap.add_argument('--out', default=os.path.join(S.HERE, 'out'))
+    ap.add_argument('--names', help='comma list: only these people from the roster')
+    ap.add_argument('--nozzle', choices=['0.4', '0.2'], default='0.4', help='0.2 = 0.1 mm layers, the text layers too')
     ap.add_argument('--stl', action='store_true', help='also write each hub + text as STLs')
     a = ap.parse_args()
     roster = json.load(open(a.roster))
     tier, people = roster.get('tier', 'participant'), roster['people']
+    if a.names:
+        want = [n.strip().upper() for n in a.names.split(',') if n.strip()]
+        people = [p for p in people if p['name'].upper() in want]
+        missing = set(want) - {p['name'].upper() for p in people}
+        if missing:
+            raise SystemExit(f"not in {a.roster}: {', '.join(sorted(missing))}")
+    layer = 0.1 if a.nozzle == '0.2' else 0.2
     base = dict(parse_qsl(a.url))
     t0 = time.time()
 
@@ -57,17 +67,18 @@ def main():
         plate_of.append(i // len(SPOTS))
         cfg_by[gname] = {'wall_loops': S.BAMBU_STILL_WALLS}
         if o['text'] != 'raised':
-            rng_by[gname] = [(0, D['textDepth'], {'layer_height': 0.2, 'wall_loops': S.BAMBU_TEXT_WALLS})]
+            rng_by[gname] = [(0, D['textDepth'], {'layer_height': layer, 'wall_loops': S.BAMBU_TEXT_WALLS})]
         print(f"  {o['name'].upper():<12} {o['hours']:>3} HOURS!   {sp.notes.get('hub-text', '')}")
         tag = tag or cfg['tag']
         tier_cfg = cfg['tier']
 
     ver = base.get('version') or cfg['options']['version']
-    fn = f'{ver}-hubs-{tier}-x{len(people)}-bambu.3mf'
+    who = '-' + '-'.join(p['name'].lower() for p in people) if a.names else ''     # out/ is gitignored
+    fn = f"{ver}-hubs-{tier}{who}-x{len(people)}{'-n02' if a.nozzle == '0.2' else ''}-bambu.3mf"
     slots = {**S.BAMBU_SLOT, 'hub': 4, 'hub-text': 2}         # tier hub on slot 4, navy text on slot 2
-    S.write_bambu_3mf(os.path.join(a.out, fn), groups, nozzle='0.4', slot4=(f"{tier_cfg['key']} (tier)", tier_cfg['color']),
+    S.write_bambu_3mf(os.path.join(a.out, fn), groups, nozzle=a.nozzle, slot4=(f"{tier_cfg['key']} (tier)", tier_cfg['color']),
                       slots=slots, obj_cfg=cfg_by, ranges=rng_by, plate_of=plate_of)
-    print(f'bambu 3mf → {fn} ({len(groups)} hubs on {max(plate_of) + 1} plate(s); slots 2 navy, 4 {tier_cfg["key"]} {tier_cfg["color"]})  ({time.time() - t0:.0f} s)')
+    print(f'bambu 3mf → {fn} ({len(groups)} hubs on {max(plate_of) + 1} plate(s), nozzle {a.nozzle}; slots 2 navy, 4 {tier_cfg["key"]} {tier_cfg["color"]})  ({time.time() - t0:.0f} s)')
 
 
 if __name__ == '__main__':
