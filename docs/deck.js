@@ -1255,7 +1255,7 @@
     const GI = B.getInvolved;
     const involved = GI && { title: GI.title || 'Get involved', key: 'get-involved', cls: 'gi', html: `<p class="kicker">${esc(GI.kicker || '')}</p><h2>${esc(GI.title || 'Get involved')}</h2>
       <div class="gi-grid"><div class="gi-why"><p class="gi-h">Why it’s awesome</p>${(GI.why || []).map((w) => `<div class="gi-why-item"><span class="gi-emoji" aria-hidden="true">${esc(w.icon || '')}</span><span>${esc(w.text)}</span></div>`).join('')}</div>
-        <div class="gi-asks">${(GI.asks || []).map((x) => `<div class="gi-ask${x.wide ? ' wide' : ''}"><span class="gi-emoji" aria-hidden="true">${esc(x.icon || '')}</span><div><div class="gi-big">${esc(x.big || '')}</div><div class="gi-text">${esc(x.text)}</div></div></div>`).join('')}</div></div>
+        <div class="gi-asks">${(GI.asks || []).map((x) => `<div class="gi-ask${x.wide ? ' wide' : ''}"><span class="gi-emoji" aria-hidden="true">${esc(x.icon || '')}</span><div><div class="gi-big">${esc(x.big || '')}</div><div class="gi-text">${esc(x.text)}</div></div>${x.qr?.url ? `<div class="gi-qr" data-qr-url="${esc(x.qr.url)}" aria-label="QR code for ${esc(x.qr.label || x.qr.url)}"></div>` : ''}</div>`).join('')}</div></div>
       ${GI.note ? `<p class="gi-note">${esc(GI.note)}</p>` : ''}` };
     return [...full('before'), badged(combo || intro), ...feats.map(badged), ...full('after'), badged(donation), badged(involved), badged(bonus)].filter(Boolean);
   }
