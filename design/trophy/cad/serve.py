@@ -30,7 +30,9 @@ def manifests():
             if fn.endswith('.json'):
                 try:
                     with open(os.path.join(OUT, fn)) as f:
-                        items.append(json.load(f))
+                        m = json.load(f)
+                    if isinstance(m, dict) and 'tag' in m and isinstance(m.get('parts'), list):   # part manifests only (rosters live here too)
+                        items.append(m)
                 except Exception:
                     pass
     return items
