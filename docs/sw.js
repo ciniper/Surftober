@@ -80,7 +80,9 @@ self.addEventListener('fetch', (e) => {
   // go straight to the network.
   // Same reasoning for /api/* (the keep-alive cron endpoint): never serve an
   // API response from cache.
-  if (url.pathname.startsWith('/_vercel/') || url.pathname.startsWith('/api/')) return;
+  // Same for the trophy previews (/trophy/, preview deploys only): their JS has
+  // no hashed names, so cache-first would pin a stale copy across deploys.
+  if (url.pathname.startsWith('/_vercel/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/trophy/')) return;
 
   // Video and audio go straight to the network. Players ask for byte ranges
   // (206 responses), which the Cache API can't store, and Safari stalls when a

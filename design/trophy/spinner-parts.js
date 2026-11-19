@@ -1,0 +1,276 @@
+// three.js geometry for the spinner, one builder per part in spinner-config.js.
+// Mirrors cad/spinner.py: same dimensions (DIM), same part ids, same mounted
+// pose (bearing z 0…t, front face at z = t). Preview geometry only — the
+// generator makes the real solids.
+import * as THREE from 'three';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { DIM, TIERS, COLORS, CAP_COLORS, PART, partColor, activeParts, frameCount, bodyShift, isInlay, isInsert, notchCount, ridgeCount, hasScrew, screwZ, capT, backFace, dimFor, centreLabel } from './spinner-config.js';
+import { ringArt, layerColors } from './wave-frames.js';
+
+// ---- materials --------------------------------------------------------------
+const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
+export function materials(o) {
+  const tier = TIERS[o.tier];
+  // polygonOffset pushes the body faces back a hair so flush inlays drawn on the same plane win the depth test
+  const flush = o.art === 'inlay' ? { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 } : {};
+  return {
+    body:   std(partColor('body', o), { roughness: o.weight === 'none' && o.body === 'tier' ? tier.rough + 0.2 : 0.75, metalness: o.weight === 'none' && o.body === 'tier' ? tier.metal * 0.3 : 0, ...flush }),
+    insert: std(tier.color, { roughness: tier.rough + 0.2, metalness: tier.metal * 0.3 }),   // the art insert is always the tier colour
+    water:  std(layerColors(o.wave).water, { roughness: 0.55 }),
+    foam:   std(layerColors(o.wave).foam, { roughness: 0.6 }),
+    hub:    std(partColor('hub', o), o.still === 'tier' ? { metalness: tier.metal * 0.3, roughness: tier.rough + 0.2, ...flush } : { roughness: 0.5, ...flush }),
+    text:   std(partColor('hub-text', o), { metalness: o.still === 'tier' ? 0 : tier.metal, roughness: o.still === 'tier' ? 0.5 : tier.rough }),
+    engraved: std(0x0e1829, { roughness: 0.9 }),   // the floor of a recess, drawn flush on the hub face
+    cap:    std(partColor('back-cap', o), { metalness: 0.65, roughness: 0.32 }),
+    steel:  std(COLORS.steel, { metalness: 0.9, roughness: 0.2 }),
+    shield: std(COLORS.shield, { roughness: 0.55 }),
+    magnet: std(COLORS.magnet, { metalness: 0.6, roughness: 0.4 }),
+    metal:  std(tier.color, { metalness: 0.85, roughness: 0.35 }),
+    fridge: std(COLORS.fridge, { metalness: 0.8, roughness: 0.38 }),
+  };
+}
+
+// ---- helpers ------------------------------------------------------------------
+function shadow(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+export function zcyl(r, z0, h, mat, seg = 64) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat);
+  m.rotation.x = Math.PI / 2; m.position.z = z0 + h / 2; return shadow(m);
+}
+// Washer / disc extruded along +z from z0, optional rounded edge
+export function annulus(rOut, rIn, z0, depth, mat, bevel = 0) {
+  const s = new THREE.Shape(); s.absarc(0, 0, rOut, 0, Math.PI * 2, false);
+  if (rIn > 0) { const h = new THREE.Path(); h.absarc(0, 0, rIn, 0, Math.PI * 2, true); s.holes.push(h); }
+  const geo = new THREE.ExtrudeGeometry(s, bevel
+    ? { depth: depth - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelOffset: -bevel, bevelSegments: 2, curveSegments: 96 }
+    : { depth, bevelEnabled: false, curveSegments: 96 });
+  geo.translate(0, 0, z0 + (bevel || 0));
+  return shadow(new THREE.Mesh(geo, mat));
+}
+// The wave ring with `n` round cuts of radius rho, `depth` deep, in its outer edge
+// (r(θ) = the nearer of the rim and the cut circle): v4 notches or v5 micro ridges.
+function notchedRing(n, rho, depth, z0, h, mat, rIn = D.ringIn) {
+  const Rc = D.ringOut + rho - depth, pts = [], M = Math.max(1440, n * 16);
+  for (let i = 0; i < M; i++) {
+    const th = i * 2 * Math.PI / M;
+    let r = D.ringOut;
+    const k = Math.round(th / (2 * Math.PI / n)), d = th - k * 2 * Math.PI / n;   // nearest cut centre
+    const disc = rho ** 2 - (Rc * Math.sin(d)) ** 2;
+    if (disc >= 0) r = Math.min(r, Rc * Math.cos(d) - Math.sqrt(disc));
+    pts.push(new THREE.Vector2(r * Math.cos(th), r * Math.sin(th)));
+  }
+  const shape = new THREE.Shape(pts), hole = new THREE.Path();
+  hole.absarc(0, 0, rIn, 0, 2 * Math.PI, true); shape.holes.push(hole);
+  const m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 96 }), mat);
+  m.position.z = z0; return shadow(m);
+}
+function polySlab(poly, z0, h, mat) {
+  const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: h, bevelEnabled: false }), mat);
+  m.position.z = z0; return shadow(m);
+}
+// Text bent around a circle, upright, reading left → right (top = over the top, else along the bottom)
+export function arcText(font, str, r, size, z0, depth, mat, top) {
+  const g = new THREE.Group(), scale = size / font.data.resolution, track = size * DIM.textTrack, chars = [...str];
+  const adv = chars.map(ch => (ch === ' ' ? size * 0.5 : (font.data.glyphs[ch] ? font.data.glyphs[ch].ha * scale : size * 0.6)) + track);
+  let s = -(adv.reduce((a, b) => a + b, 0) - track) / 2;
+  chars.forEach((ch, i) => {
+    const mid = s + adv[i] / 2; s += adv[i];
+    if (ch === ' ') return;
+    const geo = new TextGeometry(ch, { font, size, height: depth, curveSegments: 4, bevelEnabled: false });
+    geo.computeBoundingBox(); geo.translate(-(geo.boundingBox.min.x + geo.boundingBox.max.x) / 2, -size * 0.36, 0);
+    const m = shadow(new THREE.Mesh(geo, mat));
+    const th = top ? Math.PI / 2 - mid / r : -Math.PI / 2 + mid / r;
+    const w = new THREE.Group(); w.add(m);
+    w.position.set(r * Math.cos(th), r * Math.sin(th), z0); w.rotation.z = top ? th - Math.PI / 2 : th + Math.PI / 2;
+    g.add(w);
+  });
+  return g;
+}
+function cogShape(N, rTip, rRoot, rBore) {
+  const pts = [], pitch = Math.PI * 2 / N;
+  for (let i = 0; i < N; i++) {
+    const a = i * pitch;
+    [[rRoot, 0], [rRoot, .18], [rTip, .4], [rTip, .6], [rRoot, .82]].forEach(([r, f]) => pts.push(new THREE.Vector2(r * Math.cos(a + f * pitch), r * Math.sin(a + f * pitch))));
+  }
+  const s = new THREE.Shape(pts), h = new THREE.Path(); h.absarc(0, 0, rBore, 0, Math.PI * 2, true); s.holes.push(h);
+  return s;
+}
+
+// ---- part builders: id → Object3D in the mounted pose -------------------------
+const D = DIM;
+const builders = {
+  body(o, M) {
+    const g = new THREE.Group(), t = D.t;
+    if (o.seat === 'lip') {
+      g.add(annulus(D.hubOut, D.bore / 2, D.lip, t - D.lip, M.body, 0.4));
+      g.add(annulus(D.hubOut, D.lipIn, 0, D.lip, M.body));                                 // seat lip behind the outer race
+      const ch = shadow(new THREE.Mesh(new THREE.CylinderGeometry(D.bore / 2 + D.chamfer, D.bore / 2, D.chamfer, 64, 1, true), M.body));
+      ch.rotation.x = Math.PI / 2; ch.position.z = t - D.chamfer / 2; ch.material = M.body.clone(); ch.material.side = THREE.DoubleSide; g.add(ch);   // entry chamfer
+    } else g.add(annulus(D.hubOut, D.bore / 2, 0, t, M.body, 0.4));                         // plain v1/v2 bore
+    const ins = isInsert(o), len = D.ringIn - D.hubOut + (ins ? 0.75 : 1.5), mid = (D.hubOut + D.ringIn) / 2 - (ins ? 0.375 : 0);   // insert: the arms stop at the pocket's inner edge
+    for (let i = 0; i < o.arms; i++) {
+      const a = Math.PI / 2 + i * 2 * Math.PI / o.arms, arm = shadow(new THREE.Mesh(new THREE.BoxGeometry(len, D.armW, t), M.body));
+      arm.position.set(mid * Math.cos(a), mid * Math.sin(a), t / 2); arm.rotation.z = a; g.add(arm);
+    }
+    const nn = notchCount(o), nr = ridgeCount(o);
+    // the wave ring: full height, or (insert) full height only outside the pocket — the pocket floor is t - insertT
+    const ringPiece = (z0, h, rIn) => {
+      if (nr) { const rho = ((D.ridgeW / 2) ** 2 + D.ridgeDepth ** 2) / (2 * D.ridgeDepth); g.add(notchedRing(nr, rho, D.ridgeDepth, z0, h, M.body, rIn)); }   // v5 micro ridges, front to back
+      else if (nn && z0 === 0) { g.add(notchedRing(nn, D.notchR, D.notchDepth, 0, Math.min(h, t - D.notchKeep), M.body, rIn)); if (h > t - D.notchKeep) g.add(annulus(D.ringOut, rIn, t - D.notchKeep, h - (t - D.notchKeep), M.body, 0.4)); }   // v4 notches from the back
+      else g.add(annulus(D.ringOut, rIn, z0, h, M.body, 0.4));
+    };
+    if (ins) { const iT = dimFor(o).insertT; ringPiece(0, t - iT, D.ringIn); ringPiece(t - iT, iT, D.waveOut); }
+    else ringPiece(0, t, D.ringIn);
+    if (o.art === 'raised' && !ins) {   // one-colour relief, same material as the body
+      const art = waveArt(o);
+      art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.body)));
+      art.foam.forEach(p => g.add(polySlab(p, t, D.reliefFoam, M.body)));
+    }
+    if (o.weight === 'cog') g.add(annulus(D.cogBore / 2 - 0.1, D.cogBossIn, -D.cogT, D.cogT, M.body));
+    g.position.z = -bodyShift(o);      // with the lip the bearing sits 0.6 proud of the body's front face, under the hub
+    return g;
+  },
+  insert(o, M) {              // the glue-in art ring: a thin annulus in the pocket with the relief on top, shown in its print colours
+    const g = new THREE.Group(), t = D.t;
+    const iT = dimFor(o).insertT;
+    g.add(annulus(D.waveOut - D.insertClear, D.ringIn, t - iT, iT, M.insert, 0.3));
+    const art = waveArt(o);
+    art.water.forEach(p => g.add(polySlab(p, t, D.relief, M.water)));
+    art.foam.forEach(p => g.add(polySlab(p, t + 0.01, D.reliefFoam, M.foam)));
+    g.position.z = -bodyShift(o);
+    return g;
+  },
+  'wave-water'(o, M) { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proud : 0); waveArt(o).water.forEach(p => g.add(polySlab(p, D.t - D.inlay, h, M.water))); g.position.z = -bodyShift(o); return g; },
+  'wave-foam'(o, M)  { const g = new THREE.Group(), h = D.inlay + (o.art === 'proud' ? D.proudFoam : 0); waveArt(o).foam.forEach(p => g.add(polySlab(p, D.t - D.inlay + 0.01, h, M.foam))); g.position.z = -bodyShift(o); return g; },
+  hub(o, M, font) {
+    const g = new THREE.Group(), t = D.t, zDisc = t + D.standoff;
+    if (hasScrew(o)) g.add(annulus(D.stemD / 2, D.screwPilot / 2, t - D.stemLen, D.stemLen, M.hub));   // pilot for the centre screw
+    else g.add(zcyl(D.stemD / 2, t - D.stemLen, D.stemLen, M.hub, 32));
+    g.add(zcyl(D.spacerR, t, D.standoff, M.hub));
+    g.add(annulus(D.hubR, 0, zDisc, D.hubT, M.hub, 0.5));
+    if (font && o.text === 'raised') g.add(hubText(o, font, M.hub, zDisc + D.hubT, D.relief));
+    if (font && o.text === 'recessed') g.add(hubText(o, font, M.engraved, zDisc + D.hubT - 0.02, 0.02));   // preview of the engraving; the STL has the real pocket
+    return g;
+  },
+  'hub-text'(o, M, font) { const d = dimFor(o).textDepth; return font ? hubText(o, font, M.text, D.t + D.standoff + D.hubT - d, d) : new THREE.Group(); },
+  'back-cap'(o, M) {
+    const D = dimFor(o), g = new THREE.Group(), screw = hasScrew(o), rs = D.screwD / 2;
+    g.add(screw ? annulus(D.stemD / 2, rs, 0, D.stemLen, M.cap) : zcyl(D.stemD / 2, 0, D.stemLen, M.cap, 32));
+    g.add(screw ? annulus(D.spacerR, rs, -D.capSpacer, D.capSpacer, M.cap) : zcyl(D.spacerR, -D.capSpacer, D.capSpacer, M.cap));
+    const T = capT(o), zBack = -D.capSpacer - T;
+    if (o.magnet === 'disc') {
+      g.add(annulus(D.capR, D.magPocketD / 2, zBack, T, M.cap, 0.5));                      // disc with the pocket through…
+      g.add(zcyl(D.magPocketD / 2, zBack + D.magPocketDepth, T - D.magPocketDepth, M.cap)); // …and its floor
+    } else {                                                                                // grip plate with a spherical finger divot in the back face
+      const rd = D.dishD / 2, dd = D.dishDepth, R = dd ? (rd * rd + dd * dd) / (2 * dd) : 0, pts = [];   // dd 0: back=flat, no divot
+      const zd = r => dd ? zBack + dd - (R - Math.sqrt(R * R - r * r)) : zBack;
+      let r0 = 0;
+      if (screw) {              // countersink from the divot bottom, then the clearance hole up through the plate
+        const rh = D.screwHeadD / 2, csk = screwZ(o).csk, top = zBack + T;
+        pts.push(new THREE.Vector2(rs, top), new THREE.Vector2(rs, Math.min(top, csk + rh - rs)), new THREE.Vector2(rh, csk));
+        r0 = rh;
+      }
+      for (let i = 0; i <= 24; i++) { const r = r0 + (rd - r0) * i / 24; pts.push(new THREE.Vector2(r, zd(r))); }
+      pts.push(new THREE.Vector2(D.capR, zBack), new THREE.Vector2(D.capR, zBack + T), new THREE.Vector2(screw ? rs : 0, zBack + T));
+      const m = shadow(new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.cap.clone())); m.material.side = THREE.DoubleSide; m.rotation.x = Math.PI / 2; g.add(m);
+    }
+    return g;
+  },
+  bearing(o, M) {
+    const g = new THREE.Group(), b = D.bearing, t = D.t;
+    g.add(annulus(b.od / 2, b.outerId / 2, 0, t, M.steel));
+    g.add(annulus(b.outerId / 2, b.innerOd / 2, 0.3, t - 0.6, M.shield));
+    g.add(annulus(b.innerOd / 2, b.id / 2, 0, t, M.steel));
+    return g;
+  },
+  screw(o, M) {               // M3 countersunk, no thread: 90° head, shank to the tip
+    const z = screwZ(o), rh = D.screwHead / 2, r = 1.5, g = new THREE.Group();
+    const head = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r, rh, rh - r, 32), M.steel));
+    head.rotation.x = Math.PI / 2; head.position.z = z.head + (rh - r) / 2; g.add(head);
+    g.add(zcyl(r, z.head + rh - r, z.tip - z.head - (rh - r), M.steel, 24));
+    const slot = shadow(new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.3, 6), M.shield));   // hex socket
+    slot.rotation.x = Math.PI / 2; slot.position.z = z.head + 0.14; g.add(slot);
+    return g;
+  },
+  magnet(o, M) { return zcyl(D.magD / 2, -dimFor(o).capSpacer - capT(o) + (D.magPocketDepth - D.magT) + 0.05, D.magT, M.magnet); },
+  weight(o, M) {
+    if (o.weight === 'bezel' && o.bezel === 'round') {
+      const wr = D.bezelWire / 2, m = shadow(new THREE.Mesh(new THREE.TorusGeometry(D.ringOut - wr + D.bezelProud, wr, 20, 180), M.metal));
+      m.position.z = D.t / 2 - bodyShift(o); return m;
+    }
+    if (o.weight === 'bezel') {
+      const rOut = D.ringOut + D.bezelProud;
+      return annulus(rOut, rOut - (D.flatOd - D.flatId) / 2, D.t / 2 - D.flatT / 2 - bodyShift(o), D.flatT, M.metal, 0.3);
+    }
+    if (o.weight === 'cog') {
+      const m = shadow(new THREE.Mesh(new THREE.ExtrudeGeometry(cogShape(D.cogTeeth, D.cogTip, D.cogRoot, D.cogBore / 2), { depth: D.cogT, bevelEnabled: false, curveSegments: 48 }), M.metal));
+      m.position.z = -D.cogT - bodyShift(o); return m;
+    }
+    return null;
+  },
+};
+function hubText(o, font, mat, z0, depth) {
+  const T = dimFor(o), g = new THREE.Group(), r = T.hubR - T.textInset;
+  g.add(arcText(font, 'SURFTOBER 2026', r, T.textSize, z0, depth, mat, true));
+  g.add(arcText(font, o.name.toUpperCase(), r, T.textSize, z0, depth, mat, false));
+  const c = centreLabel(o);
+  if (c && c.length === 1) g.add(lineText(font, c[0], T.textSize, 0, z0, depth, mat));   // one line across the middle
+  else if (c) {   // big digits over "HOURS!", the stack centred on the hub (mirrors _text() in cad/spinner.py)
+    const S = T.textSize, Sn = S * T.hoursScale, hn = 0.73 * Sn, hw = 0.73 * S, H = hn + T.hoursGap * S + hw;
+    g.add(lineText(font, c[0], Sn, H / 2 - hn / 2, z0, depth, mat));
+    g.add(lineText(font, c[1], S, -H / 2 + hw / 2, z0, depth, mat));
+  }
+  return g;
+}
+// One straight line of text centred on x = 0, its caps centred on y = cy
+function lineText(font, str, size, cy, z0, depth, mat) {
+  const g = new THREE.Group(), scale = size / font.data.resolution, track = size * DIM.textTrack, chars = [...str];
+  const adv = chars.map(ch => (ch === ' ' ? size * 0.5 : (font.data.glyphs[ch] ? font.data.glyphs[ch].ha * scale : size * 0.6)) + track);
+  let s = -(adv.reduce((a, b) => a + b, 0) - track) / 2;
+  chars.forEach((ch, i) => {
+    const mid = s + adv[i] / 2; s += adv[i];
+    if (ch === ' ') return;
+    const geo = new TextGeometry(ch, { font, size, height: depth, curveSegments: 4, bevelEnabled: false });
+    geo.computeBoundingBox(); geo.translate(mid - (geo.boundingBox.min.x + geo.boundingBox.max.x) / 2, cy - size * 0.36, z0);
+    g.add(shadow(new THREE.Mesh(geo, mat)));
+  });
+  return g;
+}
+let artCache = { key: null, art: null };
+export function waveArt(o) {
+  const key = `${o.wave}/${frameCount(o)}`;
+  if (artCache.key !== key) {
+    const a = ringArt({ variant: o.wave, N: frameCount(o), rIn: D.waveIn, rOut: D.waveOut, ringIn: D.ringIn });
+    artCache = { key, art: { water: a.slots.flatMap(s => s.water), foam: a.slots.flatMap(s => s.foam) } };
+  }
+  return artCache.art;
+}
+
+// Which group a part rides in and how far it moves in the exploded view
+export const POSE = {
+  body: { spins: true, dz: 0 }, insert: { spins: true, dz: 12 }, 'wave-water': { spins: true, dz: 10 }, 'wave-foam': { spins: true, dz: 14 },
+  hub: { spins: false, dz: 30 }, 'hub-text': { spins: false, dz: 36 }, 'back-cap': { spins: false, dz: -20 },
+  bearing: { spins: false, dz: -10 }, screw: { spins: false, dz: -38 }, magnet: { spins: false, dz: -30 }, weight: { spins: true, dz: 0 },
+};
+export const WEIGHT_DZ = o => (o.weight === 'cog' ? -12 : 24);
+
+// Build the whole spinner for options `o`. Returns { root, spin, still, parts: Map(id → Object3D) }.
+// Hidden parts (o.parts) are still built, just not visible, so toggling is instant.
+export function buildSpinner(o, font) {
+  const M = materials(o);
+  const root = new THREE.Group(), spin = new THREE.Group(), still = new THREE.Group();
+  root.add(spin, still);
+  const parts = new Map();
+  for (const id of activeParts(o)) {
+    const obj = builders[id](o, M, font);
+    if (!obj) continue;
+    obj.userData = { part: id, z0: obj.position.z, dz: id === 'weight' ? WEIGHT_DZ(o) : POSE[id].dz };
+    obj.traverse(c => { if (c.isMesh) c.userData.part = id; });
+    obj.visible = !o.parts || o.parts.includes(id);
+    (POSE[id].spins ? spin : still).add(obj);
+    parts.set(id, obj);
+  }
+  const fridge = shadow(new THREE.Mesh(new THREE.BoxGeometry(190, 170, 2), M.fridge));
+  fridge.position.z = backFace(o) - 1;   // whatever touches the surface: the proud magnet face, or the cap's back
+  fridge.visible = false; fridge.userData = { part: 'fridge' }; root.add(fridge);
+  return { root, spin, still, parts, fridge, materials: M };
+}
