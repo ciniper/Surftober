@@ -571,7 +571,7 @@ window.SurftoberDeckConfig = {
         { icon: '👨‍👩‍👧', big: 'Share it', text: 'Ask your friends and family to chip in' },
         { icon: '🙋', big: 'Volunteer', text: 'Want to sample with us? Reach out' },
         // wide: spans both columns (an odd tile out); qr: a code at the tile's right edge
-        { icon: '🧪', big: 'Become a beta tester', text: 'Try new surftober.com features before anyone else. Just ask Chase', wide: true, qr: { url: 'https://bwtf-sf.vercel.app', label: 'bwtf-sf.vercel.app' } },
+        { icon: '🧪', big: 'Become a beta tester', text: 'Try out the Blue Water Task Force website.', wide: true, qr: { url: 'https://bwtf-sf.vercel.app', label: 'bwtf-sf.vercel.app' } },
       ],
       note: 'We’re also reaching out to other funding sources.',
     },
