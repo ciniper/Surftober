@@ -563,14 +563,15 @@ window.SurftoberDeckConfig = {
         { icon: '🌊', text: 'Feel connected to the water we all use' },
         { icon: '🔬', text: 'A hands-on way to learn real science' },
         { icon: '🎒', text: 'High schoolers are part of the team' },
+        { icon: '📣', text: 'Advocate for a better sewer system' },
       ],
       asks: [
         { icon: '📅', big: 'Dec 2', text: 'Donations are open until December 2' },
         { icon: '🤝', big: '$10,000', text: 'Dollar-for-dollar company match, up to $10,000' },
         { icon: '👨‍👩‍👧', big: 'Share it', text: 'Ask your friends and family to chip in' },
         { icon: '🙋', big: 'Volunteer', text: 'Want to sample with us? Reach out' },
-        // wide: spans both columns (an odd tile out)
-        { icon: '🧪', big: 'Become a beta tester', text: 'Try new surftober.com features before anyone else. Just ask Chase', wide: true },
+        // wide: spans both columns (an odd tile out); qr: a code at the tile's right edge
+        { icon: '🧪', big: 'Become a beta tester', text: 'Try new surftober.com features before anyone else. Just ask Chase', wide: true, qr: { url: 'https://bwtf-sf.vercel.app', label: 'bwtf-sf.vercel.app' } },
       ],
       note: 'We’re also reaching out to other funding sources.',
     },
