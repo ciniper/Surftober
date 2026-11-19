@@ -377,7 +377,128 @@
 ## Event prep (non-code)
 - [ ] Contact Nina about the surfboard giveaway (Chase, 2026-09-10)
 - [ ] Shirt design (Chase, 2026-09-10)
-- [ ] Trophy design (Chase, 2026-09-10)
+- [ ] Trophy design (Chase, 2026-09-10). Ideas floated 2026-10-08:
+      1. Wooden, laser-cut, with a trim in the medal colour (gold / silver /
+         bronze / participant) so the tier reads at a glance.
+      2. Laser-cut metal that IS the magnet — the trophy lives on the fridge.
+      3. Modular: a base piece made separately from the name/year piece, so
+         bases can be cut in bulk and names added per person (and reused
+         next year with a new name plate).
+      4. A fidget-spinner design that doubles as a fridge magnet.
+      5. Something surf-shaped — a fin, a fin key, etc.
+      6. Something riffing on the Dutch windmill (Ocean Beach landmark).
+      Notes: 1 + 3 combine naturally (laser-cut base, slot-in name tab, medal
+      trim); 2 + 4 combine (metal spinner with a magnet core). The new logo
+      (plover on the dune, v1.56.4) is the obvious engraving for the base.
+      MOCKUPS (2026-10-08, this branch): design/trophy/mockups.html — a
+      self-contained three.js viewer (loads three from unpkg, so needs
+      internet). Buttons switch concepts A plaque / B fin / C spinner /
+      D windmill, a dropdown switches the medal tier colour, `?name=NAHLA`
+      sets the name, "Download PNG" saves the current view. Open it from any
+      local static server (e.g. `python3 -m http.server --directory
+      design/trophy`), not via file:// (ES-module imports). Last year's
+      (2025) were 3D-printed multi-colour plaques — Golden Gate + cable car
+      carrying the name, car colour = medal tier — so the plaque + modular
+      name bar (A) is the closest evolution; B/C are the fridge-magnet ideas.
+      2026-10-10: C is now the lead — metal tri-spinner, magnet in an
+      anodized 6061 back cap on the 608's inner race, printed medal-colour
+      ring pegged into the lobe holes. Mockup C rebuilt to match; full build
+      plan + sourcing in design/trophy/README.md.
+      2026-10-11: ring options (notched / disk / disk + wave). The wave option
+      puts a 12-frame breaking wave on the outer band that animates in a phone
+      video; demo + SVG export in design/trophy/wave-demo.html.
+      Wave styles: classic break (12), rolling set (10), whitewater return
+      (10, foam drawn back up the face into the next lip), barrel loop (8),
+      any of them at 6–16 frames — pick one after filming a test print.
+      Body/text options (2026-10-11): maybe drop the stock spinner — printed
+      disc with 12 sealed-in M6 nuts, or a laser-cut brass/stainless/copper
+      disc on a printed hub — and put the text on a still front hub so it
+      doesn't spin. All mocked in the viewer; README has the trade-offs.
+      2026-10-12 (lead): fully printed — wave ring carried on 3 or 4 arms
+      instead of a disc, text on a wide still hub (r 25.5) that hides the
+      arms; only the 608 and the magnet are bought. Viewer: Body "printed
+      ring on arms" + arm-count selector; README "Concept C v3" has the
+      3-vs-4 and weight notes. Decide arms after a test print.
+      2026-10-12: ALL IN on the spinner — concepts A/B/D archived (last in
+      full at trophy commit 4557532); viewer is spinner-only.
+      Wave foam: "whitewater return" stays the keeper; three computed
+      lip-pinned styles tried and dropped the same day (last at trophy
+      commit 97d319f). Spec if it's ever iterated: foam at the apex before
+      the break, then riding the TIP OF THE LIP as it pitches and comes
+      down — minimal whitewater. Landing page design/trophy/index.html
+      links the 3D viewer + wave demo; demo shutter defaults to sunlight.
+      Second attempt built: returntip / classictip (foam anchored to the
+      lip-tip point, modest size curve) — awaiting Chase's verdict.
+      2026-10-19: metal weight ring. Viewer "Weight:" selector / ?weight=
+      bezel (bought Ø80 × 3.5 mm metal O-ring in a groove round the rim,
+      ~+20 g, ~2× spin inertia) or cog (19T bike cog glued behind the body,
+      teeth show past the rim, ~+60 g, ~3×); with a weight fitted the print
+      goes neutral bone and the metal (brass / stainless / copper) IS the
+      tier colour. Numbers + sourcing in README "Metal weight ring".
+      Decide after timing a test print bare vs ring vs cog.
+      2026-10-27: CAD generator — design/trophy/cad/spinner.py (CadQuery,
+      venv via cad/setup.sh) writes STL per print colour (body, water, foam,
+      hub, text, back cap) in print orientation + a coloured STEP assembly,
+      --weight bezel (flat ring + SendCutSend DXF, or round) / cog, --arms,
+      --wave, --name. cad/view.html checks the output in the browser. Next:
+      first test print (tune bore 21.9 / stem 8.1 press fits), then time it.
+      --parts / --preset pick any subset (ring = spinning piece: hub + arms
+      + ring + inlays, no name, so one set per arm/wave choice).
+      2026-10-27 (later): CLEANUP — one config (spinner-config.js: dims, parts,
+      options, presets, URL state) feeds viewer.html (configurator: presets,
+      per-part show/hide + click-to-inspect, generate button, generated-STL
+      overlay), wave-demo.html and cad/spinner.py (via cad/bridge.mjs);
+      cad/serve.py runs the generator from the browser (port 8930); outputs
+      = per-part STL + multi-part 3MF + STEP + manifest. Ring widened 50 %
+      (r 27.5–46.5, Ø93; body ~44 g). mockups.html / cad/view.html removed.
+      --art inlay|raised|none; text=recessed|inlay|raised (recessed default,
+      Chase 2026-10-27). Waves scale to fit slots narrower than their design
+      cell (the wider band was clipping them) and frames default to auto (8
+      on this band). Then ring moved 10 mm outward (arms +10, r 37.5–56.5,
+      Ø113): slots wide enough for the native 10 frames at full size; body
+      ~56 g, ~4× the Ø80 spin inertia; arms show 12 mm between hub and ring.
+      PRINT 1 (2026-10-28, Ø113, body + hub + cap on a greaseless 608):
+      visible wobble that shook the hub; spin-down ~70 % of a bulkier
+      same-weight smaller reference. → print 2: ring r 35–51.5 (Ø103, band
+      12.8 — still 10 frames at full size), 0.6 mm seat lip behind the bore
+      (outer-race face only) + 0.6 mm entry chamfer so the ring sits square.
+      Next: print 2, flip test (does wobble follow the body or the bearing?).
+      2026-10-29: output files prefixed with a version (option `version`,
+      default v3 → v3-nahla-3arm-return10-*.stl). New animation style
+      `plover`: the logo's snowy plover, side view, wings flapping + legs
+      striding + body bob, drawn procedurally (wave-frames.js sprite());
+      cream body + navy details (styles can recolour their two inlay
+      layers). Thinnest features ~0.5–0.6 mm.
+      PRINT 2 (2026-10-29, v3 Ø103 + lip + chamfer): "spins muchhhh better"
+      → lip seat is the baseline, kept as option `seat` (lip default |
+      plain for A/B). Back cap redone for the real magnet (Ø25 × 5,
+      adhesive-backed, not a press fit): Ø51 × 5.8 disc = same OD as the
+      hub, Ø25.6 × 4.6 pocket on a 1.2 floor (magnet 0.4 proud), 1.8 spacer
+      (1.2 clearance over the body). → v4 (same day): 20 finger notches in
+      the rim (option `grip`, r 3.5 × 1.2, from the back, front 1.5 mm kept
+      clean), multi-colour inlays standing proud (art=proud, 0.4 water /
+      0.7 foam; `inlay` = flush), version default v4. Separate inlay parts
+      were "a NIGHTMARE" in the slicer → default is now `art=raised`: ONE
+      solid body, water 0.4 / foam 0.8 above the face, colour the two
+      steps with height-range modifiers in Bambu Studio (7.0–7.4, 7.4–7.8).
+      PRINT 3 / v4 tests (2026-10-30/31): assembly spun much worse than v3,
+      no wobble → CONFIRMED the Ø25×5 neodymium disc behind the bearing
+      slows the spin 2–3× (axial preload + magnetised balls), and the
+      20-pack bearings vary 2× (bare spin 10–20 s). Next: magnet redesign
+      (flexible magnet sheet in a shallow well, or small discs at the cap
+      rim), sort bearings bare before assembly. 2026-10-31: back cap is a
+      plain grip plate by default (2.4 thick, Ø22 × 1 finger dish; option
+      `magnet=none|disc`, disc = the old pocket) — magnet out of the
+      equation until the holding method is decided.
+
+- [ ] Trophy, 2026-11-08 follow-ups: (a) sea ripples below the wave
+      (`wave=ploverleansea`, tex.sea) — Chase: "looks bad" as two lines;
+      park it, maybe revisit as one subtler line. (b) 4th colour (orange board
+      or black bird details) — pinned. (c) Glue-in art insert (`ring=insert`)
+      built 2026-11-08 for Chase to look at: 1 mm pocket in the body face,
+      1 mm insert ring with the relief, body at 0.4 single colour (~45 min),
+      inserts 4-up at 0.2. Needs a test print: fit of the 0.15 clearance,
+      curl of the thin ring, CA glue.
 
 ## Done
 - [x] ~~Profile-photo picker guards for iCloud photos~~ (v1.59.0, merged +
