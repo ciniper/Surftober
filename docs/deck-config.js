@@ -12,6 +12,11 @@ window.SurftoberDeckConfig = {
   year: 2026,
   edition: '5th',
   title: 'Surftober Award Ceremony',
+  // Unlisted share link for people without a Surftober account:
+  // surftober.com/ceremony-N9lUgPOF opens the published results view (no
+  // sign-in, nothing they can change). Hides, doesn't secure — the data is
+  // anon-readable anyway. Change or empty it to retire the link.
+  shareKey: 'N9lUgPOF',
 
   // Previous Surftobers (from the 2023–2025 decks). The current year is
   // appended live. `participants` counts surfers at 10h+ (Participant medal

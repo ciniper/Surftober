@@ -17,6 +17,12 @@
       ]
     },
     {
+      "source": "/deck.html",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
       "source": "/trophy/(.*)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
@@ -27,6 +33,11 @@
     { "path": "/api/keepalive", "schedule": "0 8 * * *" }
   ],
   "redirects": [
+    {
+      "source": "/ceremony-N9lUgPOF",
+      "destination": "/deck.html?share=N9lUgPOF",
+      "permanent": false
+    },
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "www.surftober.com" }],

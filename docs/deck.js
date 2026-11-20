@@ -1810,23 +1810,26 @@
 
   async function hostGate() {
     const G = window.SurftoberGame;
-    const wantsResults = new URLSearchParams(location.search).get('view') === 'results';
+    const params = new URLSearchParams(location.search);
+    // ?share=<CFG.shareKey>: a guest without an account gets the published results.
+    const shared = !!CFG.shareKey && params.get('share') === CFG.shareKey;
+    const wantsResults = shared || params.get('view') === 'results';
     const hostOnly = G ? G.locked() : /(^|\.)surftober\.com$/.test(location.hostname);
     const session = G ? await G.session() : null;
     let state = null;
-    if (G && session) {
+    if (G && (session || shared)) {
       try { state = await G.ceremonyState(GAME_ID); }
       catch (error) { if (wantsResults) console.error(error); }
     }
-    resultsView = !!(session && state?.published_at);
+    resultsView = !!((session || shared) && state?.published_at);
     if (resultsView) return true;
     if (!wantsResults && (!hostOnly || G?.isHost(session))) return true;
 
     const message = wantsResults
-      ? (session ? 'The ceremony results are not available yet.' : 'Sign in to view the ceremony results.')
+      ? (session || shared ? 'The ceremony results are not available yet.' : 'Sign in to view the ceremony results.')
       : 'The ceremony deck is for the host.';
     stage.innerHTML = `<div class="loading"><img src="${LOGO}" alt=""><div>${message}</div>
-      ${G && (!session || !wantsResults) ? `<button type="button" class="lock-btn" data-signin>${session ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
+      ${G && !shared && (!session || !wantsResults) ? `<button type="button" class="lock-btn" data-signin>${session ? 'Switch account' : 'Sign in'}</button>` : ''}</div>`;
     return false;
   }
 
