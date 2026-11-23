@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHmac } = require('node:crypto');
 const handler = require('../docs/api/club-session');
-const password = 'test-only-password-with-32-characters';
+const password = 'test phrase'; // Short club passphrases are supported; never use a real secret here.
 const secret = 'test-only-signing-secret-with-48-characters-minimum';
 process.env.CLUB_PASSWORD = password;
 process.env.CLUB_SESSION_SECRET = secret;
@@ -42,6 +42,11 @@ test('password checks, signed session lifecycle, and request boundaries', async 
   assert.equal((await request('POST', '{')).code, 400);
   assert.equal((await request('POST', { password: 123 })).code, 400);
   assert.equal((await request('POST', 'x'.repeat(2049))).code, 413);
+  process.env.CLUB_PASSWORD = '';
+  assert.equal((await request('POST', { password })).code, 503);
+  process.env.CLUB_PASSWORD = 'x'.repeat(257);
+  assert.equal((await request('POST', { password })).code, 503);
+  process.env.CLUB_PASSWORD = password;
   delete process.env.CLUB_SESSION_SECRET;
   assert.equal((await request('POST', { password })).code, 503);
   process.env.CLUB_SESSION_SECRET = secret;

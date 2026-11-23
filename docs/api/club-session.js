@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
   }
   const password = process.env.CLUB_PASSWORD;
   const secret = process.env.CLUB_SESSION_SECRET;
-  if (!password || password.length < 20 || !secret || secret.length < 32) {
+  if (!password || password.length > 256 || !secret || secret.length < 32) {
     return res.status(503).json({ ok: false, error: 'Club access is not configured.' });
   }
   // Reject cross-origin browser requests; never enable CORS for this endpoint.
