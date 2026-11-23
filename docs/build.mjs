@@ -65,7 +65,7 @@ mkdirSync(OUT);
 //    (today: version.js; future additions ship automatically).
 const special = new Set([...HASHED, MANIFEST, ...REWRITTEN]);
 for (const entry of readdirSync(SRC)) {
-  if (EXCLUDE.has(entry) || special.has(entry)) continue;
+  if (entry.startsWith('.') || EXCLUDE.has(entry) || special.has(entry)) continue;
   cpSync(path.join(SRC, entry), path.join(OUT, entry), { recursive: true });
 }
 

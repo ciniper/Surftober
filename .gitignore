@@ -9,3 +9,9 @@ docs/dist/
 
 # Trophy CAD output (regenerate with design/trophy/cad/spinner.py)
 design/trophy/cad/out/
+
+# Local credentials and Vercel state
+.env
+.env.*
+!.env.example
+.vercel/

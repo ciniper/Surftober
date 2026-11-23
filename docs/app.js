@@ -18,7 +18,8 @@ let allEvents = [DEFAULT_EVENT];
 let eventsTableAvailable = false;
 
 // Load Supabase JS if not present
-(function ensureSupabase(){
+(async function ensureSupabase(){
+  if (window.clubEntryReady && !await window.clubEntryReady) return;
   if (!window.supabase) {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -4080,7 +4081,8 @@ function attachQuizResetHandler(){
 }
 
 window.addEventListener('hashchange', renderTabs);
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+  if (window.clubEntryReady && !await window.clubEntryReady) return;
   applyThemeVars(themeVarsFor(currentThemeSelection())); // before anything renders
   initThemeUI();
   initModeToggle();
