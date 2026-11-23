@@ -221,23 +221,30 @@
     })();
   </script>
   <script>
-    // Club gate for View Mode — a friends-only speed bump, not real security
-    // (the password lives in the WhatsApp group).
-    document.getElementById('btn-view-mode').addEventListener('click', function (e) {
-      if (localStorage.getItem('surftober.clubpass') === '1') {
-        sessionStorage.setItem('surftober_authenticated', '1');
-        return;
-      }
+    // Password verification and the remembered session live on the server.
+    localStorage.removeItem('surftober.clubpass');
+    let checkingClub = false;
+    document.getElementById('btn-view-mode').addEventListener('click', async function (e) {
       e.preventDefault();
-      var guess = (prompt('Club password?') || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      if (!guess) return;
-      if (guess === 'snowy plover') {
-        localStorage.setItem('surftober.clubpass', '1');
-        sessionStorage.setItem('surftober_authenticated', '1');
-        window.location.href = this.href;
-      } else {
-        alert('Not quite — ask the crew about the bird 🐦');
-      }
+      if (checkingClub) return;
+      checkingClub = true;
+      try {
+        const session = await fetch('/api/club-session', { cache: 'no-store', credentials: 'same-origin' });
+        if (session.ok) { window.location.href = this.href; return; }
+        if (session.status !== 401) throw new Error('unavailable');
+        const password = prompt('Club password?');
+        if (!password) return;
+        const result = await fetch('/api/club-session', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        if (result.ok) window.location.href = this.href;
+        else if (result.status === 401) alert('Incorrect password. Ask the crew for the current club password.');
+        else throw new Error('unavailable');
+      } catch {
+        alert('Club access is temporarily unavailable. Please try again when online.');
+      } finally { checkingClub = false; }
     });
     // Sign In keeps its pass-through flag (no password — existing accounts)
     document.querySelector('a[href*="mode=signin"]').addEventListener('click', function () {
